@@ -1,0 +1,20 @@
+{
+  "name": "python3-python-dateutil",
+  "buildsystem": "simple",
+  "build-commands": [
+    "python3 setup.py install --prefix=${FLATPAK_DEST} --root=/"
+  ],
+  "sources": [
+    {
+      "type": "archive",
+      "url": "https://github.com/dateutil/dateutil/releases/download/2.8.1/python-dateutil-2.8.1.tar.gz",
+      "sha256": "73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"
+    },
+    {
+      "type": "shell",
+      "commands": [
+        "sed -i 's/if not platform_/if not dirs/' setup.py"
+      ]
+    }
+  ]
+}

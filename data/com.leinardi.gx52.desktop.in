@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=GX52
+Comment=Provides control of LEDs and MFD for Logitech X52 and X52 Pro H.O.T.A.S.
+Exec=@bindir@/gx52 %U
+Icon=com.leinardi.gx52
+Terminal=false
+Type=Application
+StartupNotify=true
+MimeType=
+Categories=Utility;GTK;GNOME;
+Keywords=GX52;x52;

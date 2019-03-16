@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=GX52
+# TODO: We could include the full path here but Meson requires
+#       newer GLib to generate files for GResource
+TryExec=gx52
+Exec=gx52 --gapplication-service
+Type=Application
+NoDisplay=true
+Name[en_US]=com.leinardi.gx52.service.desktop

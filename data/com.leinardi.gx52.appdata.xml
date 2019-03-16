@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2019 Roberto Leianrdi -->
+<component type="desktop-application">
+    <id>com.leinardi.gx52.desktop</id>
+
+    <!-- <translation type="gettext">trg</translation> -->
+    <name>GX52</name>
+    <developer_name>Roberto Leinardi</developer_name>
+    <summary>Provides control of LEDs and MFD for Logitech X52 and X52 Pro H.O.T.A.S.</summary>
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>GPL-3.0-or-later</project_license>
+    <description>
+        <p>GX52 is a GTK application designed to provide control for the LEDs and MFD of Logitech X52 and X52 Pro
+            H.O.T.A.S.
+        </p>
+    </description>
+    <launchable type="desktop-id">com.leinardi.gx52.desktop</launchable>
+    <!--<screenshots>-->
+    <!--<screenshot type="default">-->
+    <!--<image>https://gitlab.com/leinardi/gx52/raw/master/art/screenshot-1.png</image>-->
+    <!--</screenshot>-->
+    <!--</screenshots>-->
+    <categories>
+        <category>Utility</category>
+    </categories>
+    <url type="homepage">https://gitlab.com/leinardi/gx52</url>
+    <url type="bugtracker">https://gitlab.com/leinardi/gx52/issues</url>
+    <update_contact>roberto@leinardi.com</update_contact>
+    <releases>
+        <release date="2020-03-29" version="0.7.0">
+            <description>
+                <ul>
+                    <li>Initial release</li>
+                </ul>
+            </description>
+        </release>
+    </releases>
+    <content_rating type="oars-1.1"/>
+</component>
