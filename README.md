@@ -185,7 +185,7 @@ flatpak install flathub org.gtk.Gtk3theme.Yaru
 
 ## 💚 How to help the project
 ### Discord server
-If you want to help testing or developing it would be easier to get in touch using the discord server of the project: https://discord.gg/Q33n3UC  
+If you want to help testing or developing it would be easier to get in touch using the discord server of the project: https://discord.gg/HTCrmU8  
 Just write a message on the general channel saying how you want to help (test, dev, etc) and quoting @leinardi. If you don't use discor but still want to help just open a new issue here.
 
 ### Can I support this project some other way?

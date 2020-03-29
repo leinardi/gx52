@@ -15,11 +15,11 @@
         </p>
     </description>
     <launchable type="desktop-id">com.leinardi.gx52.desktop</launchable>
-    <!--<screenshots>-->
-    <!--<screenshot type="default">-->
-    <!--<image>https://gitlab.com/leinardi/gx52/raw/master/art/screenshot-1.png</image>-->
-    <!--</screenshot>-->
-    <!--</screenshots>-->
+    <screenshots>
+        <screenshot type="default">
+            <image>https://gitlab.com/leinardi/gx52/raw/master/art/screenshot-1.png</image>
+        </screenshot>
+    </screenshots>
     <categories>
         <category>Utility</category>
     </categories>
