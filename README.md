@@ -96,10 +96,10 @@ gx52
 ```
 
 ## Running the app
-To start the app you have to run the command `gx52` in a terminal. The app needs to access the USB interface of the Kranen that, normally,
+To start the app you have to run the command `gx52` in a terminal. The app needs to access the USB interface of the X52 that, normally,
 is not available to unprivileged users. 
 
-To allow normal users to access the Kraken's USB interface you can 
+To allow normal users to access the X52's USB interface you can 
 create a custom udev rule
 
 ### Adding Udev rule
