@@ -364,7 +364,7 @@ class MainPresenter:
                     self._profile_selected = X52ProProfile.get(X52ProProfile.can_be_removed == False)
                     self._last_applied_profile = X52ProProfile.get_empty_profile()
                 elif device_type == X52DeviceType.X52:
-                    self._profile_selected = X52Profile.get(X52ProProfile.can_be_removed == False)
+                    self._profile_selected = X52Profile.get(X52Profile.can_be_removed == False)
                     self._last_applied_profile = X52Profile.get_empty_profile()
                 else:
                     raise ValueError(f"Unsupported device type {device_type.name}")
