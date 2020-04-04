@@ -22,7 +22,7 @@ from playhouse.sqlite_ext import AutoIncrementField
 
 from gx52.conf import CLOCK_2_OFFSET_DEFAULT, CLOCK_3_OFFSET_DEFAULT
 from gx52.di import INJECTOR
-from gx52.driver.x52_driver import X52LedStatus, X52_BRIGHTNESS_MAX, X52DateFormat
+from gx52.driver.x52_driver import X52_BRIGHTNESS_MAX, X52DateFormat
 from gx52.model.enum_field import EnumField
 
 _LOG = logging.getLogger(__name__)
@@ -31,17 +31,6 @@ _LOG = logging.getLogger(__name__)
 class X52Profile(Model):
     id = AutoIncrementField()
     name = CharField()
-    led_fire = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_a = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_b = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_d = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_e = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_t1_t2 = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_t3_t4 = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_t5_t6 = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_pov_2 = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_i = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
-    led_throttle = EnumField(default=X52LedStatus.ON, choices=X52LedStatus)
     led_brightness = IntegerField(default=X52_BRIGHTNESS_MAX)
     mfd_brightness = IntegerField(default=X52_BRIGHTNESS_MAX)
     clock_1_use_local_time = BooleanField(default=False)
@@ -58,17 +47,6 @@ class X52Profile(Model):
     def get_empty_profile(cls) -> 'X52Profile':
         return cls(id=None,
                    name=None,
-                   led_fire=None,
-                   led_a=None,
-                   led_b=None,
-                   led_d=None,
-                   led_e=None,
-                   led_t1_t2=None,
-                   led_t3_t4=None,
-                   led_t5_t6=None,
-                   led_pov_2=None,
-                   led_i=None,
-                   led_throttle=None,
                    led_brightness=None,
                    mfd_brightness=None,
                    clock_1_use_local_time=None,
