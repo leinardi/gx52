@@ -4,8 +4,8 @@ GX52 is a GTK application designed to provide control for the LEDs and MFD of Lo
 ## 💡 Features
 <img src="/data/icons/hicolor/48x48@2x/apps/com.leinardi.gx52.png" width="96" align="right" hspace="0" />
 
-* Set LEDs color
-* Set LEDs status (on/off)
+* Set LEDs color (X52 Pro only)
+* Turn on/off individual LEDs (X52 Pro only)
 * Set LEDs brightness
 * Set MFD brightness
 * Update MFD date and time
