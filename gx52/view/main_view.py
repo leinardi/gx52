@@ -82,6 +82,7 @@ class MainView(MainViewInterface):
         self._profile_remove_button: Gtk.Button = self._builder.get_object("profile_remove_button")
         self._main_content_stack: Gtk.Stack = self._builder.get_object('main_content_stack')
         # LEDs
+        self._led_default_state_frame: Gtk.Frame = self._builder.get_object('led_default_state_frame')
         self._led_brightness_scale: Gtk.Scale = self._builder.get_object('led_brightness_scale')
         self._led_brightness_adjustment: Gtk.Adjustment = self._builder.get_object('led_brightness_adjustment')
         self._profile_treeselection: Gtk.TreeSelection = self._builder.get_object('profile_treeselection')
@@ -201,17 +202,21 @@ class MainView(MainViewInterface):
             self._led_brightness_adjustment.set_lower(X52_BRIGHTNESS_MIN)
             self._led_brightness_adjustment.set_upper(X52_BRIGHTNESS_MAX)
             self._led_brightness_adjustment.set_value(profile.led_brightness)
-            self._update_led(profile, "led_fire", self._led_fire_combobox, self._led_fire_liststore)
-            self._update_led(profile, "led_a", self._led_a_combobox, self._led_a_liststore)
-            self._update_led(profile, "led_b", self._led_b_combobox, self._led_b_liststore)
-            self._update_led(profile, "led_pov_2", self._led_pov_2_combobox, self._led_pov_2_liststore)
-            self._update_led(profile, "led_d", self._led_d_combobox, self._led_d_liststore)
-            self._update_led(profile, "led_e", self._led_e_combobox, self._led_e_liststore)
-            self._update_led(profile, "led_i", self._led_i_combobox, self._led_i_liststore)
-            self._update_led(profile, "led_throttle", self._led_throttle_combobox, self._led_throttle_liststore)
-            self._update_led(profile, "led_t1_t2", self._led_t1_t2_combobox, self._led_t1_t2_liststore)
-            self._update_led(profile, "led_t3_t4", self._led_t3_t4_combobox, self._led_t3_t4_liststore)
-            self._update_led(profile, "led_t5_t6", self._led_t5_t6_combobox, self._led_t5_t6_liststore)
+            if isinstance(profile, X52ProProfile):
+                self._led_default_state_frame.set_visible(True)
+                self._update_led(profile, "led_fire", self._led_fire_combobox, self._led_fire_liststore)
+                self._update_led(profile, "led_a", self._led_a_combobox, self._led_a_liststore)
+                self._update_led(profile, "led_b", self._led_b_combobox, self._led_b_liststore)
+                self._update_led(profile, "led_pov_2", self._led_pov_2_combobox, self._led_pov_2_liststore)
+                self._update_led(profile, "led_d", self._led_d_combobox, self._led_d_liststore)
+                self._update_led(profile, "led_e", self._led_e_combobox, self._led_e_liststore)
+                self._update_led(profile, "led_i", self._led_i_combobox, self._led_i_liststore)
+                self._update_led(profile, "led_throttle", self._led_throttle_combobox, self._led_throttle_liststore)
+                self._update_led(profile, "led_t1_t2", self._led_t1_t2_combobox, self._led_t1_t2_liststore)
+                self._update_led(profile, "led_t3_t4", self._led_t3_t4_combobox, self._led_t3_t4_liststore)
+                self._update_led(profile, "led_t5_t6", self._led_t5_t6_combobox, self._led_t5_t6_liststore)
+            else:
+                self._led_default_state_frame.set_visible(False)
 
             self._mfd_brightness_adjustment.set_lower(X52_BRIGHTNESS_MIN)
             self._mfd_brightness_adjustment.set_upper(X52_BRIGHTNESS_MAX)
@@ -227,7 +232,7 @@ class MainView(MainViewInterface):
             self._main_content_stack.set_sensitive(False)
 
     @staticmethod
-    def _update_led(profile: Union[X52ProProfile, X52Profile],
+    def _update_led(profile: Union[X52ProProfile],
                     active_status_attr_name: str,
                     combobox: Gtk.ComboBox,
                     liststore: Gtk.ListStore) -> None:

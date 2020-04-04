@@ -2,8 +2,8 @@
 """
 import datetime
 import logging
-from enum import Enum, auto, unique
-from typing import Any, List, Optional
+from enum import Enum, unique, IntEnum
+from typing import Any, List
 
 import usb.util
 
@@ -122,13 +122,13 @@ _SUPPORTED_DEVICES: List[X52Device] = [
 
 
 @unique
-class X52Led(Enum):
+class X52Led(IntEnum):
     X52_BIT_LED_FIRE = 1
     X52_BIT_LED_THROTTLE = 20
 
 
 @unique
-class X52LedRed(Enum):
+class X52LedRed(IntEnum):
     X52_BIT_LED_A_RED = 2
     X52_BIT_LED_B_RED = 4
     X52_BIT_LED_D_RED = 6
@@ -141,7 +141,7 @@ class X52LedRed(Enum):
 
 
 @unique
-class X52LedGreen(Enum):
+class X52LedGreen(IntEnum):
     X52_BIT_LED_A_GREEN = 3
     X52_BIT_LED_B_GREEN = 5
     X52_BIT_LED_D_GREEN = 7
@@ -154,13 +154,13 @@ class X52LedGreen(Enum):
 
 
 @unique
-class X52LedStatus(Enum):
+class X52LedStatus(IntEnum):
     OFF = 0
     ON = 1
 
 
 @unique
-class X52ColoredLedStatus(Enum):
+class X52ColoredLedStatus(IntEnum):
     OFF = 0
     GREEN = 1
     RED = 2
@@ -322,7 +322,7 @@ class X52Driver:
 
 
 @unique
-class X52EvdevKeyMapping(Enum):
+class X52ProEvdevKeyMapping(IntEnum):
     TRIGGER = 288
     FIRE = 289
     FIRE_A = 290
@@ -354,11 +354,49 @@ class X52EvdevKeyMapping(Enum):
     MODE_2 = 716
     MODE_3 = 717
     FIRE_I = 718
-    BUTTON_32 = 719
-    BUTTON_33 = 720
-    BUTTON_34 = 721
-    BUTTON_35 = 722
-    BUTTON_36 = 723
-    BUTTON_37 = 724
-    BUTTON_38 = 725
-    BUTTON_39 = 726
+    MFD_FUNCTION = 719
+    MFD_START_STOP = 720
+    MFD_RESET = 721
+    MFD_PAGE_UP = 722
+    MFD_PAGE_DOWN = 723
+    MFD_UP = 724
+    MFD_DOWN = 725
+    MFD_SELECT = 726
+
+
+@unique
+class X52EvdevKeyMapping(IntEnum):
+    TRIGGER = 288
+    FIRE = 289
+    FIRE_A = 290
+    FIRE_B = 291
+    FIRE_C = 292
+    PINKIE = 293
+    FIRE_D = 294
+    FIRE_E = 295
+    TOGGLE_1 = 296
+    TOGGLE_2 = 297
+    TOGGLE_3 = 298
+    TOGGLE_4 = 299
+    TOGGLE_5 = 300
+    TOGGLE_6 = 301
+    SECONDARY_TRIGGER = 302
+    POV_2_UP = 303
+    POV_2_RIGHT = 704
+    POV_2_DOWN = 705
+    POV_2_LEFT = 706
+    THROTTLE_HAT_UP = 707
+    THROTTLE_HAT_RIGHT = 708
+    THROTTLE_HAT_DOWN = 709
+    THROTTLE_HAT_LEFT = 710
+    MODE_1 = 711
+    MODE_2 = 712
+    MODE_3 = 713
+    FIRE_I = 717
+    LEFT_MOUSE_BUTTON = 718
+    SCROLL_CLICK = 719
+    SCROLL_DOWN = 720
+    SCROLL_UP = 721
+    MFD_FUNCTION = 714
+    MFD_START_STOP = 715
+    MFD_RESET = 716
