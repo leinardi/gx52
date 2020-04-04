@@ -14,10 +14,21 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with gst.  If not, see <http://www.gnu.org/licenses/>.
+from typing import Union
+
 from gx52.driver.x52_driver import X52EvdevKeyMapping, X52ProEvdevKeyMapping
 
 
-def get_button_name(key) -> str:
+def is_mode_button(code: int, key: Union[X52ProEvdevKeyMapping, X52EvdevKeyMapping]) -> bool:
+    if isinstance(key, X52ProEvdevKeyMapping):
+        return bool(X52ProEvdevKeyMapping.MODE_1.value <= code <= X52ProEvdevKeyMapping.MODE_3.value)
+    elif isinstance(key, X52EvdevKeyMapping):
+        return bool(X52EvdevKeyMapping.MODE_1.value <= code <= X52EvdevKeyMapping.MODE_3.value)
+    else:
+        raise ValueError(f"Wrong key mapping type")
+
+
+def get_button_name(key: Union[X52ProEvdevKeyMapping, X52EvdevKeyMapping]) -> str:
     if isinstance(key, X52ProEvdevKeyMapping):
         return get_x52_pro_button_name(key)
     elif isinstance(key, X52EvdevKeyMapping):
@@ -89,22 +100,22 @@ def get_x52_pro_button_name(key: X52ProEvdevKeyMapping) -> str:
         return "Mode 3 (B30)"
     if key == X52ProEvdevKeyMapping.FIRE_I:
         return "Fire i (B31)"
-    if key == X52ProEvdevKeyMapping.BUTTON_32:
-        return "Button 32"
-    if key == X52ProEvdevKeyMapping.BUTTON_33:
-        return "Button 33"
-    if key == X52ProEvdevKeyMapping.BUTTON_34:
-        return "Button 34"
-    if key == X52ProEvdevKeyMapping.BUTTON_35:
-        return "Button 35"
-    if key == X52ProEvdevKeyMapping.BUTTON_36:
-        return "Button 36"
-    if key == X52ProEvdevKeyMapping.BUTTON_37:
-        return "Button 37"
-    if key == X52ProEvdevKeyMapping.BUTTON_38:
-        return "Button 38"
-    if key == X52ProEvdevKeyMapping.BUTTON_39:
-        return "Button 39"
+    if key == X52ProEvdevKeyMapping.MFD_FUNCTION:
+        return "Function (B32)"
+    if key == X52ProEvdevKeyMapping.MFD_START_STOP:
+        return "Start/Stop (B33)"
+    if key == X52ProEvdevKeyMapping.MFD_RESET:
+        return "Reset (B34)"
+    if key == X52ProEvdevKeyMapping.MFD_PAGE_UP:
+        return "Page Up (B35)"
+    if key == X52ProEvdevKeyMapping.MFD_PAGE_DOWN:
+        return "Page Down (B36)"
+    if key == X52ProEvdevKeyMapping.MFD_UP:
+        return "Up (B37)"
+    if key == X52ProEvdevKeyMapping.MFD_DOWN:
+        return "Down (B38)"
+    if key == X52ProEvdevKeyMapping.MFD_SELECT:
+        return "Select (B39)"
     raise ValueError(f"Unknown key {key}")
 
 
@@ -161,11 +172,11 @@ def get_x52_button_name(key: X52EvdevKeyMapping) -> str:
         return "Mode 2 (B25)"
     if key == X52EvdevKeyMapping.MODE_3:
         return "Mode 3 (B26)"
-    if key == X52EvdevKeyMapping.FUNCTION:
+    if key == X52EvdevKeyMapping.MFD_FUNCTION:
         return "Function (B27)"
-    if key == X52EvdevKeyMapping.START_STOP:
+    if key == X52EvdevKeyMapping.MFD_START_STOP:
         return "Start/Stop (B28)"
-    if key == X52EvdevKeyMapping.BUTTON_34:
+    if key == X52EvdevKeyMapping.MFD_RESET:
         return "Reset (B29)"
     if key == X52EvdevKeyMapping.FIRE_I:
         return "Fire i (B30)"

@@ -30,7 +30,7 @@ from rx.scheduler import ThreadPoolScheduler
 from rx.scheduler.mainloop import GtkScheduler
 
 from gx52.conf import APP_NAME, APP_SOURCE_URL, APP_VERSION, APP_ID, APP_PACKAGE_NAME
-from gx52.driver.x52_driver import X52Driver, X52DeviceType, X52DateFormat, _X52_MFD_LINE_SIZE, X52EvdevKeyMapping
+from gx52.driver.x52_driver import X52Driver, X52DeviceType, X52DateFormat, X52ProEvdevKeyMapping, X52EvdevKeyMapping
 from gx52.interactor.check_new_version_interactor import CheckNewVersionInteractor
 from gx52.interactor.settings_interactor import SettingsInteractor
 from gx52.interactor.udev_interactor import UdevInteractor
@@ -39,7 +39,7 @@ from gx52.model.x52_profile import X52Profile
 from gx52.model.x52_pro_profile import X52ProProfile
 from gx52.presenter.preferences_presenter import PreferencesPresenter
 from gx52.util.view import show_notification, open_uri, get_default_application
-from gx52.util.x52 import get_button_name
+from gx52.util.x52 import get_button_name, is_mode_button
 
 _LOG = logging.getLogger(__name__)
 _ADD_NEW_PROFILE_INDEX = -10
@@ -397,8 +397,9 @@ class MainPresenter:
     def _on_evdev_event(self, event: InputEvent) -> None:
         _LOG.debug(f"{event.code} {event.value}")
         if event.type == ecodes.EV_KEY:
-            key = X52EvdevKeyMapping(event.code)
-            if X52EvdevKeyMapping.MODE_1.value <= event.code <= X52EvdevKeyMapping.MODE_3.value:
+            key = X52ProEvdevKeyMapping(event.code) if isinstance(self._profile_selected, X52ProProfile) \
+                else X52EvdevKeyMapping(event.code)
+            if is_mode_button(event.code, key):
                 if event.value == 0:
                     self._update_mfd_mode_line("")
                 else:
