@@ -37,6 +37,7 @@ CLOCK_3_OFFSET_DEFAULT = 480
 SETTINGS_DEFAULTS: Dict[str, Any] = {
     'settings_launch_on_login': False,
     'settings_load_last_profile': True,
+    'settings_check_new_version': False,
     'settings_minimize_to_tray': True,
     'settings_refresh_interval': 3,
     'settings_show_app_indicator': True,
