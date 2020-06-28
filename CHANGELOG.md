@@ -1,5 +1,5 @@
-Version next
-============
+Version 0.7.2
+=============
 Released: 2020-06-28
 
  * Check for new App version on launch (requires opt-in)
