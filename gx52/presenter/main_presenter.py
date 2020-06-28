@@ -103,7 +103,8 @@ class MainPresenter:
         self._register_db_listeners()
         self._udev_interactor.monitor_device_events(self._get_devices)
         self._get_devices()
-        # self._check_new_version()
+        if self._settings_interactor.get_int('settings_check_new_version'):
+            self._check_new_version()
 
     def on_application_window_delete_event(self, *_: Any) -> bool:
         if self._settings_interactor.get_int('settings_minimize_to_tray'):

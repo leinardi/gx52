@@ -27,6 +27,14 @@
     <url type="bugtracker">https://gitlab.com/leinardi/gx52/issues</url>
     <update_contact>roberto@leinardi.com</update_contact>
     <releases>
+        <release date="2020-06-28" version="0.7.2">
+            <description>
+                <ul>
+                    <li>Check for new App version on launch (requires opt-in)</li>
+                    <li>Updated dependencies</li>
+                </ul>
+            </description>
+        </release>
         <release date="2020-04-04" version="0.7.1">
             <description>
                 <ul>
