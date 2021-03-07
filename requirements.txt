@@ -1,6 +1,6 @@
 evdev==1.4.0
 injector==0.18.4
-peewee==3.14.0
+peewee==3.14.2
 PyGObject==3.38.0
 pyudev==0.22.0
 pyusb==1.1.1
