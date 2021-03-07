@@ -1,3 +1,10 @@
+Version 0.7.3
+=============
+Released: 2021-03-07
+
+ * Fixed #2: Date formats DD-MM-YY and MM-DD-YY are swapped
+ * Updated dependencies
+
 Version 0.7.2
 =============
 Released: 2020-06-28

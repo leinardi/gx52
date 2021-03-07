@@ -257,12 +257,12 @@ class X52Driver:
             value1 += year
             value2 = day
         elif date_format == X52DateFormat.DDMMYY:
-            value1 = day << 8
-            value1 += month
+            value1 = day
+            value1 += month << 8
             value2 = year
         elif date_format == X52DateFormat.MMDDYY:
-            value1 = month << 8
-            value1 += day
+            value1 = month
+            value1 += day << 8
             value2 = year
         else:
             raise ValueError(f"Unsupported X52DateFormat: ${date_format.name}")

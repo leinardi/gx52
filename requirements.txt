@@ -1,9 +1,9 @@
-evdev==1.3.0
-injector==0.18.3
-peewee==3.13.3
-PyGObject==3.36.1
+evdev==1.4.0
+injector==0.18.4
+peewee==3.14.2
+PyGObject==3.38.0
 pyudev==0.22.0
-pyusb==1.0.2
-pyxdg==0.26
-requests==2.24.0
-Rx==3.1.0
+pyusb==1.1.1
+pyxdg==0.27
+requests==2.25.1
+Rx==3.1.1

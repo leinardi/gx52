@@ -354,7 +354,7 @@ class MainPresenter:
 
     def _handle_get_devices_result(self, result: Any) -> None:
         if not isinstance(result, List):
-            _LOG.exception(f"Set overclock error: {str(result)}")
+            _LOG.exception(f"Get devices error: {str(result)}")
             self.main_view.set_statusbar_text(f'Error fetching USB devices! {str(result)}')
         else:
             assert isinstance(result, List)

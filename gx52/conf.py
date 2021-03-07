@@ -19,7 +19,7 @@ from typing import Dict, Any
 APP_PACKAGE_NAME = "gx52"
 APP_NAME = "GX52"
 APP_ID = "com.leinardi.gx52"
-APP_VERSION = "0.7.2"
+APP_VERSION = "0.7.3"
 APP_ICON_NAME = APP_ID
 APP_ICON_NAME_SYMBOLIC = APP_ID + "-symbolic"
 APP_DB_NAME = APP_PACKAGE_NAME + ".db"
@@ -41,7 +41,6 @@ SETTINGS_DEFAULTS: Dict[str, Any] = {
     'settings_minimize_to_tray': True,
     'settings_refresh_interval': 3,
     'settings_show_app_indicator': True,
-    'settings_app_indicator_show_gpu_temp': True,
 }
 
 DESKTOP_ENTRY: Dict[str, str] = {
