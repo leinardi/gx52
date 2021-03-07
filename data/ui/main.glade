@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.22.1 
+<!-- Generated with glade 3.38.2 
 
 Copyright (C) 
 
-This file is part of gx52.
+This file is part of GX52.
 
-gx52 is free software: you can redistribute it and/or modify
+GX52 is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-gx52 is distributed in the hope that it will be useful,
+GX52 is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with gx52.  If not, see <http://www.gnu.org/licenses/>.
+along with GX52.  If not, see <http://www.gnu.org/licenses/>.
 
 -->
 <interface>
-  <requires lib="gtk+" version="3.20"/>
+  <requires lib="gtk+" version="3.24"/>
   <!-- interface-license-type gplv3 -->
   <!-- interface-name GX52 -->
   <object class="GtkListStore" id="led_a_liststore">
@@ -45,8 +45,8 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
   </object>
   <object class="GtkAdjustment" id="led_brightness_adjustment">
     <property name="upper">32</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
   </object>
   <object class="GtkListStore" id="led_d_liststore">
     <columns>
@@ -140,13 +140,13 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
   </object>
   <object class="GtkMenu" id="main_menu">
     <property name="visible">True</property>
-    <property name="can_focus">False</property>
+    <property name="can-focus">False</property>
     <child>
       <object class="GtkMenuItem">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="label" translatable="yes">Show/Hide App window</property>
-        <property name="use_underline">True</property>
+        <property name="use-underline">True</property>
         <signal name="activate" handler="on_toggle_app_window_clicked" swapped="no"/>
         <accelerator key="h" signal="activate" modifiers="GDK_CONTROL_MASK"/>
       </object>
@@ -154,42 +154,42 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
     <child>
       <object class="GtkMenuItem">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="label" translatable="yes">Preferences</property>
-        <property name="use_underline">True</property>
+        <property name="use-underline">True</property>
         <signal name="activate" handler="on_menu_settings_clicked" swapped="no"/>
       </object>
     </child>
     <child>
       <object class="GtkMenuItem">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="label" translatable="yes">Changelog</property>
-        <property name="use_underline">True</property>
+        <property name="use-underline">True</property>
         <signal name="activate" handler="on_menu_changelog_clicked" swapped="no"/>
       </object>
     </child>
     <child>
       <object class="GtkMenuItem">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="label" translatable="yes">About</property>
-        <property name="use_underline">True</property>
+        <property name="use-underline">True</property>
         <signal name="activate" handler="on_menu_about_clicked" swapped="no"/>
       </object>
     </child>
     <child>
       <object class="GtkSeparatorMenuItem">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
       </object>
     </child>
     <child>
       <object class="GtkMenuItem">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="label" translatable="yes">Quit</property>
-        <property name="use_underline">True</property>
+        <property name="use-underline">True</property>
         <signal name="activate" handler="on_quit_clicked" swapped="no"/>
         <accelerator key="q" signal="activate" modifiers="GDK_CONTROL_MASK"/>
       </object>
@@ -197,18 +197,18 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
   </object>
   <object class="GtkAdjustment" id="mfd_brightness_adjustment">
     <property name="upper">32</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
   </object>
   <object class="GtkPopover" id="popover1">
-    <property name="can_focus">False</property>
+    <property name="can-focus">False</property>
     <child>
       <object class="GtkEntry" id="profile_name_entry">
         <property name="visible">True</property>
-        <property name="can_focus">True</property>
-        <property name="secondary_icon_stock">gtk-add</property>
-        <property name="placeholder_text" translatable="yes">Profile name</property>
-        <property name="input_hints">GTK_INPUT_HINT_SPELLCHECK | GTK_INPUT_HINT_NONE</property>
+        <property name="can-focus">True</property>
+        <property name="secondary-icon-name">document-save</property>
+        <property name="placeholder-text" translatable="yes">Profile name</property>
+        <property name="input-hints">GTK_INPUT_HINT_SPELLCHECK | GTK_INPUT_HINT_NONE</property>
         <signal name="activate" handler="on_profile_name_activate" swapped="no"/>
         <signal name="icon-release" handler="on_profile_name_icon_release" swapped="no"/>
       </object>
@@ -223,70 +223,26 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
     </columns>
   </object>
   <object class="GtkApplicationWindow" id="application_window">
-    <property name="can_focus">False</property>
-    <property name="icon_name">com.leinardi.gx52</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">com.leinardi.gx52</property>
     <property name="gravity">north</property>
     <signal name="delete-event" handler="on_application_window_delete_event" swapped="no"/>
-    <child type="titlebar">
-      <object class="GtkBox">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <child>
-          <object class="GtkHeaderBar" id="content_header_bar">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="show_close_button">True</property>
-            <child type="title">
-              <object class="GtkStackSwitcher">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="stack">main_content_stack</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkMenuButton" id="main_menu_button">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="popup">main_menu</property>
-                <property name="use_popover">False</property>
-                <child>
-                  <object class="GtkImage" id="menu_button_image">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="icon_name">open-menu-symbolic</property>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="pack_type">end</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">True</property>
-            <property name="fill">True</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-      </object>
-    </child>
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkInfoBar" id="main_infobar">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="show_close_button">True</property>
+            <property name="can-focus">False</property>
+            <property name="show-close-button">True</property>
+            <property name="revealed">False</property>
             <child internal-child="action_area">
               <object class="GtkButtonBox">
-                <property name="can_focus">False</property>
+                <property name="can-focus">False</property>
                 <property name="spacing">6</property>
-                <property name="layout_style">end</property>
+                <property name="layout-style">end</property>
                 <child>
                   <placeholder/>
                 </child>
@@ -305,12 +261,12 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
             </child>
             <child internal-child="content_area">
               <object class="GtkBox">
-                <property name="can_focus">False</property>
+                <property name="can-focus">False</property>
                 <property name="spacing">16</property>
                 <child>
                   <object class="GtkLabel" id="main_infobar_label">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can-focus">False</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -331,9 +287,6 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
                 <property name="position">0</property>
               </packing>
             </child>
-            <child>
-              <placeholder/>
-            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -344,119 +297,115 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
         <child>
           <object class="GtkBox">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
+            <property name="can-focus">False</property>
             <child>
               <object class="GtkFrame">
-                <property name="width_request">128</property>
+                <property name="width-request">128</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="margin_left">10</property>
-                <property name="margin_top">3</property>
-                <property name="margin_bottom">6</property>
-                <property name="label_xalign">0.5</property>
-                <property name="shadow_type">in</property>
+                <property name="can-focus">False</property>
+                <property name="margin-start">10</property>
+                <property name="margin-top">3</property>
+                <property name="margin-bottom">6</property>
+                <property name="label-xalign">0.5</property>
+                <property name="shadow-type">in</property>
                 <child>
-                  <object class="GtkAlignment">
+                  <!-- n-columns=2 n-rows=2 -->
+                  <object class="GtkGrid">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="bottom_padding">8</property>
-                    <property name="left_padding">8</property>
-                    <property name="right_padding">8</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="margin-bottom">8</property>
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">6</property>
+                    <property name="column-homogeneous">True</property>
                     <child>
-                      <object class="GtkGrid">
+                      <object class="GtkMenuButton" id="profile_add_menu_button">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="row_spacing">6</property>
-                        <property name="column_spacing">6</property>
-                        <property name="column_homogeneous">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="popover">popover1</property>
                         <child>
-                          <object class="GtkMenuButton" id="profile_add_menu_button">
+                          <object class="GtkImage">
                             <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="receives_default">True</property>
-                            <property name="popover">popover1</property>
-                            <child>
-                              <object class="GtkImage">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="icon_name">list-add-symbolic</property>
-                              </object>
-                            </child>
+                            <property name="can-focus">False</property>
+                            <property name="icon-name">list-add-symbolic</property>
                           </object>
-                          <packing>
-                            <property name="left_attach">0</property>
-                            <property name="top_attach">1</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkButton" id="profile_remove_button">
-                            <property name="visible">True</property>
-                            <property name="sensitive">False</property>
-                            <property name="can_focus">True</property>
-                            <property name="receives_default">True</property>
-                            <signal name="clicked" handler="on_profile_remove_clicked" swapped="no"/>
-                            <child>
-                              <object class="GtkImage">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="icon_name">list-remove-symbolic</property>
-                              </object>
-                            </child>
-                            <style>
-                              <class name="destructive-action"/>
-                            </style>
-                          </object>
-                          <packing>
-                            <property name="left_attach">1</property>
-                            <property name="top_attach">1</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkScrolledWindow">
-                            <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="vexpand">True</property>
-                            <property name="shadow_type">in</property>
-                            <child>
-                              <object class="GtkTreeView" id="profile_treeview">
-                                <property name="width_request">128</property>
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="vexpand">True</property>
-                                <property name="model">profile_liststore</property>
-                                <child internal-child="selection">
-                                  <object class="GtkTreeSelection" id="profile_treeselection">
-                                    <signal name="changed" handler="on_profile_selected" swapped="no"/>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkTreeViewColumn">
-                                    <property name="title" translatable="yes">Name</property>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                </child>
-                              </object>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="left_attach">0</property>
-                            <property name="top_attach">0</property>
-                            <property name="width">2</property>
-                          </packing>
                         </child>
                       </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="profile_remove_button">
+                        <property name="visible">True</property>
+                        <property name="sensitive">False</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <signal name="clicked" handler="on_profile_remove_clicked" swapped="no"/>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="icon-name">list-remove-symbolic</property>
+                          </object>
+                        </child>
+                        <style>
+                          <class name="destructive-action"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="left-attach">1</property>
+                        <property name="top-attach">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="shadow-type">in</property>
+                        <child>
+                          <object class="GtkTreeView" id="profile_treeview">
+                            <property name="width-request">128</property>
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="vexpand">True</property>
+                            <property name="model">profile_liststore</property>
+                            <property name="search-column">0</property>
+                            <child internal-child="selection">
+                              <object class="GtkTreeSelection">
+                                <signal name="changed" handler="on_profile_selected" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkTreeViewColumn">
+                                <property name="title" translatable="yes">Name</property>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">0</property>
+                        <property name="width">2</property>
+                      </packing>
                     </child>
                   </object>
                 </child>
                 <child type="label">
                   <object class="GtkLabel">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can-focus">False</property>
                     <property name="label" translatable="yes">Profiles</property>
                   </object>
                 </child>
@@ -471,458 +420,447 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
               <object class="GtkStack" id="main_content_stack">
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
-                <property name="can_focus">False</property>
+                <property name="can-focus">False</property>
                 <property name="hexpand">True</property>
                 <property name="vexpand">True</property>
                 <property name="hhomogeneous">False</property>
                 <property name="vhomogeneous">False</property>
-                <property name="transition_type">crossfade</property>
+                <property name="transition-type">crossfade</property>
                 <child>
+                  <!-- n-columns=1 n-rows=2 -->
                   <object class="GtkGrid">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="margin_left">10</property>
-                    <property name="margin_right">10</property>
-                    <property name="margin_top">1</property>
-                    <property name="margin_bottom">3</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <property name="margin-top">1</property>
+                    <property name="margin-bottom">3</property>
                     <child>
                       <object class="GtkFrame">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="margin_top">2</property>
-                        <property name="margin_bottom">3</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">3</property>
                         <property name="hexpand">True</property>
-                        <property name="label_xalign">0.5</property>
-                        <property name="shadow_type">in</property>
+                        <property name="label-xalign">0.5</property>
+                        <property name="shadow-type">in</property>
                         <child>
-                          <object class="GtkAlignment">
+                          <object class="GtkScale" id="led_brightness_scale">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="bottom_padding">8</property>
-                            <property name="left_padding">8</property>
-                            <property name="right_padding">8</property>
-                            <child>
-                              <object class="GtkScale" id="led_brightness_scale">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="adjustment">led_brightness_adjustment</property>
-                                <property name="show_fill_level">True</property>
-                                <property name="round_digits">0</property>
-                                <property name="digits">0</property>
-                                <property name="value_pos">left</property>
-                                <signal name="value-changed" handler="on_led_brightness_value_changed" swapped="no"/>
-                              </object>
-                            </child>
+                            <property name="can-focus">True</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="margin-bottom">8</property>
+                            <property name="adjustment">led_brightness_adjustment</property>
+                            <property name="show-fill-level">True</property>
+                            <property name="round-digits">0</property>
+                            <property name="digits">0</property>
+                            <property name="value-pos">left</property>
+                            <signal name="value-changed" handler="on_led_brightness_value_changed" swapped="no"/>
                           </object>
                         </child>
                         <child type="label">
                           <object class="GtkLabel">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="label" translatable="yes">Brightness</property>
                           </object>
                         </child>
                       </object>
                       <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">0</property>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">0</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkFrame" id="led_default_state_frame">
-                        <property name="width_request">512</property>
+                        <property name="width-request">512</property>
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="margin_top">2</property>
-                        <property name="margin_bottom">3</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">3</property>
                         <property name="hexpand">True</property>
-                        <property name="label_xalign">0.5</property>
-                        <property name="shadow_type">in</property>
+                        <property name="label-xalign">0.5</property>
+                        <property name="shadow-type">in</property>
                         <child>
-                          <object class="GtkAlignment">
+                          <!-- n-columns=6 n-rows=4 -->
+                          <object class="GtkGrid">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="top_padding">4</property>
-                            <property name="bottom_padding">8</property>
-                            <property name="left_padding">8</property>
-                            <property name="right_padding">8</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="margin-bottom">8</property>
+                            <property name="hexpand">True</property>
+                            <property name="row-spacing">5</property>
+                            <property name="column-spacing">10</property>
                             <child>
-                              <object class="GtkGrid">
+                              <object class="GtkLabel">
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">Fire</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">Fire A</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">POV 2</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">Fire B</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">Fire D</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">2</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">Fire E</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">2</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">Fire I</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">2</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">Throttle</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">2</property>
+                                <property name="top-attach">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">T1/T2</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">4</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">T3/T4</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">4</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">end</property>
+                                <property name="label" translatable="yes">T5/T6</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">4</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_fire_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
                                 <property name="hexpand">True</property>
-                                <property name="row_spacing">5</property>
-                                <property name="column_spacing">10</property>
+                                <property name="model">led_fire_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
                                 <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">Fire</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">0</property>
-                                    <property name="top_attach">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">Fire A</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">0</property>
-                                    <property name="top_attach">1</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">POV 2</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">0</property>
-                                    <property name="top_attach">3</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">Fire B</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">0</property>
-                                    <property name="top_attach">2</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">Fire D</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">2</property>
-                                    <property name="top_attach">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">Fire E</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">2</property>
-                                    <property name="top_attach">1</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">Fire I</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">2</property>
-                                    <property name="top_attach">2</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">Throttle</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">2</property>
-                                    <property name="top_attach">3</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">T1/T2</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">4</property>
-                                    <property name="top_attach">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">T3/T4</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">4</property>
-                                    <property name="top_attach">1</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="halign">end</property>
-                                    <property name="label" translatable="yes">T5/T6</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">4</property>
-                                    <property name="top_attach">2</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_fire_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="hexpand">True</property>
-                                    <property name="model">led_fire_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">1</property>
-                                    <property name="top_attach">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_a_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_a_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">1</property>
-                                    <property name="top_attach">1</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_pov_2_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_pov_2_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">1</property>
-                                    <property name="top_attach">3</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_b_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_b_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">1</property>
-                                    <property name="top_attach">2</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_d_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="hexpand">True</property>
-                                    <property name="model">led_d_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">3</property>
-                                    <property name="top_attach">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_e_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_e_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">3</property>
-                                    <property name="top_attach">1</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_i_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_i_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">3</property>
-                                    <property name="top_attach">2</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_throttle_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_throttle_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">3</property>
-                                    <property name="top_attach">3</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_t1_t2_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="hexpand">True</property>
-                                    <property name="model">led_t1_t2_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">5</property>
-                                    <property name="top_attach">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_t3_t4_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_t3_t4_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">5</property>
-                                    <property name="top_attach">1</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkComboBox" id="led_t5_t6_combobox">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="model">led_t5_t6_liststore</property>
-                                    <signal name="changed" handler="on_led_status_selected" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">5</property>
-                                    <property name="top_attach">2</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="sensitive">False</property>
-                                    <property name="can_focus">False</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">4</property>
-                                    <property name="top_attach">3</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="sensitive">False</property>
-                                    <property name="can_focus">False</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left_attach">5</property>
-                                    <property name="top_attach">3</property>
-                                  </packing>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
                                 </child>
                               </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_a_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_a_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_pov_2_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_pov_2_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_b_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_b_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_d_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="hexpand">True</property>
+                                <property name="model">led_d_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">3</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_e_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_e_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">3</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_i_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_i_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">3</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_throttle_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_throttle_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">3</property>
+                                <property name="top-attach">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_t1_t2_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="hexpand">True</property>
+                                <property name="model">led_t1_t2_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">5</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_t3_t4_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_t3_t4_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">5</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBox" id="led_t5_t6_combobox">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="model">led_t5_t6_liststore</property>
+                                <signal name="changed" handler="on_led_status_selected" swapped="no"/>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">5</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="sensitive">False</property>
+                                <property name="can-focus">False</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">4</property>
+                                <property name="top-attach">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="sensitive">False</property>
+                                <property name="can-focus">False</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">5</property>
+                                <property name="top-attach">3</property>
+                              </packing>
                             </child>
                           </object>
                         </child>
                         <child type="label">
                           <object class="GtkLabel">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="label" translatable="yes">Default state</property>
                           </object>
                         </child>
                       </object>
                       <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">1</property>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">1</property>
                       </packing>
                     </child>
                   </object>
@@ -932,412 +870,383 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
                   </packing>
                 </child>
                 <child>
+                  <!-- n-columns=1 n-rows=5 -->
                   <object class="GtkGrid">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="margin_left">10</property>
-                    <property name="margin_right">10</property>
-                    <property name="margin_top">1</property>
-                    <property name="margin_bottom">3</property>
-                    <property name="column_homogeneous">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <property name="margin-top">1</property>
+                    <property name="margin-bottom">3</property>
+                    <property name="column-homogeneous">True</property>
                     <child>
                       <object class="GtkFrame">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="margin_top">2</property>
-                        <property name="margin_bottom">3</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">3</property>
                         <property name="hexpand">True</property>
-                        <property name="label_xalign">0.5</property>
-                        <property name="shadow_type">in</property>
+                        <property name="label-xalign">0.5</property>
+                        <property name="shadow-type">in</property>
                         <child>
-                          <object class="GtkAlignment">
+                          <object class="GtkScale" id="mf_brightness_adjustment">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="bottom_padding">8</property>
-                            <property name="left_padding">8</property>
-                            <property name="right_padding">8</property>
-                            <child>
-                              <object class="GtkScale" id="mf_brightness_adjustment">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="adjustment">mfd_brightness_adjustment</property>
-                                <property name="show_fill_level">True</property>
-                                <property name="round_digits">0</property>
-                                <property name="digits">0</property>
-                                <property name="value_pos">left</property>
-                                <signal name="value-changed" handler="on_mfd_brightness_value_changed" swapped="no"/>
-                              </object>
-                            </child>
+                            <property name="can-focus">True</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="margin-bottom">8</property>
+                            <property name="adjustment">mfd_brightness_adjustment</property>
+                            <property name="show-fill-level">True</property>
+                            <property name="round-digits">0</property>
+                            <property name="digits">0</property>
+                            <property name="value-pos">left</property>
+                            <signal name="value-changed" handler="on_mfd_brightness_value_changed" swapped="no"/>
                           </object>
                         </child>
                         <child type="label">
                           <object class="GtkLabel">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="label" translatable="yes">Brightness</property>
                           </object>
                         </child>
                       </object>
                       <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">0</property>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">0</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkFrame">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="margin_top">2</property>
-                        <property name="margin_bottom">3</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">3</property>
                         <property name="hexpand">True</property>
-                        <property name="label_xalign">0.5</property>
-                        <property name="shadow_type">in</property>
+                        <property name="label-xalign">0.5</property>
+                        <property name="shadow-type">in</property>
                         <child>
-                          <object class="GtkAlignment">
+                          <object class="GtkBox">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="bottom_padding">8</property>
-                            <property name="left_padding">8</property>
-                            <property name="right_padding">8</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="margin-bottom">8</property>
+                            <property name="spacing">10</property>
+                            <property name="homogeneous">True</property>
                             <child>
-                              <object class="GtkBox">
+                              <object class="GtkCheckButton" id="mfd_clock_1_local_time_checkbutton">
+                                <property name="label" translatable="yes">Display local time</property>
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="spacing">10</property>
-                                <property name="homogeneous">True</property>
-                                <child>
-                                  <object class="GtkCheckButton" id="mfd_clock_1_local_time_checkbutton">
-                                    <property name="label" translatable="yes">Display local time</property>
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="receives_default">False</property>
-                                    <property name="active">True</property>
-                                    <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">1</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkCheckButton" id="mfd_clock_1_12h_checkbutton">
-                                    <property name="label" translatable="yes">12 hour mode</property>
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="receives_default">False</property>
-                                    <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">2</property>
-                                  </packing>
-                                </child>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">False</property>
+                                <property name="active">True</property>
+                                <property name="draw-indicator">True</property>
+                                <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
                               </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkCheckButton" id="mfd_clock_1_12h_checkbutton">
+                                <property name="label" translatable="yes">12 hour mode</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">False</property>
+                                <property name="draw-indicator">True</property>
+                                <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
                             </child>
                           </object>
                         </child>
                         <child type="label">
                           <object class="GtkLabel">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="label" translatable="yes">Clock 1</property>
                           </object>
                         </child>
                       </object>
                       <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">1</property>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">1</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkFrame">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="margin_top">2</property>
-                        <property name="margin_bottom">3</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">3</property>
                         <property name="hexpand">True</property>
-                        <property name="label_xalign">0.5</property>
-                        <property name="shadow_type">in</property>
+                        <property name="label-xalign">0.5</property>
+                        <property name="shadow-type">in</property>
                         <child>
-                          <object class="GtkAlignment">
+                          <object class="GtkBox">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="bottom_padding">8</property>
-                            <property name="left_padding">8</property>
-                            <property name="right_padding">8</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="margin-bottom">8</property>
+                            <property name="spacing">10</property>
+                            <property name="homogeneous">True</property>
                             <child>
-                              <object class="GtkBox">
+                              <object class="GtkComboBoxText" id="mfd_clock_2_comboboxtext">
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="spacing">10</property>
-                                <property name="homogeneous">True</property>
-                                <child>
-                                  <object class="GtkComboBoxText" id="mfd_clock_2_comboboxtext">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="active">0</property>
-                                    <items>
-                                      <item id="0" translatable="yes">UTC</item>
-                                      <item id="60" translatable="yes">UTC+01</item>
-                                      <item id="120" translatable="yes">UTC+02</item>
-                                      <item id="180" translatable="yes">UTC+03</item>
-                                      <item id="210" translatable="yes">UTC+03:30</item>
-                                      <item id="240" translatable="yes">UTC+04</item>
-                                      <item id="270" translatable="yes">UTC+04:30</item>
-                                      <item id="300" translatable="yes">UTC+05</item>
-                                      <item id="330" translatable="yes">UTC+05:30</item>
-                                      <item id="345" translatable="yes">UTC+05:45</item>
-                                      <item id="360" translatable="yes">UTC+06</item>
-                                      <item id="390" translatable="yes">UTC+06:30</item>
-                                      <item id="420" translatable="yes">UTC+07</item>
-                                      <item id="480" translatable="yes">UTC+08</item>
-                                      <item id="525" translatable="yes">UTC+08:45</item>
-                                      <item id="540" translatable="yes">UTC+09</item>
-                                      <item id="570" translatable="yes">UTC+09:30</item>
-                                      <item id="600" translatable="yes">UTC+10</item>
-                                      <item id="630" translatable="yes">UTC+10:30</item>
-                                      <item id="660" translatable="yes">UTC+11</item>
-                                      <item id="720" translatable="yes">UTC+12</item>
-                                      <item id="765" translatable="yes">UTC+12:45</item>
-                                      <item id="780" translatable="yes">UTC+13</item>
-                                      <item id="825" translatable="yes">UTC+13:45</item>
-                                      <item id="840" translatable="yes">UTC+14</item>
-                                      <item id="-60" translatable="yes">UTC-01</item>
-                                      <item id="-120" translatable="yes">UTC-02</item>
-                                      <item id="-150" translatable="yes">UTC-02:30</item>
-                                      <item id="-180" translatable="yes">UTC-03</item>
-                                      <item id="-210" translatable="yes">UTC-03:30</item>
-                                      <item id="-240" translatable="yes">UTC-04</item>
-                                      <item id="-300" translatable="yes">UTC-05</item>
-                                      <item id="-360" translatable="yes">UTC-06</item>
-                                      <item id="-420" translatable="yes">UTC-07</item>
-                                      <item id="-480" translatable="yes">UTC-08</item>
-                                      <item id="-540" translatable="yes">UTC-09</item>
-                                      <item id="-570" translatable="yes">UTC-09:30</item>
-                                      <item id="-600" translatable="yes">UTC-10</item>
-                                      <item id="-660" translatable="yes">UTC-11</item>
-                                      <item id="-720" translatable="yes">UTC-12</item>
-                                    </items>
-                                    <signal name="changed" handler="on_mfd_clock_2_changed" swapped="no"/>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkCheckButton" id="mfd_clock_2_12h_checkbutton">
-                                    <property name="label" translatable="yes">12 hour mode</property>
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="receives_default">False</property>
-                                    <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">2</property>
-                                  </packing>
-                                </child>
+                                <property name="can-focus">False</property>
+                                <property name="active">0</property>
+                                <items>
+                                  <item id="0" translatable="yes">UTC</item>
+                                  <item id="60" translatable="yes">UTC+01</item>
+                                  <item id="120" translatable="yes">UTC+02</item>
+                                  <item id="180" translatable="yes">UTC+03</item>
+                                  <item id="210" translatable="yes">UTC+03:30</item>
+                                  <item id="240" translatable="yes">UTC+04</item>
+                                  <item id="270" translatable="yes">UTC+04:30</item>
+                                  <item id="300" translatable="yes">UTC+05</item>
+                                  <item id="330" translatable="yes">UTC+05:30</item>
+                                  <item id="345" translatable="yes">UTC+05:45</item>
+                                  <item id="360" translatable="yes">UTC+06</item>
+                                  <item id="390" translatable="yes">UTC+06:30</item>
+                                  <item id="420" translatable="yes">UTC+07</item>
+                                  <item id="480" translatable="yes">UTC+08</item>
+                                  <item id="525" translatable="yes">UTC+08:45</item>
+                                  <item id="540" translatable="yes">UTC+09</item>
+                                  <item id="570" translatable="yes">UTC+09:30</item>
+                                  <item id="600" translatable="yes">UTC+10</item>
+                                  <item id="630" translatable="yes">UTC+10:30</item>
+                                  <item id="660" translatable="yes">UTC+11</item>
+                                  <item id="720" translatable="yes">UTC+12</item>
+                                  <item id="765" translatable="yes">UTC+12:45</item>
+                                  <item id="780" translatable="yes">UTC+13</item>
+                                  <item id="825" translatable="yes">UTC+13:45</item>
+                                  <item id="840" translatable="yes">UTC+14</item>
+                                  <item id="-60" translatable="yes">UTC-01</item>
+                                  <item id="-120" translatable="yes">UTC-02</item>
+                                  <item id="-150" translatable="yes">UTC-02:30</item>
+                                  <item id="-180" translatable="yes">UTC-03</item>
+                                  <item id="-210" translatable="yes">UTC-03:30</item>
+                                  <item id="-240" translatable="yes">UTC-04</item>
+                                  <item id="-300" translatable="yes">UTC-05</item>
+                                  <item id="-360" translatable="yes">UTC-06</item>
+                                  <item id="-420" translatable="yes">UTC-07</item>
+                                  <item id="-480" translatable="yes">UTC-08</item>
+                                  <item id="-540" translatable="yes">UTC-09</item>
+                                  <item id="-570" translatable="yes">UTC-09:30</item>
+                                  <item id="-600" translatable="yes">UTC-10</item>
+                                  <item id="-660" translatable="yes">UTC-11</item>
+                                  <item id="-720" translatable="yes">UTC-12</item>
+                                </items>
+                                <signal name="changed" handler="on_mfd_clock_2_changed" swapped="no"/>
                               </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkCheckButton" id="mfd_clock_2_12h_checkbutton">
+                                <property name="label" translatable="yes">12 hour mode</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">False</property>
+                                <property name="draw-indicator">True</property>
+                                <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
                             </child>
                           </object>
                         </child>
                         <child type="label">
                           <object class="GtkLabel">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="label" translatable="yes">Clock 2</property>
                           </object>
                         </child>
                       </object>
                       <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">2</property>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">2</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkFrame">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="margin_top">2</property>
-                        <property name="margin_bottom">3</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">3</property>
                         <property name="hexpand">True</property>
-                        <property name="label_xalign">0.5</property>
-                        <property name="shadow_type">in</property>
+                        <property name="label-xalign">0.5</property>
+                        <property name="shadow-type">in</property>
                         <child>
-                          <object class="GtkAlignment">
+                          <object class="GtkBox">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="bottom_padding">8</property>
-                            <property name="left_padding">8</property>
-                            <property name="right_padding">8</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="margin-bottom">8</property>
+                            <property name="spacing">10</property>
+                            <property name="homogeneous">True</property>
                             <child>
-                              <object class="GtkBox">
+                              <object class="GtkComboBoxText" id="mfd_clock_3_comboboxtext">
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="spacing">10</property>
-                                <property name="homogeneous">True</property>
-                                <child>
-                                  <object class="GtkComboBoxText" id="mfd_clock_3_comboboxtext">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="active">0</property>
-                                    <items>
-                                      <item id="0" translatable="yes">UTC</item>
-                                      <item id="60" translatable="yes">UTC+01</item>
-                                      <item id="120" translatable="yes">UTC+02</item>
-                                      <item id="180" translatable="yes">UTC+03</item>
-                                      <item id="210" translatable="yes">UTC+03:30</item>
-                                      <item id="240" translatable="yes">UTC+04</item>
-                                      <item id="270" translatable="yes">UTC+04:30</item>
-                                      <item id="300" translatable="yes">UTC+05</item>
-                                      <item id="330" translatable="yes">UTC+05:30</item>
-                                      <item id="345" translatable="yes">UTC+05:45</item>
-                                      <item id="360" translatable="yes">UTC+06</item>
-                                      <item id="390" translatable="yes">UTC+06:30</item>
-                                      <item id="420" translatable="yes">UTC+07</item>
-                                      <item id="480" translatable="yes">UTC+08</item>
-                                      <item id="525" translatable="yes">UTC+08:45</item>
-                                      <item id="540" translatable="yes">UTC+09</item>
-                                      <item id="570" translatable="yes">UTC+09:30</item>
-                                      <item id="600" translatable="yes">UTC+10</item>
-                                      <item id="630" translatable="yes">UTC+10:30</item>
-                                      <item id="660" translatable="yes">UTC+11</item>
-                                      <item id="720" translatable="yes">UTC+12</item>
-                                      <item id="765" translatable="yes">UTC+12:45</item>
-                                      <item id="780" translatable="yes">UTC+13</item>
-                                      <item id="825" translatable="yes">UTC+13:45</item>
-                                      <item id="840" translatable="yes">UTC+14</item>
-                                      <item id="-60" translatable="yes">UTC-01</item>
-                                      <item id="-120" translatable="yes">UTC-02</item>
-                                      <item id="-150" translatable="yes">UTC-02:30</item>
-                                      <item id="-180" translatable="yes">UTC-03</item>
-                                      <item id="-210" translatable="yes">UTC-03:30</item>
-                                      <item id="-240" translatable="yes">UTC-04</item>
-                                      <item id="-300" translatable="yes">UTC-05</item>
-                                      <item id="-360" translatable="yes">UTC-06</item>
-                                      <item id="-420" translatable="yes">UTC-07</item>
-                                      <item id="-480" translatable="yes">UTC-08</item>
-                                      <item id="-540" translatable="yes">UTC-09</item>
-                                      <item id="-570" translatable="yes">UTC-09:30</item>
-                                      <item id="-600" translatable="yes">UTC-10</item>
-                                      <item id="-660" translatable="yes">UTC-11</item>
-                                      <item id="-720" translatable="yes">UTC-12</item>
-                                    </items>
-                                    <signal name="changed" handler="on_mfd_clock_3_changed" swapped="no"/>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkCheckButton" id="mfd_clock_3_12h_checkbutton">
-                                    <property name="label" translatable="yes">12 hour mode</property>
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="receives_default">False</property>
-                                    <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">2</property>
-                                  </packing>
-                                </child>
+                                <property name="can-focus">False</property>
+                                <property name="active">0</property>
+                                <items>
+                                  <item id="0" translatable="yes">UTC</item>
+                                  <item id="60" translatable="yes">UTC+01</item>
+                                  <item id="120" translatable="yes">UTC+02</item>
+                                  <item id="180" translatable="yes">UTC+03</item>
+                                  <item id="210" translatable="yes">UTC+03:30</item>
+                                  <item id="240" translatable="yes">UTC+04</item>
+                                  <item id="270" translatable="yes">UTC+04:30</item>
+                                  <item id="300" translatable="yes">UTC+05</item>
+                                  <item id="330" translatable="yes">UTC+05:30</item>
+                                  <item id="345" translatable="yes">UTC+05:45</item>
+                                  <item id="360" translatable="yes">UTC+06</item>
+                                  <item id="390" translatable="yes">UTC+06:30</item>
+                                  <item id="420" translatable="yes">UTC+07</item>
+                                  <item id="480" translatable="yes">UTC+08</item>
+                                  <item id="525" translatable="yes">UTC+08:45</item>
+                                  <item id="540" translatable="yes">UTC+09</item>
+                                  <item id="570" translatable="yes">UTC+09:30</item>
+                                  <item id="600" translatable="yes">UTC+10</item>
+                                  <item id="630" translatable="yes">UTC+10:30</item>
+                                  <item id="660" translatable="yes">UTC+11</item>
+                                  <item id="720" translatable="yes">UTC+12</item>
+                                  <item id="765" translatable="yes">UTC+12:45</item>
+                                  <item id="780" translatable="yes">UTC+13</item>
+                                  <item id="825" translatable="yes">UTC+13:45</item>
+                                  <item id="840" translatable="yes">UTC+14</item>
+                                  <item id="-60" translatable="yes">UTC-01</item>
+                                  <item id="-120" translatable="yes">UTC-02</item>
+                                  <item id="-150" translatable="yes">UTC-02:30</item>
+                                  <item id="-180" translatable="yes">UTC-03</item>
+                                  <item id="-210" translatable="yes">UTC-03:30</item>
+                                  <item id="-240" translatable="yes">UTC-04</item>
+                                  <item id="-300" translatable="yes">UTC-05</item>
+                                  <item id="-360" translatable="yes">UTC-06</item>
+                                  <item id="-420" translatable="yes">UTC-07</item>
+                                  <item id="-480" translatable="yes">UTC-08</item>
+                                  <item id="-540" translatable="yes">UTC-09</item>
+                                  <item id="-570" translatable="yes">UTC-09:30</item>
+                                  <item id="-600" translatable="yes">UTC-10</item>
+                                  <item id="-660" translatable="yes">UTC-11</item>
+                                  <item id="-720" translatable="yes">UTC-12</item>
+                                </items>
+                                <signal name="changed" handler="on_mfd_clock_3_changed" swapped="no"/>
                               </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkCheckButton" id="mfd_clock_3_12h_checkbutton">
+                                <property name="label" translatable="yes">12 hour mode</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">False</property>
+                                <property name="draw-indicator">True</property>
+                                <signal name="toggled" handler="on_mfd_checkbuttons_toggled" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
                             </child>
                           </object>
                         </child>
                         <child type="label">
                           <object class="GtkLabel">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="label" translatable="yes">Clock 3</property>
                           </object>
                         </child>
                       </object>
                       <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">3</property>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">3</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkFrame">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="margin_top">2</property>
-                        <property name="margin_bottom">3</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">3</property>
                         <property name="hexpand">True</property>
-                        <property name="label_xalign">0.5</property>
-                        <property name="shadow_type">in</property>
+                        <property name="label-xalign">0.5</property>
+                        <property name="shadow-type">in</property>
                         <child>
-                          <object class="GtkAlignment">
+                          <object class="GtkBox">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="bottom_padding">8</property>
-                            <property name="left_padding">8</property>
-                            <property name="right_padding">8</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
+                            <property name="margin-bottom">8</property>
+                            <property name="spacing">10</property>
+                            <property name="homogeneous">True</property>
                             <child>
-                              <object class="GtkBox">
+                              <object class="GtkComboBoxText" id="mfd_date_settings_comboboxtext">
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="spacing">10</property>
-                                <property name="homogeneous">True</property>
-                                <child>
-                                  <object class="GtkComboBoxText" id="mfd_date_settings_comboboxtext">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="active">0</property>
-                                    <items>
-                                      <item id="0" translatable="yes">YY-MM-DD</item>
-                                      <item id="1" translatable="yes">DD-MM-YY</item>
-                                      <item id="2" translatable="yes">MM-DD-YY</item>
-                                    </items>
-                                    <signal name="changed" handler="on_mfd_date_settings_changed" swapped="no"/>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="sensitive">False</property>
-                                    <property name="can_focus">False</property>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">1</property>
-                                  </packing>
-                                </child>
+                                <property name="can-focus">False</property>
+                                <property name="active">0</property>
+                                <items>
+                                  <item id="0" translatable="yes">YY-MM-DD</item>
+                                  <item id="1" translatable="yes">DD-MM-YY</item>
+                                  <item id="2" translatable="yes">MM-DD-YY</item>
+                                </items>
+                                <signal name="changed" handler="on_mfd_date_settings_changed" swapped="no"/>
                               </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="sensitive">False</property>
+                                <property name="can-focus">False</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
                             </child>
                           </object>
                         </child>
                         <child type="label">
                           <object class="GtkLabel">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="label" translatable="yes">Date settings</property>
                           </object>
                         </child>
                       </object>
                       <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">4</property>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">4</property>
                       </packing>
                     </child>
                   </object>
@@ -1364,11 +1273,11 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
         <child>
           <object class="GtkStatusbar" id="statusbar">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
+            <property name="can-focus">False</property>
             <child>
               <object class="GtkLabel" id="app_version">
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
+                <property name="can-focus">False</property>
                 <style>
                   <class name="dim-label"/>
                 </style>
@@ -1388,29 +1297,71 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
         </child>
       </object>
     </child>
+    <child type="titlebar">
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkHeaderBar" id="content_header_bar">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="show-close-button">True</property>
+            <child type="title">
+              <object class="GtkStackSwitcher">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="stack">main_content_stack</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuButton" id="main_menu_button">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="popup">main_menu</property>
+                <property name="use-popover">False</property>
+                <child>
+                  <object class="GtkImage" id="menu_button_image">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="icon-name">open-menu-symbolic</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="pack-type">end</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+      </object>
+    </child>
   </object>
   <object class="GtkAboutDialog" id="about_dialog">
-    <property name="can_focus">False</property>
-    <property name="type_hint">dialog</property>
-    <property name="transient_for">application_window</property>
-    <property name="program_name">GX52</property>
+    <property name="can-focus">False</property>
+    <property name="type-hint">dialog</property>
+    <property name="transient-for">application_window</property>
+    <property name="program-name">GX52</property>
     <property name="website">https://gitlab.com/leinardi</property>
     <property name="authors">Roberto Leinardi &lt;roberto@leinardi.com&gt;
 </property>
-    <property name="logo_icon_name">com.leinardi.gx52</property>
-    <property name="license_type">gpl-3-0</property>
-    <child type="titlebar">
-      <placeholder/>
-    </child>
+    <property name="logo-icon-name">com.leinardi.gx52</property>
+    <property name="license-type">gpl-3-0</property>
     <child internal-child="vbox">
       <object class="GtkBox">
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="orientation">vertical</property>
         <property name="spacing">2</property>
         <child internal-child="action_area">
           <object class="GtkButtonBox">
-            <property name="can_focus">False</property>
-            <property name="layout_style">end</property>
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
             <child>
               <placeholder/>
             </child>
@@ -1420,9 +1371,6 @@ along with gx52.  If not, see <http://www.gnu.org/licenses/>.
             <property name="fill">False</property>
             <property name="position">0</property>
           </packing>
-        </child>
-        <child>
-          <placeholder/>
         </child>
       </object>
     </child>
