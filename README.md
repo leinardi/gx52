@@ -40,11 +40,11 @@ flatpak run com.leinardi.gx52
 
 ### Install from source code
 #### Build time dependencies
-| Distro                | pkg-config         | Python 3.6+ | gobject-introspection       | meson | ninja-build | appstream-util | libusb-1.0-0     | libudev       |
-| --------------------- | ------------------ | ----------- | --------------------------- | ----- | ----------- | -------------- | ---------------- | ------------- |
-| Arch Linux            | pkg-config         | python      | gobject-introspection       | meson | ninja       | appstream-glib | libusb           | libudev0      |
-| Fedora                | pkgconf-pkg-config | python3     | gobject-introspection-devel | meson | ninja-build | appstream-util | libusbx-devel    | libudev-devel |
-| Ubuntu                | pkg-config         | python3     | libgirepository1.0-dev      | meson | ninja-build | appstream-util | libusb-1.0-0-dev | libudev-dev   |
+| Distro                | pkg-config         | Python 3.6+ | gobject-introspection       | meson | ninja-build | appstream-util | libusb-1.0-0     | libudev       | gtk3+        |
+| --------------------- | ------------------ | ----------- | --------------------------- | ----- | ----------- | -------------- | ---------------- | ------------- |--------------|
+| Arch Linux            | pkg-config         | python      | gobject-introspection       | meson | ninja       | appstream-glib | libusb           | libudev0      | libgtk-3     | 
+| Fedora                | pkgconf-pkg-config | python3     | gobject-introspection-devel | meson | ninja-build | appstream-util | libusbx-devel    | libudev-devel | libgtk-3-dev |
+| Ubuntu                | pkg-config         | python3     | libgirepository1.0-dev      | meson | ninja-build | appstream-util | libusb-1.0-0-dev | libudev-dev   | libgtk-3-dev | 
 
 #### Run time dependencies
 | Distro                | Python 3.6+ | pip         | gobject-introspection       | libappindicator          | gnome-shell-extension-appindicator |
