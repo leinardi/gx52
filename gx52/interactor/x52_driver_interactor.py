@@ -18,9 +18,9 @@ import datetime
 import logging
 from typing import Union, Tuple
 
-import rx
+import reactivex
 from injector import singleton, inject
-from rx import Observable
+from reactivex import Observable
 
 from gx52.driver.x52_driver import X52Driver, X52ColoredLedStatus, X52LedStatus, X52DateFormat, _X52_MFD_LINE_SIZE
 from gx52.repository.x52_repository import X52Repository
@@ -36,47 +36,47 @@ class X52DriverInteractor:
 
     def get_devices(self) -> Observable:
         _LOG.debug("X52DriverInteractor.get_devices()")
-        return rx.defer(lambda _: rx.just(self._x52_repository.get_devices()))
+        return reactivex.defer(lambda _: reactivex.just(self._x52_repository.get_devices()))
 
     def set_mfd_mode_line(self,
                           driver: X52Driver,
                           mode: str) -> Observable:
         _LOG.debug("X52DriverInteractor.set_mfd_brightness()")
-        return rx.defer(lambda _: rx.just(self._x52_repository.set_mfd_line1(driver, mode[:_X52_MFD_LINE_SIZE])))
+        return reactivex.defer(lambda _: reactivex.just(self._x52_repository.set_mfd_line1(driver, mode[:_X52_MFD_LINE_SIZE])))
 
     def set_mfd_button_line(self,
                             driver: X52Driver,
                             button: str) -> Observable:
         _LOG.debug("X52DriverInteractor.set_mfd_brightness()")
-        return rx.defer(lambda _: rx.just(self._x52_repository.set_mfd_line2(driver, button[:_X52_MFD_LINE_SIZE])))
+        return reactivex.defer(lambda _: reactivex.just(self._x52_repository.set_mfd_line2(driver, button[:_X52_MFD_LINE_SIZE])))
 
     def set_mfd_profile_name_line(self,
                                   driver: X52Driver,
                                   name: str,
                                   clear_mfd: bool = False) -> Observable:
         _LOG.debug("X52DriverInteractor.set_mfd_line3()")
-        return rx.defer(
-            lambda _: rx.just(self._x52_repository.set_mfd_line3(driver, name[:_X52_MFD_LINE_SIZE], clear_mfd)))
+        return reactivex.defer(
+            lambda _: reactivex.just(self._x52_repository.set_mfd_line3(driver, name[:_X52_MFD_LINE_SIZE], clear_mfd)))
 
     def set_led_status(self,
                        driver: X52Driver,
                        led_status: Union[X52ColoredLedStatus, X52LedStatus],
                        attr_name: str) -> Observable:
         _LOG.debug("X52DriverInteractor.set_led_status()")
-        return rx.defer(
-            lambda _: rx.just(self._x52_repository.set_led_status(driver, led_status, attr_name)))
+        return reactivex.defer(
+            lambda _: reactivex.just(self._x52_repository.set_led_status(driver, led_status, attr_name)))
 
     def set_led_brightness(self,
                            driver: X52Driver,
                            brightness: int) -> Observable:
         _LOG.debug("X52DriverInteractor.set_led_brightness()")
-        return rx.defer(lambda _: rx.just(self._x52_repository.set_led_brightness(driver, brightness)))
+        return reactivex.defer(lambda _: reactivex.just(self._x52_repository.set_led_brightness(driver, brightness)))
 
     def set_mfd_brightness(self,
                            driver: X52Driver,
                            brightness: int) -> Observable:
         _LOG.debug("X52DriverInteractor.set_mfd_brightness()")
-        return rx.defer(lambda _: rx.just(self._x52_repository.set_mfd_brightness(driver, brightness)))
+        return reactivex.defer(lambda _: reactivex.just(self._x52_repository.set_mfd_brightness(driver, brightness)))
 
     def set_date_time(self,
                       driver: X52Driver,
@@ -86,7 +86,7 @@ class X52DriverInteractor:
                       clock3_offset: datetime.timedelta,
                       date_format: X52DateFormat) -> Observable:
         _LOG.debug("X52DriverInteractor.set_date_time()")
-        return rx.defer(lambda _: rx.just(self._x52_repository.set_date_time(
+        return reactivex.defer(lambda _: reactivex.just(self._x52_repository.set_date_time(
             driver,
             use_local_time,
             use_24h,

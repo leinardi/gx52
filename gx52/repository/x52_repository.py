@@ -20,12 +20,11 @@ import threading
 from typing import List, Union, Tuple, Optional
 
 import evdev
-import rx
+import reactivex
 from evdev import ecodes, InputDevice
 from injector import singleton, inject
-from rx import Observable
-from rx.core import Observer
-from rx.core.typing import Scheduler
+from reactivex import Observable, Observer
+from reactivex.scheduler.scheduler import Scheduler
 
 from gx52.driver.x52_driver import X52Driver, X52ColoredLedStatus, X52LedStatus, X52DateFormat, X52MfdLine
 from gx52.util.concurrency import synchronized_with_attr
@@ -129,4 +128,4 @@ class X52Repository:
             device.close()
             observer.on_completed()
 
-        return rx.create(observe)
+        return reactivex.create(observe)
