@@ -20,14 +20,14 @@ import multiprocessing
 from datetime import timedelta
 from typing import Optional, Any, List, Tuple, Union
 
-import rx
+import reactivex
 from evdev import ecodes, categorize, InputEvent
 from gi.repository import Gtk, GLib
 from injector import inject, singleton
-from rx import Observable, operators
-from rx.disposable import CompositeDisposable
-from rx.scheduler import ThreadPoolScheduler
-from rx.scheduler.mainloop import GtkScheduler
+from reactivex import Observable, operators
+from reactivex.disposable import CompositeDisposable
+from reactivex.scheduler import ThreadPoolScheduler
+from reactivex.scheduler.mainloop import GtkScheduler
 
 from gx52.conf import APP_NAME, APP_SOURCE_URL, APP_VERSION, APP_ID, APP_PACKAGE_NAME
 from gx52.driver.x52_driver import X52Driver, X52DeviceType, X52DateFormat, X52ProEvdevKeyMapping, X52EvdevKeyMapping
@@ -324,7 +324,7 @@ class MainPresenter:
 
     def _start_periodic_refresh(self) -> None:
         _LOG.debug("start refresh")
-        self._composite_disposable.add(rx.interval(timedelta(milliseconds=999), scheduler=self._scheduler).pipe(
+        self._composite_disposable.add(reactivex.interval(timedelta(milliseconds=999), scheduler=self._scheduler).pipe(
             operators.start_with(0),
             operators.subscribe_on(self._scheduler),
             operators.observe_on(GtkScheduler(GLib)),
