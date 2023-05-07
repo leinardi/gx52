@@ -2,7 +2,7 @@
 
 1. Bump the `APP_VERSION` property in `gx52/conf.py` based on Major.Minor.Patch naming scheme
 2. Update `data/com.leinardi.gx52.appdata.xml` for the impending release.
-3. 4. `flatpak run --env=G_DEBUG=fatal-criticals org.freedesktop.appstream-glib validate data/com.leinardi.gx52.appdata.xml`
+3. `flatpak run --env=G_DEBUG=fatal-criticals org.freedesktop.appstream-glib validate data/com.leinardi.gx52.appdata.xml`
 4. Run `./build.sh` to update the CHANGELOG.md
 5. Update the `README.md` with the new changes (if necessary).
 6. `git commit -am "Prepare for release X.Y.Z"` (where X.Y.Z is the version you set in step 1)
