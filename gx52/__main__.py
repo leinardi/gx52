@@ -25,7 +25,7 @@ from types import TracebackType
 from typing import Type
 from os.path import abspath, join, dirname
 from peewee import SqliteDatabase
-from rx.disposable import CompositeDisposable
+from reactivex.disposable import CompositeDisposable
 from gi.repository import GLib
 from gx52.conf import APP_PACKAGE_NAME
 from gx52.model.x52_profile import X52Profile
