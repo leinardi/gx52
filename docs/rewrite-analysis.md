@@ -525,8 +525,8 @@ the whole list from the start, so 1.x features don't need rework.
 - Legacy profile import (section 10).
 - Per-mode profiles: LEDs and MFD switch automatically with the mode selector (1/2/3).
 - Visual LED editor: a picture of stick and throttle with clickable LEDs (needs SVG artwork).
-- Time zones (`chrono-tz`) for clocks 2 and 3 instead of minute offsets, with daylight saving handled;
-  the MFD clocks are re-synced when an offset changes.
+- Time zones (`jiff`, see `docs/spikes/00-desk-research.md`) for clocks 2 and 3 instead of minute
+  offsets, with daylight saving handled; the MFD clocks are re-synced when an offset changes.
 - Custom MFD text, shift indicator and blink controls.
 - Profile import / export (TOML files).
 - Tray icon (`ksni`) and background running / autostart (Background portal).
@@ -535,7 +535,9 @@ the whole list from the start, so 1.x features don't need rework.
 ### 12.2 `1.x` (through the beta channel first)
 
 - Multiple devices with a device selector (the maintainer owns one device; needs testers).
-- Input tester: live view of axes and buttons.
+- Input tester: live view of axes, buttons, hats, toggles and the mode selector, modelled on the
+  Windows driver's Test tab (`docs/spikes/07-led-editor.md`). Shares the hotspot widget with the LED
+  editor, so it may move into 1.0.0.
 - CLI / D-Bus control: GApplication actions plus a D-Bus interface on `com.leinardi.gx52` (apply a
   profile, set MFD lines or pages, set LEDs). A Flatpak app owns its app-ID bus name with no extra
   permission, so host scripts can call it.
