@@ -45,22 +45,42 @@ Notes:
   finds the vendored-sources `.cargo/config.toml` in the source root, so the offline build needs no
   extra configuration.
 
-## Decision needed: host development vs latest runtime
+## CI on GitHub Actions
 
-Raising the crate features and Meson checks to GNOME 51 means the project no longer builds on hosts
-with GTK 4.22 (the maintainer's Ubuntu), so all development would happen inside the SDK (Flatpak
-builds, GNOME Builder, or an SDK shell). Two options:
+Throwaway workflow on a temporary `ci-spike` branch (deleted afterwards), three runs on 2026-10-28.
+A `push` trigger works on any branch; only `workflow_dispatch` needs the workflow on the default
+branch.
 
-1. **Required = GNOME 50, runtime = GNOME 51.** Crate features `gnome_50` / `v1_9`, Meson
-   `gtk4 >= 4.22`, `libadwaita-1 >= 1.9`; the Flatpak runs on GNOME 51. Host builds work, CI tests on
-   the GNOME 51 runtime, features are raised only when an API needs it. Recommended.
-2. **Required = runtime = GNOME 51.** Matches "latest everything" literally, but forces SDK-only
-   development and gains nothing until the code uses a GTK 4.24 API (and libadwaita 1.10 isn't
-   reachable from Rust yet anyway).
+| Job | Runner | Result | Time |
+|---|---|---|---|
+| rustfmt | `ubuntu-24.04` | OK | 5 s |
+| Flatpak build + `meson test` (`flatpak/flatpak-github-actions/flatpak-builder@v6`, container `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51`, `--privileged`) | `ubuntu-24.04` (x86_64) | OK | 5.5–6 min |
+| Same | `ubuntu-24.04-arm` (aarch64) | OK | 4.7–5.5 min |
+| clippy in the SDK build shell | `ubuntu-24.04`, same container | OK on the third run | 4.6 min |
 
-## Not done yet
+Findings:
 
-- GitHub Actions run of the scaffold's workflow (Flatpak build on `ubuntu-24.04` and
-  `ubuntu-24.04-arm`, clippy in the SDK build shell, timings with cache). Needs a push of a workflow
-  to `leinardi/gx52`.
-- The scaffold's CI template uses `gnome-50` images; switch to `gnome-51`.
+- The free `ubuntu-24.04-arm` runners build the aarch64 Flatpak natively, as fast as x86_64; no
+  QEMU needed.
+- The flatpak-builder cache (keyed on `Cargo.lock`) is restored, but the app module is rebuilt
+  every time because its source (the checkout) changes, and cargo's target directory is not part of
+  that cache. Most of the time is compiling the gtk-rs crates. Worth trying later: a separate
+  cache of cargo's target directory, or `sccache`. Fine as it is for a start.
+- The clippy job runs `flatpak-builder --stop-at=gx52`, then `--build-shell` with network allowed
+  (`flatpak build-finish --share=network`) and pipes `cargo clippy` into it. The container image
+  ships the GNOME SDK but **not** the Rust SDK extension and has **no `flathub` remote**: the job
+  must run `flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`
+  and `flatpak-builder --install-deps-from=flathub` (system installation, no `--user`). The first
+  two runs failed on exactly these two points.
+- `actions/checkout@v4` warns about the Node 20 deprecation; use `@v5`.
+
+## Decision: host development vs latest runtime
+
+Taken 2026-10-28: **required = GNOME 50, runtime = GNOME 51.** Crate features `gnome_50` /
+`v1_9` + `gtk_v4_22`, Meson `gtk4 >= 4.22`, `libadwaita-1 >= 1.9`, Flatpak runtime GNOME 51. The
+code builds on the maintainer's Ubuntu 26.04 host, CI tests on the GNOME 51 runtime, and features
+are raised only when an API needs it. `spikes/s6-hello` was switched back to these values and the
+CI runs above used them.
+
+Rejected: required = runtime = GNOME 51, which forces SDK-only development and gains nothing until
+the code uses a GTK 4.24 API (and libadwaita 1.10 is not reachable from Rust yet anyway).
