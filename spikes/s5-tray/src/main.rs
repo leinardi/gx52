@@ -152,9 +152,16 @@ fn toggle_window(app: &adw::Application, state: &TrayState) {
         window.set_visible(false);
         tracing::info!("tray action applied: window hidden");
     } else {
-        state.hold.replace(None);
-        window.present();
+        show_window(app, state);
         tracing::info!("tray action applied: window shown");
+    }
+}
+
+/// Shows the window and drops the hold taken while it was hidden in the tray.
+fn show_window(app: &adw::Application, state: &TrayState) {
+    state.hold.replace(None);
+    if let Some(window) = app.windows().into_iter().next() {
+        window.present();
     }
 }
 
@@ -203,7 +210,11 @@ fn spawn_tray(app: &adw::Application, state: &Rc<TrayState>) {
                     TrayAction::ToggleWindow => toggle_window(&app, &state),
                     TrayAction::Quit => app.quit(),
                     TrayAction::WatcherOnline => state.available.set(Some(true)),
-                    TrayAction::WatcherOffline => state.available.set(Some(false)),
+                    TrayAction::WatcherOffline => {
+                        state.available.set(Some(false));
+                        // Without a tray there is no way back to a hidden window.
+                        show_window(&app, &state);
+                    }
                 }
             }
         }
@@ -226,12 +237,10 @@ fn main() -> glib::ExitCode {
         move |app| spawn_tray(app, &state)
     ));
     app.connect_activate(move |app| {
-        let window = app
-            .windows()
-            .into_iter()
-            .next()
-            .unwrap_or_else(|| build_window(app, &state).upcast());
-        window.present();
+        if app.windows().is_empty() {
+            build_window(app, &state);
+        }
+        show_window(app, &state);
     });
     app.run()
 }
