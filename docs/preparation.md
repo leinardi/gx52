@@ -42,12 +42,13 @@ Throwaway code on a separate `spikes` branch that is never merged. Each spike re
 | S7 | Visual LED editor: rendering stick and throttle with clickable LEDs in GTK 4 (SVG plus hotspot overlay, or custom snapshot drawing); source and licence of the artwork. | look and feel input |
 | S8 | Legacy import: read a real `gx52.db` and check schema and enum values against the mapping in the analysis. | old database, if available |
 
-Desk research, can run in parallel with the spikes:
+Desk research, can run in parallel with the spikes (results in
+[spikes/00-desk-research.md](spikes/00-desk-research.md)):
 
-- [ ] Do `game-devices-udev` / `steam-devices` already cover the X52 product IDs?
-- [ ] Flathub beta branch process for an existing app.
-- [ ] Time zones: `chrono-tz` vs `glib::TimeZone` (uses the runtime's tzdata, nothing compiled in).
-- [ ] `ksni` async runtime requirements (input for S5).
+- [x] Do `game-devices-udev` / `steam-devices` already cover the X52 product IDs?
+- [x] Flathub beta branch process for an existing app.
+- [x] Time zones: `chrono-tz` vs `glib::TimeZone` (uses the runtime's tzdata, nothing compiled in).
+- [x] `ksni` async runtime requirements (input for S5).
 
 Start with S1 and S2: S1 is the risk that changes the most if it fails.
 
