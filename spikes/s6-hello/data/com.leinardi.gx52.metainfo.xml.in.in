@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@app-id@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>GX52</name>
+  <summary>Control the LEDs and MFD of the Logitech X52 and X52 Pro</summary>
+  <description>
+    <p>Control the LEDs and MFD of the Logitech X52 and X52 Pro.</p>
+  </description>
+  <developer id="com.leinardi">
+    <name translate="no">Roberto Leinardi</name>
+  </developer>
+  <launchable type="desktop-id">@app-id@.desktop</launchable>
+  <translation type="gettext">@gettext-package@</translation>
+  <url type="homepage">https://github.com/leinardi/gx52</url>
+  <url type="bugtracker">https://github.com/leinardi/gx52/issues</url>
+  <url type="vcs-browser">https://github.com/leinardi/gx52</url>
+  <content_rating type="oars-1.1" />
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+  <branding>
+    <color type="primary" scheme_preference="light">#99c1f1</color>
+    <color type="primary" scheme_preference="dark">#1a5fb4</color>
+  </branding>
+  <releases>
+    <release version="0.1.0" date="2026-10-28">
+      <description translate="no">
+        <p>Initial release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <!-- The prefix is the base app path (no .Devel). It must match `resource-base-path`
+       so libadwaita auto-loads style.css, icons/ and shortcuts-dialog.ui. -->
+  <gresource prefix="/com/leinardi/gx52">
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/window.ui">window.ui</file>
+    <!-- Root alias: AdwApplication wires app.shortcuts / Ctrl+? to it automatically. -->
+    <file compressed="true" preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">shortcuts-dialog.ui</file>
+    <file compressed="true">style.css</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="metainfo.xml">@metainfo-file@</file>
+  </gresource>
+</gresources>

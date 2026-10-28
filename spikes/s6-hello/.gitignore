@@ -1,0 +1,7 @@
+/target/
+/_build/
+/build-aux/.flatpak-builder/
+/.flatpak-builder/
+/flatpak_app/
+/_flatpak/
+/vendor/

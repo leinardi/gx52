@@ -1,0 +1,48 @@
+{
+    "id": "com.leinardi.gx52.Devel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "51",
+    "sdk": "org.gnome.Sdk",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.rust-stable"
+    ],
+    "command": "gx52",
+    "desktop-file-name-suffix": " (Devel)",
+    "finish-args": [
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--env=RUST_LOG=gx52=debug",
+        "--env=RUST_BACKTRACE=1"
+    ],
+    "build-options": {
+        "append-path": "/usr/lib/sdk/rust-stable/bin",
+        "build-args": [
+            "--share=network"
+        ],
+        "test-args": [
+            "--share=network"
+        ],
+        "env": {
+            "RUSTFLAGS": "-C force-frame-pointers=yes"
+        }
+    },
+    "modules": [
+        {
+            "name": "gx52",
+            "buildsystem": "meson",
+            "builddir": true,
+            "run-tests": true,
+            "config-opts": [
+                "-Dprofile=development"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": ".."
+                }
+            ]
+        }
+    ]
+}

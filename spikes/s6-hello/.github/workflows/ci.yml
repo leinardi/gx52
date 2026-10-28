@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add rustfmt
+      - run: cargo fmt --all -- --check
+
+  flatpak:
+    # Builds the Devel manifest inside the GNOME SDK, runs `meson test` (cargo test + lint
+    # suite) and uploads an installable bundle.
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: gx52.flatpak
+          manifest-path: build-aux/com.leinardi.gx52.Devel.json
+          cache-key: flatpak-builder-${{ github.sha }}
+
+  clippy:
+    # Run clippy inside the GNOME SDK (the runner's system GTK is older than the runtime),
+    # the same --stop-at / build-finish / --build-shell trick GNOME's CI templates use.
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build up to the app module, then run clippy in its build shell
+        run: |
+          flatpak-builder --user --disable-rofiles-fuse --install-deps-from=flathub --keep-build-dirs \
+            --stop-at=gx52 flatpak_app build-aux/com.leinardi.gx52.Devel.json
+          # Give the build shell network access so cargo can fetch crates.
+          flatpak build-finish --share=network flatpak_app
+          echo "cd .. && cargo clippy --all-targets -- -D warnings" | \
+            flatpak-builder --user --disable-rofiles-fuse \
+            --build-shell=gx52 flatpak_app build-aux/com.leinardi.gx52.Devel.json

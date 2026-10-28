@@ -1,0 +1,9 @@
+# Files with translatable strings, one per line, sorted.
+data/com.leinardi.gx52.desktop.in.in
+data/com.leinardi.gx52.gschema.xml.in
+data/com.leinardi.gx52.metainfo.xml.in.in
+data/resources/ui/shortcuts-dialog.blp
+data/resources/ui/window.blp
+src/application.rs
+src/main.rs
+src/window.rs

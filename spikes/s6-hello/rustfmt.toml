@@ -1,0 +1,3 @@
+edition = "2024"
+newline_style = "Unix"
+# Nightly-only options (imports_granularity, group_imports, wrap_comments) are ignored on stable.

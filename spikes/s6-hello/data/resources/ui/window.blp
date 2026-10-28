@@ -1,0 +1,57 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52Window: Adw.ApplicationWindow {
+  title: _("GX52");
+  default-width: 800;
+  default-height: 600;
+  width-request: 360;
+  height-request: 294;
+
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        [end]
+        MenuButton {
+          primary: true;
+          icon-name: "open-menu-symbolic";
+          tooltip-text: _("Main Menu");
+          menu-model: primary_menu;
+        }
+      }
+
+      content: Adw.StatusPage {
+        icon-name: "com.leinardi.gx52-symbolic";
+        title: _("GX52");
+        description: _("Press the button to say hello");
+
+        child: Button {
+          label: _("_Say Hello");
+          use-underline: true;
+          halign: center;
+          action-name: "win.say-hello";
+
+          styles [
+            "pill",
+            "suggested-action",
+          ]
+        };
+      };
+    };
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_Keyboard Shortcuts");
+      action: "app.shortcuts";
+    }
+
+    item {
+      label: _("_About GX52");
+      action: "app.about";
+    }
+  }
+}

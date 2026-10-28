@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=GX52
+Comment=Control the LEDs and MFD of the Logitech X52 and X52 Pro
+Exec=@bin@
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Icon=@app-id@
+Terminal=false
+Type=Application
+Categories=GTK;Utility;
+# Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
+Keywords=gtk;rust;
+StartupNotify=true

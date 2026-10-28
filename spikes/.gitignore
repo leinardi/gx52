@@ -1,0 +1,7 @@
+# Build outputs of the spikes
+target/
+_build/
+_flatpak*/
+_repo*/
+_fb-state*/
+.flatpak-builder/
