@@ -15,7 +15,7 @@ base_id = 'com.leinardi.gx52'
 # Presence/version checks only: cargo links the libraries itself.
 # Keep these in sync with the gtk/adw features in Cargo.toml.
 dependency('glib-2.0', version: '>= 2.88')
-dependency('gtk4', version: '>= 4.24')
+dependency('gtk4', version: '>= 4.22')
 dependency('libadwaita-1', version: '>= 1.9')
 
 cargo = find_program('cargo')

@@ -9,12 +9,12 @@ publish = false
 
 [dependencies]
 # Keep the version features in sync with the Flatpak runtime (build-aux/*.json)
-# and the dependency() checks in meson.build. GNOME 51 = GTK 4.24 (gnome_50 + v4_24), libadwaita 1.10
-# (the crate has no v1_10 feature yet, so libadwaita APIs stop at 1.9).
+# and the dependency() checks in meson.build. Required: GNOME 50 (GTK 4.22, libadwaita 1.9, what
+# Ubuntu 26.04 ships); tested on the GNOME 51 runtime.
 # adw's gtk_v4_* feature matters too: without gtk_v4_10, adw widgets do not implement
 # gtk::Accessible in Rust (no a11y methods, failed upcasts).
-gtk = { package = "gtk4", version = "0.11", features = ["gnome_50", "v4_24"] }
-adw = { package = "libadwaita", version = "0.9", features = ["v1_9", "gtk_v4_24"] }
+gtk = { package = "gtk4", version = "0.11", features = ["gnome_50"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_9", "gtk_v4_22"] }
 gettext-rs = { version = "0.8", features = ["gettext-system"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
