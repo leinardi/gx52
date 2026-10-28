@@ -26,7 +26,7 @@ Sources analysed:
 | Language / toolkit | Rust, gtk4-rs + libadwaita. Full rewrite, not a port: feature parity from the user's point of view, plus new features. |
 | Build system | GNOME convention: Meson driving Cargo, installing desktop file, metainfo, icons, GSettings schema and GResource. |
 | Distribution | Flathub is the main (and initially only) channel. |
-| Hosting | Move to GitHub (`github.com/leinardi/gx52`, today a read-only mirror) as the primary repository: code, issues, PRs, CI, releases. The GitLab project gets a tombstone explaining the technical reasons and pointing to GitHub. See [section 7](#7-hosting-move-to-github-and-gitlab-tombstone). |
+| Hosting | GitHub (`github.com/leinardi/gx52`, formerly a read-only mirror) is the primary repository: code, issues, PRs, CI, releases, managed through `gh-leinardi-iac`. The GitLab project gets a tombstone explaining the technical reasons and pointing to GitHub, pushed right before the first public `v1.0.0`. See [section 7](#7-hosting-move-to-github-and-gitlab-tombstone). |
 | Branching | Single trunk (`main`), as in the reference repositories. `master` / `release` are retired once the rewrite lands. Work happens on the `rust-rewrite` branch until then. |
 | Versioning | `vX.Y.Z` tags, as in all recent GitHub projects (the legacy `0.7.x` tags stay as history). Development builds are `0.99.x`; `1.0.0` is cut when the rewrite is considered complete. See [section 9.4](#94-versioning). |
 | Profiles of existing users | Imported automatically, once, on the first start that finds the old SQLite database. No CLI option. See [section 10](#10-importing-legacy-profiles). |
@@ -36,7 +36,7 @@ Sources analysed:
 | udev rule | No CLI option and no host-escape permission. When a device is present but not accessible, the app shows a page with the rule (`TAG+="uaccess"`), a copy button and the commands to run. |
 | Scope | See [section 12](#12-feature-roadmap): `1.0.0` = parity plus a core set of new features; the rest ships in `1.x` through the beta channel. The architecture is designed for all of them from the start. |
 | Pre-releases | `0.99.x` builds are published to the Flathub **beta** channel. |
-| Switch-over | Move to GitHub right away, before writing code. |
+| Switch-over | Development on GitHub right away; GitLab tombstone and archive right before `v1.0.0`. |
 | Logging | `tracing`, as in the reference repositories, with GLib/GTK log messages forwarded into it. See [section 5.5](#55-logging). |
 | Tray icon | Required. |
 | Update check | Dropped (Flathub handles updates). |
@@ -359,42 +359,37 @@ These reasons go in the tombstone, in short form:
 - **Consistency.** All other projects of the maintainer, their workflows, shared actions
   (`gh-reusable-workflows`, `make-common`) and Dependabot setup live on GitHub.
 
-### 7.2 Current state
+### 7.2 Current state (2026-10-28)
 
-- GitLab `leinardi/gx52`: primary, default branch `release`, 17 stars, 4 forks, 3 open issues, no open
-  merge requests. It push-mirrors to GitHub.
-- GitHub `leinardi/gx52`: mirror, default branch `master`, description "WARNING: This is a mirror of
-  the GitLab repository…", homepage pointing to GitLab, issues enabled, 7 stars.
-- Open GitLab issues:
-  - #3 "No POV1 LED Control" (feature request, relevant to the LED model of the rewrite);
-  - #5 "python strange error" (Python-specific, obsolete with the rewrite);
-  - #6 "Fix permissions on default flatpak installation for Pop!OS users" (device access in Flatpak,
-    relevant to risk R4).
+- GitLab `leinardi/gx52`: unchanged, default branch `release`, 17 stars, 4 forks, 3 open issues, no
+  open merge requests. The push mirror to GitHub is removed; GitLab receives no more pushes.
+- GitHub `leinardi/gx52`: the working repository. All branches (`master`, `release`,
+  `rust-rewrite`) and tags (`0.7.0` to `0.7.6`, `0.7.0-flathub`) match GitLab. Managed by OpenTofu in
+  `leinardi/gh-leinardi-iac` (`module "repo_gx52"`): description, topics, settings, labels and
+  rulesets come from there, the homepage pointing to GitLab is dropped.
+- Issues:
+  - GitLab #3 "No POV1 LED Control" is now GitHub #3;
+  - GitLab #6 "Fix permissions on default flatpak installation for Pop!OS users" is now GitHub #4;
+  - GitLab #5 "python strange error" is not carried over (Python-specific);
+  - GitHub #1 "[feature request] Deb Snap ?" (2023) was opened on the mirror and is still open;
+    Flathub is the only planned channel.
+- The Dependabot PR on the mirror (GitHub #2, `requests` bump for the Python app) is closed and its
+  branch deleted.
 
-### 7.3 Switch-over steps
+### 7.3 Remaining switch-over steps
 
-The order matters: the GitLab push mirror must be removed first, otherwise the next push to GitLab
-overwrites what was pushed to GitHub.
-
-1. Check that the GitHub mirror is up to date (all branches and tags), then remove the push mirror on
-   GitLab.
-2. GitHub: update description and homepage, remove the mirror warning, set up rulesets / branch
-   protection, Dependabot, Actions permissions and the secrets the release workflow needs (token for
-   the Flathub PR).
-3. Push the `rust-rewrite` branch to GitHub and continue development there.
-4. Recreate the relevant open issues on GitHub (#3 and #6) with a link to the original; close all
-   three on GitLab with a link to the new issue or an explanation. With only three issues, by hand is
-   faster than an import tool.
-5. Tombstone on GitLab (see 7.4), then archive the GitLab project (read-only, still browsable, still
-   clonable).
-6. The default branch on GitHub becomes `main` when the rewrite is merged; `master`, `release` and the
-   stale `bugfix-for-x52` branch are deleted or left frozen. The legacy tags stay.
-7. Flathub: the next release points the manifest source to GitHub. The current published version
-   (0.7.6) keeps building from the GitLab tag, which stays available in the archived project. Metainfo
-   URLs (homepage, bug tracker, VCS browser, help) switch to GitHub.
-
-Timing: the switch can happen now, before the rewrite is finished. The published 0.7.6 does not
-depend on it.
+1. GitHub, during the rewrite: Dependabot, Actions permissions and the secret the release workflow
+   needs (token for the Flathub PR), added together with the workflows. Required checks are added to
+   the `repo_gx52` module once CI exists.
+2. Right before the first public `v1.0.0`: close the GitLab issues with a link to the GitHub ones or
+   an explanation, push the tombstone (7.4) to GitLab, archive the GitLab project (read-only, still
+   browsable and clonable). Until then GitLab stays as it is.
+3. The default branch on GitHub becomes `main` when the rewrite is merged; `master` and `release` are
+   deleted or left frozen. The legacy tags stay. The stale `bugfix-for-x52` branch only existed on
+   GitLab and is already gone there.
+4. Flathub: the first release from GitHub points the manifest source to GitHub. The published 0.7.6
+   keeps building from its GitLab tag, which stays available in the archived project. Metainfo URLs
+   (homepage, bug tracker, VCS browser, help) switch to GitHub.
 
 ### 7.4 Tombstone content
 
@@ -408,9 +403,6 @@ A final commit on the GitLab default branch that replaces the whole tree with a 
 
 The GitLab project description and avatar are updated to say "Moved to GitHub", issues and merge
 requests are disabled, then the project is archived.
-
-Optional: a commit on GitHub `master` (the current default branch) that updates the README to drop
-the "mirror" wording until `main` replaces it.
 
 ## 8. Dependabot
 

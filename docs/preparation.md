@@ -8,14 +8,18 @@ Order: stage A and stage B can overlap; stage C is written from the spike result
 
 ## Stage A: housekeeping
 
-- [ ] Import the `leinardi/gx52` GitHub repository into `gh-leinardi-iac` (OpenTofu stack
+- [x] Import the `leinardi/gx52` GitHub repository into `gh-leinardi-iac` (OpenTofu stack
       `stacks/github-repos`) and manage it like the other repositories: description, homepage
       (drop the "mirror of the GitLab repository" wording), topics, settings, branch rules.
-- [ ] Close Dependabot PR #2 (`requests` bump for the Python app) and delete its branch.
-- [ ] Recreate the relevant open GitLab issues on GitHub, with a link to the original:
-      #3 "No POV1 LED Control" and #6 "Fix permissions on default flatpak installation for Pop!OS
-      users". #5 "python strange error" is obsolete with the rewrite.
-- [ ] Update section 7 of `rewrite-analysis.md` with the current state: the GitLab push mirror is
+      Configuration committed on `gh-leinardi-iac` branch `feat/gx52-import`; the `tofu import`,
+      plan review and apply are done by the owner.
+- [x] Close Dependabot PR #2 (`requests` bump for the Python app) and delete its branch.
+- [x] Recreate the relevant open GitLab issues on GitHub, with a link to the original:
+      #3 "No POV1 LED Control" (now GitHub #3) and #6 "Fix permissions on default flatpak
+      installation for Pop!OS users" (now GitHub #4). #5 "python strange error" is obsolete with the
+      rewrite.
+- [ ] Decide on GitHub #1 "[feature request] Deb Snap ?" (opened on the mirror in 2023).
+- [x] Update section 7 of `rewrite-analysis.md` with the current state: the GitLab push mirror is
       off, GitHub is in sync and is the working repository.
 
 Deferred, not part of this preparation: the GitLab tombstone (section 7.4 of the analysis) is pushed
