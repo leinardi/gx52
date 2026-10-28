@@ -1,0 +1,64 @@
+# Spike S6: proves the GNOME CI jobs on GitHub Actions for the GX52 rewrite.
+# Reference copy of the workflow that passed on the deleted ci-spike branch; not active here.
+name: CI spike
+
+on:
+  push:
+    branches: [ci-spike]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: spikes/s6-hello
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup component add rustfmt
+      - run: cargo fmt --all -- --check
+
+  flatpak:
+    # Builds the Devel manifest inside the GNOME 51 SDK, runs `meson test` and uploads a bundle.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: gx52-${{ matrix.arch }}.flatpak
+          manifest-path: spikes/s6-hello/build-aux/com.leinardi.gx52.Devel.json
+          arch: ${{ matrix.arch }}
+          cache-key: flatpak-builder-${{ matrix.arch }}-${{ hashFiles('spikes/s6-hello/Cargo.lock') }}
+
+  clippy:
+    # Clippy inside the GNOME SDK: the runner's system GTK is older than the runtime.
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+      # The image ships the SDK but not the Rust extension, and has no flathub remote.
+      - name: Build up to the app module, then run clippy in its build shell
+        run: |
+          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --disable-rofiles-fuse --install-deps-from=flathub --keep-build-dirs \
+            --stop-at=gx52 flatpak_app build-aux/com.leinardi.gx52.Devel.json
+          flatpak build-finish --share=network flatpak_app
+          echo "cd .. && cargo clippy --all-targets -- -D warnings" | \
+            flatpak-builder --disable-rofiles-fuse \
+            --build-shell=gx52 flatpak_app build-aux/com.leinardi.gx52.Devel.json
