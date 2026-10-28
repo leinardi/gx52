@@ -36,7 +36,7 @@ Throwaway code on a separate `spikes` branch that is never merged. Each spike re
 | S1 | Can `nusb` send the vendor control transfers without detaching the kernel HID driver, so the joystick keeps working? If not, does `rusb`? | X52 Pro |
 | S2 | Verify every command on the device: LEDs, both brightness values, MFD text, clocks 1 to 3, 12h/24h, date formats, shift, blink. Find the MFD character set and whether clock offsets are relative to clock 1. Becomes `docs/protocol.md`. | X52 Pro |
 | S3 | evdev next to the USB control: X52 Pro key codes, mode selector behaviour, unplug / replug with `nusb::watch_devices`. | X52 Pro |
-| S4 | S1 to S3 inside a minimal Flatpak with `--device=all`: USB access, input device, hotplug events, behaviour when the udev rule is missing. | X52 Pro |
+| S4 (partial ✅, hotplug pending) | S1 to S3 inside a minimal Flatpak with `--device=all`: USB access, input device, hotplug events, behaviour when the udev rule is missing. | X52 Pro |
 | S5 | Tray: integrating `ksni` with the GLib main loop; GNOME with the AppIndicator extension, KDE, inside Flatpak, behaviour without a tray host. Background portal for autostart and hidden-window running. | desktop session |
 | S6 (local ✅, CI pending) | CI and release dry run: hello-world gtk-rs + Meson + Blueprint + Flatpak app; GitHub Actions on x86_64 and aarch64 (clippy in the SDK build shell, caching, durations); `cargo-sources.json` generation and `flatpak-builder-lint`. | nothing |
 | S7 | Visual LED editor: rendering stick and throttle with clickable LEDs in GTK 4 (SVG plus hotspot overlay, or custom snapshot drawing); source and licence of the artwork. | look and feel input |
