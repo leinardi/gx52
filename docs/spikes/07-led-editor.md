@@ -73,20 +73,7 @@ product images or manual scans (copyright). Released with the app under GPL-3.0-
 CC-BY-SA-4.0 for the SVGs, decide when adding them). Style: monochrome outline drawn with
 `currentColor`-like neutral grey so it works in light and dark mode, no shading.
 
-Photo guide (one session, about 6 to 8 photos):
-
-- **Views**: stick from the front-top (trigger side away, buttons A, B, Fire cover, POV 2 visible);
-  stick from the left side (trigger, pinkie, side buttons); stick base from the front (the three
-  toggle pairs and their LEDs); throttle from the right/top (D, E, i, mouse stick, scroll wheel,
-  MFD); throttle from the left (thumb-side buttons, throttle axis LED); one wide shot of the whole
-  device for proportions.
-- **Camera**: from a distance with optical zoom (2× to 5× on a phone), lens square to the main
-  face of the part. This reduces perspective so traced shapes look like a drawing, not a photo.
-- **Light**: diffuse daylight or two lamps at 45°, no direct flash (black glossy plastic shows
-  highlights that hide edges). LEDs **on** for one set (to mark their exact position), off for
-  another.
-- **Background**: plain, light and matte (a sheet of paper), contrasting with the black device.
-- **Resolution**: full sensor resolution, no filters, no portrait-mode blur. Keep the originals.
+The shots needed and how to take them are in [../hands-on.md](../hands-on.md), section 1.
 
 ## Input tester (test page)
 

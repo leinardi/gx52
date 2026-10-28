@@ -52,6 +52,9 @@ Desk research, can run in parallel with the spikes (results in
 
 Start with S1 and S2: S1 is the risk that changes the most if it fails.
 
+The remaining steps that need a person at the device (photos, button presses, hotplug, looking
+at the tray and the LED editor) are collected in [hands-on.md](hands-on.md).
+
 ## Stage C: documentation and roadmap
 
 Written after the spikes, so they describe what has been proven.
