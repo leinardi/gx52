@@ -31,6 +31,13 @@ the call the shell makes when the user clicks.
   (`None` unknown, `Some(true)`, `Some(false)`) where a successful spawn only fills `None`. The app's
   "close hides to tray" logic must use this state.
 - `watcher_online` is not called for the initial registration, only when a watcher comes back.
+- **If the watcher goes away while the window is hidden, the window must be shown again** (and the
+  application hold dropped); otherwise there is no way back to it. Found by the gtk-rs review of the
+  spike and fixed there.
+- Re-activating the app (for example launching it again while it sits in the tray) must also drop the
+  hold taken when the window was hidden.
+- The tray `Handle` should be stored and `shutdown()` called from the application's `shutdown`
+  instead of being parked in a never-ending future as in the spike.
 - Only `--talk-name=org.kde.StatusNotifierWatcher` is needed in the manifest (the lint in S6 accepts
   it); no well-known name has to be owned by the tray.
 
