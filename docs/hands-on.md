@@ -85,7 +85,22 @@ Results go to [spikes/04-flatpak-sandbox.md](spikes/04-flatpak-sandbox.md).
 
 Results go to [spikes/05-tray.md](spikes/05-tray.md).
 
-## 5. LED editor (S7)
+## 5. Virtual mouse (S9)
+
+Run `spikes/s9-virtual-mouse` (from its directory: `cargo run --release`).
+
+- [ ] Ministick moves the pointer in the right directions; small pushes move slowly, full push fast.
+- [ ] Note whether speed and curve feel right compared with the Windows driver (adjust `GAIN`,
+      `CURVE`, `DEADZONE` in the source and re-run).
+- [ ] Primary mouse button clicks; wheel scrolls (direction right?); wheel press right-clicks.
+- [ ] Works in a Wayland session (default) and, if at hand, in an X11 session.
+- [ ] With a game running: the pointer moves, and note whether the game also reacts to the
+      ministick axes.
+- [ ] Unplug while holding the primary button: the spike exits; check no button stays stuck.
+
+Results go to [spikes/09-virtual-mouse.md](spikes/09-virtual-mouse.md).
+
+## 6. LED editor (S7)
 
 Run `spikes/s7-led-editor` with the device connected (the spike does not drive the device yet; this
 checks the UI only).

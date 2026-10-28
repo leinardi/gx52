@@ -542,6 +542,8 @@ the whole list from the start, so 1.x features don't need rework.
   profile, set MFD lines or pages, set LEDs). A Flatpak app owns its app-ID bus name with no extra
   permission, so host scripts can call it.
 - Game integration (section 12.3).
+- Virtual mouse: the throttle ministick moves the pointer, with clicks and wheel, through uinput
+  (`docs/spikes/09-virtual-mouse.md`). Off by default; needs a udev rule for `/dev/uinput`.
 
 ### 12.3 Game integration
 

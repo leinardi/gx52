@@ -41,6 +41,7 @@ Throwaway code on a separate `spikes` branch that is never merged. Each spike re
 | S6 (local ✅, CI pending) | CI and release dry run: hello-world gtk-rs + Meson + Blueprint + Flatpak app; GitHub Actions on x86_64 and aarch64 (clippy in the SDK build shell, caching, durations); `cargo-sources.json` generation and `flatpak-builder-lint`. | nothing |
 | S7 (✅ placeholders, artwork and hands-on check pending) | Visual LED editor: rendering stick and throttle with clickable LEDs in GTK 4 (SVG plus hotspot overlay, or custom snapshot drawing); source and licence of the artwork. | look and feel input |
 | S8 ✅ | Legacy import: read a real `gx52.db` and check schema and enum values against the mapping in the analysis. | old database, if available |
+| S9 (✅ desk research and uinput, hands-on pending) | Virtual mouse: ministick as mouse pointer like the Windows driver; prior art, evdev codes, uinput access on the host and in the sandbox. | X52 Pro |
 
 Desk research, can run in parallel with the spikes (results in
 [spikes/00-desk-research.md](spikes/00-desk-research.md)):
