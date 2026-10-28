@@ -531,6 +531,10 @@ the whole list from the start, so 1.x features don't need rework.
 - Profile import / export (TOML files).
 - Tray icon (`ksni`) and background running / autostart (Background portal).
 - In-app udev guidance (R4).
+- Virtual mouse: the throttle ministick moves the pointer, with left click, right click (wheel
+  press) and wheel, through uinput (`docs/spikes/09-virtual-mouse.md`). Only an on/off switch, with
+  the spike's tuning (deadzone 1 step, gain 0.6, curve 1.6, 10 ms tick); the udev guidance covers
+  `/dev/uinput`.
 
 ### 12.2 `1.x` (through the beta channel first)
 
@@ -542,8 +546,8 @@ the whole list from the start, so 1.x features don't need rework.
   profile, set MFD lines or pages, set LEDs). A Flatpak app owns its app-ID bus name with no extra
   permission, so host scripts can call it.
 - Game integration (section 12.3).
-- Virtual mouse: the throttle ministick moves the pointer, with clicks and wheel, through uinput
-  (`docs/spikes/09-virtual-mouse.md`). Off by default; needs a udev rule for `/dev/uinput`.
+- Virtual mouse settings: speed, curve, deadzone, wheel direction (the 1.0.0 version has fixed
+  values).
 
 ### 12.3 Game integration
 

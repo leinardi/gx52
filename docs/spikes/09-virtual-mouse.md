@@ -63,7 +63,7 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
 | Virtual device's own event node | root-only, as for any input device; nothing else in the session can read it |
 | GNOME 51 sandbox with `--device=all`, no network | OK, same as the host |
 | Sandbox without `--device=all` | fails: `/dev/uinput` does not exist in the sandbox |
-| Pointer moves, clicks and scrolls with the ministick | to check by hand ([hands-on.md](../hands-on.md)) |
+| Pointer moves, clicks and scrolls with the ministick (host, GNOME Wayland, 2026-10-28) | OK after inverting X: the ministick's X axis grows to the **left**. Left click, right click and wheel direction correct. Speed and curve felt "already very good" with the values above |
 
 ## Findings for the app
 
@@ -94,16 +94,16 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
   portal backend, and is meant for remote desktop, not input devices. uinput is the standard way
   (Steam Input, AntiMicroX, input-remapper all use it).
 
-## Proposal
+## Decision
 
-A **1.x feature** (through beta first): "Use the ministick as a mouse" with speed, curve, deadzone
-and wheel direction, off by default, guidance page extended with the uinput rule. Could move into
-1.0.0 if the hands-on check goes well, since the code is small and independent of the rest.
+Taken 2026-10-28 after the hands-on test: **in 1.0.0**, with only an on/off switch and the spike's
+values (deadzone 1 step, gain 0.6 px per tick, curve 1.6, 10 ms tick, X inverted). The switch stays
+because the feature needs the uinput permission and some games may react to the ministick axes
+too. Speed, curve, deadzone and wheel direction settings come in 1.x.
 
 ## Not done yet
 
-- Hands-on: move the pointer, click, scroll; tune gain and curve against the Windows driver's feel;
-  check X11 and Wayland sessions and a running game.
+- X11 session and a running game.
 - Behaviour on unplug while a button is held.
 - Whether the X52 (non-Pro) reports the ministick on the same codes (libx52's non-Pro table orders
   the mouse buttons differently).

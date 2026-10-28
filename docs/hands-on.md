@@ -89,11 +89,12 @@ Results go to [spikes/05-tray.md](spikes/05-tray.md).
 
 Run `spikes/s9-virtual-mouse` (from its directory: `cargo run --release`).
 
-- [ ] Ministick moves the pointer in the right directions; small pushes move slowly, full push fast.
-- [ ] Note whether speed and curve feel right compared with the Windows driver (adjust `GAIN`,
+- [x] Ministick moves the pointer in the right directions; small pushes move slowly, full push fast.
+      (2026-10-28: X was mirrored, fixed in the spike; feel is good as is.)
+- [x] Note whether speed and curve feel right compared with the Windows driver (adjust `GAIN`,
       `CURVE`, `DEADZONE` in the source and re-run).
-- [ ] Primary mouse button clicks; wheel scrolls (direction right?); wheel press right-clicks.
-- [ ] Works in a Wayland session (default) and, if at hand, in an X11 session.
+- [x] Primary mouse button clicks; wheel scrolls (direction right?); wheel press right-clicks.
+- [x] Works in a Wayland session (default) and, if at hand, in an X11 session.
 - [ ] With a game running: the pointer moves, and note whether the game also reacts to the
       ministick axes.
 - [ ] Unplug while holding the primary button: the spike exits; check no button stays stuck.
