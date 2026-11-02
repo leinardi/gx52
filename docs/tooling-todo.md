@@ -88,9 +88,11 @@ item off, or delete it, in the commit that does it.
 
 - [ ] Remove the legacy Python application and its tooling: `gx52/` (Python package), `bin/`,
       `build.sh`, `run.sh`, `t.py`, `requirements.txt`, `mypy.ini`, `pylintrc`, `.pycharm/`,
-      `scripts/make_local_manifest.py`, `scripts/meson_post_install.py`, the legacy
-      `meson.build`. They were brought up to the new checks (GPL header, shellcheck, `meson
-      format`) only so `make check` passes in the meantime.
+      `scripts/make_local_manifest.py`, `scripts/meson_post_install.py`. The legacy `meson.build`,
+      `data/meson.build` and `bin/meson.build` are replaced earlier, by the Rust scaffold
+      ([roadmap.md](roadmap.md#m0-project-setup-the-0990-skeleton), M0). They were brought up to the
+      new checks (GPL header, shellcheck, `meson format`) only so `make check` passes in the
+      meantime.
 - [ ] Remove the `flatpak/` submodule (rewrite analysis, section 9.3), its mapping in
       `.idea/vcs.xml`, and the `!.idea/vcs.xml` exception in `.gitignore` if nothing else needs
       it.

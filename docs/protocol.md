@@ -213,7 +213,8 @@ Rules for the app:
   example `ő` to `o`), otherwise `?`.
 - The 16-character limit is counted in bytes after conversion. The UI previews the converted text.
 - Where a glyph appears twice (`¥` at `0x5C` and `0xE6`, `←` at `0x08` and `0x7F`, `` ` `` at `0x60`
-  and `0xF3`), the conversion picks one byte; either shows the same glyph.
+  and `0xF3`), the conversion always picks the lower byte (`0x5C`, `0x08`, `0x60`); either shows the
+  same glyph.
 
 ## evdev input map (X52 Pro)
 
@@ -366,8 +367,8 @@ app assumes, all unverified until a test on the device is recorded here:
   codes on the non-Pro are not known.
 - **Mode selector and virtual mouse** on the non-Pro use that candidate map (the per-type mode
   mapping exists for `x52` too). Confirming the map on a device, with an input tester, is an open
-  item owned by the roadmap (see `roadmap.md`, once written); until then the non-Pro is documented
-  as unverified.
+  item owned by the roadmap (see [roadmap.md](roadmap.md): the 1.x input tester verifies the map,
+  and the `1.0.0` gate records the outcome); until then the non-Pro is documented as unverified.
 
 ## Commands the app may send
 
