@@ -1,140 +1,65 @@
-gnome = import('gnome')
+subdir('icons')
+subdir('resources')
 
-app_id = 'com.leinardi.gx52'
-
+# Desktop file: substitute the app id, then merge translations.
 desktop_conf = configuration_data()
-desktop_conf.set('bindir', join_paths(prefix, get_option('bindir')))
-
-desktop_file = configure_file(
-    input: app_id + '.desktop.in',
-    output: app_id + '.desktop',
-    #type: 'desktop',
+desktop_conf.set('app-id', application_id)
+desktop_conf.set('bin', meson.project_name())
+desktop_file = i18n.merge_file(
+    input: configure_file(
+        input: '@0@.desktop.in.in'.format(base_id),
+        output: '@BASENAME@',
+        configuration: desktop_conf,
+    ),
+    output: '@0@.desktop'.format(application_id),
+    type: 'desktop',
+    po_dir: podir,
     install: true,
-    install_dir: join_paths(get_option('datadir'), 'applications'),
-    configuration: desktop_conf,
+    install_dir: datadir / 'applications',
+)
+test(
+    'validate-desktop',
+    desktop_file_validate,
+    args: [desktop_file],
+    suite: ['lint'],
 )
 
-message('Looking for dependencies')
-python_bin = python.find_python()
-if not python_bin.found()
-    error('No valid python3 binary found')
-else
-    message('Found python3 binary')
-endif
-
-
-# TODO: Requires GLib 2.52 because of Meson issue
-#desktop_service = configure_file(
-#  input: app_id + '.service.desktop.in',
-#  output: app_id + '.service.desktop',
-#  configuration: desktop_conf,
-#  install: true,
-#  install_dir: PKGDATA_DIR,
-#)
-
-# i18n.merge_file(
-#   input: desktop_file,
-#   output: app_id + '.desktop',
-#   type: 'desktop',
-#   po_dir: '../po',
-#   install: true,
-#   install_dir: join_paths(get_option('datadir'), 'applications')
-# )
-#
-# i18n.merge_file(
-#   input: app_id + '.appdata.xml.in',
-#   output: app_id + '.appdata.xml',
-#   po_dir: '../po',
-#   install: true,
-#   install_dir: join_paths(get_option('datadir'), 'appdata')
-# )
-
-dbus_conf = configuration_data()
-dbus_conf.set('bindir', join_paths(prefix, get_option('bindir')))
-
-configure_file(
-    input: app_id + '.service.in',
-    output: app_id + '.service',
-    configuration: dbus_conf,
+# Settings schema: both the id and the dconf path derive from the application id, so Devel and
+# stable builds keep separate settings. dconf stores values by path, not by schema id: two schemas
+# with different ids but the same path share every value.
+gschema_conf = configuration_data()
+gschema_conf.set('app-id', application_id)
+gschema_conf.set('app-path', '/' + application_id.replace('.', '/') + '/')
+gschema_conf.set('gettext-package', gettext_package)
+gschema_file = configure_file(
+    input: '@0@.gschema.xml.in'.format(base_id),
+    output: '@0@.gschema.xml'.format(application_id),
+    configuration: gschema_conf,
     install: true,
-    install_dir: join_paths(get_option('datadir'), 'dbus-1/services'),
+    install_dir: datadir / 'glib-2.0' / 'schemas',
+)
+# Compile the configured schema in the build dir so the app runs uninstalled under `meson devenv`.
+# (gnome.compile_schemas() would compile the source dir, which only holds the .in template.)
+custom_target(
+    'gschemas-compiled',
+    input: gschema_file,
+    output: 'gschemas.compiled',
+    command: [
+        glib_compile_schemas,
+        '--strict',
+        '--targetdir',
+        '@OUTDIR@',
+        '@OUTDIR@',
+    ],
+    build_by_default: true,
+)
+test(
+    'validate-schema',
+    glib_compile_schemas,
+    args: ['--strict', '--dry-run', meson.current_build_dir()],
+    suite: ['lint'],
 )
 
-install_data(
-    app_id + '.gschema.xml',
-    install_dir: join_paths(get_option('datadir'), 'glib-2.0/schemas'),
-)
-
-if false
-    gtk_encode_symbolic = find_program('gtk-encode-symbolic-svg')
-    sizes = ['32x32', '64x64']
-    icon_targets = []
-    foreach size : sizes
-        icon_targets += custom_target(
-            'symbolic-icon-' + size,
-            input: 'icons/com.leinardi.gx52-symbolic.svg',
-            output: 'icons/com.leinardi.gx52-symbolic.png',
-            command: [
-                gtk_encode_symbolic,
-                '--output=' + meson.current_build_dir(),
-                '@INPUT@',
-                size,
-            ],
-        )
-    endforeach
-endif
-
-icondir = join_paths(get_option('datadir'), 'icons')
-install_subdir('icons/hicolor', install_dir: icondir)
-
-install_data(
-    'icons/com.leinardi.gx52-symbolic.svg',
-    install_dir: join_paths(icondir, 'hicolor/symbolic/apps'),
-)
-
-contributors = '\n'.join(
-    ['Roberto Leinardi (leinardi) &lt;roberto@leinardi.com&gt;'],
-)
-
-LIBEXEC_DIR = join_paths(get_option('prefix'), get_option('libexecdir'))
-EXTENSION_DIR = join_paths(
-    get_option('prefix'),
-    get_option('libdir'),
-    meson.project_name(),
-)
-bindir = join_paths(get_option('prefix'), get_option('bindir'))
-
-glade_conf = configuration_data()
-glade_conf.set('PACKAGE_URL', 'https://gitlab.com/leinardi/gx52')
-glade_conf.set('DATA_DIR', DATA_DIR)
-glade_conf.set('EXTENSION_DIR', EXTENSION_DIR)
-glade_conf.set(
-    'LOCALE_DIR',
-    join_paths(get_option('prefix'), get_option('datadir'), 'locale'),
-)
-glade_conf.set('PYTHON_DIR', PYTHON_DIR)
-glade_conf.set(
-    'PYTHON_EXEC_DIR',
-    join_paths(get_option('prefix'), python.sysconfig_path('stdlib')),
-)
-glade_conf.set('PYTHON', python_bin.path())
-glade_conf.set('APPID', app_id)
-glade_conf.set('libexecdir', LIBEXEC_DIR)
-# this is for development version # glade_conf.set('VERSION', ''.join([run_command(['git', 'describe', '--long', '--tags']).stdout(), get_option('profile')]))
-glade_conf.set('VERSION', meson.project_version())
-glade_conf.set('CONTRIBUTORS', contributors)
-
-gx52_resources = gnome.compile_resources(
-    app_id,
-    app_id + '.gresource.xml',
-    gresource_bundle: true,
-    install: true,
-    install_dir: PKGDATA_DIR,
-)
-
-gx52_settings = gnome.compile_schemas()
-
-install_data(
-    app_id + '.appdata.xml',
-    install_dir: join_paths(get_option('datadir'), 'metainfo'),
-)
+devenv = environment()
+devenv.set('GSETTINGS_SCHEMA_DIR', meson.current_build_dir())
+meson.add_devenv(devenv)

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2019 Roberto Leinardi -->
+<component type="desktop-application">
+  <id>@app-id@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>GX52</name>
+  <summary>Configure the Logitech X52 and X52 Pro joysticks</summary>
+  <description>
+    <p>GX52 configures the LEDs, the brightness and the multi-function display of the Logitech
+      (Saitek) X52 and X52 Pro joysticks.</p>
+  </description>
+  <developer id="com.leinardi">
+    <name translate="no">Roberto Leinardi</name>
+  </developer>
+  <launchable type="desktop-id">@app-id@.desktop</launchable>
+  <translation type="gettext">@gettext-package@</translation>
+  <url type="homepage">https://github.com/leinardi/gx52</url>
+  <url type="bugtracker">https://github.com/leinardi/gx52/issues</url>
+  <url type="vcs-browser">https://github.com/leinardi/gx52</url>
+  <update_contact>roberto@leinardi.com</update_contact>
+  <content_rating type="oars-1.1" />
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+  <branding>
+    <color type="primary" scheme_preference="light">#99c1f1</color>
+    <color type="primary" scheme_preference="dark">#1a5fb4</color>
+  </branding>
+  <!-- Newest first. The release workflow adds the entry for each new version (docs/release.md);
+       the 0.7.x entries are the legacy Python application's history. -->
+  <releases>
+    <release version="0.7.6" date="2023-05-07">
+      <description translate="no">
+        <ul>
+          <li>Updated dependencies</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.5" date="2022-04-01">
+      <description translate="no">
+        <ul>
+          <li>Updated dependencies</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.4" date="2021-08-28">
+      <description translate="no">
+        <ul>
+          <li>Updated dependencies</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.3" date="2021-03-07">
+      <description translate="no">
+        <ul>
+          <li>Fixed #2: Date formats DD-MM-YY and MM-DD-YY are swapped</li>
+          <li>Updated dependencies</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.2" date="2020-06-28">
+      <description translate="no">
+        <ul>
+          <li>Check for new App version on launch (requires opt-in)</li>
+          <li>Updated dependencies</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.1" date="2020-04-04">
+      <description translate="no">
+        <ul>
+          <li>Fixed crash for non Pro models (peewee.OperationalError: no such column:
+            t2.can_be_removed)</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.0" date="2020-03-29">
+      <description translate="no">
+        <ul>
+          <li>Initial release</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

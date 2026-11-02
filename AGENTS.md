@@ -18,8 +18,9 @@ Target layout (rewrite analysis, section 1 and 5): a Cargo workspace with `x52` 
 model, key maps, MFD charset; no GTK), `gx52` (the application) and `meta` (repository hygiene
 tests), built by Meson following the GNOME Rust app layout, with Blueprint templates, a GResource
 bundle, a GSettings schema and gettext from the first commit.
-For now the three crates are empty stubs (the root package `gx52` in `src/`, plus `x52/` and
-`meta/`); the legacy Python package also lives in `gx52/`, which is not a crate.
+The root package `gx52` in `src/` is the libadwaita application skeleton, built by Meson
+(`meson.build`, `data/`, `po/`, Flatpak manifests in `build-aux/`); `x52/` and `meta/` are still
+doc-only stubs. The legacy Python package lives, unbuilt, in `gx52/`, which is not a crate.
 
 ## Architecture
 

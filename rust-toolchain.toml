@@ -23,6 +23,6 @@
 # extension's release (docs/tooling-todo.md). No extra targets: Flathub builds every architecture
 # natively.
 [toolchain]
-channel = "1.98.1"
+channel = "1.98.0"
 components = ["clippy", "rustfmt"]
 profile = "minimal"

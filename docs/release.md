@@ -64,7 +64,7 @@ step into every file that carries it:
 | --- | --- |
 | `Cargo.toml` | `[package] version` of the root package (today `0.0.0`, set by the release workflow) |
 | `Cargo.lock` | the `gx52` entry, updated with `cargo update -p gx52 --offline` |
-| `meson.build` | `project(..., version: 'X.Y.Z')`; Meson generates `src/config.rs` with it, so the About dialog shows the same value |
+| `meson.build` | `project(..., version: 'X.Y.Z')`; Meson sets it as a constant of `src/config.rs` through the environment of its cargo invocations, so the About dialog shows the same value |
 | `data/com.leinardi.gx52.metainfo.xml.in.in` | a new `<release version="X.Y.Z" date="YYYY-MM-DD">` at the top of `<releases>`, with a description built from the `feat` and `fix` subjects since the last release |
 
 Nothing else may hold a version. A `meta` test (a `version` test next to the `toolchain` checks of

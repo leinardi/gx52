@@ -28,7 +28,7 @@ resolver = "3"
 [workspace.package]
 edition = "2024"
 # One exact Rust release, the one rust-toolchain.toml pins.
-rust-version = "1.98.1"
+rust-version = "1.98.0"
 license = "GPL-3.0-or-later"
 authors = ["Roberto Leinardi"]
 repository = "https://github.com/leinardi/gx52"
@@ -71,6 +71,26 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+# Keep the version features in sync with the dependency() checks in meson.build and the
+# runtime-version of the Flatpak manifests (build-aux/). Required: GNOME 50 (GTK 4.22, libadwaita
+# 1.9, what Ubuntu 26.04 ships); built and tested on the GNOME 51 runtime (spike S6). adw's gtk_v4_*
+# feature matters too: without gtk_v4_10, adw widgets do not implement gtk::Accessible in Rust.
+gtk = { package = "gtk4", version = "0.11", features = ["gnome_50"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_9", "gtk_v4_22"] }
+# Named after its library (gettextrs), so cargo-machete matches it to the code that uses it.
+gettextrs = { package = "gettext-rs", version = "0.8", features = ["gettext-system"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [lints]
 workspace = true
+
+[profile.release]
+# flatpak-builder splits the debug info into the .Debug extension.
+debug = true
+lto = "thin"
+codegen-units = 1
+
+# Dependencies optimized in dev builds too, so a Devel build stays responsive.
+[profile.dev.package."*"]
+opt-level = 3

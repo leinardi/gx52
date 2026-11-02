@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=com.leinardi.gx52
-Exec=@bindir@/gx52 --gapplication-service

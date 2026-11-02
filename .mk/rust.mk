@@ -29,7 +29,8 @@ MK_LOCAL_RUST_INCLUDED := 1
 #
 # These targets drive cargo directly, for the fast edit-compile-lint loop. They need the GTK 4 and
 # libadwaita development files on the host; the application itself is built by Meson (meson.mk),
-# which generates src/config.rs and the GResource bundle before invoking cargo.
+# which sets the constants of src/config.rs through the environment and builds the GResource
+# bundle before invoking cargo.
 
 CARGO ?= cargo
 

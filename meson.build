@@ -1,41 +1,70 @@
 project(
     'gx52',
-    version: run_command('grep', 'APP_VERSION', files('gx52/conf.py')).stdout().split(
-        ' = ',
-    )[1].strip().strip(
-        '"',
-    ),
-    meson_version: '>= 0.45.1',
+    'rust',
+    # The release workflow sets the version, together with Cargo.toml's (docs/release.md).
+    version: '0.0.0',
+    meson_version: '>= 1.1',
+    license: 'GPL-3.0-or-later',
 )
-# project version is defined in gx52/conf.py
 
-# Importing modules
-# i18n = import('i18n')
-python3 = import('python3')
-python = import('python3')
+i18n = import('i18n')
+gnome = import('gnome')
+fs = import('fs')
 
+base_id = 'com.leinardi.gx52'
+
+# Presence/version checks only: cargo links the libraries itself. Keep these in sync with the gtk
+# and adw features in Cargo.toml and the runtime-version of the Flatpak manifests (build-aux/).
+dependency('glib-2.0', version: '>= 2.88')
+dependency('gtk4', version: '>= 4.22')
+dependency('libadwaita-1', version: '>= 1.9')
+
+cargo = find_program('cargo')
+glib_compile_resources = find_program('glib-compile-resources')
+glib_compile_schemas = find_program('glib-compile-schemas')
+blueprint_compiler = find_program('blueprint-compiler', version: '>= 0.16')
+# Required, not optional: an optional validator that is missing would silently drop its test from
+# `meson test`. Both ship in the GNOME SDK; on the host they come with desktop-file-utils and
+# appstream.
+desktop_file_validate = find_program('desktop-file-validate')
+appstreamcli = find_program('appstreamcli')
+
+version = meson.project_version()
 prefix = get_option('prefix')
-PKGDATA_DIR = join_paths(prefix, get_option('datadir'), meson.project_name())
-DATA_DIR = PKGDATA_DIR
-PYTHON_DIR = join_paths(prefix, python.sysconfig_path('purelib'))
+bindir = prefix / get_option('bindir')
+localedir = prefix / get_option('localedir')
+datadir = prefix / get_option('datadir')
+pkgdatadir = datadir / meson.project_name()
+iconsdir = datadir / 'icons'
+podir = meson.project_source_root() / 'po'
+gettext_package = meson.project_name()
 
-message('Looking for dependencies')
-python_bin = python.find_python()
-if not python_bin.found()
-    error('No valid python3 binary found')
+if get_option('profile') == 'development'
+    profile = 'Devel'
+    application_id = base_id + '.Devel'
+    vcs_tag = ''
+    if fs.is_dir('.git')
+        vcs_tag = run_command(
+            'git',
+            'rev-parse',
+            '--short',
+            'HEAD',
+            check: false,
+        ).stdout().strip()
+    endif
+    version_suffix = vcs_tag == '' ? '-devel' : '-' + vcs_tag
 else
-    message('Found python3 binary')
+    profile = ''
+    application_id = base_id
+    version_suffix = ''
 endif
 
-# Dependencies
-dependency('gobject-introspection-1.0', version: '>= 1.56.0')
-dependency('gtk+-3.0', version: '>= 3.22.30')
-
-
-
-install_subdir('gx52', install_dir: PYTHON_DIR)
-install_subdir('python-xlib/Xlib', install_dir: join_paths(PYTHON_DIR, 'gx52'))
 subdir('data')
-subdir('bin')
+subdir('po')
+subdir('src')
 
-meson.add_install_script('scripts/meson_post_install.py')
+gnome.post_install(
+    glib_compile_schemas: true,
+    gtk_update_icon_cache: true,
+    update_desktop_database: true,
+)

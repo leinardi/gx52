@@ -32,12 +32,14 @@ As committed in `a763177`; the crates are still stubs.
   `[lints] workspace = true`. `unsafe_code = "deny"`: nothing in the app needs `unsafe`. USB goes
   through `nusb`, evdev reads and the uinput device through the `evdev` crate's safe API, as in the
   S9 spike (and S1, S3, S4 for `nusb` and evdev reads).
-- **Toolchain:** `rust-toolchain.toml` pins `1.98.1`, the same release as the workspace
-  `rust-version`. The Flatpak builds use the Rust of
-  `org.freedesktop.Sdk.Extension.rust-stable//26.08`; aligning the pin with that extension is a
-  [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace) item.
+- **Toolchain:** `rust-toolchain.toml` pins `1.98.0`, the same release as the workspace
+  `rust-version` and as the Rust of `org.freedesktop.Sdk.Extension.rust-stable//26.08`, which the
+  Flatpak builds use. The pin follows that extension: Cargo refuses a `rust-version` newer than its
+  `rustc`, so a pin ahead of the extension breaks the Flatpak build.
 - **Meson + Cargo:** the layout of the S6 scaffold. Meson drives Cargo for the root package,
-  generates `src/config.rs` (app ID, profile, version, paths), compiles the Blueprint templates and
+  sets the constants of `src/config.rs` (app ID, profile, version, paths) through the environment
+  of its cargo invocations (`option_env!`, with Devel defaults so a plain `cargo build` works),
+  compiles the Blueprint templates and
   the GResource, installs the desktop file, metainfo, icons and GSettings schema, and runs their
   validation in `meson test`. The Devel profile builds `com.leinardi.gx52.Devel`. S6 built this on
   the host, as a Devel Flatpak and as an offline Flathub-style build. The `x52` and `meta` crates

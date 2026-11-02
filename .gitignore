@@ -35,6 +35,9 @@ desktop.ini
 
 # --- Flatpak ---
 .flatpak-builder/
+/_flatpak/
+# Generated from Cargo.lock for the offline Flathub build; the release workflow regenerates it.
+/build-aux/cargo-sources.json
 /flatpak-build/
 /repo/
 *.flatpak

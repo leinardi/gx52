@@ -40,6 +40,18 @@ version = 2
 # since the shipped binary links them all.
 allow = [
     "GPL-3.0-or-later",
+    # The gtk-rs bindings (gtk4, libadwaita, glib, gio and their -sys crates), gettext-rs and
+    # tracing, and most of the transitive graph; GPL-compatible.
+    "MIT",
+    # temp-dir (a build dependency of gettext-sys), and the "MIT OR Apache-2.0" crates; compatible
+    # with GPL-3.0 (not with GPL-2.0-only, which this project is not).
+    "Apache-2.0",
+    # target-lexicon, through cfg-expr and system-deps, the build-time pkg-config probe of the
+    # -sys crates; the LLVM exception only relaxes Apache-2.0, so it is GPL-3.0-compatible too.
+    "Apache-2.0 WITH LLVM-exception",
+    # unicode-ident (through proc-macro2), whose Unicode data tables carry it; a permissive,
+    # GPL-compatible licence.
+    "Unicode-3.0",
 ]
 confidence-threshold = 0.9
 
