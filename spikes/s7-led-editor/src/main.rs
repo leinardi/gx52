@@ -4,11 +4,15 @@
 //! focusable button per LED; the button opens a popover to pick the LED state. Throwaway code:
 //! findings go to `docs/spikes/07-led-editor.md`.
 
+mod device;
 mod hotspot_view;
 
 use adw::prelude::*;
 use gtk::{gdk, glib};
 
+use std::sync::mpsc::Sender;
+
+use crate::device::{LedBits, LedCommand};
 use crate::hotspot_view::HotspotView;
 
 const APP_ID: &str = "com.leinardi.gx52.LedEditorSpike";
@@ -43,6 +47,7 @@ impl LedKind {
 struct LedSpot {
     label: &'static str,
     kind: LedKind,
+    bits: LedBits,
     x: f32,
     y: f32,
 }
@@ -57,8 +62,32 @@ struct DeviceView {
     leds: &'static [LedSpot],
 }
 
-const fn led(label: &'static str, kind: LedKind, x: f32, y: f32) -> LedSpot {
-    LedSpot { label, kind, x, y }
+/// A single-colour LED driven by one bit of the `0xb8` command.
+const fn single(label: &'static str, bit: u16, x: f32, y: f32) -> LedSpot {
+    LedSpot {
+        label,
+        kind: LedKind::Single,
+        bits: LedBits {
+            red: None,
+            green: bit,
+        },
+        x,
+        y,
+    }
+}
+
+/// A red/green LED driven by two bits of the `0xb8` command.
+const fn bi_colour(label: &'static str, red: u16, green: u16, x: f32, y: f32) -> LedSpot {
+    LedSpot {
+        label,
+        kind: LedKind::BiColour,
+        bits: LedBits {
+            red: Some(red),
+            green,
+        },
+        x,
+        y,
+    }
 }
 
 /// Placeholder artwork: rough outlines only, to be replaced by traced drawings of the device.
@@ -73,10 +102,10 @@ const VIEWS: &[DeviceView] = &[
   <text x="200" y="280" font-size="14" text-anchor="middle" fill="#8a8a8a">stick grip (placeholder)</text>
 </svg>"##,
         leds: &[
-            led("Fire", LedKind::Single, 0.50, 0.27),
-            led("A", LedKind::BiColour, 0.38, 0.15),
-            led("B", LedKind::BiColour, 0.62, 0.15),
-            led("POV 2", LedKind::BiColour, 0.50, 0.45),
+            single("Fire", 1, 0.50, 0.27),
+            bi_colour("A", 2, 3, 0.38, 0.15),
+            bi_colour("B", 4, 5, 0.62, 0.15),
+            bi_colour("POV 2", 16, 17, 0.50, 0.45),
         ],
     },
     DeviceView {
@@ -88,9 +117,9 @@ const VIEWS: &[DeviceView] = &[
   <text x="200" y="185" font-size="14" text-anchor="middle" fill="#8a8a8a">stick base, toggles (placeholder)</text>
 </svg>"##,
         leds: &[
-            led("T1/T2", LedKind::BiColour, 0.25, 0.50),
-            led("T3/T4", LedKind::BiColour, 0.50, 0.50),
-            led("T5/T6", LedKind::BiColour, 0.75, 0.50),
+            bi_colour("T1/T2", 10, 11, 0.25, 0.50),
+            bi_colour("T3/T4", 12, 13, 0.50, 0.50),
+            bi_colour("T5/T6", 14, 15, 0.75, 0.50),
         ],
     },
     DeviceView {
@@ -103,10 +132,10 @@ const VIEWS: &[DeviceView] = &[
   <text x="200" y="285" font-size="14" text-anchor="middle" fill="#8a8a8a">throttle (placeholder)</text>
 </svg>"##,
         leds: &[
-            led("D", LedKind::BiColour, 0.30, 0.30),
-            led("E", LedKind::BiColour, 0.45, 0.30),
-            led("i", LedKind::BiColour, 0.62, 0.42),
-            led("Throttle", LedKind::Single, 0.30, 0.70),
+            bi_colour("D", 6, 7, 0.30, 0.30),
+            bi_colour("E", 8, 9, 0.45, 0.30),
+            bi_colour("i", 18, 19, 0.62, 0.42),
+            single("Throttle", 20, 0.30, 0.70),
         ],
     },
 ];
@@ -144,8 +173,15 @@ fn apply_led_state(button: &gtk::MenuButton, spot: &LedSpot, state: &str) {
     button.update_property(&[gtk::accessible::Property::Label(&description)]);
 }
 
+/// Queues the LED state for the device thread; never blocks the main thread.
+fn send_led(device: &Sender<LedCommand>, spot: &LedSpot, state: &str) {
+    if device.send(LedCommand::new(spot.bits, state)).is_err() {
+        tracing::warn!("device thread is gone, {} not sent", spot.label);
+    }
+}
+
 /// A round button for one LED; it opens a popover with the LED's possible states.
-fn led_button(spot: LedSpot) -> gtk::MenuButton {
+fn led_button(spot: LedSpot, device: &Sender<LedCommand>) -> gtk::MenuButton {
     let group = adw::ToggleGroup::new();
     for (name, label) in spot.kind.states() {
         group.add(adw::Toggle::builder().name(*name).label(*label).build());
@@ -172,7 +208,9 @@ fn led_button(spot: LedSpot) -> gtk::MenuButton {
         .css_classes(["led"])
         .build();
     apply_led_state(&button, &spot, initial);
+    send_led(device, &spot, initial);
 
+    let device = device.clone();
     group.connect_active_name_notify(glib::clone!(
         #[weak]
         button,
@@ -180,13 +218,14 @@ fn led_button(spot: LedSpot) -> gtk::MenuButton {
             if let Some(state) = group.active_name() {
                 tracing::info!("{} -> {state}", spot.label);
                 apply_led_state(&button, &spot, &state);
+                send_led(&device, &spot, &state);
             }
         }
     ));
     button
 }
 
-fn device_page(view: &DeviceView) -> HotspotView {
+fn device_page(view: &DeviceView, device: &Sender<LedCommand>) -> HotspotView {
     let hotspots = HotspotView::default();
     hotspots.set_margin_top(12);
     hotspots.set_margin_bottom(12);
@@ -197,15 +236,21 @@ fn device_page(view: &DeviceView) -> HotspotView {
     ))));
     hotspots.update_property(&[gtk::accessible::Property::Label(view.title)]);
     for spot in view.leds {
-        hotspots.add_hotspot(&led_button(*spot), spot.x, spot.y);
+        hotspots.add_hotspot(&led_button(*spot, device), spot.x, spot.y);
     }
     hotspots
 }
 
 fn build_window(app: &adw::Application) -> adw::ApplicationWindow {
+    let device = device::spawn();
     let stack = adw::ViewStack::new();
     for view in VIEWS {
-        stack.add_titled_with_icon(&device_page(view), Some(view.name), view.title, view.icon);
+        stack.add_titled_with_icon(
+            &device_page(view, &device),
+            Some(view.name),
+            view.title,
+            view.icon,
+        );
     }
     let switcher = adw::ViewSwitcher::builder()
         .stack(&stack)

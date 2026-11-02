@@ -7,6 +7,7 @@ edition = "2024"
 gtk = { package = "gtk4", version = "0.11.5", features = ["gnome_50"] }
 adw = { package = "libadwaita", version = "0.9.2", features = ["v1_9", "gtk_v4_22"] }
 tracing = "0.1"
+nusb = "0.2.9"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [lints.clippy]
