@@ -62,6 +62,28 @@ sysfs/dev reads) in the sandbox. The inotify fallback was not needed; polling is
 The USB address changes on every replug (`addr 4`, `5`, `6`), so devices are matched by vendor and
 product ID (and later serial or port path for several devices), never by address.
 
+## Without the udev rule: verified 2026-11-02
+
+Rule moved away, `udevadm control --reload && udevadm trigger`, joystick replugged.
+
+| Check | Host | Sandbox |
+|---|---|---|
+| Device listed by `nusb::list_devices` (sysfs), name and IDs readable | yes | yes |
+| `/dev/bus/usb/001/007` | `root:root 0664`, no user ACL | same |
+| `DeviceInfo::open` | `permission denied (errno 13)` | same |
+| evdev node (`/dev/input/event*`) | still readable (systemd's joystick `uaccess`) | same |
+
+So the app can tell the three states apart without guessing: **no device** (not listed), **device
+without permission** (listed, `open` fails with `EACCES` / `io::ErrorKind::PermissionDenied`) and
+**ready**. The second state shows the udev guidance page. In that state input still works (input
+tester, virtual mouse if uinput is allowed), only LEDs, MFD and clocks are unavailable, so the page
+should say exactly that rather than "device not found".
+
+After restoring the rule with `udevadm control --reload && udevadm trigger` and **without
+replugging**, the user ACL came back on the existing node and `open` worked at once. So the guidance
+page can say "no need to unplug" and the app only has to retry `open` while in the "no permission"
+state (on each device poll, or when the user presses "Try again").
+
 ## Not done yet
 
 - Running the real app build (Flatpak bundle from S6 with the device code) instead of the spike
