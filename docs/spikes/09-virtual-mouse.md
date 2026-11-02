@@ -29,7 +29,7 @@ Spike `spikes/s9-virtual-mouse` on the `spikes` branch (`evdev` 0.13.2, no other
 ## Device facts (X52 Pro, from evdev on the host)
 
 | Control | evdev |
-|---|---|
+| --- | --- |
 | Ministick X / Y | `ABS_MISC` (40) / code 41, range `0..=15`, centre 8, no fuzz or flat |
 | Mouse primary button (next to the ministick) | key 303 |
 | Scroll wheel down / up (one press per detent) | keys 704 / 705 |
@@ -57,7 +57,7 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
 ## Results
 
 | Check | Result |
-|---|---|
+| --- | --- |
 | Create the uinput mouse as the logged-in user, host | OK. `/dev/uinput` has an ACL for the user here because Steam's `steam-devices` rule (`60-steam-input.rules`) tags it `uaccess` |
 | Kernel classification | Registered with `mouse1` and `event23` handlers (`EV=7`, `REL=903`, `KEY` left/right): a normal pointer for libinput and the compositor, X11 or Wayland |
 | Virtual device's own event node | root-only, as for any input device; nothing else in the session can read it |
@@ -81,10 +81,10 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
 - **Runs on its own thread** (blocking reads plus a 10 ms timer, or one `poll` loop), never on the
   GTK main thread; it must survive unplug/replug (re-open both, release held buttons on unplug).
 - **The joystick still reports the ministick and mouse buttons.** Games that bind every axis may
-  react to both the pointer and the axes (the Proton issue); X4: Foundations did not. Hiding them needs the joystick to be
-  grabbed (`EVIOCGRAB`) and re-exposed as a virtual joystick without those controls, which is the
-  same machinery as "clutch mode" and much bigger in scope (and changes the device games see).
-  Not for the first version; maybe an option later.
+  react to both the pointer and the axes (the Proton issue); X4: Foundations did not. Hiding them
+  needs the joystick to be grabbed (`EVIOCGRAB`) and re-exposed as a virtual joystick without those
+  controls, which is the same machinery as "clutch mode" and much bigger in scope (and changes the
+  device games see). Not for the first version; maybe an option later.
 - **Settings worth exposing** (the same knobs x52d and the Windows driver offer): enable, speed,
   curve (or acceleration), deadzone, invert wheel; maybe "isometric" (speed from the combined
   distance) vs per-axis.

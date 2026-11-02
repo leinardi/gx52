@@ -25,9 +25,9 @@ control transfers need the raw USB node.)
   `SUBSYSTEM=="usb", ATTRS{idVendor}=="06a3", ATTRS{idProduct}=="0762", MODE="0664", GROUP="plugdev"`
   (plus `hidraw` and the other two IDs). Users of libx52 packages may already have access.
 
-Decision: keep the in-app guidance with a host rule
-(`SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="06a3", ATTR{idProduct}=="0762|0255|075c", TAG+="uaccess"`
-in `/etc/udev/rules.d/70-gx52.rules`, validated in S1); propose a `saitek-gdu.rules` to
+Decision: keep the in-app guidance with a host rule (`SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device",
+ATTR{idVendor}=="06a3", ATTR{idProduct}=="0762|0255|075c", TAG+="uaccess"` in
+`/etc/udev/rules.d/70-gx52.rules`, validated in S1); propose a `saitek-gdu.rules` to
 game-devices-udev once verified on hardware. Skip steam-devices and systemd.
 
 ## Flathub beta channel

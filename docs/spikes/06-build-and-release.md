@@ -7,7 +7,7 @@ Throwaway app generated with the `gtk-rs-new-app` scaffold (gtk-rs-skills 0.1.0)
 ## Versions
 
 | Component | Host (Ubuntu) | GNOME 51 SDK (Flathub) |
-|---|---|---|
+| --- | --- | --- |
 | GTK | 4.22.4 | 4.24.1 |
 | libadwaita | 1.9.1 | 1.10.0 |
 | GLib | 2.88 | 2.90.1 |
@@ -24,15 +24,15 @@ no extra module needed.
 ## Results
 
 | Step | Result | Time |
-|---|---|---|
+| --- | --- | --- |
 | Host build (`meson setup` + `compile`, template as generated: GNOME 50 features) | OK | 51 s cold |
 | Host `meson test` (desktop, metainfo, schema validation + `cargo test`) | 4/4 OK | <1 s |
-| Host `cargo check` after raising to GTK 4.24 features / Meson `gtk4 >= 4.24` | fails: host GTK is 4.22 | |
+| Host `cargo check` after raising to GTK 4.24 features / Meson `gtk4 >= 4.24` | fails: host GTK is 4.22 |  |
 | Devel Flatpak build (GNOME 51, network allowed, runs `meson test`) | OK, 4/4 tests | 57 s |
 | Flathub-style Flatpak build (offline, crates from `cargo-sources.json`, inline `.cargo/config.toml`) | OK | 58 s |
 | `flatpak-cargo-generator.py` on `Cargo.lock` | 101 crate archives for 102 packages (the other is the app), 56 KB | 1 s |
-| `flatpak-builder-lint manifest` (stable and Devel) | no findings, including `--device=all` and `--talk-name=org.kde.StatusNotifierWatcher` | |
-| `flatpak-builder-lint repo` | only missing screenshots (expected for a hello world; mirroring is done by Flathub's builder) | |
+| `flatpak-builder-lint manifest` (stable and Devel) | no findings, including `--device=all` and `--talk-name=org.kde.StatusNotifierWatcher` |  |
+| `flatpak-builder-lint repo` | only missing screenshots (expected for a hello world; mirroring is done by Flathub's builder) |  |
 
 Notes:
 
@@ -52,7 +52,7 @@ A `push` trigger works on any branch; only `workflow_dispatch` needs the workflo
 branch.
 
 | Job | Runner | Result | Time |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | rustfmt | `ubuntu-24.04` | OK | 5 s |
 | Flatpak build + `meson test` (`flatpak/flatpak-github-actions/flatpak-builder@v6`, container `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51`, `--privileged`) | `ubuntu-24.04` (x86_64) | OK | 5.5–6 min |
 | Same | `ubuntu-24.04-arm` (aarch64) | OK | 4.7–5.5 min |

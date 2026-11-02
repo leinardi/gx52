@@ -3,7 +3,7 @@
 Two real GX52 0.7 databases on the maintainer's machine, opened read-only with SQLite:
 
 | File | Last modified | Origin |
-|---|---|---|
+| --- | --- | --- |
 | `~/.var/app/com.leinardi.gx52/config/gx52/gx52.db` | 2021-03-16 | Flatpak install (the one the automatic import will find) |
 | `~/.config/gx52/gx52.db` | 2021-03-07 | Source install (needs the documented manual copy) |
 
@@ -19,7 +19,7 @@ by name, take the LED columns only from `x52_pro_profile`, and ignore extra colu
 Common profile columns (both tables):
 
 | Column | Type | Values |
-|---|---|---|
+| --- | --- | --- |
 | `id` | integer | autoincrement |
 | `name` | text | free text; the default profile is named `Default` (2019 schema) or `Default Profile` |
 | `led_brightness`, `mfd_brightness` | integer | UI scale `0`-`32` (wire value is ×4) |

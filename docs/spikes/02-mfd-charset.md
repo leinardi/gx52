@@ -19,8 +19,8 @@ from this one. Characters with no glyph get a fallback (decomposition to the bas
 possible, for example `ő` to `o`, otherwise `?`); never send raw UTF-8 bytes. The UI can preview
 the result. The 16-character limit is per byte after conversion.
 
-| | x0 | x1 | x2 | x3 | x4 | x5 | x6 | x7 | x8 | x9 | xA | xB | xC | xD | xE | xF |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|  | x0 | x1 | x2 | x3 | x4 | x5 | x6 | x7 | x8 | x9 | xA | xB | xC | xD | xE | xF |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **0x** |  |  |  |  |  |  |  |  | ← | ┌ | ┐ | └ | ┘ | · | ® | © |
 | **1x** | ™ | † | § | ¶ | Γ | Δ | Θ | Λ | Ξ | Π | Σ | Υ | Φ | Ψ | Ω | α |
 | **2x** | SP | ! | " | # | $ | % | & | ' | ( | ) | * | + | , | - | . | / |

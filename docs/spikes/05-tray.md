@@ -15,7 +15,7 @@ the call the shell makes when the user clicks.
 ## Results
 
 | Scenario | Result |
-|---|---|
+| --- | --- |
 | Host, watcher present | Registers as `org.kde.StatusNotifierItem-<pid>-1`; menu "Show / Hide" hides then shows the window, "Quit" exits; every action is handled on the main thread |
 | GNOME 51 sandbox, no network, `--talk-name=org.kde.StatusNotifierWatcher`, `disable_dbus_name(true)` | Registers under its unique bus name (`:1.767@/StatusNotifierItem`); menu clicks work the same |
 | GNOME 51 sandbox **without** the talk permission (equivalent to no tray host) | `watcher_offline(Error(Watcher(ServiceUnknown)))` is reported; `spawn()` still returns `Ok` because of `assume_sni_available(true)` |
@@ -46,7 +46,7 @@ the call the shell makes when the user clicks.
 Ubuntu GNOME on Wayland, `ubuntu-appindicators@ubuntu.com`, host build.
 
 | Action | Result |
-|---|---|
+| --- | --- |
 | Icon in the top bar | shown, looks like the other indicators |
 | Right-click | menu opens at once; "Show / Hide" and "Quit" work |
 | Single left-click | opens the **menu** after a short delay, does not call `Activate` |

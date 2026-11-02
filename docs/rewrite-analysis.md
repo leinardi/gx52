@@ -1,10 +1,10 @@
 # GX52 rewrite: analysis and decisions
 
 Status: pre-planning. All questions from the analysis are answered (third review round); the next
-step is the implementation plan. This document collects what the current Python + GTK 3 application does, what the
-Rust + GTK 4 rewrite has to cover, which decisions are already taken, which are still open, and the
-risks to retire before (or early in) the implementation. It is the input for the implementation plan,
-not the plan itself.
+step is the implementation plan. This document collects what the current Python + GTK 3 application
+does, what the Rust + GTK 4 rewrite has to cover, which decisions are already taken, which are still
+open, and the risks to retire before (or early in) the implementation. It is the input for the
+implementation plan, not the plan itself.
 
 Sources analysed:
 
@@ -20,7 +20,7 @@ Sources analysed:
 ## 1. Decisions taken
 
 | Topic | Decision |
-|---|---|
+| --- | --- |
 | License | Unchanged: GPL-3.0-or-later. |
 | Identity | Unchanged: app ID `com.leinardi.gx52`, name GX52, existing icons (may be refreshed later). |
 | Language / toolkit | Rust, gtk4-rs + libadwaita. Full rewrite, not a port: feature parity from the user's point of view, plus new features. |
@@ -101,7 +101,7 @@ Described from the user's perspective. This is the parity baseline for the rewri
 ### 2.5 Application settings (preferences dialog)
 
 | Setting | Default | Actually used |
-|---|---|---|
+| --- | --- | --- |
 | Launch on login | off | yes, writes `~/.config/autostart/gx52.desktop` with `--hide-window`; disabled in Flatpak |
 | Load last profile | on | no (dead setting) |
 | Check new version | off | yes (Flathub API v1) |
@@ -116,7 +116,7 @@ Described from the user's perspective. This is the parity baseline for the rewri
 ### 2.7 Command line
 
 | Option | Effect |
-|---|---|
+| --- | --- |
 | `-v`, `--version` | print version and exit |
 | `--debug` | debug logging |
 | `--hide-window` | start hidden (tray only) |
@@ -160,7 +160,7 @@ All commands are USB vendor control transfers to the device (endpoint 0):
 - `wIndex` is the command, `wValue` the argument.
 
 | Command | `wIndex` | `wValue` |
-|---|---|---|
+| --- | --- | --- |
 | MFD brightness | `0xb1` | level × 4 (0 to 128) |
 | LED brightness | `0xb2` | level × 4 (0 to 128) |
 | Blink throttle/POV | `0xb4` | `0x51` on, `0x50` off |
@@ -185,7 +185,7 @@ MFD character map, X52 non-Pro differences).
 ### 5.1 Dependencies
 
 | Python | Rust | Notes |
-|---|---|---|
+| --- | --- | --- |
 | PyGObject + GTK 3 | `gtk4` 0.11, `libadwaita` 0.9 | Latest stable bindings matching GNOME 51. |
 | pyusb (libusb) | `nusb` 0.2 (pure Rust) | No libusb to bundle, has a hotplug API (`nusb::watch_devices`). Fallback: `rusb`. **See risk R1.** |
 | evdev | `evdev` 0.13 | Pure Rust. The device fd can be polled from the GLib main loop (`glib::unix_fd_add_local`), so no dedicated thread is required. |
@@ -284,8 +284,8 @@ everything. `--debug` maps to a `debug` filter, `RUST_LOG` overrides it. Decisio
 ### 6.2 Pre-commit hooks
 
 Keep: `pre-commit-hooks` (merge conflicts, EOF, whitespace, YAML/JSON/TOML, large files), checkmake,
-markdownlint-cli2, shellcheck, prettier (YAML), yamllint, conventional-pre-commit, cargo fmt / clippy /
-test / deny, cargo-machete, local docs-links / license-headers / suppressions checks.
+markdownlint-cli2, shellcheck, prettier (YAML), yamllint, conventional-pre-commit, cargo fmt /
+clippy / test / deny, cargo-machete, local docs-links / license-headers / suppressions checks.
 
 Drop: dclint, droast, trivy, Docker-related checks. Keep actionlint (CI moves to GitHub Actions).
 
@@ -313,12 +313,12 @@ shellcheck, yamllint, conventional commits, Rust checks, `ci-result` gate), `pre
 Differences specific to a GNOME application, following `gtk-rs-skills`
 (`references/packaging-and-ci.md` and the `gtk-rs-new-app` CI template):
 
-- **Flatpak job**: `flatpak/flatpak-github-actions/flatpak-builder@v6` (the `flathub-infra` fork of the
-  action was archived in 2025) in the `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51`
+- **Flatpak job**: `flatpak/flatpak-github-actions/flatpak-builder@v6` (the `flathub-infra` fork of
+  the action was archived in 2025) in the `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51`
   container with `--privileged`. Builds the Devel manifest, runs `meson test` (cargo test plus the
-  desktop / metainfo / schema lint suite) and uploads an installable bundle, so a PR can be tested by
-  installing the artifact. Matrix `x86_64` on `ubuntu-24.04` and `aarch64` on `ubuntu-24.04-arm` (free
-  for public repositories).
+  desktop / metainfo / schema lint suite) and uploads an installable bundle, so a PR can be tested
+  by installing the artifact. Matrix `x86_64` on `ubuntu-24.04` and `aarch64` on `ubuntu-24.04-arm`
+  (free for public repositories).
 - **Clippy inside the SDK**: runner images ship older GTK / libadwaita, so `gtk4-sys` fails its
   pkg-config check on the bare runner. The job builds the manifest with `--stop-at=gx52`, enables
   network with `flatpak build-finish --share=network`, then runs `cargo clippy` in
@@ -424,8 +424,8 @@ opens an issue when a newer GNOME runtime exists on Flathub is a possible later 
 1. `release.yaml` run manually (`workflow_dispatch`) on `main` with optional `version` and `dry_run`
    inputs, in a `release` concurrency group (same contract as `awtrix-controller`'s
    `docs/release.md`).
-2. Version computed by `svu` from Conventional Commits (or taken from the `version` input), checked to
-   be higher than every existing release (see 9.4 for the legacy tags).
+2. Version computed by `svu` from Conventional Commits (or taken from the `version` input), checked
+   to be higher than every existing release (see 9.4 for the legacy tags).
 3. Bump the version in `Cargo.toml` / `Cargo.lock` / `meson.build`, add a `<release>` entry to the
    metainfo (generated from the commits), commit, tag `vX.Y.Z`, push.
 4. Build and lint the Flatpak from the tag (both architectures) before anything is published.
@@ -477,11 +477,11 @@ polling workflow adds moving parts for little gain.
 Automatic, once, with no CLI option.
 
 - **Where the old database is.** The Python app stores `gx52.db` in `$XDG_CONFIG_HOME/gx52/`. For
-  Flatpak users that is `~/.var/app/com.leinardi.gx52/config/gx52/gx52.db`. The rewrite keeps the same
-  app ID, so inside the sandbox `glib::user_config_dir()` points to the same directory and the file is
-  readable with no extra permission. Users who installed from source have it in `~/.config/gx52/`,
-  which the Flatpak cannot see. No extra permission is added for them: the README and the `1.0.0`
-  release notes explain how to copy `gx52.db` into
+  Flatpak users that is `~/.var/app/com.leinardi.gx52/config/gx52/gx52.db`. The rewrite keeps the
+  same app ID, so inside the sandbox `glib::user_config_dir()` points to the same directory and the
+  file is readable with no extra permission. Users who installed from source have it in
+  `~/.config/gx52/`, which the Flatpak cannot see. No extra permission is added for them: the README
+  and the `1.0.0` release notes explain how to copy `gx52.db` into
   `~/.var/app/com.leinardi.gx52/config/gx52/` before the first start.
 - **When.** At start-up, before the profile store is loaded: if the "legacy import done" flag (a
   GSettings key) is not set and the old database exists, import it, then set the flag. If the file
@@ -501,7 +501,7 @@ Automatic, once, with no CLI option.
 ## 11. Risks
 
 | ID | Risk | Mitigation |
-|---|---|---|
+| --- | --- | --- |
 | R1 | The kernel HID driver owns the X52 interface. pyusb sends device-level vendor control transfers without claiming it; `nusb` must be able to do the same on Linux without detaching the driver (detaching would kill joystick input). | First spike: send one LED command with `nusb`; fall back to `rusb` if needed. |
 | R2 | Switch-over to GitHub: the GitLab push mirror overwriting GitHub, broken links in the Flathub metainfo, users filing issues in the old place. | Follow the order in section 7.3; tombstone and archive GitLab. |
 | R3 | `flatpak-builder-lint` on the update PR applies current Flathub rules to old permissions. | Drop `org.freedesktop.Flatpak` and `--share=network`; justify `--device=all`. |

@@ -8,7 +8,7 @@ matched against that order. Device name: "Logitech X52 Professional H.O.T.A.S." 
 ## Buttons (39)
 
 | Code | Control | Code | Control |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 288 | Trigger, first stage | 706 | Scroll wheel press (mouse secondary) |
 | 289 | Fire (under the flip cover) | 707 | POV 2 (top-left hat on the stick head), up |
 | 290 | A | 708 | POV 2 right |
@@ -27,9 +27,9 @@ matched against that order. Device name: "Logitech X52 Professional H.O.T.A.S." 
 | 303 | Mouse button next to the ministick | 721 | Reset |
 | 704 | Scroll wheel, one notch down | 722 | Left MFD wheel (Function) scrolled up: Page Up |
 | 705 | Scroll wheel, one notch up | 723 | Left MFD wheel scrolled down: Page Down |
-| | | 724 | Right MFD wheel (Select) scrolled up: Up |
-| | | 725 | Right MFD wheel scrolled down: Down |
-| | | 726 | Select (right MFD wheel press) |
+|  |  | 724 | Right MFD wheel (Select) scrolled up: Up |
+|  |  | 725 | Right MFD wheel scrolled down: Down |
+|  |  | 726 | Select (right MFD wheel press) |
 
 The codes are the HID report order (first 16 on `BTN_JOYSTICK` 288–303, the rest on
 `BTN_TRIGGER_HAPPY1`... 704–726), the same order libx52's X52 Pro report parser uses. The three
@@ -40,7 +40,7 @@ notch, not a held button.
 ## Axes
 
 | evdev axis | Control | Range | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `ABS_X` / `ABS_Y` | Stick left-right / forward-back | 0–1023, centre ~511 | quiet at rest |
 | `ABS_RZ` | Stick twist | 0–1023 | reached 0–1010 on this unit |
 | `ABS_Z` | Throttle lever | 0–255 | jitters ±1–2 at rest, ~40 events/s |

@@ -1,44 +1,46 @@
-Version 0.7.6
-=============
+# Changelog
+
+## Version 0.7.6
+
 Released: 2023-05-07
 
- * Updated dependencies
+* Updated dependencies
 
-Version 0.7.5
-=============
+## Version 0.7.5
+
 Released: 2022-04-01
 
- * Updated dependencies
+* Updated dependencies
 
-Version 0.7.4
-=============
+## Version 0.7.4
+
 Released: 2021-08-28
 
- * Updated dependencies
+* Updated dependencies
 
-Version 0.7.3
-=============
+## Version 0.7.3
+
 Released: 2021-03-07
 
- * Fixed #2: Date formats DD-MM-YY and MM-DD-YY are swapped
- * Updated dependencies
+* Fixed #2: Date formats DD-MM-YY and MM-DD-YY are swapped
+* Updated dependencies
 
-Version 0.7.2
-=============
+## Version 0.7.2
+
 Released: 2020-06-28
 
- * Check for new App version on launch (requires opt-in)
- * Updated dependencies
+* Check for new App version on launch (requires opt-in)
+* Updated dependencies
 
-Version 0.7.1
-=============
+## Version 0.7.1
+
 Released: 2020-04-04
 
- * Fixed crash for non Pro models (`peewee.OperationalError: no such column:
+* Fixed crash for non Pro models (`peewee.OperationalError: no such column:
    t2.can_be_removed`)
 
-Version 0.7.0
-=============
+## Version 0.7.0
+
 Released: 2020-03-29
 
- * Initial release
+* Initial release

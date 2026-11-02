@@ -8,7 +8,7 @@ The host has the `70-gx52.rules` udev rule from S1.
 ## Results
 
 | Check | Result |
-|---|---|
+| --- | --- |
 | Open the USB device and send a vendor control transfer (`nusb`) | OK; `usbhid` stays bound |
 | Read sysfs (interface drivers, device attributes) | OK |
 | Open the evdev node, read capabilities and key state (`evdev`) | OK: 39 key codes, axes, mode 1 held |
@@ -51,7 +51,7 @@ and in the GNOME 51 sandbox (`--device=all`, no network) at the same time while 
 plugged in and out three times.
 
 | Signal | Host | Sandbox, no network |
-|---|---|---|
+| --- | --- | --- |
 | `nusb::watch_devices` | every connect and disconnect, 0.3–0.6 s before polling notices | silent: the stream is created without error but never yields |
 | Polling the USB device list (250 ms) | OK | OK |
 | Polling the evdev device list (250 ms) | OK, same poll as USB or one later | OK |
@@ -67,7 +67,7 @@ product ID (and later serial or port path for several devices), never by address
 Rule moved away, `udevadm control --reload && udevadm trigger`, joystick replugged.
 
 | Check | Host | Sandbox |
-|---|---|---|
+| --- | --- | --- |
 | Device listed by `nusb::list_devices` (sysfs), name and IDs readable | yes | yes |
 | `/dev/bus/usb/001/007` | `root:root 0664`, no user ACL | same |
 | `DeviceInfo::open` | `permission denied (errno 13)` | same |

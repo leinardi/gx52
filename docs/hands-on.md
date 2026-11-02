@@ -22,7 +22,7 @@ with `x52-probe bright led 128`, `x52-probe bright mfd 128`, then `x52-probe led
 `x52-probe led fire on` and `x52-probe led throttle on`.
 
 | # | View | Must show |
-|---|---|---|
+| --- | --- | --- |
 | 1 | Stick, front-top (looking down at the head, trigger side away) | Buttons A, B, Fire (with cover), POV 1 hat, POV 2 hat and its LED, C button |
 | 2 | Stick, left side | Trigger (both stages), pinkie switch, side buttons |
 | 3 | Stick base, front | Toggles T1–T6 and the three LEDs (T1/T2, T3/T4, T5/T6), mode selector |
@@ -111,10 +111,12 @@ checks the UI only).
 
 - [x] Click each LED: the popover opens, choosing a state changes the colour. (2026-11-02, also
       on the device, including catch-up after replug.)
-- [-] (skipped: UI to be redesigned) Keyboard only: Tab moves between LEDs, Enter/Space opens the popover, arrows choose a state,
-      Escape closes it.
-- [-] (skipped: UI to be redesigned) Resize to the narrowest window (360×294): LEDs stay on the drawing and remain clickable.
-- [-] (skipped: UI to be redesigned) Light and dark style (Settings > Appearance): the outline and colours stay readable.
+- [-] (skipped: UI to be redesigned) Keyboard only: Tab moves between LEDs, Enter/Space opens the
+      popover, arrows choose a state, Escape closes it.
+- [-] (skipped: UI to be redesigned) Resize to the narrowest window (360×294): LEDs stay on the
+      drawing and remain clickable.
+- [-] (skipped: UI to be redesigned) Light and dark style (Settings > Appearance): the outline and
+      colours stay readable.
 - [-] (skipped: UI to be redesigned) Optional: Orca screen reader reads "<LED> LED: <state>".
 
 Results go to [spikes/07-led-editor.md](spikes/07-led-editor.md).

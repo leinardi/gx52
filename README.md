@@ -1,26 +1,33 @@
 # GX52
-GX52 is a GTK application designed to provide control for the LEDs and MFD of Logitech X52 and X52 Pro H.O.T.A.S.
+
+GX52 is a GTK application designed to provide control for the LEDs and MFD of Logitech X52 and X52
+Pro H.O.T.A.S.
 
 ## 💡 Features
-<img src="/data/icons/hicolor/48x48@2x/apps/com.leinardi.gx52.png" width="96" align="right" hspace="0" />
+
+<img src="/data/icons/hicolor/48x48@2x/apps/com.leinardi.gx52.png" alt="GX52 icon"
+     width="96" align="right" hspace="0" />
 
 * Set LEDs color (X52 Pro only)
 * Turn on/off individual LEDs (X52 Pro only)
 * Set LEDs brightness
 * Set MFD brightness
 * Update MFD date and time
-* Show on MFD which button is currently pressed 
+* Show on MFD which button is currently pressed
 * Save and restore multiple profiles
 
-<img src="/art/screenshot-1.png" width="800" align="middle"/>
-<img src="/art/screenshot-2.png" width="800" align="middle"/>
-
+<img src="/art/screenshot-1.png" alt="GX52 screenshot 1" width="800" align="middle"/>
+<img src="/art/screenshot-2.png" alt="GX52 screenshot 2" width="800" align="middle"/>
 
 ## 📦 How to get GX52
-### Install from Flathub
-This is the preferred way to get GX52 on any major distribution (Arch, Fedora, Linux Mint, openSUSE, Ubuntu, etc).
 
-If you don't have Flatpak installed you can find step by step instructions [here](https://flatpak.org/setup/).
+### Install from Flathub
+
+This is the preferred way to get GX52 on any major distribution (Arch, Fedora, Linux Mint, openSUSE,
+Ubuntu, etc).
+
+If you don't have Flatpak installed you can find step by step instructions in the [Flatpak setup
+guide](https://flatpak.org/setup/).
 
 Make sure to have the Flathub remote added to the current user:
 
@@ -29,34 +36,41 @@ flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flath
 ```
 
 #### Install
+
 ```bash
 flatpak --user install flathub com.leinardi.gx52
 ```
 
 #### Run
+
 ```bash
 flatpak run com.leinardi.gx52
 ```
 
 ### Install from source code
+
 #### Build time dependencies
-| Distro                | pkg-config         | Python 3.6+ | gobject-introspection       | meson | ninja-build | appstream-util | libusb-1.0-0     | libudev       | gtk3+        |
-| --------------------- | ------------------ | ----------- | --------------------------- | ----- | ----------- | -------------- | ---------------- | ------------- |--------------|
-| Arch Linux            | pkg-config         | python      | gobject-introspection       | meson | ninja       | appstream-glib | libusb           | libudev0      | libgtk-3     | 
-| Fedora                | pkgconf-pkg-config | python3     | gobject-introspection-devel | meson | ninja-build | appstream-util | libusbx-devel    | libudev-devel | libgtk-3-dev |
-| Ubuntu                | pkg-config         | python3     | libgirepository1.0-dev      | meson | ninja-build | appstream-util | libusb-1.0-0-dev | libudev-dev   | libgtk-3-dev | 
+
+| Distro | pkg-config | Python 3.6+ | gobject-introspection | meson | ninja-build | appstream-util | libusb-1.0-0 | libudev | gtk3+ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Arch Linux | pkg-config | python | gobject-introspection | meson | ninja | appstream-glib | libusb | libudev0 | libgtk-3 |
+| Fedora | pkgconf-pkg-config | python3 | gobject-introspection-devel | meson | ninja-build | appstream-util | libusbx-devel | libudev-devel | libgtk-3-dev |
+| Ubuntu | pkg-config | python3 | libgirepository1.0-dev | meson | ninja-build | appstream-util | libusb-1.0-0-dev | libudev-dev | libgtk-3-dev |
 
 #### Run time dependencies
-| Distro                | Python 3.6+ | pip         | gobject-introspection       | libappindicator          | gnome-shell-extension-appindicator |
-| --------------------- | ----------- | ----------- | --------------------------- | ------------------------ | ---------------------------------- |
-| Arch Linux            | python      | python-pip  | gobject-introspection       | libappindicator3         | gnome-shell-extension-appindicator |
-| Fedora                | python3     | python3-pip | gobject-introspection-devel | libappindicator-gtk3     | gnome-shell-extension-appindicator |
-| Ubuntu                | python3     | python3-pip | libgirepository1.0-dev      | gir1.2-appindicator3-0.1 | gnome-shell-extension-appindicator |
+
+| Distro | Python 3.6+ | pip | gobject-introspection | libappindicator | gnome-shell-extension-appindicator |
+| --- | --- | --- | --- | --- | --- |
+| Arch Linux | python | python-pip | gobject-introspection | libappindicator3 | gnome-shell-extension-appindicator |
+| Fedora | python3 | python3-pip | gobject-introspection-devel | libappindicator-gtk3 | gnome-shell-extension-appindicator |
+| Ubuntu | python3 | python3-pip | libgirepository1.0-dev | gir1.2-appindicator3-0.1 | gnome-shell-extension-appindicator |
 
 plus all the Python dependencies listed in [requirements.txt](requirements.txt)
 
 #### Clone project and install
+
 If you have not installed GX52 yet:
+
 ```bash
 git clone --recurse-submodules -j4 https://gitlab.com/leinardi/gx52.git
 cd gx52
@@ -68,7 +82,9 @@ sudo ninja -v -C build install
 ```
 
 #### Update old installation
+
 If you installed GX52 from source code previously and you want to update it:
+
 ```bash
 cd gx52
 git fetch
@@ -83,28 +99,37 @@ sudo ninja -v -C build install
 ```
 
 #### Run
+
 Once installed, to start it you can simply execute on a terminal:
+
 ```bash
 gx52
 ```
 
 ## Running the app
-To start the app you have to run the command `gx52` in a terminal. The app needs to access the USB interface of the X52 that, normally,
-is not available to unprivileged users. 
 
-To allow normal users to access the X52's USB interface you can 
+To start the app you have to run the command `gx52` in a terminal. The app needs to access the USB
+interface of the X52 that, normally, is not available to unprivileged users.
+
+To allow normal users to access the X52's USB interface you can
 create a custom udev rule
 
 ### Adding Udev rule
+
 #### Using GX52
+
 Simply run:
+
 ```bash
 gx52 --add-udev-rule
 ```
+
 It will automatically refresh also the udev rules.
 
 #### Manually
+
 Create a new file in `/lib/udev/rules.d/60-gx52.rules` containing this text:
+
 ```bash
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="06a3", ATTRS{idProduct}=="0762", MODE="0666"
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="06a3", ATTRS{idProduct}=="0255", MODE="0666"
@@ -112,6 +137,7 @@ SUBSYSTEMS=="usb", ATTRS{idVendor}=="06a3", ATTRS{idProduct}=="075c", MODE="0666
 ```
 
 After that, run the following commands
+
 ```bash
 sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=06a3 --action=add
@@ -119,18 +145,20 @@ sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=06a3 --action=a
 
 ## Command line options
 
-  | Parameter                 | Description                                                 | Source | Flatpak |
-  |---------------------------|-------------------------------------------------------------|:------:|:-------:|
-  |-v, --version              |Show the app version                                         |    x   |    x    |
-  |--debug                    |Show debug messages                                          |    x   |    x    |
-  |--hide-window              |Start with the main window hidden                            |    x   |    x    |
-  |--add-udev-rule            |Add udev rule to allow execution without root permission     |    x   |    x    |
-  |--remove-udev-rule         |Remove udev rule that allow execution without root permission|    x   |    x    |
-  |--autostart-on             |Enable automatic start of the app on login                   |    x   |         |
-  |--autostart-off            |Disable automatic start of the app on login                  |    x   |         |
+  | Parameter | Description | Source | Flatpak |
+  | --- | --- | :-: | :-: |
+  | -v, --version | Show the app version | x | x |
+  | --debug | Show debug messages | x | x |
+  | --hide-window | Start with the main window hidden | x | x |
+  | --add-udev-rule | Add udev rule to allow execution without root permission | x | x |
+  | --remove-udev-rule | Remove udev rule that allow execution without root permission | x | x |
+  | --autostart-on | Enable automatic start of the app on login | x |  |
+  | --autostart-off | Disable automatic start of the app on login | x |  |
 
 ## 🖥️ Build, install and run with Flatpak
-If you don't have Flatpak installed you can find step by step instructions [here](https://flatpak.org/setup/).
+
+If you don't have Flatpak installed you can find step by step instructions in the [Flatpak setup
+guide](https://flatpak.org/setup/).
 
 Make sure to have the Flathub remote added to the current user:
 
@@ -139,55 +167,75 @@ flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flath
 ```
 
 ### Clone the repo
+
 ```bash
 git clone --recurse-submodules -j4 https://gitlab.com/leinardi/gx52.git
 ```
+
 It is possible to build the local source or the remote one (the same that Flathub uses)
+
 ### Local repository
+
 ```bash
 ./build.sh --flatpak-local --flatpak-install
 ```
+
 ### Remote repository
+
 ```bash
 ./build.sh --flatpak-remote --flatpak-install
 ```
+
 ### Run
+
 ```bash
 flatpak run com.leinardi.gx52 --debug
 ```
 
 ## ❓ FAQ
+
 ### The Flatpak version of GX52 is not using my theme, how can I fix it?
-To fix this issue install a Gtk theme from Flathub. This way, Flatpak applications will automatically pick the 
-installed Gtk theme and use that instead of Adwaita.
+
+To fix this issue install a Gtk theme from Flathub. This way, Flatpak applications will
+automatically pick the installed Gtk theme and use that instead of Adwaita.
 
 Use this command to get a list of all the available Gtk themes on Flathub:
+
 ```bash
 flatpak --user remote-ls flathub | grep org.gtk.Gtk3theme
 ```
+
 And then just install your preferred theme. For example, to install Yaru:
+
 ```
 flatpak install flathub org.gtk.Gtk3theme.Yaru
 ``````
 
 ### Where are the settings and profiles stored on the filesystem?
-| Installation type |                     Location                     |
-|-------------------|:------------------------------------------------:|
-| Flatpak           |        `$HOME/.var/app/com.leinardi.gx52/`        |
-| Source code       | `$XDG_CONFIG_HOME` (usually `$HOME/.config/gx52`) |
+
+| Installation type | Location |
+| --- | :-: |
+| Flatpak | `$HOME/.var/app/com.leinardi.gx52/` |
+| Source code | `$XDG_CONFIG_HOME` (usually `$HOME/.config/gx52`) |
 
 ## 💚 How to help the project
+
 ### Discord server
-If you want to help testing or developing it would be easier to get in touch using the discord server of the project: https://discord.gg/HTCrmU8  
-Just write a message on the general channel saying how you want to help (test, dev, etc) and quoting @leinardi. If you don't use discor but still want to help just open a new issue here.
+
+If you want to help testing or developing it would be easier to get in touch using the discord
+server of the project: <https://discord.gg/HTCrmU8> Just write a message on the general channel
+saying how you want to help (test, dev, etc) and quoting @leinardi. If you don't use discor but
+still want to help just open a new issue here.
 
 ### Can I support this project some other way?
 
-Something simple that everyone can do is to star it on both [GitLab](https://gitlab.com/leinardi/gx52) and [GitHub](https://github.com/leinardi/gx52).
-Feedback is always welcome: if you found a bug or would like to suggest a feature,
-feel free to open an issue on the [issue tracker](https://gitlab.com/leinardi/gx52/issues).
+Something simple that everyone can do is to star it on both
+[GitLab](https://gitlab.com/leinardi/gx52) and [GitHub](https://github.com/leinardi/gx52). Feedback
+is always welcome: if you found a bug or would like to suggest a feature, feel free to open an issue
+on the [issue tracker](https://gitlab.com/leinardi/gx52/issues).
 
 ## License
+
 ```
 This file is part of gx52.
 

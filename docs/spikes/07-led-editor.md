@@ -37,7 +37,7 @@ palette variables (`--green-3`, `--red-3`, `--yellow-3`); the tooltip and the ac
 ## Results
 
 | Check | Result |
-|---|---|
+| --- | --- |
 | Builds with `clippy -D warnings` (pedantic) against GNOME 50 features | OK |
 | Runs on the host, all three pages render, no GTK criticals or warnings | OK |
 | LED buttons placed on the artwork at the given points, coloured by state | OK (after the CSS fix below) |
@@ -77,9 +77,9 @@ The shots needed and how to take them are in [../hands-on.md](../hands-on.md), s
 
 ## Input tester (test page)
 
-Requested 2026-10-28, modelled on the Test tab of the Windows driver's control panel: live view of every axis, button, toggle, hat and the mode selector, read
-from evdev without grabbing the device (games keep receiving input). S4 already showed evdev works
-in the sandbox with `--device=all`.
+Requested 2026-10-28, modelled on the Test tab of the Windows driver's control panel: live view of
+every axis, button, toggle, hat and the mode selector, read from evdev without grabbing the device
+(games keep receiving input). S4 already showed evdev works in the sandbox with `--device=all`.
 
 Layout proposal:
 
