@@ -3,7 +3,7 @@
 How the Rust rewrite is built: crates, threads and data flow, the state model, persistence, errors,
 the sandbox and the test strategy. The decisions behind it are in
 [rewrite-analysis.md](rewrite-analysis.md) (sections 1, 5, 10 and 12); what the device does is in
-[protocol.md](protocol.md); the profile format is in `profiles.md` (written next). Where a value
+[protocol.md](protocol.md); the profile format is in [profiles.md](profiles.md). Where a value
 comes from a spike, the spike is named.
 
 ## Skills
@@ -74,14 +74,14 @@ encoded control transfer; the app implements it with `nusb`, the tests with a re
 Two inputs come from files the app did not write itself: imported profile files (and hand-edited
 ones in the profile directory) and the legacy `gx52.db`. Both are parsed as untrusted:
 
-- a size limit before parsing (the limits are set in `profiles.md`);
+- a size limit before parsing (the limits are set in [profiles.md](profiles.md#files));
 - no panics on any content: every read returns a `Result`, no `unwrap` or indexing on file data
   (the workspace lints already deny `unwrap_used` and `expect_used` outside tests);
-- validation per field as `profiles.md` defines it, before a value reaches the device model; values
-  that cannot be represented never become commands: the typed commands in `x52` are built only
-  through constructors that check every range at run time (brightness `0`–`128`, offsets
-  `0`–`720`, ...), and the type system guarantees that nothing reaches the transport without going
-  through them;
+- validation per field as [profiles.md](profiles.md#validation-and-recovery) defines it, before a
+  value reaches the device model; values that cannot be represented never become commands: the typed
+  commands in `x52` are built only through constructors that check every range at run time
+  (brightness `0`–`128`, offsets `0`–`720`, ...), and the type system guarantees that nothing
+  reaches the transport without going through them;
 - the legacy database is opened read-only and never modified (rewrite analysis, section 10).
 
 This feeds two open items of [tooling-todo.md](tooling-todo.md#docs-and-project-files): the decision
@@ -210,8 +210,8 @@ overrides ───────────────────────�
     fields exist (no LEDs, shift or blink on the non-Pro, per
     [protocol.md](protocol.md#x52-non-pro));
   - the **active mode** (from the reader) mapped to a profile **for that device type** through the
-    per-type mode mapping in GSettings (see `profiles.md`); a missing or wrong-type profile falls
-    back to that type's default profile;
+    per-type mode mapping in GSettings (see [profiles.md](profiles.md#mode-mapping)); a missing or
+    wrong-type profile falls back to that type's default profile;
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
   - **overrides**: temporary values on top of the profile, such as live edits not yet saved and,
@@ -248,7 +248,7 @@ From S9; the 1.0.0 scope is an on/off switch with fixed values.
   flag) and the **per-type mode mappings** (profile ids for modes 1/2/3 per device type). One
   `gio::Settings` instance, held by the application.
 - **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
-  format, defaults, validation and recovery rules are in `profiles.md`.
+  format, defaults, validation and recovery rules are in [profiles.md](profiles.md).
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
   and `gx52.db` exists; read-only; the flag is set even when the database is unreadable, so start-up
   never fails because of it (rewrite analysis, section 10; S8 for the schema).
@@ -289,9 +289,9 @@ The Flatpak `finish-args` beyond the display sockets:
   mode debounce with recorded event sequences.
 - **Recording transport mock:** device-service tests assert the exact command sequence for a
   connect (full replay), a profile switch, a burst of slider changes (coalesced) and a disconnect.
-- **Profile fixtures and round-trip tests:** valid files, every failure case of `profiles.md`
-  (malformed, out of range, unknown value, future schema), and legacy row → profile → TOML →
-  profile.
+- **Profile fixtures and round-trip tests:** valid files, every failure case of
+  [profiles.md](profiles.md#validation-and-recovery) (malformed, out of range, unknown value, future
+  schema), and legacy row → profile → TOML → profile.
 - **Legacy DB fixture:** small databases with both schemas found in S8, created by the test suite
   (the real files are not committed).
 - **`meson test`:** validates the desktop file, metainfo and GSettings schema and runs

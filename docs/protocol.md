@@ -99,7 +99,7 @@ Every command is a vendor control transfer to the device with no data stage:
 Notes on the commands:
 
 - **Brightness.** Both commands use the `0`–`128` wire scale. GX52 0.7 showed `0`–`32` and
-  multiplied by 4; the app shows and stores the wire value (see `profiles.md`, once written).
+  multiplied by 4; the app shows and stores the wire value (see [profiles.md](profiles.md)).
 - **Clocks.** The app re-sends clock 1 every minute, on the minute, and whenever the time source
   changes (time zone, DST transition, suspend and resume), because the device keeps the last time it
   was sent. Clocks 2 and 3 are offsets from clock 1, not from UTC: to show a zone on clock 2 the app
