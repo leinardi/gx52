@@ -1,0 +1,28 @@
+#
+# Copyright 2026 Roberto Leinardi.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Adapted from swarm-device-access/rust-toolchain.toml at 4cd31c4cea79, originally
+# Apache-2.0-licensed, Copyright (c) 2026 Roberto Leinardi.
+#
+# One exact Rust release for host builds, pre-commit and the bare CI runner: the Cargo
+# rust-version names the same one. The Flatpak builds use the Rust of the
+# org.freedesktop.Sdk.Extension.rust-stable extension instead, so this pin follows that
+# extension's release (docs/tooling-todo.md). No extra targets: Flathub builds every architecture
+# natively.
+[toolchain]
+channel = "1.98.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

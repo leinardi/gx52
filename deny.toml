@@ -1,0 +1,54 @@
+#
+# Copyright 2026 Roberto Leinardi.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Adapted from swarm-device-access/deny.toml at 4cd31c4cea79, originally Apache-2.0-licensed,
+# Copyright (c) 2026 Roberto Leinardi.
+#
+# cargo-deny: the dependency gate for the Rust workspace. `cargo deny --workspace check` runs every
+# section; the advisories section needs the network to be current.
+
+[graph]
+all-features = true
+
+[advisories]
+# Every vulnerability and unsound advisory fails; "unmaintained" fails for direct and transitive
+# crates alike unless ignored here by advisory ID, with a reason. An ignore written as
+# `{ crate = "name" }` would only ignore yanked versions, so none is.
+version = 2
+unmaintained = "all"
+yanked = "deny"
+ignore = []
+
+[licenses]
+version = 2
+# Only the licences the Cargo.lock graph needs, each added by the change that brings in the crate
+# needing it, with a comment naming that crate. GPL-3.0-or-later is this project's own (every
+# workspace member carries it). Every licence added here must be compatible with GPL-3.0-or-later,
+# since the shipped binary links them all.
+allow = [
+    "GPL-3.0-or-later",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

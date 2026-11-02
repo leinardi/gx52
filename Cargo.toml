@@ -1,0 +1,76 @@
+#
+# Copyright 2026 Roberto Leinardi.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Adapted from swarm-device-access/Cargo.toml at 4cd31c4cea79, originally Apache-2.0-licensed,
+# Copyright (c) 2026 Roberto Leinardi.
+#
+# The workspace: the root package is the gx52 application (src/, next to the Meson build), x52 the
+# device library with no GTK dependency, meta the repository meta-tests (docs/tooling-todo.md).
+
+[workspace]
+# Listed explicitly, never as a glob, so a new member is a reviewed change.
+members = [".", "meta", "x52"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+# One exact Rust release, the one rust-toolchain.toml pins.
+rust-version = "1.98.1"
+license = "GPL-3.0-or-later"
+authors = ["Roberto Leinardi"]
+repository = "https://github.com/leinardi/gx52"
+
+# The lint set lives here once. Every member opts in with `[lints] workspace = true` (a member does
+# not inherit it otherwise), and every clippy run is workspace-wide.
+[workspace.lints.rust]
+# deny, not forbid: only #[expect] can lift a denied lint, should one audited module ever need it.
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# Only `#[expect(lint, reason = "...")]` may silence a lint: it fails once the lint stops firing,
+# and the reason is mandatory. Every one is counted by scripts/check-suppressions.sh.
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+# No panics outside tests; clippy.toml allows both in tests.
+unwrap_used = "deny"
+expect_used = "deny"
+# Output goes through tracing, or an explicit writeln! to a handle.
+print_stdout = "deny"
+print_stderr = "deny"
+# A match on an enum names every variant, so a new variant is a compile-time decision everywhere.
+wildcard_enum_match_arm = "deny"
+# Descriptive names; clippy's default allow-list applies.
+min_ident_chars = "deny"
+# Any ban added to clippy.toml is only enforced if the lint is.
+disallowed_methods = "deny"
+
+[package]
+name = "gx52"
+# The release workflow sets the version (docs/rewrite-analysis.md, section 9).
+version = "0.0.0"
+description = "Configure the Logitech X52 and X52 Pro joysticks"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+
+[lints]
+workspace = true
