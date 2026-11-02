@@ -21,6 +21,15 @@ bundle, a GSettings schema and gettext from the first commit.
 For now the three crates are empty stubs (the root package `gx52` in `src/`, plus `x52/` and
 `meta/`); the legacy Python package also lives in `gx52/`, which is not a crate.
 
+## Architecture
+
+[`docs/architecture.md`](docs/architecture.md) describes how the app is built: the workspace
+(`gx52`, `x52`, `meta`), the threads (GTK main thread, device writer, evdev reader, virtual-mouse
+loop, device watch, ksni tray) and the channels between them, the state model (device type, active
+mode mapped to a profile per type, clocks, overrides), persistence, errors and logging, the sandbox
+permissions, the test strategy and the 1.x extension points. What the device does, and the only
+commands the app may send, are in [`docs/protocol.md`](docs/protocol.md).
+
 ## Common commands
 
 Build / test / lint — Make wrappers around `cargo` and `pre-commit`:

@@ -69,8 +69,8 @@ Tick an item off, or delete it, in the commit that does it.
       Devel build, `make check`, commit conventions), adapted from `swarm-device-access`.
 - [ ] `RELEASING.md`: replace with `docs/release.md`.
 - [ ] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
-- [ ] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists, and the Meson
-      and Flatpak commands once their `.mk` fragments do.
+- [x] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists.
+- [ ] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
 - [ ] `.agents/skills/`: decide whether gx52 needs a domain skill like `swarm-device-access`'s
       `trust-boundary` (candidates: profile and legacy-database parsing, the device command path).
 - [ ] `SECURITY.md`: check the security model against the final Flatpak `finish-args` (spike S4

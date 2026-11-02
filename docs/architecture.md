@@ -1,0 +1,315 @@
+# GX52 architecture
+
+How the Rust rewrite is built: crates, threads and data flow, the state model, persistence, errors,
+the sandbox and the test strategy. The decisions behind it are in
+[rewrite-analysis.md](rewrite-analysis.md) (sections 1, 5, 10 and 12); what the device does is in
+[protocol.md](protocol.md); the profile format is in `profiles.md` (written next). Where a value
+comes from a spike, the spike is named.
+
+## Skills
+
+The skills rule is in [AGENTS.md, "Project skills"](../AGENTS.md#project-skills) and is not repeated
+here. On top of it:
+
+- The Meson + Cargo + Blueprint + Flatpak scaffold of milestone M0 is generated with the
+  `gtk-rs-new-app` skill, as spike S6 did (`spikes/s6-hello` on the `spikes` branch).
+- Every review uses the project's `adversarial-review` skill, which routes Rust and GTK code to
+  `gtk-rs-review` and `rust-review`.
+- Each roadmap task that touches code points to the AGENTS.md rule, so the skills are loaded before
+  the work starts.
+
+## Workspace
+
+As committed in `a763177`; the crates are still stubs.
+
+| Member | Path | Role |
+| --- | --- | --- |
+| `gx52` | the repository root (`Cargo.toml`, `src/`), next to `meson.build` | The application: GTK 4 + libadwaita UI, device service, profile store, tray, virtual mouse |
+| `x52` | `x52/` | Protocol encoding over a transport trait, device model (X52 Pro / X52 capabilities and LED set), MFD character set, evdev input map. Pure and unit-tested, no GTK dependency |
+| `meta` | `meta/` | Repository meta-tests: docs links, license headers, suppressions, toolchain. Planned in [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace) |
+
+- **Lints** live only in `[workspace.lints]` of the root `Cargo.toml`; every member opts in with
+  `[lints] workspace = true`. `unsafe_code = "deny"`: nothing in the app needs `unsafe`. USB goes
+  through `nusb`, evdev reads and the uinput device through the `evdev` crate's safe API, as in the
+  S9 spike (and S1, S3, S4 for `nusb` and evdev reads).
+- **Toolchain:** `rust-toolchain.toml` pins `1.98.1`, the same release as the workspace
+  `rust-version`. The Flatpak builds use the Rust of
+  `org.freedesktop.Sdk.Extension.rust-stable//26.08`; aligning the pin with that extension is a
+  [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace) item.
+- **Meson + Cargo:** the layout of the S6 scaffold. Meson drives Cargo for the root package,
+  generates `src/config.rs` (app ID, profile, version, paths), compiles the Blueprint templates and
+  the GResource, installs the desktop file, metainfo, icons and GSettings schema, and runs their
+  validation in `meson test`. The Devel profile builds `com.leinardi.gx52.Devel`. S6 built this on
+  the host, as a Devel Flatpak and as an offline Flathub-style build. The `x52` and `meta` crates
+  are built by Cargo only.
+- **Versions:** GNOME 50 required, GNOME 51 runtime (S6 decision): `gtk4` 0.11 with `gnome_50`,
+  `libadwaita` 0.9 with `v1_9` + `gtk_v4_22`, Meson `gtk4 >= 4.22`, `libadwaita-1 >= 1.9`. A feature
+  is raised only when an API needs it, together with the Meson check.
+
+The `x52` crate holds what can be checked without a device or a display: the typed commands of
+[protocol.md, "Commands the app may send"](protocol.md#commands-the-app-may-send) and their
+encoding, the LED bits, the character-set conversion, the evdev key and axis names, the mode
+debounce and the MFD clock arithmetic. The transport is a trait with one method that sends one
+encoded control transfer; the app implements it with `nusb`, the tests with a recording mock.
+
+## Testability
+
+- **Transport trait:** every device test runs the real encoding against a recording transport and
+  asserts the exact `(wIndex, wValue)` sequence: full-state replay, LED colour order (green bit,
+  then red bit), MFD line clear and padding.
+- **Injected clock:** the MFD clock logic (clock 1 time, clock 2/3 offsets from clock 1, the
+  normalisation into `−720`–`+720` minutes from [protocol.md](protocol.md#usb-vendor-commands), the
+  next instant to re-send) takes the current time and zone as input from a time source the app
+  passes in, never from a direct `now()` call. Then `clippy.toml` `disallowed-methods` can ban
+  `jiff::Timestamp::now`, `jiff::Zoned::now` and `std::time::SystemTime::now` everywhere except the
+  one production time source, whose exception is an `#[expect]` with a reason, counted by the
+  suppression ratchet. This is the [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace)
+  `clippy.toml` item.
+- **Event timestamps:** the mode debounce uses the timestamps evdev puts on each event, not the
+  wall clock, so it is tested with recorded event sequences (the S3 bounce log is the first
+  fixture).
+
+## Untrusted input
+
+Two inputs come from files the app did not write itself: imported profile files (and hand-edited
+ones in the profile directory) and the legacy `gx52.db`. Both are parsed as untrusted:
+
+- a size limit before parsing (the limits are set in `profiles.md`);
+- no panics on any content: every read returns a `Result`, no `unwrap` or indexing on file data
+  (the workspace lints already deny `unwrap_used` and `expect_used` outside tests);
+- validation per field as `profiles.md` defines it, before a value reaches the device model; values
+  that cannot be represented never become commands: the typed commands in `x52` are built only
+  through constructors that check every range at run time (brightness `0`–`128`, offsets
+  `0`–`720`, ...), and the type system guarantees that nothing reaches the transport without going
+  through them;
+- the legacy database is opened read-only and never modified (rewrite analysis, section 10).
+
+This feeds two open items of [tooling-todo.md](tooling-todo.md#docs-and-project-files): the decision
+whether gx52 needs a `trust-boundary` skill (profile and legacy-database parsing, the device command
+path) and the check of [SECURITY.md](../SECURITY.md) against the final import/export path.
+
+## Threads and data flow
+
+Nothing blocks the GTK main thread (AGENTS.md). Each long-lived loop that blocks gets its own thread
+and talks to the main thread through `async_channel` (blocking send on the worker, `recv().await` in
+a `glib::spawn_future_local` loop), following the gtk-rs-development "long-lived workers" pattern.
+Workers never touch GObjects; only plain `Send` data crosses a channel. The main thread never blocks
+on a send either: channels towards workers are unbounded (`try_send` never reports a full channel),
+and the writer's coalescing keeps the queue short.
+
+```mermaid
+flowchart LR
+    subgraph main["GTK main thread"]
+        ui["UI (widgets bound to GObject properties)"]
+        state["Device state model (GObject)"]
+        store["Profile store + GSettings"]
+    end
+    watch["Device watch thread<br/>nusb::watch_devices on the host,<br/>250 ms polling in the sandbox"]
+    writer["Device writer thread<br/>command channel, coalescing,<br/>full-state replay on connect,<br/>minute clock ticker"]
+    reader["evdev reader thread<br/>mode debounce (200 ms)"]
+    mouse["Virtual-mouse loop<br/>10 ms tick, uinput"]
+    tray["ksni tray<br/>own async-io executor"]
+    usb[("X52 USB node")]
+    evdev[("X52 evdev node")]
+    uinput[("/dev/uinput")]
+
+    ui <--> state
+    state <--> store
+    state -- "desired state" --> writer
+    writer -- "access state, errors" --> state
+    watch -- "appeared / gone" --> writer
+    watch -- "appeared / gone" --> reader
+    watch -- "appeared / gone" --> state
+    reader -- "mode, input events" --> state
+    state -- "start / stop" --> mouse
+    state -- "forward mouse input on / off" --> reader
+    reader -- "ministick, mouse buttons, joystick gone (ENODEV)" --> mouse
+    watch -- "gone" --> mouse
+    tray -- "TrayAction (async_channel)" --> state
+    state -- "Handle::update" --> tray
+    writer --> usb
+    evdev --> reader
+    mouse --> uinput
+```
+
+- **GTK main thread.** Widgets, GObject models, GSettings, the profile store's in-memory state, and
+  the decisions: which profile is active, what the device should show. File I/O for the profile
+  store and the legacy import runs in `gio::spawn_blocking` or GIO async calls, never inline.
+- **Device writer thread.** Owns the opened `nusb::Device` and nothing else touches it.
+  - Receives the desired device state over a command channel. It keeps the last state sent and sends
+    only the commands whose value changed.
+  - **Coalescing:** before sending, it drains every queued message and keeps the latest value per
+    command, so a dragged brightness slider becomes one transfer per drain, not one per pixel. The
+    S7 worker (`spikes/s7-led-editor/src/device.rs` on the `spikes` branch) kept the latest command
+    per LED in a map and replayed that map on every connect.
+  - **Full-state replay on connect:** on "device appeared" (start-up, hotplug, resume, permission
+    granted) it opens the device and sends the full state, brightness first, then LEDs, MFD lines,
+    clocks, date, shift and blink, as [protocol.md, "Power-on state"](protocol.md#power-on-state)
+    requires. S7's worker did this and the device caught up within about a second after a replug.
+  - On `EACCES` it reports "found, no permission" and retries `open` on each "device appeared" or
+    poll tick and when the user presses "Try again" (S4: the ACL comes back without a replug). A
+    failed transfer drops the device and waits for the next "appeared".
+  - **Clocks and the minute ticker:** the writer owns the injected time source. The desired state
+    carries only clock *sources* (local, UTC, a zone, a fixed offset) and 12/24 h; the writer turns
+    them into the clock 1 time and the clock 2/3 offsets it sends, with the `x52` clock logic. Its
+    receive timeout is the next instant a clock has to be re-sent (the next minute boundary, or an
+    earlier DST transition from `jiff`); the device clock does not tick by itself (S2). Monotonic
+    timers do not advance during suspend, so how a resume is noticed (and the clocks re-sent) is
+    decided in milestone M2 and recorded here.
+- **evdev reader thread.** Opens the joystick's evdev node **without grabbing** (games keep every
+  input), reads events, applies the mode debounce of [protocol.md](protocol.md#mode-selector), and
+  sends mode changes and, when something listens (the input tester in 1.x), input events to the main
+  thread. It reads the initial mode with `EVIOCGKEY`. Nothing logs per event (axis noise, S3).
+  Control transfers and evdev reads do not disturb each other (S3), so writer and reader are
+  independent.
+- **Virtual-mouse loop.** Its own thread, owned by the main thread: started when the GSettings
+  switch is on (and a joystick is connected), stopped when it is turned off. It drives the uinput
+  device on a 10 ms tick with the S9 values
+  ([protocol.md, "Virtual mouse"](protocol.md#virtual-mouse-uinput)).
+  - Input: the reader forwards ministick positions and mouse-button events to the loop only while
+    the main thread has told it the loop is running, so nothing queues up while it is stopped.
+  - "Stop" from the main thread, "joystick gone" from the reader (its read fails with `ENODEV`, as
+    in S9) or "gone" from the device watch all lead to the same step: the loop sends `BTN_LEFT` and
+    `BTN_RIGHT` up followed by `SYN_REPORT`, then stops (on "stop") or waits for the joystick to
+    come back (on "gone"), keeping or destroying the uinput device as M7 decides.
+  - A failure to create the uinput device (no permission) is reported to the main thread, which
+    shows the guidance page.
+- **Device watch.** One component, two sources (S4): `nusb::watch_devices` when not sandboxed,
+  polling `nusb::list_devices` and `evdev::enumerate` every 250 ms in the sandbox (detected through
+  `/.flatpak-info`, for example with `ashpd::is_sandboxed()`). It matches by vendor and product ID,
+  never by address, and tells the writer, the reader and the main thread when the device appears or
+  goes away.
+- **ksni tray.** `ksni` with the `async-io` feature runs its own executor thread and is spawned from
+  `glib::spawn_future_local` (desk research, S5). Menu callbacks send a `TrayAction` through an
+  `async_channel` to a main-thread loop; the main thread pushes state with `Handle::update`. The
+  `Handle` is stored and `shutdown()` is called from the application's `shutdown`. Tray
+  availability is a tri-state (unknown, available, not available) where a successful `spawn()` only
+  fills "unknown", because the offline report can arrive first (S5). "Close hides to tray" uses it,
+  and a watcher that goes away while the window is hidden brings the window back and drops the
+  application hold.
+- **Background and autostart:** the Background portal through `ashpd` (`request_background` with
+  autostart), with `default-features = false` and the `async-io` and `background` features (ashpd
+  0.13), awaited on the main context, so the app adds no tokio runtime. While the window is hidden
+  the app holds an `ApplicationHoldGuard`; re-activating the app drops it (S5).
+
+## State model
+
+```text
+device type ─┐
+active mode ─┼─> mapped profile for that type ─┐
+             │                                 ├─> desired device state ─> writer
+clocks ──────┴─────────────────────────────────┤
+overrides ─────────────────────────────────────┘
+```
+
+- The **desired device state** is a plain `x52` value: LED states (X52 Pro only), both brightness
+  values, three MFD lines, clock 1 source and 12/24 h, clock 2/3 sources and 12/24 h, date format,
+  shift, blink. It holds clock sources, not times: the writer resolves them (see the writer above).
+  It is computed on the main thread from:
+  - the **device type** of the connected device (`x52-pro` or `x52`), which also decides which
+    fields exist (no LEDs, shift or blink on the non-Pro, per
+    [protocol.md](protocol.md#x52-non-pro));
+  - the **active mode** (from the reader) mapped to a profile **for that device type** through the
+    per-type mode mapping in GSettings (see `profiles.md`); a missing or wrong-type profile falls
+    back to that type's default profile;
+  - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
+    fixed offset), which the writer turns into wire values;
+  - **overrides**: temporary values on top of the profile, such as live edits not yet saved and,
+    in 1.x, MFD pages and D-Bus requests.
+- It is **pushed to the writer** whenever an input changes. The writer decides what to send (only
+  changes, or everything on connect).
+- The **UI binds to GObject properties**: a device object (access state, device type, active mode,
+  connected), profile objects (one per profile, with properties per field) and the active profile.
+  Widgets bind in Blueprint or with `bind_property(...).sync_create()`; behaviour is exposed as
+  actions. Models never import widgets.
+- **Connecting a different supported model** (an X52 Pro unplugged, an X52 plugged in) switches to
+  that type's mapping and that type's profiles; the UI shows only the fields the type has.
+
+## Virtual mouse
+
+From S9; the 1.0.0 scope is an on/off switch with fixed values.
+
+- **Off by default**, enabled by a GSettings switch. The switch exists because the feature needs the
+  uinput permission and some games may react to the ministick axes too.
+- **Needs the uinput permission** (the second udev rule line in
+  [protocol.md](protocol.md#udev-rule)). When it is missing, creating the uinput device fails and
+  the guidance page explains the rule, including the security note that uinput write access lets the
+  user's programs inject input. The USB access state is unaffected.
+- **Releases held buttons:** on joystick disconnect or when the switch is turned off, the loop sends
+  `BTN_LEFT` and `BTN_RIGHT` up followed by `SYN_REPORT`, whether or not the uinput device is kept
+  alive.
+- The joystick is never grabbed, so games still see the ministick and mouse buttons (S9: no side
+  effects in X4: Foundations). Hiding them needs a grab plus a virtual joystick and is not planned.
+
+## Persistence
+
+- **GSettings** (schema id and path from the app ID; the Devel build has its own): app settings
+  (tray, run in background / autostart, virtual mouse switch, window state, the legacy-import-done
+  flag) and the **per-type mode mappings** (profile ids for modes 1/2/3 per device type). One
+  `gio::Settings` instance, held by the application.
+- **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
+  format, defaults, validation and recovery rules are in `profiles.md`.
+- **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
+  and `gx52.db` exists; read-only; the flag is set even when the database is unreadable, so start-up
+  never fails because of it (rewrite analysis, section 10; S8 for the schema).
+
+## Errors and logging
+
+- **`x52`:** `thiserror` enums per area (encoding, transport), `Display` lowercase without trailing
+  punctuation, causes kept through `source()`.
+- **App:** `anyhow` with `.context(...)` inside the app where callers only log or show the error.
+  Errors reach the user once, at the boundary: an `adw::Toast` for transient problems (a failed
+  transfer, a profile that could not be read), an `adw::AlertDialog` when the user has to decide
+  (replacing an unreadable default profile file). A dismissed dialog is not an error. Device
+  access problems are states shown on the guidance page, not errors.
+- **Logging:** `tracing` + `tracing-subscriber` with an `EnvFilter`; `--debug` maps to a `debug`
+  filter and `RUST_LOG` overrides it. GLib, GTK and libadwaita messages are forwarded into
+  `tracing` with a GLib log writer (`glib::log_set_writer_func`), so there is one filter and one
+  format (rewrite analysis, section 5.5). Log once, where an error is handled; never per input
+  event.
+
+## Sandbox and permissions
+
+The Flatpak `finish-args` beyond the display sockets:
+
+- `--device=all`: the USB node, the evdev node and `/dev/uinput` (S4, S9: without it `/dev/uinput`
+  does not exist in the sandbox). Device access itself comes from the host udev rule.
+- `--talk-name=org.kde.StatusNotifierWatcher` for the tray (S5; accepted by `flatpak-builder-lint`
+  in S6); no well-known name is owned (`disable_dbus_name(true)`).
+- **No network**: hotplug works by polling (S4), so `--share=network` is not needed. It is added
+  only with the X-Plane adapter in 1.x (risk R12).
+- No filesystem permission: profile import and export go through `gtk::FileDialog` (the file
+  chooser portal); the legacy database is in the app's own config directory (rewrite analysis,
+  section 10).
+
+## Testing strategy
+
+- **Protocol unit tests** in `x52`: every command's encoding and range, the LED bits, the
+  character-set conversion and fallbacks, the clock arithmetic with an injected time source, the
+  mode debounce with recorded event sequences.
+- **Recording transport mock:** device-service tests assert the exact command sequence for a
+  connect (full replay), a profile switch, a burst of slider changes (coalesced) and a disconnect.
+- **Profile fixtures and round-trip tests:** valid files, every failure case of `profiles.md`
+  (malformed, out of range, unknown value, future schema), and legacy row → profile → TOML →
+  profile.
+- **Legacy DB fixture:** small databases with both schemas found in S8, created by the test suite
+  (the real files are not committed).
+- **`meson test`:** validates the desktop file, metainfo and GSettings schema and runs
+  `cargo test`; it runs in CI inside the Flatpak build on both architectures (S6).
+- Repository checks: `make verify` and `make check` (AGENTS.md), and the `meta` crate once it
+  exists.
+
+## Extension points for 1.x
+
+Designed in from the start so the 1.x features need no rework (rewrite analysis, section 12):
+
+- **D-Bus API:** GApplication actions plus a D-Bus interface on the app's own bus name (apply a
+  profile, set MFD lines or pages, set LEDs). It feeds the overrides of the state model; owning the
+  app-ID name needs no Flatpak permission.
+- **MFD pages engine:** pages of three 16-character lines built from static text and named values,
+  switched with the MFD buttons (which arrive through evdev, S3). It writes into the MFD lines of
+  the overrides.
+- **Several devices:** device watch, writer and reader are per device, keyed by vendor/product ID
+  plus serial or port path (never the USB address, S4); 1.0.0 drives the first device found.
+- **Game adapters:** data sources for the MFD pages engine; the first is X-Plane over UDP, which
+  needs `--share=network` (R12).
