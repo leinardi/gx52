@@ -24,7 +24,7 @@ observations on this one device.
 | LED on/off and colour (`0xb8`, `bit << 8 \| state`) | All stick LEDs (Fire, A, B, POV 2, T1/T2, T3/T4, T5/T6) and throttle LEDs (D, E, i, Throttle) follow red / green / amber / off as encoded in GX52 0.7. |
 | LED brightness (`0xb2`) | One value for every LED, stick and throttle. `0` = off, `128` = maximum; `255` looks the same as `128`. |
 | MFD brightness (`0xb1`) | `0` = backlight off, `16` = very dim, `128` = full. |
-| MFD text (`0xd1`/`0xd2`/`0xd4`, clear with `\| 0x08`) | Lines 1 to 3 show text as written, one byte per character, 16 per line. Character set in [02-mfd-charset.md](02-mfd-charset.md). |
+| MFD text (`0xd1`/`0xd2`/`0xd4`, clear with `\| 0x08`) | Lines 1 to 3 show text as written, one byte per character, 16 per line. Character set in [protocol.md](../protocol.md#mfd-character-set). |
 | Clock 1 (`0xc0`, `24h << 15 \| hour << 8 \| minute`) | Shown as written. 12h mode shows an AM/PM indicator next to the time. The clock does **not** advance by itself: 7 minutes later it still showed the time that was sent, so the app must re-send it every minute. |
 | Clock 2 / 3 offset (`0xc1` / `0xc2`, `24h << 15 \| negative << 10 \| minutes`) | Offsets are relative to **clock 1**: with clock 1 at 20:46, `+60` showed 21:46 and `-120` showed 18:46. The 12h/24h flag is per clock (clock 1 and 2 in 12h with clock 3 in 24h works). |
 | Date (`0xc4` = `high << 8 \| low`, `0xc8` = third field) | Displayed as `low.high.third`, e.g. `28.10.26`. There is no format flag: the date format is chosen by which value the app puts in which field. |

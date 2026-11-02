@@ -154,31 +154,10 @@ Described from the user's perspective. This is the parity baseline for the rewri
 
 ## 4. USB / input protocol summary
 
-All commands are USB vendor control transfers to the device (endpoint 0):
-
-- `bmRequestType = 0x40` (host-to-device, vendor, device), `bRequest = 0x91`, timeout 5 s;
-- `wIndex` is the command, `wValue` the argument.
-
-| Command | `wIndex` | `wValue` |
-| --- | --- | --- |
-| MFD brightness | `0xb1` | level × 4 (0 to 128) |
-| LED brightness | `0xb2` | level × 4 (0 to 128) |
-| Blink throttle/POV | `0xb4` | `0x51` on, `0x50` off |
-| LED on/off | `0xb8` | `led_bit << 8 \| state` (Fire = 1, A red/green = 2/3, B = 4/5, D = 6/7, E = 8/9, T1 = 10/11, T2 = 12/13, T3 = 14/15, POV = 16/17, i = 18/19, Throttle = 20) |
-| Clock 1 | `0xc0` | `use_24h << 15 \| hour << 8 \| minute` |
-| Clock 2 / 3 offset | `0xc1` / `0xc2` | `use_24h << 15 \| negative << 10 \| abs(offset_min)` (max 1023) |
-| Date (day/month) | `0xc4` | depends on the date format |
-| Date (year) | `0xc8` | depends on the date format |
-| MFD line 1 / 2 / 3 write | `0xd1` / `0xd2` / `0xd4` | two characters per transfer, little-endian |
-| MFD line clear | line \| `0x08` | `0` |
-| Shift indicator | `0xfd` | `0x51` on, `0x50` off |
-
-Button names on the MFD come from evdev key codes, which differ between the X52 Pro and the X52 (two
-separate mapping tables in `gx52/driver/x52_driver.py` and `gx52/util/x52.py`).
-
-The encoding is pure arithmetic and can be fully unit-tested without hardware behind a transport
-trait. [libx52](https://github.com/nirenjan/libx52) is a useful second reference (protocol details,
-MFD character map, X52 non-Pro differences).
+Superseded by [protocol.md](protocol.md), which records the USB vendor commands, the MFD character
+set, the evdev input map, hotplug, the virtual mouse and the list of commands the app may send, as
+verified on the device in spikes S1 to S4 and S9. The encoding is pure arithmetic and is unit-tested
+without hardware behind a transport trait in the `x52` crate.
 
 ## 5. Technology mapping (Python to Rust)
 
