@@ -19,9 +19,10 @@ ifndef MK_LOCAL_VERIFY_INCLUDED
 MK_LOCAL_VERIFY_INCLUDED := 1
 
 # Local snippet (NOT part of make-common): one command that runs every check a change has to pass,
-# the way CI does (AGENTS.md, Validation matrix). verify-rust lives in rust.mk.
+# the way CI does (AGENTS.md, Validation matrix). verify-rust lives in rust.mk, meson-test in
+# meson.mk.
 
 .PHONY: verify
-verify: verify-rust ## Verify everything (build, fmt, clippy, tests, docs)
+verify: verify-rust meson-test ## Verify everything (build, fmt, clippy, tests, docs, meson test)
 
 endif  # MK_LOCAL_VERIFY_INCLUDED

@@ -1,0 +1,2 @@
+# The gettext template is generated (meson compile -C _build gx52-pot); review the sources, not it.
+po/*.pot linguist-generated=true

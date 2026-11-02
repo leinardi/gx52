@@ -33,10 +33,10 @@ commands the app may send, are in [`docs/protocol.md`](docs/protocol.md).
 
 ## Common commands
 
-Build / test / lint — Make wrappers around `cargo` and `pre-commit`:
+Build / test / lint — Make wrappers around `cargo`, `meson`, `flatpak` and `pre-commit`:
 
 ```bash
-make verify        # verify-rust: every check a change has to pass
+make verify        # verify-rust and meson-test: every check a change has to pass
 make verify-rust   # rust-build, rust-fmt-check, rust-clippy (-D warnings), rust-test, rust-doc
 make rust-build    # cargo build --workspace --all-targets --all-features --locked
 make rust-test     # cargo test --workspace --locked (meta-tests included)
@@ -50,11 +50,33 @@ make check         # pre-commit on all files: the authoritative local gate
 make check-stage   # pre-commit on staging area only
 make pre-commit-install  # install the pre-commit and commit-msg hooks
 make help          # every target with its one-line description
+
+make meson-setup   # meson setup _build -Dprofile=development (once; Meson reconfigures itself)
+make meson-compile # build the Devel app (com.leinardi.gx52.Devel) with Meson
+make meson-test    # meson test: cargo test -p gx52 -p x52, desktop, metainfo and schema validation
+make meson-run     # meson devenv -C _build ./src/gx52: run uninstalled
+make meson-install # meson install -C _build
+
+make flatpak-build # Devel Flatpak into _flatpak/repo via org.flatpak.Builder (runs meson test)
+make flatpak-install  # the same, installed for the user: flatpak run com.leinardi.gx52.Devel
+make flatpak-bundle   # _flatpak/com.leinardi.gx52.Devel.flatpak
+make flatpak-lint-manifest  # flatpak-builder-lint on both manifests (also a pre-commit hook)
+make flatpak-lint-repo      # flatpak-builder-lint on _flatpak/repo; reports missing screenshots until M8
+make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (network required)
 ```
 
-The cargo targets need the GTK 4 and libadwaita development files on the host, at the versions
-the crate features require (see [`docs/spikes/06-build-and-release.md`](docs/spikes/06-build-and-release.md)).
-The Meson and Flatpak targets (`meson.mk`, `flatpak.mk`) are not written yet.
+The cargo and Meson targets need the GTK 4 and libadwaita development files on the host, at the
+versions the crate features require (see
+[`docs/spikes/06-build-and-release.md`](docs/spikes/06-build-and-release.md)), plus Meson,
+`blueprint-compiler` and the two validators `meson setup` refuses to run without
+(`desktop-file-validate`, `appstreamcli`). On Ubuntu 26.04:
+
+```bash
+sudo apt install libgtk-4-dev libadwaita-1-dev blueprint-compiler meson desktop-file-utils appstream
+```
+
+The Flatpak targets need `flatpak` with the `org.flatpak.Builder` Flatpak from Flathub;
+`cargo-sources` needs `uv` and `curl`.
 
 The Makefile pulls shared snippets from `leinardi/make-common@v1` into `.mk/` on first run. To
 refresh: `make mk-common-update`. Repo-local targets go in their own `.mk/<fragment>.mk`, listed in
@@ -132,7 +154,9 @@ Run before considering an edit done. `make check` applies to every row.
 | --- | --- |
 | `**/*.rs`, `clippy.toml`, `rustfmt.toml` | `make verify`, then `make check-stage` |
 | a `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `deny.toml` | `make verify`, `make rust-deny` (network) |
-| `**/*.blp`, `meson.build`, `meson.options` | `make check` (blueprint and meson format hooks) |
+| `**/*.blp`, `meson.build`, `meson.options`, `data/**`, `po/**` | `make meson-test`, `make check` (blueprint and meson format hooks); `make meson-run` when the change is visible |
+| `build-aux/*.json` | `make flatpak-lint-manifest`, `make flatpak-install` |
+| `.mk/meson.mk`, `.mk/flatpak.mk` | `make help`, and the targets the edit touched |
 | `scripts/check-suppressions.sh`, `.suppressions-baseline` | `cargo test --locked -p meta --test suppressions` |
 | `scripts/check-license-headers.sh` | `cargo test --locked -p meta --test license_headers` |
 | `meta/**` | `make verify` |

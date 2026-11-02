@@ -20,6 +20,14 @@ ij_wrap_on_typing = false
 [*.{yml,yaml}]
 indent_size = 2
 
+# The canonical formats of the blueprint-format and meson-format hooks: Blueprint two spaces,
+# meson format's default four.
+[*.blp]
+indent_size = 2
+
+[{meson.build,meson.options}]
+indent_size = 4
+
 [*.md]
 max_line_length = 100
 trim_trailing_whitespace = false # Allow trailing spaces for line breaks

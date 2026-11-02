@@ -25,9 +25,19 @@ glib_compile_schemas = find_program('glib-compile-schemas')
 blueprint_compiler = find_program('blueprint-compiler', version: '>= 0.16')
 # Required, not optional: an optional validator that is missing would silently drop its test from
 # `meson test`. Both ship in the GNOME SDK; on the host they come with desktop-file-utils and
-# appstream.
-desktop_file_validate = find_program('desktop-file-validate')
-appstreamcli = find_program('appstreamcli')
+# appstream (AGENTS.md has the install command).
+desktop_file_validate = find_program('desktop-file-validate', required: false)
+if not desktop_file_validate.found()
+    error(
+        'desktop-file-validate not found: meson test validates the desktop file with it. Install desktop-file-utils.',
+    )
+endif
+appstreamcli = find_program('appstreamcli', required: false)
+if not appstreamcli.found()
+    error(
+        'appstreamcli not found: meson test validates the metainfo with it. Install appstream.',
+    )
+endif
 
 version = meson.project_version()
 prefix = get_option('prefix')

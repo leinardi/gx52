@@ -5,8 +5,9 @@
 # commit types, so a message that cannot be classified is caught at commit time
 # rather than at release time.
 #
-# Hooks still to add (docs/tooling-todo.md): the desktop / metainfo / GSettings
-# schema validators and flatpak-builder-lint.
+# The desktop, metainfo and GSettings schema validators are not hooks: the files
+# are templated per build profile, so meson test validates the generated ones
+# (make meson-test, part of make verify).
 default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
@@ -169,6 +170,17 @@ repos:
         entry: meson format --check-diff
         language: system
         files: '(^|/)meson\.build$|^meson\.options$'
+      # Both Flatpak manifests, through the org.flatpak.Builder Flatpak (Flathub's linter). The
+      # stable manifest lists the generated build-aux/cargo-sources.json, which the make target
+      # regenerates first when Cargo.lock is newer (network required). CI skips it in the
+      # pre-commit job and runs the same target in the Flatpak job, where the tools are.
+      - id: flatpak-builder-lint
+        name: flatpak-builder-lint manifest
+        entry: make flatpak-lint-manifest
+        language: system
+        pass_filenames: false
+        require_serial: true
+        files: '^build-aux/com\.leinardi\.gx52(\.Devel)?\.json$'
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:

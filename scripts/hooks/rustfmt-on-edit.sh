@@ -20,8 +20,9 @@
 #
 
 # rustfmt-on-edit.sh -- Claude Code PostToolUse hook (configured in .claude/settings.json).
-# Auto-formats Rust files immediately after an Edit/Write tool call so formatting
-# drift is fixed at edit time instead of failing later at pre-commit.
+# Auto-formats Rust and Blueprint files immediately after an Edit/Write tool call so formatting
+# drift is fixed at edit time instead of failing later at pre-commit (cargo-fmt and
+# blueprint-format hooks).
 #
 # Input: hook payload JSON on stdin; the edited path is at .tool_input.file_path.
 # rustfmt finds the repository's rustfmt.toml (edition, max_width) from the file's directory.
@@ -35,6 +36,11 @@ case "$file" in
   *.rs)
     if [[ -f "$file" ]] && command -v rustfmt >/dev/null 2>&1; then
       rustfmt --quiet "$file" || true
+    fi
+    ;;
+  *.blp)
+    if [[ -f "$file" ]] && command -v blueprint-compiler >/dev/null 2>&1; then
+      blueprint-compiler format --fix "$file" >/dev/null 2>&1 || true
     fi
     ;;
 esac

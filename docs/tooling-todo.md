@@ -41,21 +41,27 @@ item off, or delete it, in the commit that does it.
 
 ## Needs the Meson / Flatpak scaffold
 
-- [ ] `.mk/meson.mk` (setup with the Devel profile, compile, test, install, run) and
+- [x] `.mk/meson.mk` (setup with the Devel profile, compile, test, install, run) and
       `.mk/flatpak.mk` (build and install the Devel manifest, bundle, `flatpak-builder-lint`,
       regenerate `cargo-sources.json`), built on what spike S6 proved; add them to `MK_LOCAL_FILES`
-      and `verify`.
-- [ ] Pre-commit hooks for the data files, once their paths and the Devel/stable templating exist:
+      and `verify`. `flatpak-lint-repo` reports the missing screenshots until M8 adds them, so it is
+      not a gate before then.
+- [x] Pre-commit hooks for the data files, once their paths and the Devel/stable templating exist:
       `appstreamcli validate --no-net` on the metainfo, `desktop-file-validate` on the desktop
       file, `glib-compile-schemas --strict --dry-run` on the schema, `flatpak-builder-lint manifest`
       on the Devel manifest. Decide per hook whether it runs in pre-commit, in `meson test`, or
-      both (the gtk-rs-new-app scaffold validates the generated files in `meson test`).
-- [ ] `scripts/hooks/rustfmt-on-edit.sh`: consider a `blueprint-compiler format --fix` branch for
+      both (the gtk-rs-new-app scaffold validates the generated files in `meson test`). Decided:
+      the three validators stay in `meson test`, on the generated files, with
+      `desktop-file-validate` and `appstreamcli` required by `meson setup` so a missing tool cannot
+      drop a test; `flatpak-builder-lint manifest` on both manifests is the `flatpak-builder-lint`
+      hook.
+- [x] `scripts/hooks/rustfmt-on-edit.sh`: consider a `blueprint-compiler format --fix` branch for
       `.blp` files.
-- [ ] `.editorconfig`: add sections for `*.blp` and `meson.build` if their formatters' indentation
+- [x] `.editorconfig`: add sections for `*.blp` and `meson.build` if their formatters' indentation
       differs from the default.
-- [ ] `.gitattributes`: mark generated files (`po/*.pot`, a vendored `cargo-sources.json` if one is
-      ever kept here) as `linguist-generated`.
+- [x] `.gitattributes`: mark generated files (`po/*.pot`, a vendored `cargo-sources.json` if one is
+      ever kept here) as `linguist-generated`. Only `po/*.pot`: `cargo-sources.json` is generated
+      and ignored, never committed.
 
 ## Needs CI and the release flow
 
@@ -79,7 +85,7 @@ item off, or delete it, in the commit that does it.
 - [ ] `RELEASING.md`: replace with `docs/release.md`.
 - [ ] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
 - [x] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists.
-- [ ] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
+- [x] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
 - [ ] `.agents/skills/`: decide whether gx52 needs a domain skill like `swarm-device-access`'s
       `trust-boundary` (candidates: profile and legacy-database parsing, the device command path).
 - [ ] `SECURITY.md`: check the security model against the final Flatpak `finish-args` (spike S4
