@@ -37,10 +37,9 @@ item off, or delete it, in the commit that does it.
 ## Needs the Meson / Flatpak scaffold
 
 - [ ] `.mk/meson.mk` (setup with the Devel profile, compile, test, install, run) and
-  `.mk/flatpak.mk`
-      (build and install the Devel manifest, bundle, `flatpak-builder-lint`, regenerate
-      `cargo-sources.json`), built on what spike S6 proved; add them to `MK_LOCAL_FILES` and
-      `verify`.
+      `.mk/flatpak.mk` (build and install the Devel manifest, bundle, `flatpak-builder-lint`,
+      regenerate `cargo-sources.json`), built on what spike S6 proved; add them to `MK_LOCAL_FILES`
+      and `verify`.
 - [ ] Pre-commit hooks for the data files, once their paths and the Devel/stable templating exist:
       `appstreamcli validate --no-net` on the metainfo, `desktop-file-validate` on the desktop
       file, `glib-compile-schemas --strict --dry-run` on the schema, `flatpak-builder-lint manifest`
@@ -56,11 +55,10 @@ item off, or delete it, in the commit that does it.
 ## Needs CI and the release flow
 
 - [ ] `.github/workflows/ci.yaml` (rewrite analysis, section 6.3): pre-commit on the bare runner
-  with
-      `SKIP=cargo-clippy,cargo-test,blueprint-format,meson-format`, clippy and the format checks in
-      the GNOME SDK build shell, the Flatpak build and `meson test` on `x86_64` and `aarch64`,
-      conventional commits, the `ci-result` gate. `pre-commit-warmup.yaml` is already ported and
-      expects the pre-commit job to restore the cache under the same key.
+      with `SKIP=cargo-clippy,cargo-test,blueprint-format,meson-format`, clippy and the format
+      checks in the GNOME SDK build shell, the Flatpak build and `meson test` on `x86_64` and
+      `aarch64`, conventional commits, the `ci-result` gate. `pre-commit-warmup.yaml` is already
+      ported and expects the pre-commit job to restore the cache under the same key.
 - [x] `docs/release.md`: the release specification (rewrite analysis, section 9).
 - [ ] `.github/workflows/release.yaml`, implementing [release.md](release.md).
 - [ ] `scheduled-scan.yaml` (dependency audit only) and, possibly, a check for a newer GNOME

@@ -1,10 +1,11 @@
 # GX52 rewrite: analysis and decisions
 
-Status: pre-planning. All questions from the analysis are answered (third review round); the next
-step is the implementation plan. This document collects what the current Python + GTK 3 application
-does, what the Rust + GTK 4 rewrite has to cover, which decisions are already taken, which are still
-open, and the risks to retire before (or early in) the implementation. It is the input for the
-implementation plan, not the plan itself.
+Status: decision record. The spikes S1–S9 and the hands-on session are done, and stage C turned
+their results into the reference docs: [protocol.md](protocol.md),
+[architecture.md](architecture.md), [profiles.md](profiles.md), [release.md](release.md) and the
+ordered plan in [roadmap.md](roadmap.md). This document collects what the Python + GTK 3 application
+does, what the rewrite has to cover and why each decision was taken; where a reference doc now holds
+the detail, the section here links to it.
 
 Sources analysed:
 
@@ -48,7 +49,13 @@ Sources analysed:
 | UI definition | The current GTK 4 best practice: Blueprint templates. See [section 5.4](#54-ui-definition-blueprint). |
 | AI tooling | Port everything from the reference repositories (`AGENTS.md`, `.agents/skills`, `.claude/`, `.serena/`). |
 | Architectures | `x86_64` and `aarch64` (the current `flathub.json` restricts to `x86_64`). |
-| Runtime and libraries | Always the latest stable version Flathub supports. At the time of writing: `org.gnome.Platform//51`, `org.freedesktop.Sdk.Extension.rust-stable//26.08`, `gtk4` 0.11, `libadwaita` 0.9. |
+| Per-mode profiles | A profile is one full state for one device type. A setting maps modes 1/2/3 to profiles **per device type** (GSettings `mode-profiles-x52-pro`, `mode-profiles-x52`); by default all three use that type's default profile. See [profiles.md](profiles.md#mode-mapping). |
+| GNOME versions | **Required GNOME 50, runtime GNOME 51** (S6): crate features `gnome_50` / `v1_9` + `gtk_v4_22`, Meson `gtk4 >= 4.22`, `libadwaita-1 >= 1.9`; raised only when an API needs it. |
+| Hotplug in the sandbox | `nusb::watch_devices` on the host, **polling every 250 ms** in the Flatpak sandbox, where the udev netlink events never arrive (S4). No `--share=network`. |
+| Virtual mouse | **In 1.0.0, off by default**, enabled by a switch; uinput through the `evdev` crate, with the S9 values (S9, [protocol.md](protocol.md#virtual-mouse-uinput)). |
+| POV 1 LED | **Fixed green**, not controllable (S2 scan); shown as a fixed LED in the editor, answering GitHub #3. |
+| Clock sources | Clock 1 `local` or `utc`; clocks 2/3 an IANA zone (`jiff`, runtime tzdata) or a fixed offset in minutes. Legacy offsets import unchanged as fixed offsets, never guessed into a zone. See [profiles.md](profiles.md#clocks). |
+| Runtime and libraries | Always the latest stable runtime Flathub supports (see GNOME versions above for the required minimum). At the time of writing: `org.gnome.Platform//51`, `org.freedesktop.Sdk.Extension.rust-stable//26.08`, `gtk4` 0.11, `libadwaita` 0.9. |
 
 ## 2. Feature inventory of the current application
 
@@ -81,8 +88,8 @@ Described from the user's perspective. This is the parity baseline for the rewri
   `+840`), 12h or 24h each. Offsets are relative to UTC; when clock 1 uses local time, the local UTC
   offset is subtracted, because the hardware computes clocks 2/3 relative to clock 1.
 - Date format: YY-MM-DD, DD-MM-YY or MM-DD-YY.
-- Date and time are pushed at start-up, on every change, and every minute (a 1 s timer that acts when
-  `second == 0`).
+- Date and time are pushed at start-up, on every change, and every minute (a 1 s timer that acts
+  when `second == 0`).
 - Text lines (16 characters each):
   - line 1: name of the mode while the mode selector button is held;
   - line 2: name of the button currently pressed (from evdev `EV_KEY` events);
@@ -131,11 +138,13 @@ Described from the user's perspective. This is the parity baseline for the rewri
 
 ## 3. Defects and debt not to carry over
 
-- `--autostart-off` enables autostart (`gx52/app.py`: both options call `set_autostart_entry(True)`).
+- `--autostart-off` enables autostart (`gx52/app.py`: both options call
+  `set_autostart_entry(True)`).
 - Dead settings (`settings_load_last_profile`, `settings_refresh_interval`) and an unused
   `CurrentProfile` table.
 - Changelog URL uses the GitHub path format (`/blob/<tag>/CHANGELOG.md`); GitLab needs `/-/blob/`.
-- Update check uses the retired Flathub API v1 and `distutils.LooseVersion` (removed in Python 3.12).
+- Update check uses the retired Flathub API v1 and `distutils.LooseVersion` (removed in Python
+  3.12).
 - MFD text is encoded as ASCII: any non-ASCII profile name raises. The MFD has its own character set
   (libx52 documents the mapping).
 - The udev rule lives in `/lib/udev/rules.d` (package-owned location) and uses `MODE="0666"` (world
@@ -144,11 +153,11 @@ Described from the user's perspective. This is the parity baseline for the rewri
 - The evdev reader blocks in `read_loop()` on a thread pool and has no clean shutdown.
 - Implemented but unused in the driver: shift indicator, blink (throttle and POV), `EV_ABS` (axes)
   forwarding.
-- `meson.build` installs a `python-xlib` subdirectory that no longer exists; `t.py` is a scratch file;
-  the driver docstring still refers to NZXT Kraken coolers.
+- `meson.build` installs a `python-xlib` subdirectory that no longer exists; `t.py` is a scratch
+  file; the driver docstring still refers to NZXT Kraken coolers.
 - The Flatpak manifest grants `--talk-name=org.freedesktop.Flatpak` (full host command execution) to
-  run `pkexec` on the host. Flathub reviewers now push back on this permission; the rewrite should not
-  need it.
+  run `pkexec` on the host. Flathub reviewers now push back on this permission; the rewrite should
+  not need it.
 - The `flatpak/` submodule (with its own nested submodules) couples this repository to the Flathub
   one; the release pipeline will clone the Flathub repository instead.
 
@@ -167,9 +176,9 @@ without hardware behind a transport trait in the `x52` crate.
 | --- | --- | --- |
 | PyGObject + GTK 3 | `gtk4` 0.11, `libadwaita` 0.9 | Latest stable bindings matching GNOME 51. |
 | pyusb (libusb) | `nusb` 0.2 (pure Rust) | No libusb to bundle, has a hotplug API (`nusb::watch_devices`). Fallback: `rusb`. **See risk R1.** |
-| evdev | `evdev` 0.13 | Pure Rust. The device fd can be polled from the GLib main loop (`glib::unix_fd_add_local`), so no dedicated thread is required. |
-| pyudev | `nusb` hotplug (kernel netlink uevents) | `/run/udev` is not visible in the Flatpak sandbox, so a libudev monitor on the "udev" source is unreliable there; kernel uevents work. |
-| peewee + SQLite | `serde` + a TOML (or JSON) file per profile, or one file for all, in `glib::user_config_dir()` | Small data, human-readable, trivially exportable. |
+| evdev | `evdev` 0.13 | Pure Rust. Read on its own thread, which also feeds the virtual mouse ([architecture.md](architecture.md#threads-and-data-flow)); the earlier idea of polling the fd from the GLib main loop was dropped. |
+| pyudev | `nusb` hotplug (kernel netlink uevents) | `/run/udev` is not visible in the Flatpak sandbox, and S4 showed the netlink events do not arrive there either: the app polls in the sandbox (section 1, Hotplug in the sandbox). |
+| peewee + SQLite | `serde` + one TOML file per profile in `glib::user_config_dir().join("gx52/profiles")` ([profiles.md](profiles.md)) | Small data, human-readable, trivially exportable. |
 | injector | none | Plain constructor wiring. |
 | reactivex | `glib::spawn_future_local`, `gio::spawn_blocking`, `async-channel` | Device I/O on a worker; UI updates on the main context. |
 | AppIndicator3 | `ksni` 0.3 (StatusNotifierItem over D-Bus) | GTK 4 has no tray API. Works on KDE and on GNOME with the AppIndicator extension. Needs `--talk-name=org.kde.StatusNotifierWatcher` (already granted). See risk R5. |
@@ -178,43 +187,35 @@ without hardware behind a transport trait in the `x52` crate.
 | gettext | `gettext-rs` | Infrastructure from day one, English only for now. |
 | logging | `tracing` + `tracing-subscriber` (+ `tracing-log` to capture `log` records from dependencies) | Same stack as the reference repositories. |
 
-### 5.2 Architecture sketch (to be refined in the plan)
+### 5.2 Architecture sketch
 
-- `x52` module (or crate in a workspace): protocol encoding (pure functions), device model
-  (Pro / non-Pro capabilities), evdev key maps, MFD character map. No GTK dependency, unit-tested.
-- Transport layer: trait over "send control transfer", `nusb` implementation, recording mock for
-  tests.
-- Device service: owns the opened device on a worker thread, receives commands through a channel,
-  coalesces bursts (sliders), reports errors and disconnects; hotplug watcher; evdev reader.
-- Profile store: load/save, defaults, validation, import/export.
-- UI: `adw::Application`, GObject subclasses with Blueprint composite templates, `adw::PreferencesDialog`,
-  `adw::AboutDialog`, `adw::Toast` for errors (replaces the status bar), tray via `ksni`.
-- Background mode: `application.hold()` when the window is hidden, Background portal for autostart.
+Superseded by [architecture.md](architecture.md): workspace, threads and data flow, device service,
+state model, profile store, UI layers, background mode, errors, sandbox and tests.
 
 ### 5.3 Build and packaging
 
-- Meson + Cargo following the GNOME Rust app layout (as in Fractal, Amberol, Shortwave, Pika Backup):
-  `src/config.rs.in` generated by Meson, Cargo invoked by a Meson custom target, `data/` with
-  `com.leinardi.gx52.desktop.in`, `com.leinardi.gx52.metainfo.xml.in` (rename from `appdata.xml`),
-  `com.leinardi.gx52.gschema.xml`, GResource, icons.
+- Meson + Cargo following the GNOME Rust app layout (as in Fractal, Amberol, Shortwave, Pika
+  Backup): `src/config.rs.in` generated by Meson, Cargo invoked by a Meson custom target, `data/`
+  with `com.leinardi.gx52.desktop.in`, `com.leinardi.gx52.metainfo.xml.in` (rename from
+  `appdata.xml`), `com.leinardi.gx52.gschema.xml`, GResource, icons.
 - Development profile (`com.leinardi.gx52.Devel`) for side-by-side installs, as the GNOME convention
   suggests.
-- Metainfo: add `<developer id=…>`, `<branding>` colours, updated screenshots, `<releases>`; validate
-  with `appstreamcli validate` (`appstream-util` is deprecated).
+- Metainfo: add `<developer id=…>`, `<branding>` colours, updated screenshots, `<releases>`;
+  validate with `appstreamcli validate` (`appstream-util` is deprecated).
 - Flatpak manifest: `org.gnome.Platform//51`, `org.freedesktop.Sdk.Extension.rust-stable//26.08`,
-  `cargo-sources.json`, offline Cargo build. Permissions to re-evaluate: `--device=all` (still needed
-  for `/dev/bus/usb` and `/dev/input`), drop `--share=network` (no update check) and
+  `cargo-sources.json`, offline Cargo build. Permissions to re-evaluate: `--device=all` (still
+  needed for `/dev/bus/usb` and `/dev/input`), drop `--share=network` (no update check) and
   `--talk-name=org.freedesktop.Flatpak`.
 - `flathub.json`: allow `x86_64` and `aarch64` (or delete the file, which means all Flathub
   architectures).
 
 ### 5.4 UI definition: Blueprint
 
-GTK 4 itself only understands GtkBuilder XML (`.ui`). Blueprint is a markup language that compiles to
-it, and it is the current best practice for new GNOME applications:
+GTK 4 itself only understands GtkBuilder XML (`.ui`). Blueprint is a markup language that compiles
+to it, and it is the current best practice for new GNOME applications:
 
-- it is a GNOME project (`GNOME/blueprint-compiler`), used by the GNOME Builder templates and by many
-  recent Rust apps;
+- it is a GNOME project (`GNOME/blueprint-compiler`), used by the GNOME Builder templates and by
+  many recent Rust apps;
 - it is much more readable and diff-friendly than XML, has a formatter (`blueprint-compiler format`)
   and type checks against GObject introspection at build time;
 - Meson compiles `.blp` to `.ui` before `glib-compile-resources`; Rust uses
@@ -228,13 +229,13 @@ module is needed (Meson: `find_program('blueprint-compiler', version: '>= 0.16')
 
 Options considered:
 
-- **`tracing` + `tracing-subscriber`** (used by the reference repositories and by GNOME Rust apps such
-  as Fractal): structured fields, spans (useful around device operations running on a worker), an
-  `EnvFilter` (`RUST_LOG`), and `tracing-log` to capture dependencies that use `log`.
+- **`tracing` + `tracing-subscriber`** (used by the reference repositories and by GNOME Rust apps
+  such as Fractal): structured fields, spans (useful around device operations running on a worker),
+  an `EnvFilter` (`RUST_LOG`), and `tracing-log` to capture dependencies that use `log`.
 - **`log` + `glib::GlibLogger`**: routes Rust log records into GLib's structured logging, so they
   follow `G_MESSAGES_DEBUG` and reach the journal with the same fields as GTK's own messages. Fewer
-  dependencies, but no spans, no structured fields beyond the message, and a different stack from the
-  other projects.
+  dependencies, but no spans, no structured fields beyond the message, and a different stack from
+  the other projects.
 
 There is no strong argument against `tracing`. The one gap is that GTK, GLib and libadwaita warnings
 go through GLib's own log writer and would bypass the `tracing` filter; installing a GLib log writer
@@ -245,11 +246,12 @@ everything. `--debug` maps to a `debug` filter, `RUST_LOG` overrides it. Decisio
 
 ### 6.1 Directly portable
 
-- `Makefile` with `make-common` bootstrap (`scripts/bootstrap-mk-common.sh`, `.mk/.mk-common-version`)
-  and the shared fragments `help.mk`, `pre-commit.mk`; repo-local `rust.mk`, `verify.mk`,
-  `audit-deps.mk`. `make-common` is fetched from `raw.githubusercontent.com`, which works from any CI.
-  New repo-local fragments: `meson.mk` (setup/build/install/run), `flatpak.mk` (build, install,
-  bundle, lint, regenerate `cargo-sources.json`).
+- `Makefile` with `make-common` bootstrap (`scripts/bootstrap-mk-common.sh`,
+  `.mk/.mk-common-version`) and the shared fragments `help.mk`, `pre-commit.mk`; repo-local
+  `rust.mk`, `verify.mk`, `audit-deps.mk`. `make-common` is fetched from
+  `raw.githubusercontent.com`, which works from any CI. New repo-local fragments: `meson.mk`
+  (setup/build/install/run), `flatpak.mk` (build, install, bundle, lint, regenerate
+  `cargo-sources.json`).
 - Config: `.editorconfig`, `rustfmt.toml`, `rust-toolchain.toml`, `clippy.toml`, `deny.toml`,
   `.markdownlint-cli2.yaml`, `.yamllint.yaml`, `.prettierrc.json`, `checkmake.ini`,
   `.suppressions-baseline`, `.gitignore`.
@@ -285,9 +287,9 @@ images usually lag behind GNOME 51), or it runs inside the GNOME SDK container.
 ### 6.3 GitHub Actions
 
 The reference workflows port almost unchanged: `ci.yaml` (pre-commit, actionlint, markdownlint,
-shellcheck, yamllint, conventional commits, Rust checks, `ci-result` gate), `pre-commit-warmup.yaml`,
-`scheduled-scan.yaml` (dependency audit only, no image), `release.yaml`, composite actions under
-`.github/actions/`, `CODEOWNERS`, issue and PR templates, `dependabot.yml`.
+shellcheck, yamllint, conventional commits, Rust checks, `ci-result` gate),
+`pre-commit-warmup.yaml`, `scheduled-scan.yaml` (dependency audit only, no image), `release.yaml`,
+composite actions under `.github/actions/`, `CODEOWNERS`, issue and PR templates, `dependabot.yml`.
 
 Differences specific to a GNOME application, following `gtk-rs-skills`
 (`references/packaging-and-ci.md` and the `gtk-rs-new-app` CI template):
@@ -300,21 +302,21 @@ Differences specific to a GNOME application, following `gtk-rs-skills`
   (free for public repositories).
 - **Clippy inside the SDK**: runner images ship older GTK / libadwaita, so `gtk4-sys` fails its
   pkg-config check on the bare runner. The job builds the manifest with `--stop-at=gx52`, enables
-  network with `flatpak build-finish --share=network`, then runs `cargo clippy` in
-  `flatpak-builder --build-shell=gx52`. Blueprint and Meson format checks run in the same shell so tool
-  versions match the runtime.
+  network with `flatpak build-finish --share=network`, then runs `cargo clippy` in `flatpak-builder
+  --build-shell=gx52`. Blueprint and Meson format checks run in the same shell so tool versions
+  match the runtime.
 - **Bare runner** for everything without system libraries: rustfmt, pre-commit hooks that don't need
   GTK, markdownlint, yamllint, actionlint, shellcheck, conventional commits.
 - **Widget tests** (`#[gtk::test]`) need a display: the action's `run-tests` input runs them under
   `xvfb-run`.
 - **Pre-commit vs CI**: hooks that need GTK (clippy, cargo test) run locally on the host (the
-  maintainer's machine has GTK 4.22 / libadwaita 1.9) and in CI inside the SDK; the CI pre-commit job
-  skips them (`SKIP=`) to avoid the system-library problem.
-- **`flatpak-builder-lint`**: manifest mode on the Devel and stable manifests, repo mode on the build
-  output.
+  maintainer's machine has GTK 4.22 / libadwaita 1.9) and in CI inside the SDK; the CI pre-commit
+  job skips them (`SKIP=`) to avoid the system-library problem.
+- **`flatpak-builder-lint`**: manifest mode on the Devel and stable manifests, repo mode on the
+  build output.
 - No static binaries, zigbuild, Docker image, image scan, SBOM or cosign signature: Flathub builds,
-  signs and publishes the artifact users install. Binary attestation scripts from the reference repos
-  are not needed.
+  signs and publishes the artifact users install. Binary attestation scripts from the reference
+  repos are not needed.
 - Devel manifest (`build-aux/com.leinardi.gx52.Devel.json`, app ID `com.leinardi.gx52.Devel`,
   network allowed at build time) lives in this repository; the stable manifest lives in the Flathub
   repository and is updated by the release workflow.
@@ -326,11 +328,12 @@ Differences specific to a GNOME application, following `gtk-rs-skills`
 These reasons go in the tombstone, in short form:
 
 - **CI minutes.** GitLab.com's free tier gives a namespace a few hundred shared-runner minutes per
-  month. A Rust + GTK pipeline plus a Flatpak build (15 to 30 minutes with a cold cache) uses that up
-  after a handful of merge requests. GitHub Actions is free and unlimited for public repositories.
-- **Flatpak builds.** `flatpak-builder` needs user namespaces (bubblewrap), which GitLab shared runners
-  only allow with workarounds. Flathub maintains GitHub Actions and containers that work out of the
-  box.
+  month. A Rust + GTK pipeline plus a Flatpak build (15 to 30 minutes with a cold cache) uses that
+  up after a handful of merge requests. GitHub Actions is free and unlimited for public
+  repositories.
+- **Flatpak builds.** `flatpak-builder` needs user namespaces (bubblewrap), which GitLab shared
+  runners only allow with workarounds. Flathub maintains GitHub Actions and containers that work out
+  of the box.
 - **aarch64.** GitHub provides free arm64 runners for public repositories; on GitLab they consume
   extra minutes.
 - **Flathub.** The packaging repository (`flathub/com.leinardi.gx52`) is on GitHub. Releasing means
@@ -342,8 +345,8 @@ These reasons go in the tombstone, in short form:
 
 - GitLab `leinardi/gx52`: unchanged, default branch `release`, 17 stars, 4 forks, 3 open issues, no
   open merge requests. The push mirror to GitHub is removed; GitLab receives no more pushes.
-- GitHub `leinardi/gx52`: the working repository. All branches (`master`, `release`,
-  `rust-rewrite`) and tags (`0.7.0` to `0.7.6`, `0.7.0-flathub`) match GitLab. Managed by OpenTofu in
+- GitHub `leinardi/gx52`: the working repository. All branches (`master`, `release`, `rust-rewrite`)
+  and tags (`0.7.0` to `0.7.6`, `0.7.0-flathub`) match GitLab. Managed by OpenTofu in
   `leinardi/gh-leinardi-iac` (`module "repo_gx52"`): description, topics, settings, labels and
   rulesets come from there, the homepage pointing to GitLab is dropped.
 - Issues:
@@ -363,9 +366,9 @@ These reasons go in the tombstone, in short form:
 2. Right before the first public `v1.0.0`: close the GitLab issues with a link to the GitHub ones or
    an explanation, push the tombstone (7.4) to GitLab, archive the GitLab project (read-only, still
    browsable and clonable). Until then GitLab stays as it is.
-3. The default branch on GitHub becomes `main` when the rewrite is merged; `master` and `release` are
-   deleted or left frozen. The legacy tags stay. The stale `bugfix-for-x52` branch only existed on
-   GitLab and is already gone there.
+3. The default branch on GitHub becomes `main` when the rewrite is merged; `master` and `release`
+   are deleted or left frozen. The legacy tags stay. The stale `bugfix-for-x52` branch only existed
+   on GitLab and is already gone there.
 4. Flathub: the first release from GitHub points the manifest source to GitHub. The published 0.7.6
    keeps building from its GitLab tag, which stays available in the archived project. Metainfo URLs
    (homepage, bug tracker, VCS browser, help) switch to GitHub.
@@ -388,13 +391,13 @@ requests are disabled, then the project is archived.
 Same setup as the reference repositories:
 
 - ecosystems: `cargo`, `github-actions`, `pre-commit` (if used in the reference repos);
-- commit message policy: production Cargo dependencies as `fix(deps)` (they trigger a patch release),
-  dev dependencies, actions and pre-commit hooks as `chore(deps)`.
+- commit message policy: production Cargo dependencies as `fix(deps)` (they trigger a patch
+  release), dev dependencies, actions and pre-commit hooks as `chore(deps)`.
 
 Dependabot has no Flatpak ecosystem. The runtime version (`org.gnome.Platform//51`) and the
 `rust-stable` SDK extension are bumped by hand (twice a year, with the GNOME releases); the Flathub
-repository also gets update PRs from Flathub's own tooling for shared modules. A scheduled check that
-opens an issue when a newer GNOME runtime exists on Flathub is a possible later addition.
+repository also gets update PRs from Flathub's own tooling for shared modules. A scheduled check
+that opens an issue when a newer GNOME runtime exists on Flathub is a possible later addition.
 
 ## 9. Release pipeline and Flathub automation
 
@@ -411,22 +414,23 @@ opens an issue when a newer GNOME runtime exists on Flathub is a possible later 
 5. Create the GitHub release with the notes.
 6. Clone `github.com/flathub/com.leinardi.gx52`, update the source `tag` + `commit`, regenerate
    `cargo-sources.json` from the tagged `Cargo.lock` with `flatpak-cargo-generator.py`, run
-   `flatpak-builder-lint`, push a branch and open a PR with `gh pr create`, using a fine-grained token
-   stored as a repository secret (the default `GITHUB_TOKEN` cannot write to another repository).
+   `flatpak-builder-lint`, push a branch and open a PR with `gh pr create`, using a fine-grained
+   token stored as a repository secret (the default `GITHUB_TOKEN` cannot write to another
+   repository).
 7. Flathub's build bot builds the PR on all architectures.
 8. Merge by hand: see 9.2.
 
 ### 9.2 Merge
 
-Manual. The release workflow stops after opening the Flathub PR; the maintainer checks the Flathub test
-build (it can be installed from the bot's test repository) and merges. Automating the merge was
+Manual. The release workflow stops after opening the Flathub PR; the maintainer checks the Flathub
+test build (it can be installed from the bot's test repository) and merges. Automating the merge was
 considered and rejected: `gh pr merge --auto` depends on a setting of the Flathub repository, and a
 polling workflow adds moving parts for little gain.
 
 ### 9.3 Things the pipeline must handle
 
-- `cargo-sources.json` changes whenever `Cargo.lock` does; it must always be generated from the tagged
-  commit.
+- `cargo-sources.json` changes whenever `Cargo.lock` does; it must always be generated from the
+  tagged commit.
 - The `flatpak/` submodule is removed from this repository.
 - The manifest source URL changes from GitLab to GitHub with the first release from GitHub.
 - `flathub.json`: allow `x86_64` and `aarch64`.
@@ -445,11 +449,11 @@ polling workflow adds moving parts for little gain.
   `1.0.0`, neither of which is wanted during development.
 - `1.0.0` is released explicitly when the rewrite is complete. From then on `svu` derives versions
   normally.
-- `0.99.x` builds go to the Flathub **beta** channel: a `beta` branch in the Flathub repository, users
-  opt in with the `flathub-beta` remote. This lets X52 non-Pro owners test before `1.0.0` replaces
-  `0.7.6` on stable. The release workflow takes the target branch (`beta` or `master`) as an input,
-  defaulting to `beta` for `0.x` versions and to `master` from `1.0.0` on. After `1.0.0`, 1.x
-  features can go through `beta` first the same way.
+- `0.99.x` builds go to the Flathub **beta** channel: a `beta` branch in the Flathub repository,
+  users opt in with the `flathub-beta` remote. This lets X52 non-Pro owners test before `1.0.0`
+  replaces `0.7.6` on stable. The release workflow takes the target branch (`beta` or `master`) as
+  an input, defaulting to `beta` for `0.x` versions and to `master` from `1.0.0` on. After `1.0.0`,
+  1.x features can go through `beta` first the same way.
 
 ## 10. Importing legacy profiles
 
@@ -466,13 +470,13 @@ Automatic, once, with no CLI option.
   GSettings key) is not set and the old database exists, import it, then set the flag. If the file
   doesn't exist, set the flag too, so the check never runs again.
 - **What.** Rows of `x52_pro_profile` and `x52_profile` mapped to the new format: name, LED states,
-  brightness, clock settings, date format, clock offsets (1:1 as fixed offsets, or to the matching
-  time zone setting if time zones are adopted). The old "Default Profile" maps to the new default
-  profile instead of creating a duplicate.
+  brightness, clock settings, date format, clock offsets (1:1 as fixed offsets, never guessed into a
+  zone; [profiles.md](profiles.md#legacy-import) has the full mapping). The old "Default Profile"
+  maps to the new default profile instead of creating a duplicate.
 - **Safety.** The old database is opened read-only and never modified or deleted (users can still go
-  back to `0.7.6`). A corrupt or unreadable database is logged, reported once in a toast, and the flag
-  is still set so start-up never fails because of it. The import is a pure function from rows to
-  profiles and gets unit tests with a fixture database.
+  back to `0.7.6`). A corrupt or unreadable database is logged, reported once in a toast, and the
+  flag is still set so start-up never fails because of it. The import is a pure function from rows
+  to profiles and gets unit tests with a fixture database.
 - **Feedback.** A toast "Imported N profiles from GX52 0.7" on the first start.
 - **Dependency.** `rusqlite` with the `bundled` feature (SQLite compiled in, no runtime dependency).
   When the import code is removed in a later major version, the dependency goes with it.
@@ -484,8 +488,8 @@ Automatic, once, with no CLI option.
 | R1 | The kernel HID driver owns the X52 interface. pyusb sends device-level vendor control transfers without claiming it; `nusb` must be able to do the same on Linux without detaching the driver (detaching would kill joystick input). | First spike: send one LED command with `nusb`; fall back to `rusb` if needed. |
 | R2 | Switch-over to GitHub: the GitLab push mirror overwriting GitHub, broken links in the Flathub metainfo, users filing issues in the old place. | Follow the order in section 7.3; tombstone and archive GitLab. |
 | R3 | `flatpak-builder-lint` on the update PR applies current Flathub rules to old permissions. | Drop `org.freedesktop.Flatpak` and `--share=network`; justify `--device=all`. |
-| R4 | Device access needs a udev rule, which a sandboxed app cannot install. | In-app guidance page with the rule and commands; check whether `game-devices-udev` / `steam-devices` already cover the X52 and, if not, propose the IDs upstream. |
-| R5 | Tray on GNOME requires the AppIndicator extension; without it the icon is invisible. | Background portal as an additional mechanism; detect a missing `StatusNotifierWatcher` and don't hide the window in that case. |
+| R4 | Device access needs a udev rule, which a sandboxed app cannot install. | In-app guidance page with the rule and commands. Spike results: no distribution rule covers the X52 (desk research); the rule in [protocol.md](protocol.md#udev-rule) works on the host and in the sandbox, the three access states are told apart without guessing, and access comes back after `udevadm trigger` without a replug (S1, S4). The virtual mouse needs a second line for `/dev/uinput` (S9). Proposing the rule to `game-devices-udev` stays a 1.x item. |
+| R5 | Tray on GNOME requires the AppIndicator extension; without it the icon is invisible. | Background portal as an additional mechanism; detect a missing `StatusNotifierWatcher` and don't hide the window in that case. Spike results (S5): `ksni` with `async-io` works on GNOME with the extension and in the sandbox; a missing watcher is reported asynchronously, so availability is a tri-state; a single left-click opens the menu on GNOME, so "Show / Hide GX52" is the first item. The tray inside the Flatpak build and the Background portal dialog are acceptance tests of roadmap M6. |
 | R6 | X52 non-Pro cannot be tested on hardware. | Protocol unit tests; mark support as community-tested; ask for testers. |
 | R7 | GTK 4 / libadwaita development packages on CI images are older than GNOME 51. | Run Rust checks inside the GNOME 51 SDK container. |
 | R8 | MFD non-ASCII characters. | Use the MFD character map; replace unmappable characters. |
@@ -547,20 +551,27 @@ Decision:
 - **First built-in adapter: X-Plane 11/12.** X-Plane runs natively on Linux, and its built-in UDP
   protocol (dataref subscriptions, port 49000 by default) needs no plugin. Requires
   `--share=network` (R12).
-- Later adapters on the same engine, each evaluated on its own: DCS World via DCS-BIOS (binary export
-  over UDP multicast `239.255.50.10:5010`, per-aircraft JSON address maps; DCS runs under Proton),
-  FlightGear (generic protocol over UDP, needs a protocol XML installed in FlightGear), Elite Dangerous
-  (`Status.json` in the Proton prefix, readable after a one-time folder pick through the document
-  portal). MSFS is out of scope (SimConnect is Windows-only).
+- Later adapters on the same engine, each evaluated on its own: DCS World via DCS-BIOS (binary
+  export over UDP multicast `239.255.50.10:5010`, per-aircraft JSON address maps; DCS runs under
+  Proton), FlightGear (generic protocol over UDP, needs a protocol XML installed in FlightGear),
+  Elite Dangerous (`Status.json` in the Proton prefix, readable after a one-time folder pick through
+  the document portal). MSFS is out of scope (SimConnect is Windows-only).
 
 Per-game automatic profile switching based on running processes stays out of scope: the Flatpak
 sandbox has its own PID namespace.
 
 ## 13. Open questions
 
-None from the analysis. Items to settle while writing the plan:
+Resolved during the spikes and stage C:
 
-- Artwork for the visual LED editor (draw new SVGs; licence-compatible references).
-- Exact TOML schema for profiles and its versioning.
+- Artwork for the visual LED editor: line drawings traced from the maintainer's own photos (S7);
+  the photos and the tracing are roadmap M4.
+- Exact TOML schema for profiles and its versioning: [profiles.md](profiles.md).
+- Whether `game-devices-udev` / `steam-devices` already cover the X52 product IDs: no (desk
+  research); the app ships its guidance page.
+
+Still open, each with an owner in [roadmap.md](roadmap.md):
+
 - D-Bus interface definition (1.x), kept stable once published.
-- Whether `game-devices-udev` / `steam-devices` already cover the X52 product IDs.
+- GitHub #1 "[feature request] Deb Snap ?": the packaging scope beyond Flathub (M8).
+- Whether the MFD lines show dynamic content as GX52 0.7 did (M4).
