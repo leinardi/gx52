@@ -63,7 +63,7 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
 | Virtual device's own event node | root-only, as for any input device; nothing else in the session can read it |
 | GNOME 51 sandbox with `--device=all`, no network | OK, same as the host |
 | Sandbox without `--device=all` | fails: `/dev/uinput` does not exist in the sandbox |
-| Pointer moves, clicks and scrolls with the ministick (host, GNOME Wayland, 2026-10-28) | OK after inverting X: the ministick's X axis grows to the **left**. Left click, right click and wheel direction correct. Speed and curve felt "already very good" with the values above |
+| Pointer moves, clicks and scrolls with the ministick (host, GNOME Wayland, 2026-10-28 and 2026-11-02) | OK: the axes map directly to pointer X/Y (no inversion). Left click, right click and wheel direction correct. Speed and curve felt "already very good" with the values above |
 
 ## Findings for the app
 
@@ -105,7 +105,7 @@ compositor), it must send `BTN_LEFT` / `BTN_RIGHT` release events itself when th
 ## Decision
 
 Taken 2026-10-28 after the hands-on test: **in 1.0.0**, with only an on/off switch and the spike's
-values (deadzone 1 step, gain 0.6 px per tick, curve 1.6, 10 ms tick, X inverted). The switch stays
+values (deadzone 1 step, gain 0.6 px per tick, curve 1.6, 10 ms tick). The switch stays
 because the feature needs the uinput permission and some games may react to the ministick axes
 too. Speed, curve, deadzone and wheel direction settings come in 1.x.
 

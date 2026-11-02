@@ -47,7 +47,7 @@ notch, not a held button.
 | `ABS_RX` | Rotary next to the i button | 0–255 | jitters ±1–2 at rest, ~50 events/s |
 | `ABS_RY` | Rotary next to the E button | 0–255 | jitters ±1–2 at rest |
 | `ABS_THROTTLE` | Slider on the throttle | 0–255 | flickers between two adjacent values at rest |
-| `ABS_MISC` (40) / 41 | Ministick (the small thumb stick, "mouse nub") X / Y | 0–15, centre 8 | X grows to the left (S9) |
+| `ABS_MISC` (40) / 41 | Ministick (the small thumb stick, "mouse nub") X / Y | 0–15, centre 8 | X grows to the right, Y grows downwards, like the pointer |
 | `ABS_HAT0X` / `ABS_HAT0Y` | POV 1 (lower hat, between B and C) | −1, 0, 1 | standard: X −1 left, Y −1 up |
 
 POV 2 and the throttle hat are buttons, not hat axes. Names used from here on (they match GX52

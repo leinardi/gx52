@@ -93,7 +93,7 @@ Results go to [spikes/05-tray.md](spikes/05-tray.md).
 Run `spikes/s9-virtual-mouse` (from its directory: `cargo run --release`).
 
 - [x] Ministick moves the pointer in the right directions; small pushes move slowly, full push fast.
-      (2026-10-28: X was mirrored, fixed in the spike; feel is good as is.)
+      (2026-10-28: feel is good as is.)
 - [x] Note whether speed and curve feel right compared with the Windows driver (adjust `GAIN`,
       `CURVE`, `DEADZONE` in the source and re-run).
 - [x] Primary mouse button clicks; wheel scrolls (direction right?); wheel press right-clicks.
