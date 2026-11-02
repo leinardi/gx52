@@ -50,26 +50,28 @@ Add any extra angle where a button or LED is hidden in the shots above; better o
 
 Run `spikes/x52-input` and, in order:
 
-- [ ] Press every button once, in a fixed order (stick, then throttle, then base); note the key code
+- [x] Press every button once, in a fixed order (stick, then throttle, then base); note the key code
       shown for each. Gives the button order map and the names for the input tester.
-- [ ] Move every axis to both ends: stick X/Y, twist, throttle, both rotaries, slider, mini-stick.
+- [x] Move every axis to both ends: stick X/Y, twist, throttle, both rotaries, slider, mini-stick.
       Note the axis codes and ranges.
-- [ ] All three hats in the 8 directions (POV 1, POV 2, throttle hat).
-- [ ] Mode selector through 1, 2, 3: confirm it is a held key (715 = mode 1 seen at start).
-- [ ] MFD buttons (Start/Stop, Reset, function wheel up/down/press): do they appear on evdev at all?
-- [ ] Clutch / i button and the shift-related buttons, if any.
-- [ ] While `x52-input` runs, change LEDs with `x52-probe` and confirm input keeps flowing
+- [x] All three hats in the 8 directions (POV 1, POV 2, throttle hat).
+- [x] Mode selector through 1, 2, 3: confirm it is a held key (715 = mode 1 seen at start).
+- [x] MFD buttons (Start/Stop, Reset, function wheel up/down/press): do they appear on evdev at all?
+- [x] Clutch / i button and the shift-related buttons, if any. (2026-11-02: results in
+      [spikes/03-input.md](spikes/03-input.md).)
+- [x] While `x52-input` runs, change LEDs with `x52-probe` and confirm input keeps flowing
       (control transfers and evdev at the same time).
 
 Results go to a new `docs/spikes/03-input.md` and later to `docs/protocol.md`.
 
 ## 3. Hotplug (S3 and S4)
 
-- [ ] Host: unplug and replug while the hotplug watcher runs; does `nusb::watch_devices` see both
+- [x] Host: unplug and replug while the hotplug watcher runs; does `nusb::watch_devices` see both
       events?
-- [ ] Flatpak (`--device=all`, no network): same test. Expected: the udev netlink events do not
+- [x] Flatpak (`--device=all`, no network): same test. Expected: the udev netlink events do not
       arrive; check whether the inotify fallback on `/dev/bus/usb` and `/dev/input` sees the change.
 - [ ] After replug, confirm the app re-sends brightness (MFD backlight and throttle LEDs come back).
+      Not testable before the app exists: an acceptance check for the device service.
 - [ ] Remove the udev rule temporarily (or test as another user) and note the exact error, for the
       in-app guidance page.
 

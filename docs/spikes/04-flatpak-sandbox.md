@@ -14,7 +14,7 @@ The host has the `70-gx52.rules` udev rule from S1.
 | Open the evdev node, read capabilities and key state (`evdev`) | OK: 39 key codes, axes, mode 1 held |
 | `/dev/bus/usb/...` permissions | the user's `uaccess` ACL works (owner shows as `nfsnobody` through the user namespace) |
 | `/run/udev` (libudev database) | not present, as expected: libudev-based enumeration or monitoring cannot be used |
-| Hotplug events | **not verified yet** (needs an unplug / replug), see below |
+| Hotplug events | `nusb::watch_devices` gets **nothing** in the sandbox (no events, no error); polling works, see below |
 
 So `--device=all` plus the host udev rule is enough for everything the app does at start-up. No
 extra permission is needed.
@@ -43,8 +43,26 @@ Fallbacks, in order of preference:
 Whatever is chosen, the device service treats "device appeared" as a trigger to enumerate and send
 the full state (see the power-on findings in S2), so the event source is replaceable.
 
+## Hotplug: verified 2026-11-02
+
+`spikes/x52-hotplug` prints three signals with timestamps: `nusb::watch_devices` events, and
+changes seen by polling `nusb::list_devices` and `evdev::enumerate` every 250 ms. It ran on the host
+and in the GNOME 51 sandbox (`--device=all`, no network) at the same time while the joystick was
+plugged in and out three times.
+
+| Signal | Host | Sandbox, no network |
+|---|---|---|
+| `nusb::watch_devices` | every connect and disconnect, 0.3–0.6 s before polling notices | silent: the stream is created without error but never yields |
+| Polling the USB device list (250 ms) | OK | OK |
+| Polling the evdev device list (250 ms) | OK, same poll as USB or one later | OK |
+
+This confirms the netlink analysis above. Decision for the app: one device-watch component with two
+sources, `nusb::watch_devices` when not sandboxed and polling (250 ms to 500 ms, both lists are
+sysfs/dev reads) in the sandbox. The inotify fallback was not needed; polling is simpler and proven.
+The USB address changes on every replug (`addr 4`, `5`, `6`), so devices are matched by vendor and
+product ID (and later serial or port path for several devices), never by address.
+
 ## Not done yet
 
-- Hotplug verification (above).
 - Running the real app build (Flatpak bundle from S6 with the device code) instead of the spike
   binaries.
