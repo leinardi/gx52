@@ -121,8 +121,7 @@ impl StickState {
 
     /// Whole pixels to move this tick; fractions carry over so slow speeds still move.
     fn motion(&mut self) -> (i32, i32) {
-        // The ministick's X axis grows to the left (checked on an X52 Pro), so it is inverted.
-        let dx = self.remainder_x + speed(f64::from(STICK_CENTRE - self.x));
+        let dx = self.remainder_x + speed(f64::from(self.x - STICK_CENTRE));
         let dy = self.remainder_y + speed(f64::from(self.y - STICK_CENTRE));
         let (whole_x, whole_y) = (dx.trunc(), dy.trunc());
         // Back to the centre: drop the leftover so the pointer stops dead.
@@ -262,7 +261,7 @@ mod tests {
     #[test]
     fn slow_speeds_accumulate_into_pixels() {
         let mut state = StickState::centred();
-        state.x = STICK_CENTRE - 2;
+        state.x = STICK_CENTRE + 2;
         let moved: i32 = (0..10).map(|_| state.motion().0).sum();
         // 0.6 px per tick for 10 ticks, give or take float rounding.
         assert!((5..=6).contains(&moved), "moved {moved} px");
