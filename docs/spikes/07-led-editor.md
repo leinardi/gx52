@@ -103,9 +103,18 @@ Out of scope or later:
 Release: the tester was a 1.x item; with the hotspot widget shared with the LED editor it is cheap
 enough to consider for 1.0.0 (decide in the roadmap, Stage C).
 
+## Hands-on check (2026-11-02)
+
+With the editor wired to the device (worker thread with an `mpsc` channel; it opens the device, sends
+brightness and replays the full LED state on every connect): every LED follows the editor at once,
+and after unplugging, changing LEDs and plugging back in, the device catches up within about a second
+(brightness included). The popover UI worked on all pages.
+
+Missing in the spike: the POV 1 LED (lower hat between B and C). It cannot be controlled
+([01-usb-control.md](01-usb-control.md)); the app shows it as a fixed green LED.
+
 ## Not done yet
 
-- Hands-on check: popover selection, keyboard navigation (Tab between LEDs, Enter opens the popover),
-  screen reader labels, narrow window.
+- Keyboard navigation, screen reader labels, narrow window, light/dark (not checked yet).
 - Photos and traced artwork.
 - Input tester prototype: depends on S3 (key codes, mode selector, MFD buttons on evdev).

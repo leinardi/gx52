@@ -108,7 +108,8 @@ Results go to [spikes/09-virtual-mouse.md](spikes/09-virtual-mouse.md).
 Run `spikes/s7-led-editor` with the device connected (the spike does not drive the device yet; this
 checks the UI only).
 
-- [ ] Click each LED: the popover opens, choosing a state changes the colour.
+- [x] Click each LED: the popover opens, choosing a state changes the colour. (2026-11-02, also
+      on the device, including catch-up after replug.)
 - [ ] Keyboard only: Tab moves between LEDs, Enter/Space opens the popover, arrows choose a state,
       Escape closes it.
 - [ ] Resize to the narrowest window (360×294): LEDs stay on the drawing and remain clickable.

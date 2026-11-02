@@ -29,7 +29,7 @@ observations on this one device.
 | Clock 2 / 3 offset (`0xc1` / `0xc2`, `24h << 15 \| negative << 10 \| minutes`) | Offsets are relative to **clock 1**: with clock 1 at 20:46, `+60` showed 21:46 and `-120` showed 18:46. The 12h/24h flag is per clock (clock 1 and 2 in 12h with clock 3 in 24h works). |
 | Date (`0xc4` = `high << 8 \| low`, `0xc8` = third field) | Displayed as `low.high.third`, e.g. `28.10.26`. There is no format flag: the date format is chosen by which value the app puts in which field. |
 | Shift indicator (`0xfd`, `0x51` / `0x50`) | Lights the SHIFT label on the MFD. |
-| Blink (`0xb4`, `0x51` / `0x50`) | Makes the **i** button LED (throttle) and the **POV 2** LED (stick) blink. |
+| Blink (`0xb4`, `0x51` / `0x50`) | Makes the **i** button LED (throttle) and the **POV 1** LED (lower stick hat) blink; corrected on 2026-11-02, see below. |
 
 ## Using the MFD clocks
 
@@ -43,3 +43,19 @@ After plugging in, the MFD backlight and the throttle LEDs are off; the stick LE
 on only after the brightness commands are sent (GX52 0.7 turned them on when it applied a profile). Consequence for the app: on every
 connect (start-up, hotplug, resume) the full state must be sent, brightness included, not only the
 values that changed.
+
+## POV 1 LED (2026-11-02)
+
+The stick has two lit hats. **POV 2** (top-left hat on the stick head) is the LED driven by bits
+16/17 of `0xb8`. **POV 1** (the lower hat between B and C) has a green LED that:
+
+- stays green with every known LED switched off;
+- goes dark with LED brightness 0 and comes back with 128 (it is on the same brightness control);
+- blinks with `0xb4` together with the i button (the S2 note that POV 2 blinks was a misreading:
+  only the lower hat and i blink);
+- does not react to `0xb8` with any bit from 0 to 255, state on or off (all accepted without error).
+
+So POV 1's colour cannot be set: it is fixed green. This answers issue #3 ("No POV1 LED Control").
+Other command numbers were not scanned, because unknown commands could change persistent device
+settings. The LED editor shows POV 1 as a fixed, non-editable green LED with a short explanation.
+

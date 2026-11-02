@@ -10,7 +10,7 @@ matched against that order. Device name: "Logitech X52 Professional H.O.T.A.S." 
 | Code | Control | Code | Control |
 |---|---|---|---|
 | 288 | Trigger, first stage | 706 | Scroll wheel press (mouse secondary) |
-| 289 | Fire (under the flip cover) | 707 | Stick hat with LED (POV 2), up |
+| 289 | Fire (under the flip cover) | 707 | POV 2 (top-left hat on the stick head), up |
 | 290 | A | 708 | POV 2 right |
 | 291 | B | 709 | POV 2 down |
 | 292 | C | 710 | POV 2 left |
@@ -48,9 +48,15 @@ notch, not a held button.
 | `ABS_RY` | Rotary next to the E button | 0–255 | jitters ±1–2 at rest |
 | `ABS_THROTTLE` | Slider on the throttle | 0–255 | flickers between two adjacent values at rest |
 | `ABS_MISC` (40) / 41 | Ministick (the small thumb stick, "mouse nub") X / Y | 0–15, centre 8 | X grows to the left (S9) |
-| `ABS_HAT0X` / `ABS_HAT0Y` | Stick hat without LED (POV 1) | −1, 0, 1 | standard: X −1 left, Y −1 up |
+| `ABS_HAT0X` / `ABS_HAT0Y` | POV 1 (lower hat, between B and C) | −1, 0, 1 | standard: X −1 left, Y −1 up |
 
-POV 2 (stick hat with LED) and the throttle hat are buttons, not hat axes.
+POV 2 and the throttle hat are buttons, not hat axes. Names used from here on (they match GX52
+0.7, whose only hat LED was called "POV 2", and the old issue #3 "No POV1 LED Control"):
+
+- **POV 1**: the lower hat between B and C; hat axes; its LED is fixed green (see
+  [01-usb-control.md](01-usb-control.md)).
+- **POV 2**: the top-left hat on the stick head; buttons 707–710; LED bits 16/17 (red/green).
+- **Throttle hat**: buttons 711–714; no LED.
 
 ## Mode selector
 
