@@ -79,7 +79,8 @@ Results go to [spikes/04-flatpak-sandbox.md](spikes/04-flatpak-sandbox.md).
 
 ## 4. Tray (S5)
 
-- [ ] Run `spikes/s5-tray`: icon visible in the panel, menu looks right, click opens/hides the window.
+- [x] Run `spikes/s5-tray`: icon visible in the panel, menu looks right, click opens/hides the window.
+      (2026-11-02: single left-click opens the menu on GNOME, double-click toggles; see S5.)
 - [ ] Same in the Flatpak build.
 - [ ] Background portal: first request shows GNOME's permission dialog; accept, then check autostart
       after logging out and in.
@@ -110,10 +111,10 @@ checks the UI only).
 
 - [x] Click each LED: the popover opens, choosing a state changes the colour. (2026-11-02, also
       on the device, including catch-up after replug.)
-- [ ] Keyboard only: Tab moves between LEDs, Enter/Space opens the popover, arrows choose a state,
+- [-] (skipped: UI to be redesigned) Keyboard only: Tab moves between LEDs, Enter/Space opens the popover, arrows choose a state,
       Escape closes it.
-- [ ] Resize to the narrowest window (360×294): LEDs stay on the drawing and remain clickable.
-- [ ] Light and dark style (Settings > Appearance): the outline and colours stay readable.
-- [ ] Optional: Orca screen reader reads "<LED> LED: <state>".
+- [-] (skipped: UI to be redesigned) Resize to the narrowest window (360×294): LEDs stay on the drawing and remain clickable.
+- [-] (skipped: UI to be redesigned) Light and dark style (Settings > Appearance): the outline and colours stay readable.
+- [-] (skipped: UI to be redesigned) Optional: Orca screen reader reads "<LED> LED: <state>".
 
 Results go to [spikes/07-led-editor.md](spikes/07-led-editor.md).

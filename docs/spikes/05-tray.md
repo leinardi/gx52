@@ -41,10 +41,27 @@ the call the shell makes when the user clicks.
 - Only `--talk-name=org.kde.StatusNotifierWatcher` is needed in the manifest (the lint in S6 accepts
   it); no well-known name has to be owned by the tray.
 
+## Visual check on GNOME (2026-11-02)
+
+Ubuntu GNOME on Wayland, `ubuntu-appindicators@ubuntu.com`, host build.
+
+| Action | Result |
+|---|---|
+| Icon in the top bar | shown, looks like the other indicators |
+| Right-click | menu opens at once; "Show / Hide" and "Quit" work |
+| Single left-click | opens the **menu** after a short delay, does not call `Activate` |
+| Double-click | calls `Activate`: the window toggles |
+| Closing the window | hides it to the tray; "Show / Hide" or a double-click brings it back |
+
+The single-click behaviour is by design in the extension (`indicatorStatusIcon.js`): a primary click
+waits for the double-click timeout and then toggles the menu, a double-click sends `Activate`, a
+middle click sends `SecondaryActivate`. KDE Plasma calls `Activate` on a single click. Consequence
+for the app: the first menu item must be "Show GX52" / "Hide GX52", because on GNOME the menu is
+what a single click gives; `Activate` stays mapped to show/hide for KDE and for double-clicks.
+
 ## Not done yet
 
-- Visual check of icon and menu in the panel (needs a look on a hands-on day), including the app's
-  own symbolic icon name instead of `input-gaming-symbolic`.
+- The app's own symbolic icon instead of `input-gaming-symbolic` (with the real app).
 - Background portal (`ashpd` `request_background` with autostart): the first request shows a
   permission dialog on GNOME, so it needs a human.
 - KDE Plasma (native watcher).

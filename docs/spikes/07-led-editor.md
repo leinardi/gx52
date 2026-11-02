@@ -115,6 +115,8 @@ Missing in the spike: the POV 1 LED (lower hat between B and C). It cannot be co
 
 ## Not done yet
 
-- Keyboard navigation, screen reader labels, narrow window, light/dark (not checked yet).
+- Keyboard navigation, screen reader labels, narrow window, light/dark: skipped on purpose
+  (2026-11-02). The UI will be redesigned from scratch; this spike only provides the data (LED
+  bits, positions as data, states) and the device logic (worker thread, replay on connect).
 - Photos and traced artwork.
 - Input tester prototype: depends on S3 (key codes, mode selector, MFD buttons on evdev).
