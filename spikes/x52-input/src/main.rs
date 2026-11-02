@@ -26,6 +26,7 @@ fn main() -> ExitCode {
         let pressed: Vec<u16> = state.iter().map(evdev::KeyCode::code).collect();
         println!("initially pressed: {pressed:?}");
     }
+    let start = std::time::SystemTime::now();
     loop {
         let events = match dev.fetch_events() {
             Ok(e) => e.collect::<Vec<_>>(),
@@ -35,12 +36,17 @@ fn main() -> ExitCode {
             }
         };
         for ev in events {
+            let at = ev
+                .timestamp()
+                .duration_since(start)
+                .unwrap_or_default()
+                .as_secs_f64();
             match ev.destructure() {
                 EventSummary::Key(_, key, value) => {
-                    println!("KEY code={} ({key:?}) value={value}", key.code());
+                    println!("{at:9.3} KEY code={} ({key:?}) value={value}", key.code());
                 }
                 EventSummary::AbsoluteAxis(_, axis, value) if show_abs => {
-                    println!("ABS {axis:?} value={value}");
+                    println!("{at:9.3} ABS {axis:?} value={value}");
                 }
                 _ => {}
             }

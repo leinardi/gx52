@@ -1,0 +1,14 @@
+[package]
+name = "x52-hotplug"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[dependencies]
+evdev = "0.13.2"
+futures-lite = "2.6.1"
+nusb = "0.2.9"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
