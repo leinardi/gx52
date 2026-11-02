@@ -64,6 +64,7 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
 | GNOME 51 sandbox with `--device=all`, no network | OK, same as the host |
 | Sandbox without `--device=all` | fails: `/dev/uinput` does not exist in the sandbox |
 | Pointer moves, clicks and scrolls with the ministick (host, GNOME Wayland, 2026-10-28 and 2026-11-02) | OK: the axes map directly to pointer X/Y (no inversion). Left click, right click and wheel direction correct. Speed and curve felt "already very good" with the values above |
+| In a game: X4: Foundations through Proton (2026-11-02) | Pointer, left click, right click and wheel work like the real mouse; no side effects noticed from the game also seeing the ministick and mouse buttons as joystick input |
 
 ## Findings for the app
 
@@ -80,7 +81,7 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
 - **Runs on its own thread** (blocking reads plus a 10 ms timer, or one `poll` loop), never on the
   GTK main thread; it must survive unplug/replug (re-open both, release held buttons on unplug).
 - **The joystick still reports the ministick and mouse buttons.** Games that bind every axis may
-  react to both the pointer and the axes (the Proton issue). Hiding them needs the joystick to be
+  react to both the pointer and the axes (the Proton issue); X4: Foundations did not. Hiding them needs the joystick to be
   grabbed (`EVIOCGRAB`) and re-exposed as a virtual joystick without those controls, which is the
   same machinery as "clutch mode" and much bigger in scope (and changes the device games see).
   Not for the first version; maybe an option later.
@@ -111,6 +112,6 @@ too. Speed, curve, deadzone and wheel direction settings come in 1.x.
 
 ## Not done yet
 
-- X11 session and a running game.
+- X11 session (optional). Other games, especially ones that bind every joystick axis.
 - Whether the X52 (non-Pro) reports the ministick on the same codes (libx52's non-Pro table orders
   the mouse buttons differently).

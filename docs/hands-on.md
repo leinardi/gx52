@@ -98,7 +98,7 @@ Run `spikes/s9-virtual-mouse` (from its directory: `cargo run --release`).
       `CURVE`, `DEADZONE` in the source and re-run).
 - [x] Primary mouse button clicks; wheel scrolls (direction right?); wheel press right-clicks.
 - [x] Works in a Wayland session (default) and, if at hand, in an X11 session.
-- [ ] With a game running: the pointer moves, and note whether the game also reacts to the
+- [x] With a game running: the pointer moves, and note whether the game also reacts to the
       ministick axes.
 - [x] Unplug while holding the primary button: the spike exits; check no button stays stuck.
 
