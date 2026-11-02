@@ -1,24 +1,43 @@
-build/
-*.egg-info/
-*.egg
-*.py[cod]
-__pycache__/
-*.so
-*~
-*.glade#
-*.iml
-*.iws
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IntelliJ: only the shared code style, the copyright profile and the VCS mappings are tracked
 .idea/*
-!.idea/codeStyleSettings.xml
-!.idea/checkstyle-idea.xml
 !.idea/codeStyles/
 !.idea/copyright/
-!.idea/fileTemplates/
-!.idea/inspectionProfiles/
-!.idea/scopes/
 !.idea/vcs.xml
-*.autosave
-/.mypy_cache/
-.dmypy.json
-/venv/
+*.iml
+
+# Other editors
+.vscode/
+*.code-workspace
+*.swp
+*~
+
+# Tool caches
+.cache/
+
+# Claude Code: the shared settings and the skills symlink are tracked; local settings
+# (settings.local.json) and session state never are.
+.claude/*
+!.claude/settings.json
+!.claude/skills
+
+# --- Rust build outputs ---
+/target/
+
+# --- Meson build directories ---
+/_build/
+/build/
+/builddir/
+
+# --- Flatpak ---
 .flatpak-builder/
+/flatpak-build/
+/repo/
+*.flatpak
+
+# --- gettext ---
+*.mo

@@ -1,0 +1,177 @@
+# Adapted from swarm-device-access/.pre-commit-config.yaml at 4cd31c4cea79 (same author).
+#
+# commit-msg as well as pre-commit, so that `make pre-commit-install` installs
+# the conventional-commit check too: the release version is derived from the
+# commit types, so a message that cannot be classified is caught at commit time
+# rather than at release time.
+#
+# Hooks still to add (docs/tooling-todo.md): docs-links (needs the meta crate),
+# the desktop / metainfo / GSettings schema validators and flatpak-builder-lint.
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      # Fixtures are byte-for-byte captures (USB transfers, evdev events, the
+      # legacy SQLite database), and a formatter that tidies them makes them
+      # prove something other than what was captured.
+      - id: end-of-file-fixer
+        exclude: (^|/)testdata/
+      - id: trailing-whitespace
+        exclude: (^|/)testdata/
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: check-added-large-files
+  - repo: https://github.com/checkmake/checkmake.git
+    rev: v0.3.2
+    hooks:
+      - id: checkmake
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+        name: actionlint
+        files: ^\.github/workflows/.*\.(yml|yaml)$
+        args: ["-shellcheck", "shellcheck -S error"]
+      - id: actionlint
+        alias: actionlint-oneline
+        name: actionlint (one line per one error)
+        files: ^\.github/workflows/.*\.(yml|yaml)$
+        args: ["-oneline", "-shellcheck", "shellcheck -S error"]
+        stages: [manual]
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.24.0
+    hooks:
+      - id: markdownlint-cli2
+        additional_dependencies:
+          - markdownlint-rule-table-format@1.0.3
+  # Pinned rather than taken from the system, so a developer machine and CI run the same release.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        args: ["-x"]
+      - id: shellcheck
+        alias: shellcheck-diff-output
+        name: shellcheck (diff output)
+        args: ["-f", "diff", "-x"]
+        stages: [manual]
+      - id: shellcheck
+        alias: shellcheck-json-output
+        name: shellcheck (json output)
+        args: ["-f", "json", "-x"]
+        stages: [manual]
+  - repo: local
+    hooks:
+      - id: prettier-yaml
+        name: prettier-yaml
+        entry: prettier
+        language: node
+        additional_dependencies: ["prettier@3.9.9"]
+        files: \.(yml|yaml)$
+        args: ["--write"]
+      # Every source file carries the GPL-3.0-or-later header (scripts/check-license-headers.sh
+      # says which files are governed). Reads the whole tree, so it always runs; pinned to one
+      # stage because always_run makes a hook eligible at every installed stage, and commit-msg is
+      # one of them.
+      - id: check-license-headers
+        name: license headers
+        entry: scripts/check-license-headers.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      # Every in-file suppression is counted per rule against .suppressions-baseline, and a commit
+      # that adds one must change the baseline too (AGENTS.md). Always runs: the ratchet reads the
+      # whole tree and the staged diff, and a commit that touches no source at all can still
+      # delete the baseline out from under it.
+      - id: check-suppressions
+        name: suppression ratchet
+        entry: scripts/check-suppressions.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+  # The Rust workspace. Every command is workspace-wide, so every member is held to the same lints,
+  # and --locked, so Cargo.lock is what gets tested. clippy and the tests need the GTK 4 and
+  # libadwaita development files on the host; CI runs these two inside the GNOME SDK instead and
+  # skips them in its pre-commit job (SKIP=cargo-clippy,cargo-test). The toolchain comes from
+  # rust-toolchain.toml.
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all --check
+        language: system
+        pass_filenames: false
+        files: '(\.rs$|^rustfmt\.toml$|^rust-toolchain\.toml$)'
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+        language: system
+        pass_filenames: false
+        require_serial: true
+        files: '(\.rs$|(^|/)Cargo\.(toml|lock)$|^clippy\.toml$|^rust-toolchain\.toml$)'
+      - id: cargo-test
+        name: cargo test
+        entry: cargo test --workspace --locked
+        language: system
+        pass_filenames: false
+        require_serial: true
+        files: '(\.rs$|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$)'
+      # Dependency-change check, and nothing more: it fires when the dependency graph changes,
+      # needs the network for the advisory database, and catches a bad upgrade at the moment it is
+      # made. It does not catch an advisory published against a crate nobody touched since: CI
+      # runs the same check on every pull request.
+      - id: cargo-deny
+        name: cargo deny
+        entry: cargo deny --workspace check
+        language: system
+        pass_filenames: false
+        require_serial: true
+        files: '((^|/)Cargo\.(toml|lock)$|^deny\.toml$)'
+  # Unused dependencies in every workspace member's Cargo.toml. Upstream triggers it on manifest
+  # changes only; deleting the last `use` of a crate in a .rs file is what usually makes a
+  # dependency unused, so Rust sources trigger it too.
+  - repo: https://github.com/bnjbvr/cargo-machete
+    rev: v0.9.2
+    hooks:
+      - id: cargo-machete
+        types_or: [rust, cargo, cargo-lock]
+  # The GNOME side of the build: Blueprint templates and Meson files, each in its tool's canonical
+  # format. Both run the tools on PATH (the GNOME SDK ships them, and so do the distributions);
+  # CI runs them inside the SDK build shell, so the versions match the runtime.
+  - repo: local
+    hooks:
+      - id: blueprint-format
+        name: blueprint format
+        entry: blueprint-compiler format
+        language: system
+        files: \.blp$
+      - id: meson-format
+        name: meson format
+        entry: meson format --check-diff
+        language: system
+        files: '(^|/)meson\.build$|^meson\.options$'
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+      - id: yamllint
+        alias: yamllint-parsable
+        name: "yamllint (parsable output)"
+        args: ["--format", "parsable"]
+        stages: [manual]
+  # The release version is derived from the commit types since the last tag, so
+  # a message nobody can classify is a release nobody can version. With
+  # --force-scope: every commit here names a scope, and AGENTS.md requires one.
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: ["--force-scope"]

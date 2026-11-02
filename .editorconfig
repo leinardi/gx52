@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 150
+
+# IntelliJ IDEA-specific settings
+ij_continuation_indent_size = 4
+ij_formatter_off_tag = @formatter:off
+ij_formatter_on_tag = @formatter:on
+ij_formatter_tags_enabled = true
+ij_smart_tabs = false
+ij_visual_guides = 80, 120, 150
+ij_wrap_on_typing = false
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.md]
+max_line_length = 100
+trim_trailing_whitespace = false # Allow trailing spaces for line breaks
+ij_markdown_format_tables = false # Disable: IntelliJ only knows aligned style; compact formatting handled by markdownlint-cli2

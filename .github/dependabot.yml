@@ -1,0 +1,53 @@
+version: 2
+
+# Adapted from swarm-device-access/.github/dependabot.yml at 4cd31c4cea79. No docker ecosystem:
+# there is no image. The Flatpak runtime (org.gnome.Platform) and the rust-stable SDK extension
+# have no Dependabot ecosystem and are bumped by hand with the GNOME releases.
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies", "ci"]
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies", "ci"]
+    groups:
+      pre-commit-hooks:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    # fix, not chore: the release version is derived from commit types, so a
+    # crate bump (security fixes included) produces a patch release.
+    # Dev-dependencies never reach the application, so their bumps are
+    # chore(deps) and in a group of their own: one grouped PR carries a single
+    # prefix, so mixing them would release an application that did not change.
+    commit-message:
+      prefix: "fix(deps)"
+      prefix-development: "chore(deps)"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    groups:
+      cargo-crates:
+        dependency-type: "production"
+        patterns:
+          - "*"
+      cargo-dev-crates:
+        dependency-type: "development"
+        patterns:
+          - "*"

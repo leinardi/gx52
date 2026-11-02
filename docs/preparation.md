@@ -32,7 +32,7 @@ Throwaway code on a separate `spikes` branch that is never merged. Each spike re
 `docs/spikes/NN-name.md`: question, what was tried, what worked, decision.
 
 | # | Question | Needs |
-|---|---|---|
+| --- | --- | --- |
 | S1 | Can `nusb` send the vendor control transfers without detaching the kernel HID driver, so the joystick keeps working? If not, does `rusb`? | X52 Pro |
 | S2 | Verify every command on the device: LEDs, both brightness values, MFD text, clocks 1 to 3, 12h/24h, date formats, shift, blink. Find the MFD character set and whether clock offsets are relative to clock 1. Becomes `docs/protocol.md`. | X52 Pro |
 | S3 ✅ | evdev next to the USB control: X52 Pro key codes, mode selector behaviour, unplug / replug with `nusb::watch_devices`. | X52 Pro |
@@ -70,5 +70,7 @@ Written after the spikes, so they describe what has been proven.
       list and a "done when" condition per task. The first milestone is the project setup (Makefile,
       pre-commit, CI, Meson scaffold), built on what S6 proved. This is the input for the coding
       session.
+      The tooling already ported, and what is left of it, is tracked in
+      [tooling-todo.md](tooling-todo.md).
 - [ ] `docs/rewrite-analysis.md`: kept as the decision record, updated where spikes change a
       decision.

@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make check)",
+      "Bash(make check-stage)",
+      "Bash(pre-commit run *)",
+      "Bash(scripts/check-*.sh)",
+      "Bash(scripts/check-*.sh *)",
+      "mcp__serena__initial_instructions",
+      "mcp__serena__find_symbol",
+      "mcp__serena__find_referencing_symbols",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__get_diagnostics_for_file",
+      "mcp__serena__list_memories",
+      "mcp__serena__read_memory"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/hooks/rustfmt-on-edit.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
