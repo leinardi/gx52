@@ -94,6 +94,14 @@ mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each butt
   portal backend, and is meant for remote desktop, not input devices. uinput is the standard way
   (Steam Input, AntiMicroX, input-remapper all use it).
 
+## Unplug while a button is held (2026-11-02)
+
+Holding the primary button (dragging a window) and unplugging: the joystick read fails with `ENODEV`
+(`No such device`, os error 19), the spike exits, the uinput device is destroyed and the drag ends at
+once; nothing stays pressed. The release comes from the virtual device going away. If the app keeps
+its virtual mouse alive across replugs (fewer devices appearing and disappearing for the
+compositor), it must send `BTN_LEFT` / `BTN_RIGHT` release events itself when the joystick goes away.
+
 ## Decision
 
 Taken 2026-10-28 after the hands-on test: **in 1.0.0**, with only an on/off switch and the spike's
@@ -104,6 +112,5 @@ too. Speed, curve, deadzone and wheel direction settings come in 1.x.
 ## Not done yet
 
 - X11 session and a running game.
-- Behaviour on unplug while a button is held.
 - Whether the X52 (non-Pro) reports the ministick on the same codes (libx52's non-Pro table orders
   the mouse buttons differently).
