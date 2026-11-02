@@ -31,8 +31,10 @@ item off, or delete it, in the commit that does it.
       job that runs it), with `ci.yaml`.
 - [x] `deny.toml`: add each licence the dependency graph needs (MIT, Apache-2.0, Unicode-3.0, ...)
       with the crate that brings it in, checking GPL-3.0-or-later compatibility for each.
-- [ ] `clippy.toml`: prune `doc-valid-idents` to the names the docs really use; add
-      `disallowed-methods` if an injected clock is introduced (MFD clock tests).
+- [x] `clippy.toml`: prune `doc-valid-idents` to the names the docs really use (none yet: the
+      list is clippy's default).
+- [ ] `clippy.toml`: add `disallowed-methods` with the injected clock of the MFD clock code (M1),
+      banning direct reads of the system time outside it.
 - [x] `rust-toolchain.toml`: align the pin with the Rust release of the
       `org.freedesktop.Sdk.Extension.rust-stable//26.08` extension the Flatpak builds use: `1.98.0`
       on Flathub, one patch release behind the `1.98.1` the other projects pin.

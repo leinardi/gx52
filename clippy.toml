@@ -23,20 +23,12 @@ allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 
 # Proper names the docs cite (a technology, a format, a tool, a device), never an identifier that
-# should be in backticks; ".." keeps clippy's default list.
+# should be in backticks; ".." keeps clippy's default list. Only names a doc comment actually uses
+# and clippy's doc_markdown would otherwise flag belong here: none does yet, so the list is the
+# default. Add a name in the change whose docs need it.
 doc-valid-idents = [
-    "GObject",
-    "GLib",
-    "GResource",
-    "GSettings",
-    "GTK",
-    "libadwaita",
-    "Flatpak",
-    "Flathub",
-    "AppIndicator",
-    "X52",
-    "evdev",
-    "uinput",
-    "udev",
     "..",
 ]
+
+# disallowed-methods (with the workspace's disallowed_methods = "deny") gets its first ban with the
+# MFD clock code in M1, which reads the time through an injected clock (docs/tooling-todo.md).
