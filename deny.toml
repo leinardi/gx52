@@ -30,7 +30,13 @@ all-features = true
 version = 2
 unmaintained = "all"
 yanked = "deny"
-ignore = []
+ignore = [
+    # Unmaintained, the parser under serde_yaml_ng, which only the meta crate's tests use, to read
+    # this repository's own workflows and .pre-commit-config.yaml; nothing it parses reaches the
+    # application. No vulnerability is reported against it; serde-saphyr is the safe-Rust way out
+    # if that changes.
+    { id = "RUSTSEC-2024-0449", reason = "unsafe-libyaml is unmaintained, transitive via serde_yaml_ng in the meta crate's tests only; no known vulnerability" },
+]
 
 [licenses]
 version = 2
@@ -41,10 +47,11 @@ version = 2
 allow = [
     "GPL-3.0-or-later",
     # The gtk-rs bindings (gtk4, libadwaita, glib, gio and their -sys crates), gettext-rs and
-    # tracing, and most of the transitive graph; GPL-compatible.
+    # tracing, the meta crate's serde_yaml_ng and unsafe-libyaml, and the "MIT OR Apache-2.0"
+    # crates (regex, and the meta crate's tempfile and toml among them); GPL-compatible.
     "MIT",
-    # temp-dir (a build dependency of gettext-sys), and the "MIT OR Apache-2.0" crates; compatible
-    # with GPL-3.0 (not with GPL-2.0-only, which this project is not).
+    # temp-dir (a build dependency of gettext-sys); compatible with GPL-3.0 (not with
+    # GPL-2.0-only, which this project is not).
     "Apache-2.0",
     # target-lexicon, through cfg-expr and system-deps, the build-time pkg-config probe of the
     # -sys crates; the LLVM exception only relaxes Apache-2.0, so it is GPL-3.0-compatible too.

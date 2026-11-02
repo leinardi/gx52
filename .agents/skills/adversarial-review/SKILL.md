@@ -209,7 +209,8 @@ treat a failure it caused as a confirmed finding with the output attached:
 | --- | --- |
 | any `**/*.rs`, a Cargo manifest or lock, `clippy.toml`, `rustfmt.toml`, `rust-toolchain.toml`, `deny.toml` | `make verify` (build, fmt check, clippy with `-D warnings`, tests, docs), `make rust-deny` when a manifest or `Cargo.lock` changed (network required), then `make check` |
 | the `x52` crate's device paths | also the hands-on check on a real X52 Pro, when one is available (`docs/hands-on.md`) |
-| `meta/**`, `scripts/check-*.sh`, `.github/**`, `.pre-commit-config.yaml` | `cargo test --locked -p meta` once the crate exists, `pre-commit run actionlint --all-files` |
+| `meta/**`, `scripts/check-*.sh`, `.github/**`, `.pre-commit-config.yaml`, `.mk/**`, `Makefile` | `cargo test --locked -p meta` (docs links, license headers, suppressions, toolchain pins, vacuous flags, workspace lints, version), `pre-commit run actionlint --all-files` |
+| `meson.build`, the metainfo, any Markdown | `cargo test --locked -p meta --test version --test docs` |
 | anything else | `make check` (pre-commit on all files) |
 
 Several hooks rewrite files (prettier, markdownlint, rustfmt through `cargo fmt` when run by

@@ -16,17 +16,19 @@ item off, or delete it, in the commit that does it.
 - [x] Replace the stubs with the real crates: gtk4, libadwaita and the other dependencies with the
       version features from spike S6, the constants of `src/config.rs` set by Meson through the
       environment. `x52` stays a doc-only library until M1.
-- [ ] The `meta` crate, adapted from `swarm-device-access/meta`: `docs` (relative links and
+- [x] The `meta` crate, adapted from `swarm-device-access/meta`: `docs` (relative links and
       fragments), `license_headers` and `suppressions` (driving the two `scripts/check-*.sh` against
       scratch repositories), `toolchain` (rust-toolchain.toml, `rust-version` and the CI pins
-      agree), `version` (`Cargo.toml`, `meson.build` and the newest metainfo `<release>` agree,
-      [release.md](release.md#one-version-source)), `workspace_lints`, `vacuous_flags`, `ci_gates`.
-      No Dockerfile tests. Then:
-  - [ ] add the `docs-links` hook (`cargo test --locked -p meta --test docs`) to
+      agree), `version` (`Cargo.toml` and `meson.build` agree, and the newest metainfo `<release>`
+      too once the version is not `0.0.0`, [release.md](release.md#one-version-source)),
+      `workspace_lints`, `vacuous_flags`. No Dockerfile tests. Then:
+  - [x] add the `docs-links` hook (`cargo test --locked -p meta --test docs`) to
         `.pre-commit-config.yaml`;
-  - [ ] point the "Run" column of the validation matrix in `AGENTS.md` and §6 of the
+  - [x] point the "Run" column of the validation matrix in `AGENTS.md` and §6 of the
         `adversarial-review` skill at the meta-tests, as `swarm-device-access` does;
-  - [ ] update the "to be exercised by" note in `scripts/check-suppressions.sh`.
+  - [x] update the "to be exercised by" note in `scripts/check-suppressions.sh`.
+- [ ] The `ci_gates` meta-test (every job in `ci-result.needs`, every skipped hook mapped to the
+      job that runs it), with `ci.yaml`.
 - [x] `deny.toml`: add each licence the dependency graph needs (MIT, Apache-2.0, Unicode-3.0, ...)
       with the crate that brings it in, checking GPL-3.0-or-later compatibility for each.
 - [ ] `clippy.toml`: prune `doc-valid-idents` to the names the docs really use; add

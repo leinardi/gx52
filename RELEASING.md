@@ -15,4 +15,4 @@
     X.Y.Z is the version you set in step 1)
 12. Make a PR to the Flathub repository master, test the build and, if OK, merge the PR
 13. `git commit -am "Release X.X.X" && git push` (where X.Y.Z is the version you set in step 1)
-14. Create a PR from [master](../../tree/master) to [release](../../tree/release)
+14. Create a PR from [master](https://github.com/leinardi/gx52/tree/master) to [release](https://github.com/leinardi/gx52/tree/release)

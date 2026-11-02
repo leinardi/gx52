@@ -5,8 +5,8 @@
 # commit types, so a message that cannot be classified is caught at commit time
 # rather than at release time.
 #
-# Hooks still to add (docs/tooling-todo.md): docs-links (needs the meta crate),
-# the desktop / metainfo / GSettings schema validators and flatpak-builder-lint.
+# Hooks still to add (docs/tooling-todo.md): the desktop / metainfo / GSettings
+# schema validators and flatpak-builder-lint.
 default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
@@ -123,6 +123,18 @@ repos:
         pass_filenames: false
         require_serial: true
         files: '(\.rs$|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$)'
+      # Every relative link and fragment in the tracked Markdown resolves (meta/tests/docs.rs).
+      # Offline and GTK-free, so it runs on the bare CI runner too. Always runs: renaming a heading
+      # or deleting a file breaks links in Markdown nobody touched. Pinned to the pre-commit stage
+      # for the same reason as the whole-tree hooks above.
+      - id: docs-links
+        name: docs links
+        entry: cargo test --locked -p meta --test docs
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
       # Dependency-change check, and nothing more: it fires when the dependency graph changes,
       # needs the network for the advisory database, and catches a bad upgrade at the moment it is
       # made. It does not catch an advisory published against a crate nobody touched since: CI

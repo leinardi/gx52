@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+# Adapted from swarm-device-access/meta/Cargo.toml at 4cd31c4, originally Apache-2.0-licensed,
+# Copyright (c) 2026 Roberto Leinardi.
 
 [package]
 name = "meta"
@@ -26,7 +28,16 @@ authors.workspace = true
 repository.workspace = true
 publish = false
 
-[dependencies]
-
 [lints]
 workspace = true
+
+# The Markdown reader of the library, and the source scans of the tests.
+[dependencies]
+regex = "1.13.1"
+
+# The pre-commit configuration and the workflows (YAML), the scratch repositories of the script
+# tests, and the workspace manifests (TOML).
+[dev-dependencies]
+serde_yaml_ng = "0.10"
+tempfile = "3.27.0"
+toml = "1.1.8"

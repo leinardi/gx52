@@ -54,8 +54,8 @@
 # Apache-2.0-licensed, Copyright (c) 2026 Roberto Leinardi; the droast families are dropped, since
 # this repository has no Dockerfile.
 #
-# scripts/check-suppressions.sh is to be exercised by meta/tests/suppressions.rs, which drives it
-# against scratch repositories rather than this one (docs/tooling-todo.md).
+# scripts/check-suppressions.sh is exercised by meta/tests/suppressions.rs, which drives it against
+# scratch repositories rather than this one.
 
 set -euo pipefail
 

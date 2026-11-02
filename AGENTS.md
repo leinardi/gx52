@@ -133,12 +133,14 @@ Run before considering an edit done. `make check` applies to every row.
 | `**/*.rs`, `clippy.toml`, `rustfmt.toml` | `make verify`, then `make check-stage` |
 | a `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `deny.toml` | `make verify`, `make rust-deny` (network) |
 | `**/*.blp`, `meson.build`, `meson.options` | `make check` (blueprint and meson format hooks) |
-| `scripts/check-suppressions.sh`, `.suppressions-baseline` | `scripts/check-suppressions.sh` |
-| `scripts/check-license-headers.sh` | `scripts/check-license-headers.sh` |
-| `.pre-commit-config.yaml`, `Makefile`, `.mk/**` | `make check`, `make help` |
-| `.github/workflows/**` | `pre-commit run actionlint --all-files` |
+| `scripts/check-suppressions.sh`, `.suppressions-baseline` | `cargo test --locked -p meta --test suppressions` |
+| `scripts/check-license-headers.sh` | `cargo test --locked -p meta --test license_headers` |
+| `meta/**` | `make verify` |
+| `meson.build`, `data/com.leinardi.gx52.metainfo.xml.in.in` (the version) | `cargo test --locked -p meta --test version` |
+| `.pre-commit-config.yaml`, `Makefile`, `.mk/**` | `make check`, `cargo test --locked -p meta` (vacuous flags, whole-tree hooks), `make help` |
+| `.github/workflows/**` | `pre-commit run actionlint --all-files`, `cargo test --locked -p meta` (Rust pins, vacuous flags) |
 | `scripts/hooks/rustfmt-on-edit.sh` | shellcheck (in `make check`); run it once by editing a `.rs` file in Claude Code |
-| `README.md`, `docs/**/*.md`, other Markdown | `make check` (markdownlint); prose wraps at 100 columns |
+| `README.md`, `docs/**/*.md`, other Markdown | `cargo test --locked -p meta --test docs` (the `docs-links` hook); prose wraps at 100 columns (markdownlint in `make check`) |
 | `.agents/skills/**` | the Markdown row |
 
 ## Commit messages

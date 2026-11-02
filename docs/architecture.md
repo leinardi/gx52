@@ -26,7 +26,7 @@ As committed in `a763177`; the crates are still stubs.
 | --- | --- | --- |
 | `gx52` | the repository root (`Cargo.toml`, `src/`), next to `meson.build` | The application: GTK 4 + libadwaita UI, device service, profile store, tray, virtual mouse |
 | `x52` | `x52/` | Protocol encoding over a transport trait, device model (X52 Pro / X52 capabilities and LED set), MFD character set, evdev input map. Pure and unit-tested, no GTK dependency |
-| `meta` | `meta/` | Repository meta-tests: docs links, license headers, suppressions, toolchain. Planned in [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace) |
+| `meta` | `meta/` | Repository meta-tests: docs links, license headers, suppressions, toolchain pins, vacuous flags, workspace lints, one version source. Run by cargo only, on the bare CI runner: they read the git checkout |
 
 - **Lints** live only in `[workspace.lints]` of the root `Cargo.toml`; every member opts in with
   `[lints] workspace = true`. `unsafe_code = "deny"`: nothing in the app needs `unsafe`. USB goes
