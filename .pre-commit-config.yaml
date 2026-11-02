@@ -99,9 +99,9 @@ repos:
         stages: [pre-commit]
   # The Rust workspace. Every command is workspace-wide, so every member is held to the same lints,
   # and --locked, so Cargo.lock is what gets tested. clippy and the tests need the GTK 4 and
-  # libadwaita development files on the host; CI runs these two inside the GNOME SDK instead and
-  # skips them in its pre-commit job (SKIP=cargo-clippy,cargo-test). The toolchain comes from
-  # rust-toolchain.toml.
+  # libadwaita development files on the host; CI skips these two in its pre-commit job and runs
+  # clippy and the tests of gx52 and x52 inside the GNOME SDK (sdk-checks), the meta-tests on the
+  # bare runner (meta). The toolchain comes from rust-toolchain.toml.
   - repo: local
     hooks:
       - id: cargo-fmt

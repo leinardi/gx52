@@ -151,8 +151,9 @@ fn rust_step_problems(steps: &[ActionStep], want: &str) -> Vec<String> {
 }
 
 /// One exact Rust release, patch included, is shared by rust-toolchain.toml's channel, the
-/// workspace's rust-version and every CI toolchain step, so the toolchain a developer, a hook and
-/// CI build with is one compiler.
+/// workspace's rust-version and every CI toolchain step (the bare-runner jobs of ci.yaml; the
+/// Flatpak jobs use the SDK extension's Rust, which the pin follows), so the toolchain a
+/// developer, a hook and CI build with is one compiler.
 #[test]
 fn rust_line_is_one_release() {
     let toolchain = repo::read("rust-toolchain.toml");
@@ -172,7 +173,16 @@ fn rust_line_is_one_release() {
         )),
         None => problems.push("the root Cargo.toml sets no rust-version".to_owned()),
     }
-    problems.extend(rust_step_problems(&github_steps(), &want));
+    let steps = github_steps();
+    if !steps
+        .iter()
+        .any(|step| step.action == RUST_TOOLCHAIN_ACTION)
+    {
+        problems.push(format!(
+            "no {RUST_TOOLCHAIN_ACTION} step under .github; the check would see nothing"
+        ));
+    }
+    problems.extend(rust_step_problems(&steps, &want));
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 

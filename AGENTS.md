@@ -162,7 +162,7 @@ Run before considering an edit done. `make check` applies to every row.
 | `meta/**` | `make verify` |
 | `meson.build`, `data/com.leinardi.gx52.metainfo.xml.in.in` (the version) | `cargo test --locked -p meta --test version` |
 | `.pre-commit-config.yaml`, `Makefile`, `.mk/**` | `make check`, `cargo test --locked -p meta` (vacuous flags, whole-tree hooks), `make help` |
-| `.github/workflows/**` | `pre-commit run actionlint --all-files`, `cargo test --locked -p meta` (Rust pins, vacuous flags) |
+| `.github/workflows/**` | `pre-commit run actionlint --all-files`, `cargo test --locked -p meta` (Rust pins, vacuous flags, required gates and skipped hooks) |
 | `scripts/hooks/rustfmt-on-edit.sh` | shellcheck (in `make check`); run it once by editing a `.rs` file in Claude Code |
 | `README.md`, `docs/**/*.md`, other Markdown | `cargo test --locked -p meta --test docs` (the `docs-links` hook); prose wraps at 100 columns (markdownlint in `make check`) |
 | `.agents/skills/**` | the Markdown row |

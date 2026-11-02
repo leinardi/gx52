@@ -27,7 +27,7 @@ item off, or delete it, in the commit that does it.
   - [x] point the "Run" column of the validation matrix in `AGENTS.md` and §6 of the
         `adversarial-review` skill at the meta-tests, as `swarm-device-access` does;
   - [x] update the "to be exercised by" note in `scripts/check-suppressions.sh`.
-- [ ] The `ci_gates` meta-test (every job in `ci-result.needs`, every skipped hook mapped to the
+- [x] The `ci_gates` meta-test (every job in `ci-result.needs`, every skipped hook mapped to the
       job that runs it), with `ci.yaml`.
 - [x] `deny.toml`: add each licence the dependency graph needs (MIT, Apache-2.0, Unicode-3.0, ...)
       with the crate that brings it in, checking GPL-3.0-or-later compatibility for each.
@@ -65,11 +65,13 @@ item off, or delete it, in the commit that does it.
 
 ## Needs CI and the release flow
 
-- [ ] `.github/workflows/ci.yaml` (rewrite analysis, section 6.3): pre-commit on the bare runner
+- [x] `.github/workflows/ci.yaml` (rewrite analysis, section 6.3): pre-commit on the bare runner
       with `SKIP=cargo-clippy,cargo-test,blueprint-format,meson-format`, clippy and the format
       checks in the GNOME SDK build shell, the Flatpak build and `meson test` on `x86_64` and
       `aarch64`, conventional commits, the `ci-result` gate. `pre-commit-warmup.yaml` is already
-      ported and expects the pre-commit job to restore the cache under the same key.
+      ported and expects the pre-commit job to restore the cache under the same key. Also skipped
+      there: `cargo-deny` (the `deny` job) and `flatpak-builder-lint` (the `flatpak` job); the
+      meta-tests run in their own bare-runner job, `meta`.
 - [x] `docs/release.md`: the release specification (rewrite analysis, section 9).
 - [ ] `.github/workflows/release.yaml`, implementing [release.md](release.md).
 - [ ] `scheduled-scan.yaml` (dependency audit only) and, possibly, a check for a newer GNOME
