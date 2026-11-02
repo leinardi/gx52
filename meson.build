@@ -1,10 +1,11 @@
-project('gx52',
-  version: run_command(
-    'grep',
-    'APP_VERSION',
-    files('gx52/conf.py')
-  ).stdout().split(' = ')[1].strip().strip('"'),
-  meson_version: '>= 0.45.1'
+project(
+    'gx52',
+    version: run_command('grep', 'APP_VERSION', files('gx52/conf.py')).stdout().split(
+        ' = ',
+    )[1].strip().strip(
+        '"',
+    ),
+    meson_version: '>= 0.45.1',
 )
 # project version is defined in gx52/conf.py
 

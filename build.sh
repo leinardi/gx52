@@ -1,4 +1,20 @@
 #!/bin/bash
+#
+# Copyright 2019 Roberto Leinardi.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -36,17 +52,20 @@ OUTPUT_DIR="${BUILD_DIR}/output"
 MESON_BUILD_DIR="${BUILD_DIR}/meson"
 FLATPAK_BUILD_DIR="${BUILD_DIR}/flatpak/build"
 FLATPAK_REPO_DIR="${BUILD_DIR}/flatpak/repo"
-FLATPAK_INSTALL_PARAMETERS="--user --install"
+FLATPAK_INSTALL_PARAMETERS=(--user --install)
 FLATPAK_REMOTE_MANIFEST="flatpak/${APP_ID}.json"
 FLATPAK_LOCAL_MANIFEST="build/flatpak/${APP_ID}.json"
 FLATPAK_OUTPUT_FILE="${OUTPUT_DIR}/${APP_ID}.flatpak"
 INSTALL_DIR="${OUTPUT_DIR}/install"
 
+# build_flatpak <manifest> [flatpak-builder options...]
 function build_flatpak {
+	local manifest="$1"
+	shift
 	mkdir -p ${FLATPAK_REPO_DIR} && \
 	mkdir -p ${FLATPAK_BUILD_DIR} && \
 
-	time flatpak-builder --force-clean $2 --install-deps-from=flathub --repo=${FLATPAK_REPO_DIR} ${FLATPAK_BUILD_DIR} $1 && \
+	time flatpak-builder --force-clean "$@" --install-deps-from=flathub --repo=${FLATPAK_REPO_DIR} ${FLATPAK_BUILD_DIR} "${manifest}" && \
 	desktop-file-validate build/flatpak/build/files/share/applications/com.leinardi.gx52.desktop || exit $?
 }
 
@@ -56,7 +75,7 @@ function build_flatpak_bundle {
 }
 
 if [[ ${#POSITIONAL[@]} -ne 0 ]]; then
-	echo "Unknown option ${POSITIONAL}"
+	echo "Unknown option ${POSITIONAL[*]}"
 	exit 1
 fi
 
@@ -67,7 +86,7 @@ find . -regex '^.*\(__pycache__\|\.py[co]\)$' -delete
 
 if [[ ${FLATPAK_REMOTE} -eq 1 ]]; then
 	if [[ ${FLATPAK_INSTALL} -eq 1 ]]; then
-		build_flatpak "${FLATPAK_REMOTE_MANIFEST}" "${FLATPAK_INSTALL_PARAMETERS}"
+		build_flatpak "${FLATPAK_REMOTE_MANIFEST}" "${FLATPAK_INSTALL_PARAMETERS[@]}"
 	else
 		build_flatpak ${FLATPAK_REMOTE_MANIFEST}
 	fi
@@ -77,7 +96,7 @@ if [[ ${FLATPAK_REMOTE} -eq 1 ]]; then
 elif [[ ${FLATPAK_LOCAL} -eq 1 ]]; then
 	scripts/make_local_manifest.py ${FLATPAK_REMOTE_MANIFEST} ${FLATPAK_LOCAL_MANIFEST}
 	if [[ ${FLATPAK_INSTALL} -eq 1 ]]; then
-		build_flatpak "${FLATPAK_LOCAL_MANIFEST}" "${FLATPAK_INSTALL_PARAMETERS}"
+		build_flatpak "${FLATPAK_LOCAL_MANIFEST}" "${FLATPAK_INSTALL_PARAMETERS[@]}"
 	else
 		build_flatpak ${FLATPAK_LOCAL_MANIFEST}
 	fi
@@ -89,7 +108,7 @@ elif [[ ${FLATPAK_BUNDLE} -eq 1 ]]; then
 else
 	[[ -d ${MESON_BUILD_DIR} ]] && rm -rfv ${MESON_BUILD_DIR}
 	mkdir -pv ${MESON_BUILD_DIR} ${INSTALL_DIR} && \
-	meson . ${MESON_BUILD_DIR} --prefix=$PWD/${INSTALL_DIR} && \
+	meson . ${MESON_BUILD_DIR} --prefix="$PWD/${INSTALL_DIR}" && \
 	ninja -v -C ${MESON_BUILD_DIR} && \
 	desktop-file-validate build/meson/data/com.leinardi.gx52.desktop && \
 	ninja -v -C ${MESON_BUILD_DIR} install
