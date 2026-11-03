@@ -180,12 +180,23 @@ flowchart LR
     thread through `async_channel`, which the main thread awaits in a `glib::spawn_future_local`
     loop. Monotonic time comes from an injected source too, so the tests drive every schedule
     without sleeping.
-- **evdev reader thread.** Opens the joystick's evdev node **without grabbing** (games keep every
-  input), reads events, applies the mode debounce of [protocol.md](protocol.md#mode-selector), and
-  sends mode changes and, when something listens (the input tester in 1.x), input events to the main
-  thread. It reads the initial mode with `EVIOCGKEY`. Nothing logs per event (axis noise, S3).
-  Control transfers and evdev reads do not disturb each other (S3), so writer and reader are
-  independent.
+- **evdev reader thread.** Follows the device watch's selection (`src/device/reader.rs`). USB
+  presence and evdev readiness are tracked apart: while a device is selected and its evdev node is
+  not found or cannot be opened, the reader looks for it again every 250 ms (the node can appear a
+  poll after the USB device, S4). A node belongs to the selected device when its sysfs device
+  (`/sys/class/input/eventN/device`, canonicalised) lies under the selected USB device's sysfs
+  directory, so USB and evdev always come from the same physical device. It opens the node
+  **without grabbing** (games keep every input), reads the initial mode with `EVIOCGKEY`, reads
+  events nonblocking with `poll(2)`, applies the mode debounce of
+  [protocol.md](protocol.md#mode-selector), and sends mode changes and, when something listens (the
+  input tester in 1.x), input events to the main thread. Nothing logs per event (axis noise, S3).
+  - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
+    further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
+    follow the wall clock, so the time since the last key event is measured with monotonic time.
+  - On `ENODEV` or a read error it closes the node and looks for it again while the USB device
+    stays selected; on `Gone` for its generation it stops reading.
+  - Control transfers and evdev reads do not disturb each other (S3), so writer and reader are
+    independent.
 - **Virtual-mouse loop.** Its own thread, owned by the main thread: started when the GSettings
   switch is on (and a joystick is connected), stopped when it is turned off. It drives the uinput
   device on a 10 ms tick with the S9 values

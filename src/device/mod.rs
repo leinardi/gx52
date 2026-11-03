@@ -19,6 +19,7 @@
 pub(crate) mod access;
 pub(crate) mod id;
 pub(crate) mod monotonic;
+pub(crate) mod reader;
 pub(crate) mod usb;
 pub(crate) mod watch;
 pub(crate) mod writer;

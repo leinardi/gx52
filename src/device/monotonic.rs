@@ -70,6 +70,20 @@ mod fake {
         pub(crate) fn advance(&self, by: Duration) {
             *self.elapsed.lock().expect("lock poisoned") += by;
         }
+
+        /// Moves the time forward to `at`.
+        ///
+        /// # Panics
+        ///
+        /// If `at` is earlier than the current time: monotonic time never goes back.
+        pub(crate) fn set(&self, at: Duration) {
+            let mut elapsed = self.elapsed.lock().expect("lock poisoned");
+            assert!(
+                at >= *elapsed,
+                "monotonic time going back: {elapsed:?} to {at:?}"
+            );
+            *elapsed = at;
+        }
     }
 
     impl Monotonic for FakeMonotonic {

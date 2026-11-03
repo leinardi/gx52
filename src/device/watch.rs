@@ -32,6 +32,7 @@ use nusb::hotplug::HotplugEvent;
 use x52::device::DeviceType;
 
 use super::id::{Attachment, DeviceId, Generation};
+use super::reader::ReaderMessage;
 use super::writer::WriterMessage;
 
 /// How often the sandbox polls the device list.
@@ -55,6 +56,14 @@ impl SelectionChange {
         match self {
             Self::Selected(device) => WriterMessage::Selected(device.clone()),
             Self::Gone(generation) => WriterMessage::Gone(*generation),
+        }
+    }
+
+    /// The message that tells the evdev reader about this change.
+    pub(crate) fn to_reader(&self) -> ReaderMessage {
+        match self {
+            Self::Selected(device) => ReaderMessage::Selected(device.clone()),
+            Self::Gone(generation) => ReaderMessage::Gone(*generation),
         }
     }
 }

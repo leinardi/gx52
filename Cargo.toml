@@ -92,6 +92,10 @@ jiff = "0.2"
 thiserror = "2"
 # Awaits the host hotplug stream against the shutdown signal, with no async runtime.
 futures-lite = "2"
+# The joystick's input events: the mode selector (spike S3).
+evdev = "0.13"
+# poll(2) on the evdev node with a timeout.
+rustix = { version = "1", features = ["event"] }
 
 [dev-dependencies]
 x52 = { path = "x52", features = ["test-support"] }

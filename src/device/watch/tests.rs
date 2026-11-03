@@ -175,6 +175,16 @@ fn the_writer_message_carries_the_change() {
     ));
 }
 
+#[test]
+fn the_reader_message_carries_the_change() {
+    let change = selected(DeviceType::X52Pro, "1-4", 5, 1);
+    let SelectionChange::Selected(device) = &change else {
+        panic!("not Selected");
+    };
+    assert_eq!(change.to_reader(), ReaderMessage::Selected(device.clone()));
+    assert_eq!(gone(3).to_reader(), ReaderMessage::Gone(Generation(3)));
+}
+
 /// Returns the scripted lists in order, then the last one forever.
 struct ScriptedLister {
     lists: VecDeque<io::Result<Vec<UsbEntry<Key>>>>,
