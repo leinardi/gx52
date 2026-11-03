@@ -22,8 +22,10 @@
 //! every workspace member.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::LazyLock;
 
 use meta::repo;
+use regex::Regex;
 use serde_yaml_ng::Value;
 
 const CI_WORKFLOW: &str = ".github/workflows/ci.yaml";
@@ -31,18 +33,33 @@ const RESULT_JOB: &str = "ci-result";
 const PRE_COMMIT_JOB: &str = "pre-commit-all";
 const SDK_JOB: &str = "sdk-checks";
 const META_JOB: &str = "meta";
+const FLATPAK_JOB: &str = "flatpak";
+const FLATPAK_BUILDER_ACTION: &str = "flatpak/flatpak-github-actions/flatpak-builder";
+const MESON_TESTS: &str = "src/meson.build";
+
+/// The `test('cargo-test', ...)` call of src/meson.build, up to its closing parenthesis.
+static MESON_CARGO_TEST: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?s)\btest\(\s*'cargo-test',(.*?)\n\)")
+        .unwrap_or_else(|error| panic!("invalid pattern: {error}"))
+});
+/// A `'-p', '<package>'` pair of a Meson argument list.
+static MESON_PACKAGE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"'(?:-p|--package)',\s*'([^']+)'")
+        .unwrap_or_else(|error| panic!("invalid pattern: {error}"))
+});
 
 /// For each hook `pre-commit-all` may skip, the ci.yaml jobs that run it instead. A skip is only
 /// safe when every one of those jobs exists and `ci-result` needs it.
 ///
 /// cargo-test runs `cargo test --workspace` locally, but CI cannot run it in one place: gx52 and
-/// x52 need GTK 4 and libadwaita, which only the GNOME SDK build shell of sdk-checks has, and the
-/// meta-tests read the git checkout, which that build shell lacks, so they run in the meta job on
-/// the bare runner. `cargo_test_jobs_cover_the_workspace` checks that the packages the two jobs
-/// test are, together, every workspace member.
+/// x52 need GTK 4 and libadwaita, which only the GNOME SDK has, so they are tested by the meson
+/// test of the flatpak job (src/meson.build's cargo-test); the meta-tests read the git checkout,
+/// which a Flatpak build lacks, so they run in the meta job on the bare runner.
+/// `cargo_test_jobs_cover_the_workspace` checks that the packages the two test are, together,
+/// every workspace member.
 const SKIPPED_HOOK_RUNNERS: &[(&str, &[&str])] = &[
     ("cargo-clippy", &[SDK_JOB]),
-    ("cargo-test", &[SDK_JOB, META_JOB]),
+    ("cargo-test", &[FLATPAK_JOB, META_JOB]),
     ("cargo-deny", &["deny"]),
     ("blueprint-format", &[SDK_JOB]),
     ("meson-format", &[SDK_JOB]),
@@ -59,13 +76,14 @@ const ANNOTATE_ONLY_JOBS: [&str; 5] = [
     "yamllint",
 ];
 
-/// One job of the workflow: the jobs it needs, the `SKIP` value of each of its steps, and the
-/// shell its steps run.
+/// One job of the workflow: the jobs it needs, the `SKIP` value of each of its steps, the shell
+/// its steps run, and whether a flatpak-builder step runs the manifest's tests.
 #[derive(Debug, Default)]
 struct Job {
     needs: Vec<String>,
     skips: Vec<String>,
     runs: Vec<String>,
+    runs_flatpak_tests: bool,
 }
 
 /// The part of ci.yaml these checks read, by job name.
@@ -107,7 +125,21 @@ fn parse_ci(content: &str) -> BTreeMap<String, Job> {
                 .filter_map(|step| step.get("run")?.as_str())
                 .map(str::to_owned)
                 .collect();
-            Some((name.as_str()?.to_owned(), Job { needs, skips, runs }))
+            let runs_flatpak_tests = steps.iter().any(|step| {
+                let action = step.get("uses").and_then(Value::as_str).unwrap_or_default();
+                let run_tests = step.get("with").and_then(|with| with.get("run-tests"));
+                action.split('@').next() == Some(FLATPAK_BUILDER_ACTION)
+                    && matches!(run_tests, Some(Value::Bool(true)))
+            });
+            Some((
+                name.as_str()?.to_owned(),
+                Job {
+                    needs,
+                    skips,
+                    runs,
+                    runs_flatpak_tests,
+                },
+            ))
         })
         .collect()
 }
@@ -186,25 +218,55 @@ fn tested_packages(job: &Job) -> BTreeSet<String> {
     packages
 }
 
-/// What is wrong with the split of cargo-test between `sdk-checks` and `meta`: together they
-/// must test exactly `members`.
+/// The packages the cargo-test of src/meson.build (`meson_tests`) names with `-p`.
+fn meson_tested_packages(meson_tests: &str) -> BTreeSet<String> {
+    MESON_CARGO_TEST
+        .captures(meson_tests)
+        .and_then(|captures| captures.get(1))
+        .map(|arguments| {
+            MESON_PACKAGE
+                .captures_iter(arguments.as_str())
+                .map(|captures| captures[1].to_owned())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// What is wrong with the split of cargo-test between the flatpak job's meson test, whose
+/// cargo-test is in `meson_tests`, and the meta job: together they must test exactly `members`.
 fn cargo_test_split_problems(
     jobs: &BTreeMap<String, Job>,
+    meson_tests: &str,
     members: &BTreeSet<String>,
 ) -> Vec<String> {
     let mut tested = BTreeSet::new();
     let mut problems = Vec::new();
-    for name in [SDK_JOB, META_JOB] {
-        match jobs.get(name) {
-            Some(job) => {
-                let packages = tested_packages(job);
-                if packages.is_empty() {
-                    problems.push(format!("the {name} job runs no cargo test -p <package>"));
-                }
-                tested.extend(packages);
+    match jobs.get(FLATPAK_JOB) {
+        Some(job) if job.runs_flatpak_tests => {
+            let packages = meson_tested_packages(meson_tests);
+            if packages.is_empty() {
+                problems.push(format!(
+                    "{MESON_TESTS} has no cargo-test naming its packages with -p"
+                ));
             }
-            None => problems.push(format!("the CI workflow has no {name} job")),
+            tested.extend(packages);
         }
+        Some(_) => problems.push(format!(
+            "the {FLATPAK_JOB} job has no {FLATPAK_BUILDER_ACTION} step with run-tests: true"
+        )),
+        None => problems.push(format!("the CI workflow has no {FLATPAK_JOB} job")),
+    }
+    match jobs.get(META_JOB) {
+        Some(job) => {
+            let packages = tested_packages(job);
+            if packages.is_empty() {
+                problems.push(format!(
+                    "the {META_JOB} job runs no cargo test -p <package>"
+                ));
+            }
+            tested.extend(packages);
+        }
+        None => problems.push(format!("the CI workflow has no {META_JOB} job")),
     }
     for missing in members.difference(&tested) {
         problems.push(format!(
@@ -278,7 +340,11 @@ fn cargo_test_jobs_cover_the_workspace() {
         members.len() >= 3,
         "the workspace members were not read: {members:?}"
     );
-    let problems = cargo_test_split_problems(&parse_ci(&repo::read(CI_WORKFLOW)), &members);
+    let problems = cargo_test_split_problems(
+        &parse_ci(&repo::read(CI_WORKFLOW)),
+        &repo::read(MESON_TESTS),
+        &members,
+    );
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
@@ -293,9 +359,12 @@ fn ci_structure_rules() {
           SKIP: cargo-test,cargo-clippy,unknown-hook,meson-format
   sdk-checks:
     steps:
-      - run: |
-          cargo clippy --workspace -- -D warnings
-          cargo test --locked -p gx52
+      - run: cargo clippy --workspace -- -D warnings
+  flatpak:
+    steps:
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@0123456789abcdef0123456789abcdef01234567
+        with:
+          run-tests: true
   meta:
     steps:
       - run: cargo test --locked -p meta
@@ -304,7 +373,7 @@ fn ci_structure_rules() {
   markdownlint:
     steps: []
   ci-result:
-    needs: [pre-commit-all, sdk-checks, test]
+    needs: [pre-commit-all, sdk-checks, flatpak, test]
 ",
     );
     let hooks = "      - id: cargo-test\n      - id: cargo-clippy\n      - id: meson-format\n";
@@ -316,7 +385,7 @@ fn ci_structure_rules() {
         "want one problem naming meta, got {problems:?}"
     );
 
-    // cargo-test is run by sdk-checks and by meta, which ci-result does not need; cargo-clippy and
+    // cargo-test is run by flatpak and by meta, which ci-result does not need; cargo-clippy and
     // meson-format by sdk-checks, which it does; unknown-hook is not a hook at all.
     let problems = skip_problems(&jobs, hooks);
     assert_eq!(problems.len(), 2, "{problems:#?}");
@@ -338,30 +407,6 @@ fn ci_structure_rules() {
         "{problems:#?}"
     );
 
-    // x52 is tested by neither job; a package that is no member is refused too.
-    let members: BTreeSet<String> = ["gx52", "meta", "x52"].map(str::to_owned).into();
-    let problems = cargo_test_split_problems(&jobs, &members);
-    assert_eq!(problems.len(), 1, "{problems:#?}");
-    assert!(problems[0].contains("x52"), "{problems:#?}");
-    let extra = parse_ci(
-        "jobs:\n  sdk-checks:\n    steps:\n      - run: cargo test -p gx52 -p x52 -p ghost\n  \
-         meta:\n    steps:\n      - run: cargo test -p meta\n",
-    );
-    let problems = cargo_test_split_problems(&extra, &members);
-    assert!(
-        problems.len() == 1 && problems[0].contains("ghost"),
-        "{problems:#?}"
-    );
-    let empty_meta = parse_ci(
-        "jobs:\n  sdk-checks:\n    steps:\n      - run: cargo test -p gx52 -p x52 -p meta\n  \
-         meta:\n    steps:\n      - run: cargo build\n",
-    );
-    let problems = cargo_test_split_problems(&empty_meta, &members);
-    assert!(
-        problems.len() == 1 && problems[0].contains("the meta job runs no cargo test"),
-        "{problems:#?}"
-    );
-
     let problems = skip_problems(&parse_ci("jobs:\n  ci-result:\n    needs: []\n"), hooks);
     assert_eq!(
         problems.len(),
@@ -376,8 +421,75 @@ fn ci_structure_rules() {
     );
 }
 
+/// The negative control of the cargo-test split: x52 dropped from src/meson.build is tested by
+/// neither job, a package that is no member is refused, and so are a flatpak job that skips the
+/// tests and a meta job that runs none.
+#[test]
+fn cargo_test_split_rules() {
+    let jobs = parse_ci(
+        "jobs:
+  flatpak:
+    steps:
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@0123456789abcdef0123456789abcdef01234567
+        with:
+          run-tests: true
+  meta:
+    steps:
+      - run: cargo test --locked -p meta
+",
+    );
+    let members: BTreeSet<String> = ["gx52", "meta", "x52"].map(str::to_owned).into();
+    let meson_tests = repo::read(MESON_TESTS);
+    assert_eq!(
+        meson_tested_packages(&meson_tests),
+        ["gx52", "x52"].map(str::to_owned).into(),
+        "{MESON_TESTS}'s cargo-test was not read"
+    );
+    assert_eq!(
+        cargo_test_split_problems(&jobs, &meson_tests, &members),
+        Vec::<String>::new()
+    );
+    let without_x52 = meson_tests.replacen(", '-p', 'x52'", "", 1);
+    assert_ne!(without_x52, meson_tests, "the sample is the file itself");
+    let problems = cargo_test_split_problems(&jobs, &without_x52, &members);
+    assert!(
+        problems.len() == 1 && problems[0].contains("x52"),
+        "{problems:#?}"
+    );
+    let ghost = meson_tests.replacen("'-p', 'x52'", "'-p', 'x52', '-p', 'ghost'", 1);
+    let problems = cargo_test_split_problems(&jobs, &ghost, &members);
+    assert!(
+        problems.len() == 1 && problems[0].contains("ghost"),
+        "{problems:#?}"
+    );
+    let no_tests = parse_ci(
+        "jobs:\n  flatpak:\n    steps:\n      - uses: \
+         flatpak/flatpak-github-actions/flatpak-builder@v6\n  meta:\n    steps:\n      - run: \
+         cargo test -p meta\n",
+    );
+    let problems = cargo_test_split_problems(&no_tests, &meson_tests, &members);
+    assert!(
+        problems
+            .iter()
+            .any(|problem| problem.contains("run-tests: true")),
+        "{problems:#?}"
+    );
+    let empty_meta = parse_ci(
+        "jobs:\n  flatpak:\n    steps:\n      - uses: \
+         flatpak/flatpak-github-actions/flatpak-builder@v6\n        with:\n          run-tests: \
+         true\n  meta:\n    steps:\n      - run: cargo build\n",
+    );
+    let problems = cargo_test_split_problems(&empty_meta, &meson_tests, &members);
+    assert!(
+        problems
+            .iter()
+            .any(|problem| problem.contains("the meta job runs no cargo test")),
+        "{problems:#?}"
+    );
+}
+
 /// Rustdoc warnings must fail both the local verify target and the sdk-checks job, which runs
-/// `make rust-doc` in the SDK build shell.
+/// `make rust-doc` in the GNOME SDK.
 fn rustdoc_gate_present(fragment: &str, workflow: &str) -> bool {
     let verify = fragment.lines().any(|line| {
         line.starts_with("verify-rust:")

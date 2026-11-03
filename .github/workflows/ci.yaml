@@ -23,8 +23,9 @@ jobs:
   # The authoritative lint gate: every pre-commit hook over every file, on the bare runner. Skipped
   # here, each because a dedicated job below runs it (meta/tests/ci_gates.rs keeps the two lists
   # in step): the hooks that need GTK 4, libadwaita, blueprint-compiler or a Meson as new as the
-  # GNOME SDK's run in sdk-checks, cargo-test is split between sdk-checks and meta, cargo-deny runs
-  # in deny (it needs the network), and flatpak-builder-lint in flatpak, where the linter is.
+  # GNOME SDK's run in sdk-checks, cargo-test is split between flatpak (meson test) and meta,
+  # cargo-deny runs in deny (it needs the network), and flatpak-builder-lint in flatpak, where the
+  # linter is.
   pre-commit-all:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -78,8 +79,8 @@ jobs:
           test -z "$(git status --porcelain)"
 
   # The meta-tests, the half of the cargo-test hook that needs no GTK: they read the git checkout
-  # (git ls-files, scratch repositories), which the Flatpak build shell of sdk-checks does not
-  # have. The cache is saved only on a pull request, as in pre-commit-all.
+  # (git ls-files, scratch repositories), which a Flatpak build does not have. The cache is saved
+  # only on a pull request, as in pre-commit-all.
   meta:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -124,8 +125,9 @@ jobs:
           command: check
 
   # The Devel Flatpak on both architectures, natively (spike S6): the GNOME 51 SDK builds the
-  # application and runs meson test (cargo test of gx52 and x52, desktop, metainfo and schema
-  # validation), and flatpak-builder-lint checks both manifests. The image ships flatpak-builder,
+  # application and runs meson test (cargo test of gx52 and x52, the GTK half of the cargo-test
+  # hook, and desktop, metainfo and schema validation), and flatpak-builder-lint checks both
+  # manifests. The image ships flatpak-builder,
   # flatpak-builder-lint and uv, so the lint runs the same make target as the pre-commit hook.
   flatpak:
     strategy:
@@ -160,11 +162,12 @@ jobs:
       - name: Lint the Flatpak manifests
         run: make flatpak-lint-manifest FLATPAK_BUILDER_LINT=flatpak-builder-lint
 
-  # The checks that need the GNOME SDK, run in the build shell of the Devel manifest's app module
-  # (spike S6): the runner's GTK is older than the runtime, and the image ships the SDK but not
-  # the Rust extension. Each command is the one of the hook pre-commit-all skips: cargo-clippy,
-  # the GTK half of cargo-test (gx52 and x52; meta runs in the meta job), blueprint-format and
-  # meson-format, plus the rustdoc gate of make verify.
+  # The checks that need the GNOME SDK, run in it directly: the runner's GTK is older than the
+  # runtime, and the image ships the SDK but not the Rust extension, the one thing installed here.
+  # Each command is the one of a hook pre-commit-all skips (cargo-clippy, blueprint-format,
+  # meson-format), plus the rustdoc gate of make verify; the tests of gx52 and x52 run in the
+  # flatpak job's meson test. Cargo's target directory and home are in the checkout, so they are
+  # cached between runs, keyed on the architecture, Cargo.lock and the toolchain pin.
   sdk-checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -178,26 +181,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Build the dependencies up to the app module
+      # The extension of the Devel manifest; the SDK is the image's, left as it is.
+      - name: Install the Rust SDK extension
         run: |
           flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak-builder --disable-rofiles-fuse --install-deps-from=flathub --keep-build-dirs \
-            --stop-at=gx52 _flatpak/sdk build-aux/com.leinardi.gx52.Devel.json
-          flatpak build-finish --share=network _flatpak/sdk
+          flatpak install --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
 
-      # The build shell starts in the module's Meson build directory, one level below the
-      # source copy.
-      - name: Run the SDK checks in the build shell
+      - name: Cache the Rust build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            target
+            .cargo-home
+          key: sdk-checks|${{ runner.arch }}|${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            sdk-checks|${{ runner.arch }}|
+
+      - name: Run the SDK checks
         run: |
-          flatpak-builder --disable-rofiles-fuse --build-shell=gx52 _flatpak/sdk \
-            build-aux/com.leinardi.gx52.Devel.json <<'CHECKS'
+          flatpak run --devel --share=network --filesystem="${GITHUB_WORKSPACE}" \
+            --env=PATH=/usr/bin:/usr/lib/sdk/rust-stable/bin \
+            --env=CARGO_HOME="${GITHUB_WORKSPACE}/.cargo-home" \
+            --command=bash org.gnome.Sdk//51 -s "${GITHUB_WORKSPACE}" <<'CHECKS'
           set -eux
-          cd ..
+          cd "$1"
           cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-          cargo test --locked -p gx52 -p x52
           make rust-doc
           blueprint-compiler format data
-          meson format --check-diff meson.options $(find . -name meson.build -not -path './_*' -not -path './.*')
+          meson format --check-diff meson.options $(find . -name meson.build -not -path './_*' -not -path './.*' -not -path './target/*')
           CHECKS
 
   actionlint:

@@ -44,3 +44,6 @@ desktop.ini
 
 # --- gettext ---
 *.mo
+
+# The cargo home of the sdk-checks CI job, cached with target/.
+/.cargo-home/
