@@ -23,7 +23,9 @@ MK_LOCAL_FLATPAK_INCLUDED := 1
 # flatpak-builder-lint at Flathub's versions), which needs --disable-rofiles-fuse. The Devel
 # manifest builds com.leinardi.gx52.Devel from the checkout with the network allowed during the
 # build (cargo fetches the crates) and runs meson test; the stable manifest is the offline,
-# Flathub-style build, whose crates come from the generated build-aux/cargo-sources.json.
+# Flathub-style build, whose crates come from the generated build-aux/cargo-sources.json. With
+# --ccache the Devel build keeps cargo's home and target directory in .flatpak-builder/ccache, so
+# a rebuild compiles the workspace crates only (src/meson.build).
 
 FLATPAK ?= flatpak
 FLATPAK_BUILDER ?= $(FLATPAK) run org.flatpak.Builder
@@ -36,8 +38,8 @@ FLATPAK_MANIFESTS := build-aux/com.leinardi.gx52.json $(FLATPAK_DEVEL_MANIFEST)
 FLATPAK_DIR ?= _flatpak
 FLATPAK_REPO := $(FLATPAK_DIR)/repo
 FLATPAK_BUNDLE := $(FLATPAK_DIR)/$(FLATPAK_DEVEL_ID).flatpak
-FLATPAK_BUILDER_ARGS := --user --force-clean --disable-rofiles-fuse --install-deps-from=flathub \
-    --repo=$(FLATPAK_REPO)
+FLATPAK_BUILDER_ARGS := --user --force-clean --disable-rofiles-fuse --ccache \
+    --install-deps-from=flathub --repo=$(FLATPAK_REPO)
 
 # flatpak-cargo-generator.py from flatpak-builder-tools, pinned by commit and checked by digest
 # before it runs. It declares its Python dependencies inline, so uv runs it without a virtualenv.
