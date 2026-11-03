@@ -198,11 +198,26 @@ flowchart LR
     come back (on "gone"), keeping or destroying the uinput device as M7 decides.
   - A failure to create the uinput device (no permission) is reported to the main thread, which
     shows the guidance page.
-- **Device watch.** One component, two sources (S4): `nusb::watch_devices` when not sandboxed,
-  polling `nusb::list_devices` and `evdev::enumerate` every 250 ms in the sandbox (detected through
-  `/.flatpak-info`, for example with `ashpd::is_sandboxed()`). It matches by vendor and product ID,
-  never by address, and tells the writer, the reader and the main thread when the device appears or
-  goes away.
+- **Device watch.** One component, two sources (S4, `src/device/watch.rs`): `nusb::watch_devices`
+  when not sandboxed, re-listing the USB devices at start and after every hotplug event (a
+  `Disconnected` carries no vendor or product ID), and polling `nusb::list_devices` every 250 ms in
+  the sandbox (detected through `/.flatpak-info`), where the hotplug stream never yields. It
+  matches by vendor and product ID, never by address, and tells the writer, the reader and the
+  main thread when a device is selected or gone.
+  - **Selection:** the USB device's sysfs path is the selection key. With nothing selected, the
+    first supported device in sysfs-path order is selected; the selection is kept while that path
+    stays listed, whatever the enumeration order and whatever else appears (a second X52 does not
+    steal it). When the path goes, the watch sends `Gone` for its generation and selects the next
+    supported device, if any.
+  - **Reattachment:** every selection has a generation. A host `Disconnected` for the selected
+    attachment, or a different attachment at the selected path (a replug faster than the re-list,
+    or between two polls), sends `Gone` for the old generation and `Selected` with the same path,
+    the new attachment and a new generation, so the writer reopens and replays everything. A
+    disconnected attachment is left out of the listings until one no longer contains it, since
+    its sysfs directory can outlive the event for a moment.
+  - **Shutdown:** the hotplug stream is awaited with `futures_lite::future::or` against a shutdown
+    signal; the polling loop waits on the same signal with the 250 ms timeout. Dropping the
+    trigger signals both.
 - **ksni tray.** `ksni` with the `async-io` feature runs its own executor thread and is spawned from
   `glib::spawn_future_local` (desk research, S5). Menu callbacks send a `TrayAction` through an
   `async_channel` to a main-thread loop; the main thread pushes state with `Handle::update`. The

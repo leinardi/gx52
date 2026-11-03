@@ -90,9 +90,12 @@ async-channel = "2"
 # The system time zone the clocks follow.
 jiff = "0.2"
 thiserror = "2"
+# Awaits the host hotplug stream against the shutdown signal, with no async runtime.
+futures-lite = "2"
 
 [dev-dependencies]
 x52 = { path = "x52", features = ["test-support"] }
+tempfile = "3.27.0"
 
 [lints]
 workspace = true
