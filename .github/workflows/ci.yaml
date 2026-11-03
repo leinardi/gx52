@@ -127,8 +127,12 @@ jobs:
   # The Devel Flatpak on both architectures, natively (spike S6): the GNOME 51 SDK builds the
   # application and runs meson test (cargo test of gx52 and x52, the GTK half of the cargo-test
   # hook, and desktop, metainfo and schema validation), and flatpak-builder-lint checks both
-  # manifests. The image ships flatpak-builder,
-  # flatpak-builder-lint and uv, so the lint runs the same make target as the pre-commit hook.
+  # manifests. The image ships flatpak-builder, flatpak-builder-lint and uv, so the lint runs the
+  # same make target as the pre-commit hook. With the cache on, the action passes --ccache and
+  # caches .flatpak-builder; the Devel build keeps cargo's home and target directory in its ccache
+  # directory (src/meson.build), so the dependencies are compiled once per key. The action saves
+  # only under a key it did not restore, so the key covers what invalidates the compiled
+  # dependencies: the lock file and the toolchain.
   flatpak:
     strategy:
       fail-fast: false
@@ -157,7 +161,7 @@ jobs:
           arch: ${{ matrix.arch }}
           bundle: gx52-devel-${{ matrix.arch }}.flatpak
           run-tests: true
-          cache-key: flatpak-builder-${{ matrix.arch }}-${{ hashFiles('Cargo.lock') }}
+          cache-key: flatpak-builder-${{ matrix.arch }}-cargo-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
 
       - name: Lint the Flatpak manifests
         run: make flatpak-lint-manifest FLATPAK_BUILDER_LINT=flatpak-builder-lint

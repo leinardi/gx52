@@ -1,7 +1,14 @@
-cargo_target_dir = meson.project_build_root() / 'cargo-target'
+# Cargo's home and target directory live in the build dir: reproducible and Flatpak friendly. A
+# Devel build under flatpak-builder --ccache (the CI flatpak job, make flatpak-build) puts them in
+# /run/ccache instead, the directory flatpak-builder keeps between builds, so a rebuild compiles
+# the workspace crates and not every dependency. The release profile, Flathub's, never does.
+cargo_cache_dir = meson.project_build_root()
+if get_option('profile') == 'development' and fs.is_dir('/run/ccache')
+    cargo_cache_dir = '/run/ccache/cargo'
+endif
+cargo_target_dir = cargo_cache_dir / 'cargo-target'
 cargo_vars = {
-    # Keep cargo's caches inside the build dir: reproducible and Flatpak friendly.
-    'CARGO_HOME': meson.project_build_root() / 'cargo-home',
+    'CARGO_HOME': cargo_cache_dir / 'cargo-home',
     'CARGO_TARGET_DIR': cargo_target_dir,
     # Build-time constants read by src/config.rs through option_env!(); a plain cargo build falls
     # back to the Devel defaults written there.
