@@ -202,7 +202,6 @@ jobs:
         # capability to write to it, so the two writable directories are created out here, owned by
         # the container's root, which is the sandbox's user.
         run: |
-          ls -ld "${GITHUB_WORKSPACE}"
           mkdir -p target .cargo-home
           flatpak run --devel --share=network --filesystem="${GITHUB_WORKSPACE}" \
             --env=PATH=/usr/bin:/usr/lib/sdk/rust-stable/bin \
