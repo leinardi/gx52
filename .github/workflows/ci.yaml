@@ -198,7 +198,12 @@ jobs:
             sdk-checks|${{ runner.arch }}|
 
       - name: Run the SDK checks
+        # The checkout directory belongs to the runner's user, and root in the sandbox has no
+        # capability to write to it, so the two writable directories are created out here, owned by
+        # the container's root, which is the sandbox's user.
         run: |
+          ls -ld "${GITHUB_WORKSPACE}"
+          mkdir -p target .cargo-home
           flatpak run --devel --share=network --filesystem="${GITHUB_WORKSPACE}" \
             --env=PATH=/usr/bin:/usr/lib/sdk/rust-stable/bin \
             --env=CARGO_HOME="${GITHUB_WORKSPACE}/.cargo-home" \
