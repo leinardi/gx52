@@ -30,5 +30,13 @@ doc-valid-idents = [
     "..",
 ]
 
-# disallowed-methods (with the workspace's disallowed_methods = "deny") gets its first ban with the
-# MFD clock code in M1, which reads the time through an injected clock (docs/tooling-todo.md).
+# The MFD clocks read the time through the injected x52::clock::Clock, so the tests can set it
+# (docs/architecture.md, "Testability"). Only x52::clock::SystemClock reads it directly, through an
+# #[expect(clippy::disallowed_methods, reason = "...")]; with the workspace's
+# disallowed_methods = "deny", any other read fails clippy.
+disallowed-methods = [
+    { path = "jiff::Timestamp::now", reason = "read the time from the injected Clock" },
+    { path = "jiff::Zoned::now", reason = "read the time from the injected Clock" },
+    { path = "std::time::SystemTime::now", reason = "read the time from the injected Clock" },
+    { path = "std::time::Instant::now", reason = "read the time from the injected Clock" },
+]

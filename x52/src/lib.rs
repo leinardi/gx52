@@ -19,6 +19,7 @@
 //! [`command`] are the only ones that can be built, and [`transport::send`] is the only way to
 //! send one.
 
+pub mod clock;
 pub mod command;
 pub mod device;
 pub mod error;
