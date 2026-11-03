@@ -26,7 +26,12 @@ authors.workspace = true
 repository.workspace = true
 publish = false
 
+[features]
+# The RecordingTransport, for the tests of the crates that send commands.
+test-support = []
+
 [dependencies]
+thiserror = "2"
 
 [lints]
 workspace = true
