@@ -159,15 +159,22 @@ impl FixedOffset {
     ///
     /// [`RangeError::OutOfRange`] outside `-720`–`+840`.
     pub fn new(minutes: i16) -> Result<Self, RangeError> {
-        if !(Self::MIN_MINUTES..=Self::MAX_MINUTES).contains(&minutes) {
-            return Err(RangeError::out_of_range(
+        Self::checked(minutes).ok_or_else(|| {
+            RangeError::out_of_range(
                 "fixed offset",
                 minutes,
                 Self::MIN_MINUTES,
                 Self::MAX_MINUTES,
-            ));
+            )
+        })
+    }
+
+    /// An offset from UTC in minutes, or `None` outside `-720`–`+840`; usable in constants.
+    pub(crate) const fn checked(minutes: i16) -> Option<Self> {
+        if minutes < Self::MIN_MINUTES || minutes > Self::MAX_MINUTES {
+            return None;
         }
-        Ok(Self(minutes))
+        Some(Self(minutes))
     }
 
     /// The offset in minutes.
@@ -178,7 +185,7 @@ impl FixedOffset {
 }
 
 /// What clock 2 or 3 shows: a time zone with its daylight saving time, or a fixed offset.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ZoneSource {
     /// A time zone, usually from the system's time zone database.
     Zone(TimeZone),
