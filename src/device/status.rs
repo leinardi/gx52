@@ -51,11 +51,10 @@ impl DeviceStatus {
     pub(crate) fn apply(&mut self, event: &DeviceEvent) -> bool {
         let before = *self;
         match event {
-            DeviceEvent::DeviceType(device_type) => {
-                self.device_type = *device_type;
-                if device_type.is_none() {
-                    self.mode = None;
-                }
+            DeviceEvent::Selected(device) => self.device_type = Some(device.device_type),
+            DeviceEvent::Gone(_) => {
+                self.device_type = None;
+                self.mode = None;
             }
             DeviceEvent::Access(access) => self.access = *access,
             DeviceEvent::InputNode(node) => {
@@ -65,7 +64,7 @@ impl DeviceStatus {
             }
             DeviceEvent::Mode(mode) => self.mode = Some(*mode),
             DeviceEvent::X52dRunning(running) => self.x52d_running = *running,
-            DeviceEvent::Error(_) => {}
+            DeviceEvent::Error(_) | DeviceEvent::Sent(_) => {}
         }
         *self != before
     }
@@ -128,6 +127,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::device::id::{Attachment, DeviceId, Generation};
 
     fn status(access: AccessState, device_type: Option<DeviceType>) -> DeviceStatus {
         DeviceStatus {
@@ -192,7 +192,13 @@ mod tests {
     #[test]
     fn events_update_the_status_and_report_changes() {
         let mut status = DeviceStatus::default();
-        assert!(status.apply(&DeviceEvent::DeviceType(Some(DeviceType::X52Pro))));
+        let device = DeviceId {
+            device_type: DeviceType::X52Pro,
+            sysfs_path: PathBuf::from("/sys/bus/usb/devices/1-4"),
+            attachment: Attachment { bus: 1, address: 5 },
+            generation: Generation(1),
+        };
+        assert!(status.apply(&DeviceEvent::Selected(device)));
         assert!(status.apply(&DeviceEvent::Access(AccessState::Ready)));
         assert!(!status.apply(&DeviceEvent::Access(AccessState::Ready)));
         assert!(!status.apply(&DeviceEvent::InputNode(Some(PathBuf::from(
@@ -214,7 +220,7 @@ mod tests {
         assert!(status.apply(&DeviceEvent::InputNode(None)));
         assert_eq!(status.mode, None, "no mode without the evdev node");
         status.apply(&DeviceEvent::Mode(Mode::One));
-        assert!(status.apply(&DeviceEvent::DeviceType(None)));
+        assert!(status.apply(&DeviceEvent::Gone(Generation(1))));
         assert_eq!(status.mode, None);
     }
 }

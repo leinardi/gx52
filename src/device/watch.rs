@@ -262,7 +262,7 @@ pub(crate) struct ShutdownSignal {
 
 impl ShutdownSignal {
     /// Waits up to `timeout`; true once shutdown is signalled.
-    fn wait_timeout(&self, timeout: Duration) -> bool {
+    pub(crate) fn wait_timeout(&self, timeout: Duration) -> bool {
         match self.blocking.recv_timeout(timeout) {
             Ok(()) | Err(RecvTimeoutError::Disconnected) => true,
             Err(RecvTimeoutError::Timeout) => false,

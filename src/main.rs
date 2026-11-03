@@ -23,7 +23,7 @@ mod config;
 mod device;
 mod window;
 
-use std::{env, io, path::PathBuf};
+use std::{env, io, io::Write, path::PathBuf};
 
 use gtk::{gio, glib, prelude::*};
 use tracing_subscriber::EnvFilter;
@@ -34,7 +34,24 @@ fn main() -> glib::ExitCode {
     // INFO for this crate and WARN for everything else; override with RUST_LOG.
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(concat!(env!("CARGO_CRATE_NAME"), "=info,warn")));
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        // Logs go to stderr, so stdout carries only the device check's report.
+        .with_writer(io::stderr)
+        .init();
+
+    // The device check harness runs without GTK (Devel builds only).
+    let args: Vec<String> = env::args().skip(1).collect();
+    match device::check::parse_args(&args, config::is_devel()) {
+        Ok(Some(scenario)) => {
+            return glib::ExitCode::from(device::check::run_on_device(scenario, &mut io::stdout()));
+        }
+        Ok(None) => {}
+        Err(error) => {
+            let _ = writeln!(io::stderr(), "gx52: {error}");
+            return glib::ExitCode::from(2);
+        }
+    }
 
     init_i18n();
 

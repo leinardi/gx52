@@ -29,7 +29,7 @@ use std::time::Duration;
 
 use jiff::tz::TimeZone;
 use x52::clock::{self, Clock, ClockError};
-use x52::command::{CommandSlot, ControlTransfer};
+use x52::command::{Command, CommandSlot, ControlTransfer};
 use x52::state::DeviceState;
 use x52::transport::{self, SendError, Transport};
 
@@ -68,6 +68,8 @@ pub(crate) enum WriterEvent {
     Access(AccessState),
     /// Something failed; reported once until it recovers.
     Error(WriterError),
+    /// A command was sent successfully.
+    Sent(Command),
 }
 
 /// Why the writer could not show the desired state.
@@ -307,6 +309,7 @@ where
                 return;
             }
         };
+        let mut delivered = Vec::new();
         for command in commands {
             let transfers = command.encode();
             if sent.get(&command.slot()) == Some(&transfers) {
@@ -315,6 +318,7 @@ where
             match transport::send(transport, device_type, &command) {
                 Ok(()) => {
                     sent.insert(command.slot(), transfers);
+                    delivered.push(command);
                 }
                 Err(error) => {
                     let source: Box<dyn std::error::Error + Send + Sync> = match error {
@@ -325,6 +329,7 @@ where
                     self.link = Link::Waiting {
                         retry_at: now + RETRY_INTERVAL,
                     };
+                    self.report_sent(delivered);
                     self.report_failure(WriterError::Transfer {
                         command: command.name(),
                         source,
@@ -332,6 +337,13 @@ where
                     return;
                 }
             }
+        }
+        self.report_sent(delivered);
+    }
+
+    fn report_sent(&self, delivered: Vec<Command>) {
+        for command in delivered {
+            self.send(WriterEvent::Sent(command));
         }
     }
 

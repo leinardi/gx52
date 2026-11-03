@@ -349,6 +349,17 @@ The Flatpak `finish-args` beyond the display sockets:
   (the real files are not committed).
 - **`meson test`:** validates the desktop file, metainfo and GSettings schema and runs
   `cargo test`; it runs in CI inside the Flatpak build on both architectures (S6).
+- **Device check harness** (Devel builds only, `src/device/check.rs`): `gx52 --device-check
+  <scenario>` runs the device service without a window, before GTK starts, and prints
+  timestamped lines: `STEP` (something the user must do), `CHECK` (something to confirm by
+  looking), `PASS` and `FAIL` (what it verified itself), `INFO`, `SEND` for every command the
+  writer sends, and a `DONE` summary. The scenarios are `smoke` (no user action), `replug`, `mode`,
+  `permission`, `resume`, `midnight`, `x52d` and `uinput`. The exit code is 0 when everything
+  passed, 1 on a failure, 2 for a command-line error and 3 when a precondition was not met (the
+  permission check with a node that stays writable). A release build refuses the option. The
+  service runs over a `Backend` (the real system, or fakes), so the tests run every scenario's
+  automatic verifications against the real threads over a scripted watch, opener and evdev
+  source.
 - Repository checks: `make verify` and `make check` (AGENTS.md), and the `meta` crate once it
   exists.
 

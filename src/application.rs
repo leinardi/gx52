@@ -173,10 +173,10 @@ impl Application {
     /// shows a changed status in every window.
     fn on_device_event(&self, event: &DeviceEvent) {
         let imp = self.imp();
-        if let DeviceEvent::DeviceType(Some(device_type)) = event
+        if let DeviceEvent::Selected(selected) = event
             && let Some(device) = imp.device.borrow().as_ref()
         {
-            device.set_state(DeviceState::default_for(*device_type));
+            device.set_state(DeviceState::default_for(selected.device_type));
         }
         let mut status = imp.device_status.get();
         if status.apply(event) {

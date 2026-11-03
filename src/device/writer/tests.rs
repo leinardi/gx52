@@ -160,7 +160,7 @@ impl Harness {
         std::iter::from_fn(|| self.events.try_recv().ok())
             .filter_map(|event| match event {
                 WriterEvent::Access(access) => Some(access),
-                WriterEvent::Error(_) => None,
+                WriterEvent::Error(_) | WriterEvent::Sent(_) => None,
             })
             .collect()
     }
@@ -241,6 +241,27 @@ fn connect_sends_the_exact_full_replay() {
         "{expected:?}"
     );
     assert_eq!(harness.access_events(), [AccessState::Ready]);
+}
+
+#[test]
+fn every_command_sent_is_reported() {
+    let mut harness = Harness::new(Vec::new());
+    harness.send([
+        WriterMessage::SetState(pro_default()),
+        WriterMessage::Selected(device(1, 5)),
+    ]);
+    let expected = pro_default()
+        .resolve(DeviceType::X52Pro, harness.clock.now(), &TimeZone::UTC)
+        .unwrap();
+
+    let reported: Vec<Command> = std::iter::from_fn(|| harness.events.try_recv().ok())
+        .filter_map(|event| match event {
+            WriterEvent::Sent(command) => Some(command),
+            WriterEvent::Access(_) | WriterEvent::Error(_) => None,
+        })
+        .collect();
+
+    assert_eq!(reported, expected);
 }
 
 #[test]
@@ -433,14 +454,19 @@ fn a_failed_transfer_drops_the_handle_and_the_reopen_a_second_later_replays_full
     harness.send([WriterMessage::SetState(state.clone())]);
     assert_eq!(harness.sent(), []);
     assert_eq!(harness.writer.timeout(), RETRY_INTERVAL);
-    assert!(matches!(
-        harness.events.try_recv(),
-        Ok(WriterEvent::Access(AccessState::Ready))
-    ));
-    assert!(matches!(
-        harness.events.try_recv(),
-        Ok(WriterEvent::Error(WriterError::Transfer { .. }))
-    ));
+    let reported: Vec<WriterEvent> = std::iter::from_fn(|| harness.events.try_recv().ok())
+        .filter(|event| !matches!(event, WriterEvent::Sent(_)))
+        .collect();
+    assert!(
+        matches!(
+            reported.as_slice(),
+            [
+                WriterEvent::Access(AccessState::Ready),
+                WriterEvent::Error(WriterError::Transfer { .. })
+            ]
+        ),
+        "{reported:?}"
+    );
 
     harness.monotonic.advance(Duration::from_millis(999));
     harness.send([]);
