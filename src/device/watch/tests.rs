@@ -16,6 +16,7 @@
 //! The selection over fake device lists, and the two sources over a scripted lister.
 
 use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use futures_lite::stream;
@@ -185,6 +186,19 @@ fn the_reader_message_carries_the_change() {
     assert_eq!(gone(3).to_reader(), ReaderMessage::Gone(Generation(3)));
 }
 
+/// The x52d check of a system without the daemon.
+fn no_x52d() -> bool {
+    false
+}
+
+/// The selection change of `event`, if it is one.
+fn selection(event: WatchEvent) -> Option<SelectionChange> {
+    match event {
+        WatchEvent::Selection(change) => Some(change),
+        WatchEvent::X52dRunning(_) => None,
+    }
+}
+
 /// Returns the scripted lists in order, then the last one forever.
 struct ScriptedLister {
     lists: VecDeque<io::Result<Vec<UsbEntry<Key>>>>,
@@ -230,8 +244,10 @@ fn the_hotplug_source_relists_on_every_event_and_handles_a_disconnect() {
     ]);
     let (sender, changes) = mpsc::channel();
     let watch = thread::spawn(move || {
-        run_hotplug(lister, events, &signal, |change| {
-            sender.send(change).unwrap();
+        run_hotplug(lister, events, no_x52d, &signal, |event| {
+            if let Some(change) = selection(event) {
+                sender.send(change).unwrap();
+            }
         });
     });
 
@@ -269,7 +285,9 @@ fn a_disconnected_attachment_still_listed_is_not_selected_again() {
     ]);
     let mut changes = Vec::new();
 
-    run_hotplug(lister, events, &signal, |change| changes.push(change));
+    run_hotplug(lister, events, no_x52d, &signal, |event| {
+        changes.extend(selection(event));
+    });
 
     assert_eq!(
         changes,
@@ -293,7 +311,9 @@ fn a_failed_listing_keeps_the_selection() {
     let mut changes = Vec::new();
     drop(trigger);
 
-    run_hotplug(lister, events, &signal, |change| changes.push(change));
+    run_hotplug(lister, events, no_x52d, &signal, |event| {
+        changes.extend(selection(event));
+    });
 
     assert_eq!(changes, [selected(DeviceType::X52Pro, "1-4", 5, 1)]);
 }
@@ -321,7 +341,7 @@ fn assert_shutdown_within_500_ms(watch: impl FnOnce(&ShutdownSignal) + Send + 's
 fn shutdown_of_an_idle_hotplug_stream_returns_within_500_ms() {
     assert_shutdown_within_500_ms(|signal| {
         let lister = ScriptedLister::new(vec![Ok(vec![entry(PRO, "1-4", 5)])]);
-        run_hotplug(lister, stream::pending(), signal, |_| {});
+        run_hotplug(lister, stream::pending(), no_x52d, signal, |_| {});
     });
 }
 
@@ -329,7 +349,7 @@ fn shutdown_of_an_idle_hotplug_stream_returns_within_500_ms() {
 fn shutdown_of_the_polling_loop_returns_within_500_ms() {
     assert_shutdown_within_500_ms(|signal| {
         let lister = ScriptedLister::new(vec![Ok(vec![entry(PRO, "1-4", 5)])]);
-        run_polling(lister, signal, |_| {});
+        run_polling(lister, no_x52d, signal, |_| {});
     });
 }
 
@@ -343,7 +363,11 @@ fn the_polling_source_follows_the_lists() {
     ]);
     let (sender, changes) = mpsc::channel();
     let watch = thread::spawn(move || {
-        run_polling(lister, &signal, |change| sender.send(change).unwrap());
+        run_polling(lister, no_x52d, &signal, |event| {
+            if let Some(change) = selection(event) {
+                sender.send(change).unwrap();
+            }
+        });
     });
 
     assert_eq!(
@@ -357,4 +381,62 @@ fn the_polling_source_follows_the_lists() {
     );
     drop(trigger);
     watch.join().unwrap();
+}
+
+#[test]
+fn x52d_is_reported_at_start_then_on_change() {
+    let (trigger, signal) = shutdown_signal();
+    let lister = ScriptedLister::new(vec![Ok(vec![entry(PRO, "1-4", 5)])]);
+    let mut events = Vec::new();
+    drop(trigger);
+
+    run_hotplug(
+        lister,
+        stream::pending(),
+        || true,
+        &signal,
+        |event| {
+            events.push(event);
+        },
+    );
+
+    assert_eq!(
+        events,
+        [
+            WatchEvent::X52dRunning(true),
+            WatchEvent::Selection(selected(DeviceType::X52Pro, "1-4", 5, 1)),
+        ]
+    );
+}
+
+#[test]
+fn the_polling_source_checks_x52d_every_5_s() {
+    let (trigger, signal) = shutdown_signal();
+    let lister = ScriptedLister::new(vec![Ok(Vec::new())]);
+    let checks = Arc::new(Mutex::new(0_u32));
+    let counted = Arc::clone(&checks);
+    let (sender, events) = mpsc::channel();
+    let watch = thread::spawn(move || {
+        run_polling(
+            lister,
+            move || {
+                let mut checks = counted.lock().unwrap();
+                *checks += 1;
+                // Running from the second check on.
+                *checks > 1
+            },
+            &signal,
+            |event| sender.send(event).unwrap(),
+        );
+    });
+
+    assert_eq!(events.recv().unwrap(), WatchEvent::X52dRunning(false));
+    // The second check comes 20 polls of 250 ms later.
+    assert_eq!(
+        events.recv_timeout(Duration::from_secs(10)).unwrap(),
+        WatchEvent::X52dRunning(true)
+    );
+    drop(trigger);
+    watch.join().unwrap();
+    assert_eq!(*checks.lock().unwrap(), 2);
 }

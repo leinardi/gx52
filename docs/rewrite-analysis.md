@@ -494,7 +494,7 @@ Automatic, once, with no CLI option.
 | R7 | GTK 4 / libadwaita development packages on CI images are older than GNOME 51. | Run Rust checks inside the GNOME 51 SDK container. |
 | R8 | MFD non-ASCII characters. | Use the MFD character map; replace unmappable characters. |
 | R10 | Users who installed from source (not Flatpak) and switch to the Flatpak: their database is in `~/.config/gx52/`, outside the sandbox. | Documented manual copy (README, release notes). |
-| R11 | libx52's `x52d` daemon (or its CLI) running at the same time fights over the same device: both write LEDs, clocks and the MFD. | Detect a running `x52d` (its command socket) and show a warning; document it. |
+| R11 | libx52's `x52d` daemon (or its CLI) running at the same time fights over the same device: both write LEDs, clocks and the MFD. | Detect a running `x52d` (its command socket) and show a warning; document it. Done in M2: the device watch connects to the socket every 5 s and the window shows a banner. In the Flatpak the socket is visible through the read-only finish-arg `--filesystem=/run/x52d.cmd:ro`, which `flatpak-builder-lint` accepts; a daemon started after GX52 is seen after a restart of GX52, and a source build's socket under `/usr/local` is not seen at all ([protocol.md, "libx52's x52d"](protocol.md#libx52s-x52d)). |
 | R12 | The X-Plane adapter (1.x) needs `--share=network`, which the rewrite otherwise drops. | Add it only with the adapter, with a comment in the manifest; the D-Bus API needs no permission. |
 
 ## 12. Feature roadmap

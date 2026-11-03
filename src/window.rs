@@ -16,12 +16,13 @@
 // Adapted from gtk-rs-skills/skills/gtk-rs-new-app/assets/template/src/window.rs at 42eb5e9,
 // originally MIT-licensed, Copyright (c) 2026 Roberto Leinardi
 
-//! The main window, with its size and maximized state kept in `GSettings`.
+//! The main window, with its size and maximized state kept in `GSettings`, showing the device
+//! status.
 
 use adw::{prelude::*, subclass::prelude::*};
 use gtk::{gio, glib};
 
-use crate::{application::Application, config};
+use crate::{application::Application, config, device::status::DeviceStatus};
 
 mod imp {
     use std::cell::OnceCell;
@@ -35,6 +36,12 @@ mod imp {
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
     pub struct Window {
         pub settings: OnceCell<gio::Settings>,
+        #[template_child]
+        pub x52d_banner: TemplateChild<adw::Banner>,
+        #[template_child]
+        pub status_page: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub retry_button: TemplateChild<gtk::Button>,
     }
 
     #[glib::object_subclass]
@@ -88,6 +95,20 @@ glib::wrapper! {
 impl Window {
     pub fn new(app: &Application) -> Self {
         glib::Object::builder().property("application", app).build()
+    }
+
+    /// Shows `status`: the status line, the `x52d` warning and "Try again" when it applies.
+    pub(crate) fn show_device_status(&self, status: DeviceStatus) {
+        let imp = self.imp();
+        imp.status_page.set_description(Some(&status.status_line()));
+        imp.retry_button.set_visible(status.offers_retry());
+        match status.x52d_warning() {
+            Some(warning) => {
+                imp.x52d_banner.set_title(&warning);
+                imp.x52d_banner.set_revealed(true);
+            }
+            None => imp.x52d_banner.set_revealed(false),
+        }
     }
 
     fn settings(&self) -> &gio::Settings {

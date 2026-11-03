@@ -6,6 +6,5 @@
 # changing this file, so raising a count is a visible act rather than a side effect.
 #
 # Regenerate with: scripts/check-suppressions.sh --update
-# reviewed 3, 2026-11-03
+# reviewed 4, 2026-11-03
 expect/clippy::disallowed_methods	2
-expect/dead_code	1

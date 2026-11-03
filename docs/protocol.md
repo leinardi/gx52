@@ -72,6 +72,27 @@ The uinput permission is a separate state, checked only when the virtual mouse i
 second rule line. A missing uinput permission does not change the USB state above and does not
 affect LEDs, MFD or clocks.
 
+### libx52's x52d
+
+libx52's `x52d` daemon drives the same LEDs, MFD and clocks, so the two would overwrite each other
+(risk R11 of the rewrite analysis). GX52 does not stop it; it warns while it runs.
+
+- **Socket:** `x52d` listens on a Unix stream socket, by default
+  `$(prefix)/$(localstatedir)/run/x52d.cmd` (`daemon/constants.h`, `include/meson.build` and
+  `daemon/protocol.dox` of [nirenjan/libx52](https://github.com/nirenjan/libx52) at `2da88f4`;
+  `-s` overrides it, the shipped systemd unit does not). A distribution package (prefix `/usr`)
+  has it at `/var/run/x52d.cmd`, which is `/run/x52d.cmd`; a source build with Meson's default
+  prefix at `/usr/local/var/run/x52d.cmd`. GX52 checks all three.
+- **Check:** a nonblocking `connect` to the socket. A successful connection (or a full backlog) is a
+  running daemon; a refused connection is a stale file left by a daemon that died, not a running
+  one. The device watch checks at start and every 5 s.
+- **Sandbox:** the sandbox has its own `/run`, so the Flatpak exposes the socket read-only with
+  `--filesystem=/run/x52d.cmd:ro` (accepted by `flatpak-builder-lint`; a host socket exposed this
+  way accepts connections from the sandbox, checked on 2026-11-03). Two limitations remain: Flatpak
+  exposes a path only if it exists when the app starts, so a daemon started after GX52 is seen
+  after GX52 restarts; and `/usr/local` cannot be exposed, so a source build's daemon is seen only
+  by a GX52 that is not sandboxed.
+
 ## USB vendor commands
 
 Every command is a vendor control transfer to the device with no data stage:

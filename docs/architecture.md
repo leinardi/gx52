@@ -328,9 +328,12 @@ The Flatpak `finish-args` beyond the display sockets:
   in S6); no well-known name is owned (`disable_dbus_name(true)`).
 - **No network**: hotplug works by polling (S4), so `--share=network` is not needed. It is added
   only with the X-Plane adapter in 1.x (risk R12).
-- No filesystem permission: profile import and export go through `gtk::FileDialog` (the file
-  chooser portal); the legacy database is in the app's own config directory (rewrite analysis,
-  section 10).
+- `--filesystem=/run/x52d.cmd:ro`: only so the device watch can see a running libx52 `x52d` by its
+  command socket ([protocol.md, "libx52's x52d"](protocol.md#libx52s-x52d); risk R11). Accepted
+  by `flatpak-builder-lint`.
+- No other filesystem permission: profile import and export go through `gtk::FileDialog` (the
+  file chooser portal); the legacy database is in the app's own config directory (rewrite
+  analysis, section 10).
 
 ## Testing strategy
 

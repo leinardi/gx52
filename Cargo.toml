@@ -92,10 +92,12 @@ jiff = "0.2"
 thiserror = "2"
 # Awaits the host hotplug stream against the shutdown signal, with no async runtime.
 futures-lite = "2"
+# The device watch's periodic x52d check next to the hotplug stream (the tray uses it too, later).
+async-io = "2"
 # The joystick's input events: the mode selector (spike S3).
 evdev = "0.13"
 # poll(2) on the evdev node with a timeout.
-rustix = { version = "1", features = ["event"] }
+rustix = { version = "1", features = ["event", "net"] }
 
 [dev-dependencies]
 x52 = { path = "x52", features = ["test-support"] }

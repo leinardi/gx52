@@ -105,14 +105,15 @@ enum Link<T> {
     },
 }
 
-/// The writer's state, driven by [`Writer::run`]; the tests drive it step by step.
-pub(crate) struct Writer<O: Opener, C, M> {
+/// The writer's state, driven by [`Writer::run`]; the tests drive it step by step. It reports
+/// into a channel of any event type a [`WriterEvent`] converts to.
+pub(crate) struct Writer<O: Opener, C, M, E> {
     opener: O,
     clock: C,
     monotonic: M,
     /// The time zone clock 1 follows when it shows local time, read on every resolve.
     local_zone: fn() -> TimeZone,
-    events: async_channel::Sender<WriterEvent>,
+    events: async_channel::Sender<E>,
     desired: Option<DeviceState>,
     selected: Option<DeviceId>,
     link: Link<O::Transport>,
@@ -122,12 +123,13 @@ pub(crate) struct Writer<O: Opener, C, M> {
     failure_reported: bool,
 }
 
-impl<O, C, M> Writer<O, C, M>
+impl<O, C, M, E> Writer<O, C, M, E>
 where
     O: Opener,
     <O::Transport as Transport>::Error: Send + Sync,
     C: Clock,
     M: Monotonic,
+    E: From<WriterEvent>,
 {
     /// A writer with nothing selected and no desired state.
     pub(crate) fn new(
@@ -135,7 +137,7 @@ where
         clock: C,
         monotonic: M,
         local_zone: fn() -> TimeZone,
-        events: async_channel::Sender<WriterEvent>,
+        events: async_channel::Sender<E>,
     ) -> Self {
         Self {
             opener,
@@ -351,12 +353,12 @@ where
 
     fn send(&self, event: WriterEvent) {
         // An unbounded channel only fails once the main thread has stopped listening.
-        let _ = self.events.try_send(event);
+        let _ = self.events.try_send(event.into());
     }
 }
 
 /// `error` and its sources, joined with `: `.
-fn error_chain(error: &dyn std::error::Error) -> String {
+pub(crate) fn error_chain(error: &dyn std::error::Error) -> String {
     let mut message = error.to_string();
     let mut source = error.source();
     while let Some(cause) = source {

@@ -13,6 +13,7 @@
         "--socket=fallback-x11",
         "--socket=wayland",
         "--device=all",
+        "--filesystem=/run/x52d.cmd:ro",
         "--talk-name=org.kde.StatusNotifierWatcher",
         "--env=RUST_LOG=gx52=debug",
         "--env=RUST_BACKTRACE=1"

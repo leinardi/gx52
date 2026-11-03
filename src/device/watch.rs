@@ -26,6 +26,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::time::Duration;
 
+use async_io::Timer;
 use futures_lite::{Stream, StreamExt, future};
 use nusb::MaybeFuture;
 use nusb::hotplug::HotplugEvent;
@@ -34,6 +35,7 @@ use x52::device::DeviceType;
 use super::id::{Attachment, DeviceId, Generation};
 use super::reader::ReaderMessage;
 use super::writer::WriterMessage;
+use super::x52d::{self, X52dWatch};
 
 /// How often the sandbox polls the device list.
 pub(crate) const POLL_INTERVAL: Duration = Duration::from_millis(250);
@@ -66,6 +68,15 @@ impl SelectionChange {
             Self::Gone(generation) => ReaderMessage::Gone(*generation),
         }
     }
+}
+
+/// What the watch reports.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum WatchEvent {
+    /// The selection changed.
+    Selection(SelectionChange),
+    /// libx52's `x52d` started or stopped running (reported at start, then on change).
+    X52dRunning(bool),
 }
 
 /// One device of a USB device list.
@@ -104,6 +115,7 @@ impl<K> Default for Selector<K> {
 
 impl<K: Clone + PartialEq> Selector<K> {
     /// The selected device.
+    #[cfg(test)]
     pub(crate) fn selected(&self) -> Option<&DeviceId> {
         self.selected.as_ref().map(|(device, _)| device)
     }
@@ -265,11 +277,11 @@ impl ShutdownSignal {
 }
 
 /// Runs the watch until shutdown, with the source that works where the app runs, and passes
-/// every selection change to `notify`.
-pub(crate) fn run(shutdown: &ShutdownSignal, notify: impl FnMut(SelectionChange)) {
+/// every selection change and every change of `x52d`'s state to `notify`.
+pub(crate) fn run(shutdown: &ShutdownSignal, notify: impl FnMut(WatchEvent)) {
     if Path::new(FLATPAK_INFO).exists() {
         tracing::info!("Sandboxed: polling the USB device list");
-        run_polling(NusbLister, shutdown, notify);
+        run_polling(NusbLister, x52d::is_running, shutdown, notify);
         return;
     }
     // The stream is created before the first list, so no event between the two is lost.
@@ -279,21 +291,23 @@ pub(crate) fn run(shutdown: &ShutdownSignal, notify: impl FnMut(SelectionChange)
                 HotplugEvent::Connected(_) => Hotplug::Connected,
                 HotplugEvent::Disconnected(id) => Hotplug::Disconnected(id),
             });
-            run_hotplug(NusbLister, events, shutdown, notify);
+            run_hotplug(NusbLister, events, x52d::is_running, shutdown, notify);
         }
         Err(error) => {
             tracing::warn!("Cannot watch USB hotplug events, polling instead: {error}");
-            run_polling(NusbLister, shutdown, notify);
+            run_polling(NusbLister, x52d::is_running, shutdown, notify);
         }
     }
 }
 
-/// The host source: a re-list at start and after every hotplug event, until shutdown.
+/// The host source: a re-list at start and after every hotplug event, and an `x52d` check at
+/// start and every [`x52d::CHECK_INTERVAL`], until shutdown.
 pub(crate) fn run_hotplug<L, S>(
     lister: L,
     mut events: S,
+    check_x52d: impl FnMut() -> bool,
     shutdown: &ShutdownSignal,
-    mut notify: impl FnMut(SelectionChange),
+    mut notify: impl FnMut(WatchEvent),
 ) where
     L: Lister,
     S: Stream<Item = Hotplug<L::Key>> + Unpin,
@@ -302,22 +316,35 @@ pub(crate) fn run_hotplug<L, S>(
     enum Next<K> {
         Event(Hotplug<K>),
         StreamEnded,
+        CheckX52d,
         Shutdown,
     }
 
-    let mut watch = Listing::new(lister);
+    let mut watch = Listing::new(lister, check_x52d);
+    watch.check_x52d(&mut notify);
     watch.relist(&mut notify);
+    let mut ticks = Timer::interval(x52d::CHECK_INTERVAL);
     loop {
         let next = future::block_on(future::or(
             async { events.next().await.map_or(Next::StreamEnded, Next::Event) },
-            async {
-                shutdown.signalled().await;
-                Next::Shutdown
-            },
+            future::or(
+                async {
+                    ticks.next().await;
+                    Next::CheckX52d
+                },
+                async {
+                    shutdown.signalled().await;
+                    Next::Shutdown
+                },
+            ),
         ));
         match next {
             Next::Event(Hotplug::Disconnected(key)) => watch.disconnected(key, &mut notify),
             Next::Event(Hotplug::Connected) => {}
+            Next::CheckX52d => {
+                watch.check_x52d(&mut notify);
+                continue;
+            }
             Next::StreamEnded => {
                 tracing::warn!("The USB hotplug stream ended; the device watch stops");
                 return;
@@ -328,14 +355,22 @@ pub(crate) fn run_hotplug<L, S>(
     }
 }
 
-/// The sandbox source: a re-list every [`POLL_INTERVAL`] until shutdown.
+/// The sandbox source: a re-list every [`POLL_INTERVAL`] and an `x52d` check every
+/// [`x52d::CHECK_INTERVAL`], until shutdown.
 pub(crate) fn run_polling<L: Lister>(
     lister: L,
+    check_x52d: impl FnMut() -> bool,
     shutdown: &ShutdownSignal,
-    mut notify: impl FnMut(SelectionChange),
+    mut notify: impl FnMut(WatchEvent),
 ) {
-    let mut watch = Listing::new(lister);
+    let polls_per_check = x52d::CHECK_INTERVAL.as_millis() / POLL_INTERVAL.as_millis();
+    let mut watch = Listing::new(lister, check_x52d);
+    let mut polls = 0;
     loop {
+        if polls % polls_per_check == 0 {
+            watch.check_x52d(&mut notify);
+        }
+        polls += 1;
         watch.relist(&mut notify);
         if shutdown.wait_timeout(POLL_INTERVAL) {
             return;
@@ -343,9 +378,11 @@ pub(crate) fn run_polling<L: Lister>(
     }
 }
 
-/// A lister and the selection over its lists.
-struct Listing<L: Lister> {
+/// A lister, the selection over its lists, and the `x52d` check.
+struct Listing<L: Lister, C> {
     lister: L,
+    check_x52d: C,
+    x52d: X52dWatch,
     selector: Selector<L::Key>,
     /// Whether the last listing failed, so a failure is logged once until a listing succeeds.
     list_failed: bool,
@@ -354,21 +391,31 @@ struct Listing<L: Lister> {
     departed: Vec<L::Key>,
 }
 
-impl<L: Lister> Listing<L> {
-    fn new(lister: L) -> Self {
+impl<L: Lister, C: FnMut() -> bool> Listing<L, C> {
+    fn new(lister: L, check_x52d: C) -> Self {
         Self {
             lister,
+            check_x52d,
+            x52d: X52dWatch::default(),
             selector: Selector::default(),
             list_failed: false,
             departed: Vec::new(),
         }
     }
 
+    /// Checks whether `x52d` runs and reports a change.
+    fn check_x52d(&mut self, notify: &mut impl FnMut(WatchEvent)) {
+        if let Some(running) = self.x52d.update((self.check_x52d)()) {
+            tracing::info!("libx52's x52d running: {running}");
+            notify(WatchEvent::X52dRunning(running));
+        }
+    }
+
     /// Applies a host `Disconnected` for `key`.
-    fn disconnected(&mut self, key: L::Key, notify: &mut impl FnMut(SelectionChange)) {
+    fn disconnected(&mut self, key: L::Key, notify: &mut impl FnMut(WatchEvent)) {
         for change in self.selector.disconnected(&key) {
             tracing::info!("Device selection: {change:?}");
-            notify(change);
+            notify(WatchEvent::Selection(change));
         }
         if !self.departed.contains(&key) {
             self.departed.push(key);
@@ -376,7 +423,7 @@ impl<L: Lister> Listing<L> {
     }
 
     /// Lists the devices and applies the list; a failed listing keeps the selection.
-    fn relist(&mut self, notify: &mut impl FnMut(SelectionChange)) {
+    fn relist(&mut self, notify: &mut impl FnMut(WatchEvent)) {
         let mut entries = match self.lister.list() {
             Ok(entries) => entries,
             Err(error) => {
@@ -393,7 +440,7 @@ impl<L: Lister> Listing<L> {
         entries.retain(|entry| !self.departed.contains(&entry.key));
         for change in self.selector.update(&entries) {
             tracing::info!("Device selection: {change:?}");
-            notify(change);
+            notify(WatchEvent::Selection(change));
         }
     }
 }

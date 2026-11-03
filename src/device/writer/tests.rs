@@ -84,7 +84,7 @@ impl Clock for SharedClock {
 }
 
 struct Harness {
-    writer: Writer<FakeOpener, SharedClock, FakeMonotonic>,
+    writer: Writer<FakeOpener, SharedClock, FakeMonotonic, WriterEvent>,
     clock: Arc<FakeClock>,
     monotonic: FakeMonotonic,
     log: Log,

@@ -230,7 +230,7 @@ impl Harness {
 
     /// Selects `device(1)`, runs the reader over `source` until it stops and returns its events.
     fn run(self, source: FakeSource) -> (Vec<ReaderEvent>, Self) {
-        let (events, received) = async_channel::unbounded();
+        let (events, received) = async_channel::unbounded::<ReaderEvent>();
         self.sender
             .send(ReaderMessage::Selected(device(1)))
             .unwrap();

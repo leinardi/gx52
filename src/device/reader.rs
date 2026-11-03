@@ -227,20 +227,17 @@ enum Stop {
     NodeLost,
 }
 
-/// The reader, driven by [`Reader::run`].
-pub(crate) struct Reader<S, M> {
+/// The reader, driven by [`Reader::run`]. It reports into a channel of any event type a
+/// [`ReaderEvent`] converts to.
+pub(crate) struct Reader<S, M, E> {
     source: S,
     monotonic: M,
-    events: async_channel::Sender<ReaderEvent>,
+    events: async_channel::Sender<E>,
 }
 
-impl<S: EvdevSource, M: Monotonic> Reader<S, M> {
+impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
     /// A reader over `source` reporting to `events`.
-    pub(crate) const fn new(
-        source: S,
-        monotonic: M,
-        events: async_channel::Sender<ReaderEvent>,
-    ) -> Self {
+    pub(crate) const fn new(source: S, monotonic: M, events: async_channel::Sender<E>) -> Self {
         Self {
             source,
             monotonic,
@@ -369,7 +366,7 @@ impl<S: EvdevSource, M: Monotonic> Reader<S, M> {
 
     fn send(&self, event: ReaderEvent) {
         // An unbounded channel only fails once the main thread has stopped listening.
-        let _ = self.events.try_send(event);
+        let _ = self.events.try_send(event.into());
     }
 }
 
