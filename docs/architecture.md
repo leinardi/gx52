@@ -96,8 +96,8 @@ Nothing blocks the GTK main thread (AGENTS.md). Each long-lived loop that blocks
 and talks to the main thread through `async_channel` (blocking send on the worker, `recv().await` in
 a `glib::spawn_future_local` loop), following the gtk-rs-development "long-lived workers" pattern.
 Workers never touch GObjects; only plain `Send` data crosses a channel. The main thread never blocks
-on a send either: channels towards workers are unbounded (`try_send` never reports a full channel),
-and the writer's coalescing keeps the queue short.
+on a send either: channels towards workers are unbounded `std::sync::mpsc` channels, whose `send`
+never blocks, and the writer's coalescing keeps the queue short.
 
 ```mermaid
 flowchart LR
@@ -107,7 +107,7 @@ flowchart LR
         store["Profile store + GSettings"]
     end
     watch["Device watch thread<br/>nusb::watch_devices on the host,<br/>250 ms polling in the sandbox"]
-    writer["Device writer thread<br/>command channel, coalescing,<br/>full-state replay on connect,<br/>minute clock ticker"]
+    writer["Device writer thread<br/>command channel, coalescing,<br/>full-state replay on connect,<br/>sent-command cache,<br/>5 s clock check"]
     reader["evdev reader thread<br/>mode debounce (200 ms)"]
     mouse["Virtual-mouse loop<br/>10 ms tick, uinput"]
     tray["ksni tray<br/>own async-io executor"]
@@ -137,27 +137,49 @@ flowchart LR
 - **GTK main thread.** Widgets, GObject models, GSettings, the profile store's in-memory state, and
   the decisions: which profile is active, what the device should show. File I/O for the profile
   store and the legacy import runs in `gio::spawn_blocking` or GIO async calls, never inline.
-- **Device writer thread.** Owns the opened `nusb::Device` and nothing else touches it.
-  - Receives the desired device state over a command channel. It keeps the last state sent and sends
-    only the commands whose value changed.
-  - **Coalescing:** before sending, it drains every queued message and keeps the latest value per
-    command, so a dragged brightness slider becomes one transfer per drain, not one per pixel. The
+- **Device writer thread.** Owns the opened `nusb::Device` and nothing else touches it
+  (`src/device/writer.rs`). Messages in: the desired state, `Selected` and `Gone` from the device
+  watch, `Retry` from the user, `Shutdown`. Events out: the access state and errors, each error
+  reported once until the device recovers.
+  - **Sent-command cache:** the writer keeps, per `x52::command::CommandSlot`, the encoded
+    transfers it last sent successfully. On every wake it resolves the desired state at the
+    injected clock's current instant (`x52::state::DeviceState::resolve`) and sends exactly the
+    commands whose transfers differ from the cache, then updates the cache. There is no
+    state-to-state diff: the comparison is with what the device was last told.
+  - **Coalescing:** before resolving, it drains every queued message and keeps only the latest
+    state, so a dragged brightness slider becomes one transfer per drain, not one per pixel. The
     S7 worker (`spikes/s7-led-editor/src/device.rs` on the `spikes` branch) kept the latest command
     per LED in a map and replayed that map on every connect.
-  - **Full-state replay on connect:** on "device appeared" (start-up, hotplug, resume, permission
-    granted) it opens the device and sends the full state, brightness first, then LEDs, MFD lines,
-    clocks, date, shift and blink, as [protocol.md, "Power-on state"](protocol.md#power-on-state)
-    requires. S7's worker did this and the device caught up within about a second after a replug.
-  - On `EACCES` it reports "found, no permission" and retries `open` on each "device appeared" or
-    poll tick and when the user presses "Try again" (S4: the ACL comes back without a replug). A
-    failed transfer drops the device and waits for the next "appeared".
-  - **Clocks and the minute ticker:** the writer owns the injected time source. The desired state
+  - **Full-state replay on connect:** a newly opened device starts with an empty cache, so its
+    first wake sends the full state, brightness first, then LEDs, MFD lines, clocks, date, shift
+    and blink, as [protocol.md, "Power-on state"](protocol.md#power-on-state) requires. Start-up,
+    hotplug, a replug into the same port (a new generation of the selection), a resume that
+    re-enumerates the device and a granted permission all go through a new open. S7's worker did
+    this and the device caught up within about a second after a replug.
+  - **Permission:** `EACCES` on `open` gives "found, no permission". While in it the writer retries
+    `open` every **1 s** on both backends (host and sandbox), at once on every `Selected` and on
+    "Try again" (`Retry`), so an ACL restored with `udevadm trigger` and no hotplug event is
+    noticed (S4: the ACL comes back without a replug). A failed transfer drops the handle and the
+    cache, and the writer retries `open` every 1 s for as long as the device stays selected, so a
+    transient failure or a missed reattachment never leaves it waiting for an event that may not
+    come.
+  - **Clocks and the wake schedule:** the writer owns the injected time source. The desired state
     carries only clock *sources* (local, UTC, a zone, a fixed offset) and 12/24 h; the writer turns
-    them into the clock 1 time and the clock 2/3 offsets it sends, with the `x52` clock logic. Its
-    receive timeout is the next instant a clock has to be re-sent (the next minute boundary, or an
-    earlier DST transition from `jiff`); the device clock does not tick by itself (S2). Monotonic
-    timers do not advance during suspend, so how a resume is noticed (and the clocks re-sent) is
-    decided in milestone M2 and recorded here.
+    them into the clock 1 time and the clock 2/3 offsets it sends, with the `x52` clock logic; the
+    device clock does not tick by itself (S2). The writer wakes at the earlier of the next instant
+    a clock has to be re-sent (the next minute boundary, or an earlier DST transition from `jiff`)
+    and **5 s** of monotonic time. Because every wake compares the resolved clock commands with
+    the cache, a minute rollover, a date rollover, a DST transition, a forward jump and a backward
+    wall-clock jump are all corrected within 5 s.
+  - **Resume (decided in M2):** monotonic time does not advance during suspend, so a pending wait
+    ends at most 5 s after the resume and the clocks are re-sent then. The app asks for no logind
+    D-Bus permission to hear about suspend; a resume that re-enumerates the USB device is a new
+    selection with a reopen and a full replay.
+  - **Channels:** messages towards the workers go through `std::sync::mpsc` (unbounded, so the main
+    thread never blocks on a send; the writer waits with `recv_timeout`), events towards the main
+    thread through `async_channel`, which the main thread awaits in a `glib::spawn_future_local`
+    loop. Monotonic time comes from an injected source too, so the tests drive every schedule
+    without sleeping.
 - **evdev reader thread.** Opens the joystick's evdev node **without grabbing** (games keep every
   input), reads events, applies the mode debounce of [protocol.md](protocol.md#mode-selector), and
   sends mode changes and, when something listens (the input tester in 1.x), input events to the main

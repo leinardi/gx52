@@ -20,6 +20,11 @@
 
 mod application;
 mod config;
+#[expect(
+    dead_code,
+    reason = "the device service is built thread by thread and started by the application last"
+)]
+mod device;
 mod window;
 
 use std::{env, io, path::PathBuf};

@@ -81,6 +81,18 @@ adw = { package = "libadwaita", version = "0.9", features = ["v1_9", "gtk_v4_22"
 gettextrs = { package = "gettext-rs", version = "0.8", features = ["gettext-system"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# The protocol, the device model and the clock logic (docs/architecture.md, "Workspace").
+x52 = { path = "x52" }
+# The device writer opens the joystick and sends its control transfers (spike S1).
+nusb = "0.2"
+# Worker threads report to the GTK main thread (docs/architecture.md, "Threads and data flow").
+async-channel = "2"
+# The system time zone the clocks follow.
+jiff = "0.2"
+thiserror = "2"
+
+[dev-dependencies]
+x52 = { path = "x52", features = ["test-support"] }
 
 [lints]
 workspace = true
