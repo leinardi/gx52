@@ -15,4 +15,17 @@
 
 //! The X52 and X52 Pro protocol, device model, key maps and MFD character set.
 //!
-//! No GTK dependency: everything here is testable without a display or a device.
+//! No GTK dependency: everything here is testable without a display or a device. The commands of
+//! [`command`] are the only ones that can be built, and [`transport::send`] is the only way to
+//! send one.
+
+pub mod charset;
+pub mod clock;
+pub mod command;
+pub mod device;
+pub mod error;
+pub mod input;
+pub mod transport;
+
+#[cfg(test)]
+mod test_support;

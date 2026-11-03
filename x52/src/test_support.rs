@@ -1,0 +1,29 @@
+// Copyright 2026 Roberto Leinardi.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// testdata is adapted from swarm-device-access/src/test_support.rs at 4cd31c4cea79, originally
+// Apache-2.0-licensed, Copyright (c) 2026 Roberto Leinardi
+
+//! Helpers shared by the unit tests.
+
+use std::path::Path;
+
+/// The bytes of `relative` under `tests/testdata`.
+pub(crate) fn testdata(relative: &str) -> Vec<u8> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/testdata")
+        .join(relative);
+    std::fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
+}

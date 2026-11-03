@@ -1,0 +1,437 @@
+// Copyright 2026 Roberto Leinardi.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+use std::collections::BTreeSet;
+
+use super::*;
+use crate::test_support::testdata;
+
+/// One `EV_KEY` event of an evtest capture: the code, pressed or released, and the timestamp.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct KeyEvent {
+    code: u16,
+    pressed: bool,
+    at: Duration,
+}
+
+/// The `EV_KEY` press and release events of an evtest capture, in order. A line looks like
+/// `Event: time 1793716445.329008, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0`;
+/// every other line (the header, scan codes) is skipped.
+fn key_events(capture: &str) -> Vec<KeyEvent> {
+    capture
+        .lines()
+        .filter_map(|line| line.strip_prefix("Event: time "))
+        .filter_map(|line| {
+            let mut fields = line.split(", ");
+            let time = fields.next()?;
+            if fields.next()? != "type 1 (EV_KEY)" {
+                return None;
+            }
+            let code = fields.next()?.strip_prefix("code ")?.split(' ').next()?;
+            let value = fields.next()?.strip_prefix("value ")?;
+            let (seconds, micros) = time.split_once('.')?;
+            Some(KeyEvent {
+                code: code.parse().unwrap(),
+                pressed: match value {
+                    "1" => true,
+                    "0" => false,
+                    other => panic!("unexpected key value {other} in {line:?}"),
+                },
+                at: Duration::from_secs(seconds.parse().unwrap())
+                    + Duration::from_micros(micros.parse().unwrap()),
+            })
+        })
+        .collect()
+}
+
+/// The modes applied while replaying `events` through `map` into `debouncer`, the pending one
+/// included at the end (as the reader's poll timeout would).
+fn replay(map: &InputMap, debouncer: &mut ModeDebouncer, events: &[KeyEvent]) -> Vec<Mode> {
+    let mut applied: Vec<Mode> = events
+        .iter()
+        .filter_map(|event| {
+            let mode = map.mode_for(event.code)?;
+            debouncer.on_event(mode, event.pressed, event.at)
+        })
+        .collect();
+    if let Some(deadline) = debouncer.deadline() {
+        applied.extend(debouncer.advance_to(deadline));
+    }
+    applied
+}
+
+fn ms(milliseconds: u64) -> Duration {
+    Duration::from_millis(milliseconds)
+}
+
+#[test]
+fn the_recorded_bounce_gives_1_2_3_1_three_times() {
+    let capture = String::from_utf8(testdata("input/mode-bounce.evtest")).unwrap();
+    let events = key_events(&capture);
+    let first = events.first().unwrap();
+    // The capture starts in mode 1 (its first mode event is the release of 715); the snapshot is
+    // taken just before it.
+    assert_eq!((first.code, first.pressed), (715, false));
+    let map = InputMap::for_device(DeviceType::X52Pro);
+    let mut debouncer = ModeDebouncer::new(ModeSet::EMPTY.with(Mode::One), first.at);
+    assert_eq!(debouncer.active(), Some(Mode::One));
+    let applied = replay(&map, &mut debouncer, &events);
+    // Pass 1 and 2: 2, 3, 1. Pass 3: mode 2 was held for only 160 ms on the way, so 3 follows 1.
+    // From 3 to 1 the selector passes through 2 every time, and 2 is never applied there.
+    assert_eq!(
+        applied,
+        [
+            Mode::Two,
+            Mode::Three,
+            Mode::One,
+            Mode::Two,
+            Mode::Three,
+            Mode::One,
+            Mode::Three,
+            Mode::One
+        ]
+    );
+    assert!(
+        applied
+            .windows(2)
+            .all(|pair| pair != [Mode::Three, Mode::Two]),
+        "{applied:?}"
+    );
+}
+
+#[test]
+fn the_recording_bounces() {
+    // The fixture shows what the debounce is for: presses shorter than 200 ms and gaps with no
+    // mode held.
+    let capture = String::from_utf8(testdata("input/mode-bounce.evtest")).unwrap();
+    let events: Vec<KeyEvent> = key_events(&capture)
+        .into_iter()
+        .filter(|event| (715..=717).contains(&event.code))
+        .collect();
+    assert_eq!(events.len(), 64);
+    let short_press = events.windows(2).any(|pair| {
+        pair[0].code == pair[1].code
+            && pair[0].pressed
+            && !pair[1].pressed
+            && pair[1].at.checked_sub(pair[0].at).unwrap() < SETTLE
+    });
+    assert!(short_press);
+}
+
+/// The mode button codes of a device, by mode.
+fn mode_code(device: DeviceType, mode: Mode) -> u16 {
+    let map = InputMap::for_device(device);
+    map.buttons()
+        .find(|(code, _)| map.mode_for(*code) == Some(mode))
+        .map(|(code, _)| code)
+        .unwrap()
+}
+
+/// A synthetic sequence of `(mode, pressed, milliseconds)` as raw codes of `device`.
+fn raw(device: DeviceType, sequence: &[(Mode, bool, u64)]) -> Vec<KeyEvent> {
+    sequence
+        .iter()
+        .map(|(mode, pressed, at)| KeyEvent {
+            code: mode_code(device, *mode),
+            pressed: *pressed,
+            at: ms(*at),
+        })
+        .collect()
+}
+
+/// A synthetic case: what it shows, the `(mode, pressed, milliseconds)` sequence from mode 1 at
+/// time 0, and the modes applied.
+type Case = (&'static str, Vec<(Mode, bool, u64)>, Vec<Mode>);
+
+fn transition_cases() -> Vec<Case> {
+    use Mode::{One, Three, Two};
+    vec![
+        (
+            "a press shorter than 200 ms is not applied",
+            vec![
+                (One, false, 10),
+                (Two, true, 20),
+                (Two, false, 219),
+                (One, true, 230),
+            ],
+            vec![],
+        ),
+        (
+            "a press of 200 ms is applied",
+            vec![(One, false, 10), (Two, true, 20), (Two, false, 220)],
+            vec![Two],
+        ),
+        (
+            "two modes held are not applied, the one left alone is after 200 ms",
+            vec![
+                (One, false, 10),
+                (Two, true, 20),
+                (Three, true, 30),
+                (Two, false, 300),
+                (Three, false, 499),
+                (Three, true, 600),
+            ],
+            vec![Three],
+        ),
+        (
+            "a gap with nothing held keeps the mode",
+            vec![(One, false, 10), (One, true, 80), (One, false, 400)],
+            vec![],
+        ),
+        (
+            "3 to 1 through 2",
+            vec![
+                (One, false, 10),
+                (Three, true, 20),
+                (Three, false, 400),
+                (Two, true, 420),
+                (Two, false, 480),
+                (One, true, 500),
+            ],
+            vec![Three, One],
+        ),
+        (
+            "bouncing on one position applies it once",
+            vec![
+                (One, false, 10),
+                (Two, true, 20),
+                (Two, false, 40),
+                (Two, true, 50),
+                (Two, false, 60),
+                (Two, true, 70),
+            ],
+            vec![Two],
+        ),
+    ]
+}
+
+#[test]
+fn synthetic_transitions_are_the_same_on_both_devices() {
+    for device in DeviceType::ALL {
+        let map = InputMap::for_device(device);
+        for (case, sequence, want) in transition_cases() {
+            let mut debouncer = ModeDebouncer::new(ModeSet::EMPTY.with(Mode::One), ms(0));
+            let events = raw(device, &sequence);
+            assert_eq!(
+                replay(&map, &mut debouncer, &events),
+                want,
+                "{device} {case}"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_deadline_and_advance_path() {
+    for device in DeviceType::ALL {
+        let map = InputMap::for_device(device);
+        let two = mode_code(device, Mode::Two);
+        let mut debouncer = ModeDebouncer::new(ModeSet::EMPTY.with(Mode::One), ms(0));
+        assert_eq!(debouncer.deadline(), None);
+        let mode = map.mode_for(mode_code(device, Mode::One)).unwrap();
+        assert_eq!(debouncer.on_event(mode, false, ms(10)), None);
+        let mode = map.mode_for(two).unwrap();
+        assert_eq!(debouncer.on_event(mode, true, ms(20)), None);
+        assert_eq!(debouncer.deadline(), Some(ms(220)), "{device}");
+        // Nothing happens before the deadline, the mode is applied at it, and only once.
+        assert_eq!(debouncer.advance_to(ms(219)), None);
+        assert_eq!(debouncer.active(), Some(Mode::One));
+        assert_eq!(debouncer.advance_to(ms(220)), Some(Mode::Two));
+        assert_eq!(debouncer.active(), Some(Mode::Two));
+        assert_eq!(debouncer.deadline(), None);
+        assert_eq!(debouncer.advance_to(ms(1000)), None);
+    }
+}
+
+#[test]
+fn start_stop_on_the_x52_never_changes_the_mode() {
+    let map = InputMap::for_device(DeviceType::X52);
+    assert_eq!(map.button(715), Some(Button::StartStop));
+    assert_eq!(map.mode_for(715), None);
+    let pro = InputMap::for_device(DeviceType::X52Pro);
+    assert_eq!(pro.mode_for(715), Some(Mode::One));
+    // A capture of the Pro's mode buttons read with the X52's map changes nothing.
+    let events = raw(
+        DeviceType::X52Pro,
+        &[(Mode::One, false, 10), (Mode::One, true, 20)],
+    );
+    let mut debouncer = ModeDebouncer::new(ModeSet::EMPTY.with(Mode::Two), ms(0));
+    assert_eq!(replay(&map, &mut debouncer, &events), []);
+    assert_eq!(debouncer.active(), Some(Mode::Two));
+}
+
+#[test]
+fn start_up_with_one_mode_held_is_active_at_once() {
+    let debouncer = ModeDebouncer::new(ModeSet::EMPTY.with(Mode::Three), ms(5));
+    assert_eq!(debouncer.active(), Some(Mode::Three));
+    assert_eq!(debouncer.deadline(), None);
+}
+
+#[test]
+fn start_up_with_two_modes_held_waits_for_one_alone() {
+    let held: ModeSet = [Mode::One, Mode::Two].into_iter().collect();
+    let mut debouncer = ModeDebouncer::new(held, ms(0));
+    assert_eq!(debouncer.active(), None);
+    assert_eq!(debouncer.deadline(), None);
+    // 1 released: 2 is alone from now, and applied 200 ms later.
+    assert_eq!(debouncer.on_event(Mode::One, false, ms(50)), None);
+    assert_eq!(debouncer.deadline(), Some(ms(250)));
+    assert_eq!(debouncer.advance_to(ms(249)), None);
+    assert_eq!(debouncer.advance_to(ms(250)), Some(Mode::Two));
+    assert_eq!(debouncer.active(), Some(Mode::Two));
+}
+
+#[test]
+fn start_up_with_no_mode_held_waits_for_the_first() {
+    let mut debouncer = ModeDebouncer::new(ModeSet::EMPTY, ms(0));
+    assert_eq!(debouncer.active(), None);
+    assert_eq!(debouncer.on_event(Mode::Three, true, ms(10)), None);
+    assert_eq!(debouncer.active(), None);
+    // The release after 300 ms applies it.
+    assert_eq!(
+        debouncer.on_event(Mode::Three, false, ms(310)),
+        Some(Mode::Three)
+    );
+    assert_eq!(debouncer.active(), Some(Mode::Three));
+}
+
+#[test]
+fn replayed_events_from_before_the_snapshot_are_harmless() {
+    // The snapshot has mode 2 held; the press of 2 queued before it changes nothing.
+    let mut debouncer = ModeDebouncer::new(ModeSet::EMPTY.with(Mode::Two), ms(100));
+    assert_eq!(debouncer.on_event(Mode::Two, true, ms(50)), None);
+    assert_eq!(debouncer.on_event(Mode::One, false, ms(60)), None);
+    assert_eq!(debouncer.deadline(), None);
+    assert_eq!(debouncer.active(), Some(Mode::Two));
+}
+
+#[test]
+fn mode_sets() {
+    let set: ModeSet = [Mode::One, Mode::Three].into_iter().collect();
+    assert!(set.contains(Mode::One) && !set.contains(Mode::Two) && set.contains(Mode::Three));
+    assert_eq!(set.sole(), None);
+    assert_eq!(set.without(Mode::One).sole(), Some(Mode::Three));
+    assert!(set.without(Mode::One).without(Mode::Three).is_empty());
+    assert_eq!(ModeSet::EMPTY.sole(), None);
+}
+
+#[test]
+fn every_code_in_each_map_is_unique() {
+    for device in DeviceType::ALL {
+        let map = InputMap::for_device(device);
+        let codes: Vec<u16> = map.buttons().map(|(code, _)| code).collect();
+        let unique: BTreeSet<u16> = codes.iter().copied().collect();
+        assert_eq!(codes.len(), unique.len(), "{device} buttons");
+        let buttons: BTreeSet<Button> = map.buttons().map(|(_, button)| button).collect();
+        assert_eq!(
+            codes.len(),
+            buttons.len(),
+            "{device}: a button has two codes"
+        );
+        let codes: Vec<u16> = map.axes().map(|(code, _)| code).collect();
+        let unique: BTreeSet<u16> = codes.iter().copied().collect();
+        assert_eq!(codes.len(), unique.len(), "{device} axes");
+    }
+}
+
+#[test]
+fn the_pro_map_matches_the_protocol() {
+    // docs/protocol.md, "Buttons" and "Axes", row by row.
+    use Button::*;
+    let map = InputMap::for_device(DeviceType::X52Pro);
+    assert!(map.is_verified());
+    let buttons: Vec<(u16, Button)> = map.buttons().collect();
+    assert_eq!(
+        buttons,
+        [
+            (288, TriggerStage1),
+            (289, Fire),
+            (290, ButtonA),
+            (291, ButtonB),
+            (292, ButtonC),
+            (293, Pinkie),
+            (294, ButtonD),
+            (295, ButtonE),
+            (296, T1),
+            (297, T2),
+            (298, T3),
+            (299, T4),
+            (300, T5),
+            (301, T6),
+            (302, TriggerStage2),
+            (303, MouseButton),
+            (704, ScrollDown),
+            (705, ScrollUp),
+            (706, ScrollPress),
+            (707, Pov2Up),
+            (708, Pov2Right),
+            (709, Pov2Down),
+            (710, Pov2Left),
+            (711, ThrottleHatUp),
+            (712, ThrottleHatRight),
+            (713, ThrottleHatDown),
+            (714, ThrottleHatLeft),
+            (715, Mode1),
+            (716, Mode2),
+            (717, Mode3),
+            (718, Clutch),
+            (719, Function),
+            (720, StartStop),
+            (721, Reset),
+            (722, PageUp),
+            (723, PageDown),
+            (724, Up),
+            (725, Down),
+            (726, Select),
+        ]
+    );
+    // ABS_X 0x00, ABS_Y 0x01, ABS_Z 0x02, ABS_RX 0x03, ABS_RY 0x04, ABS_RZ 0x05,
+    // ABS_THROTTLE 0x06, ABS_HAT0X 0x10, ABS_HAT0Y 0x11, ABS_MISC 0x28 and 41.
+    let axes: Vec<(u16, Axis)> = map.axes().collect();
+    assert_eq!(
+        axes,
+        [
+            (0x00, Axis::StickX),
+            (0x01, Axis::StickY),
+            (0x02, Axis::Throttle),
+            (0x03, Axis::RotaryI),
+            (0x04, Axis::RotaryE),
+            (0x05, Axis::Twist),
+            (0x06, Axis::Slider),
+            (0x10, Axis::Pov1X),
+            (0x11, Axis::Pov1Y),
+            (0x28, Axis::MinistickX),
+            (0x29, Axis::MinistickY),
+        ]
+    );
+    assert_eq!(map.mode_for(716), Some(Mode::Two));
+    assert_eq!(map.button(304), None);
+}
+
+#[test]
+fn the_x52_map_is_the_unverified_candidate() {
+    let map = InputMap::for_device(DeviceType::X52);
+    assert!(!map.is_verified());
+    for (code, mode) in [(711, Mode::One), (712, Mode::Two), (713, Mode::Three)] {
+        assert_eq!(map.mode_for(code), Some(mode));
+    }
+    assert_eq!(map.button(303), Some(Button::Pov2Up));
+    assert_eq!(map.button(717), Some(Button::Clutch));
+    assert_eq!(map.button(722), None);
+    // No ministick: its codes on the X52 are not known.
+    assert_eq!(map.axis(0x28), None);
+    assert_eq!(map.axis(0x29), None);
+    assert_eq!(map.axis(0x00), Some(Axis::StickX));
+}

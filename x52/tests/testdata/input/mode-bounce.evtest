@@ -1,0 +1,231 @@
+Input driver version is 1.0.1
+Input device ID: bus 0x3 vendor 0x6a3 product 0x762 version 0x111
+Input device name: "Logitech X52 Professional H.O.T.A.S."
+Supported events:
+  Event type 0 (EV_SYN)
+  Event type 1 (EV_KEY)
+    Event code 288 (BTN_TRIGGER)
+    Event code 289 (BTN_THUMB)
+    Event code 290 (BTN_THUMB2)
+    Event code 291 (BTN_TOP)
+    Event code 292 (BTN_TOP2)
+    Event code 293 (BTN_PINKIE)
+    Event code 294 (BTN_BASE)
+    Event code 295 (BTN_BASE2)
+    Event code 296 (BTN_BASE3)
+    Event code 297 (BTN_BASE4)
+    Event code 298 (BTN_BASE5)
+    Event code 299 (BTN_BASE6)
+    Event code 300 (?)
+    Event code 301 (?)
+    Event code 302 (?)
+    Event code 303 (BTN_DEAD)
+    Event code 704 (BTN_TRIGGER_HAPPY1)
+    Event code 705 (BTN_TRIGGER_HAPPY2)
+    Event code 706 (BTN_TRIGGER_HAPPY3)
+    Event code 707 (BTN_TRIGGER_HAPPY4)
+    Event code 708 (BTN_TRIGGER_HAPPY5)
+    Event code 709 (BTN_TRIGGER_HAPPY6)
+    Event code 710 (BTN_TRIGGER_HAPPY7)
+    Event code 711 (BTN_TRIGGER_HAPPY8)
+    Event code 712 (BTN_TRIGGER_HAPPY9)
+    Event code 713 (BTN_TRIGGER_HAPPY10)
+    Event code 714 (BTN_TRIGGER_HAPPY11)
+    Event code 715 (BTN_TRIGGER_HAPPY12)
+    Event code 716 (BTN_TRIGGER_HAPPY13)
+    Event code 717 (BTN_TRIGGER_HAPPY14)
+    Event code 718 (BTN_TRIGGER_HAPPY15)
+    Event code 719 (BTN_TRIGGER_HAPPY16)
+    Event code 720 (BTN_TRIGGER_HAPPY17)
+    Event code 721 (BTN_TRIGGER_HAPPY18)
+    Event code 722 (BTN_TRIGGER_HAPPY19)
+    Event code 723 (BTN_TRIGGER_HAPPY20)
+    Event code 724 (BTN_TRIGGER_HAPPY21)
+    Event code 725 (BTN_TRIGGER_HAPPY22)
+    Event code 726 (BTN_TRIGGER_HAPPY23)
+    Event code 0 (ABS_X)
+      Value    512
+      Min        0
+      Max     1023
+      Fuzz       3
+      Flat      63
+    Event code 1 (ABS_Y)
+      Value    512
+      Min        0
+      Max     1023
+      Fuzz       3
+      Flat      63
+    Event code 2 (ABS_Z)
+      Value     61
+      Min        0
+      Max      255
+      Flat      15
+    Event code 3 (ABS_RX)
+      Value    128
+      Min        0
+      Max      255
+      Flat      15
+    Event code 4 (ABS_RY)
+      Value    133
+      Min        0
+      Max      255
+      Flat      15
+    Event code 5 (ABS_RZ)
+      Value    512
+      Min        0
+      Max     1023
+      Fuzz       3
+      Flat      63
+    Event code 6 (ABS_THROTTLE)
+      Value    105
+      Min        0
+      Max      255
+      Flat      15
+    Event code 16 (ABS_HAT0X)
+      Value      0
+      Min       -1
+      Max        1
+    Event code 17 (ABS_HAT0Y)
+      Value      0
+      Min       -1
+      Max        1
+    Event code 40 (ABS_MISC)
+      Value      8
+      Min        0
+      Max       15
+    Event code 41 (?)
+      Value     15
+      Min        0
+      Max       15
+  Event type 4 (EV_MSC)
+    Event code 4 (MSC_SCAN)
+Properties:
+Testing ... (interrupt to exit)
+Event: time 1793716445.329008, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716445.329008, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716445.449025, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716445.449025, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716445.489024, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716445.489024, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716445.505027, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716445.505027, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716446.417137, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716446.417137, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716446.425135, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716446.425135, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716446.473146, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716446.473146, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716446.545159, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716446.545159, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 1
+Event: time 1793716446.561158, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716446.561158, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 0
+Event: time 1793716446.569181, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716446.569181, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 1
+Event: time 1793716448.121368, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716448.121368, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 0
+Event: time 1793716448.177361, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716448.177361, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716448.193360, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716448.193360, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716448.201355, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716448.201355, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716448.265366, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716448.265366, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716448.297367, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716448.297367, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716448.313368, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716448.313368, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716448.321372, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716448.321372, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716448.337370, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716448.337370, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716448.345378, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716448.345378, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716449.145469, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716449.145469, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716449.161469, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716449.161469, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716449.281476, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716449.281476, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716449.329478, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716449.329478, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716449.337475, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716449.337475, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716449.353479, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716449.353479, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716449.361481, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716449.361481, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716449.369481, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716449.369481, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716449.809528, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716449.809528, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716449.881532, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716449.881532, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 1
+Event: time 1793716449.889536, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716449.889536, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 0
+Event: time 1793716449.897535, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716449.897535, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 1
+Event: time 1793716449.913537, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716449.913537, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 0
+Event: time 1793716449.929538, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716449.929538, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 1
+Event: time 1793716450.265583, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716450.265583, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 0
+Event: time 1793716450.305584, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716450.305584, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716450.321586, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716450.321586, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716450.329585, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716450.329585, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716450.361589, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716450.361589, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716450.385594, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716450.385594, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716450.393596, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716450.393596, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716450.409598, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716450.409598, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716451.265695, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716451.265695, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716451.273696, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716451.273696, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716451.401711, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716451.401711, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716451.433715, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716451.433715, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716451.449716, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716451.449716, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716451.457716, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716451.457716, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716451.497723, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716451.497723, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716451.513723, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716451.513723, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716451.673743, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716451.673743, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716451.737752, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716451.737752, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 1
+Event: time 1793716452.625854, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716452.625854, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 0
+Event: time 1793716452.641854, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716452.641854, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 1
+Event: time 1793716452.649856, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001e
+Event: time 1793716452.649856, type 1 (EV_KEY), code 717 (BTN_TRIGGER_HAPPY14), value 0
+Event: time 1793716452.697867, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716452.697867, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716452.705862, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716452.705862, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716452.721864, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716452.721864, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716452.753867, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716452.753867, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716452.761877, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716452.761877, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 1
+Event: time 1793716452.777868, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001d
+Event: time 1793716452.777868, type 1 (EV_KEY), code 716 (BTN_TRIGGER_HAPPY13), value 0
+Event: time 1793716452.801870, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716452.801870, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
+Event: time 1793716452.809871, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716452.809871, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 0
+Event: time 1793716452.825874, type 4 (EV_MSC), code 4 (MSC_SCAN), value 9001c
+Event: time 1793716452.825874, type 1 (EV_KEY), code 715 (BTN_TRIGGER_HAPPY12), value 1
