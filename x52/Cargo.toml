@@ -34,6 +34,7 @@ test-support = []
 # Reads the system's time zone database (/usr/share/zoneinfo, shipped by the GNOME runtime).
 jiff = "0.2"
 thiserror = "2"
+unicode-normalization = "0.1"
 
 [lints]
 workspace = true

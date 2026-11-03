@@ -36,8 +36,8 @@ fn offset(minutes: i16) -> ClockOffset {
     ClockOffset::new(minutes).unwrap_or_else(|error| panic!("{error}"))
 }
 
-fn text(bytes: &[u8]) -> MfdBytes {
-    MfdBytes::new(bytes).unwrap_or_else(|error| panic!("{error}"))
+fn text(text: &str) -> MfdText {
+    MfdText::new(text).unwrap_or_else(|error| panic!("{error}"))
 }
 
 #[test]
@@ -164,7 +164,7 @@ fn rows_0xd1_to_0xdc_mfd_text_clear_then_pairs() {
         (MfdLine::Three, 0xd4, 0xdc),
     ] {
         assert_eq!(
-            wire(Command::MfdText(line, text(b"GX52"))),
+            wire(Command::MfdText(line, text("GX52"))),
             [
                 (clear, 0),
                 (write, u16::from(b'X') << 8 | u16::from(b'G')),
@@ -173,21 +173,21 @@ fn rows_0xd1_to_0xdc_mfd_text_clear_then_pairs() {
             "{line:?}"
         );
         // An empty line is a clear and nothing else.
-        assert_eq!(wire(Command::MfdText(line, text(b""))), [(clear, 0)]);
+        assert_eq!(wire(Command::MfdText(line, text(""))), [(clear, 0)]);
     }
 }
 
 #[test]
 fn mfd_text_pads_an_odd_last_byte_with_a_space() {
     assert_eq!(
-        wire(Command::MfdText(MfdLine::One, text(b"abc"))),
+        wire(Command::MfdText(MfdLine::One, text("abc"))),
         [(0xd9, 0), (0xd1, 0x6261), (0xd1, 0x2063)]
     );
 }
 
 #[test]
 fn mfd_text_of_16_bytes_is_8_writes() {
-    let pairs = wire(Command::MfdText(MfdLine::Two, text(&[0xff; 16])));
+    let pairs = wire(Command::MfdText(MfdLine::Two, text(&"¯".repeat(16))));
     assert_eq!(pairs.len(), 9);
     assert_eq!(pairs.first(), Some(&(0xda, 0)));
     assert!(pairs.iter().skip(1).all(|pair| *pair == (0xd2, 0xffff)));
@@ -303,8 +303,8 @@ fn mfd_bytes_reject_17_bytes_and_blank_bytes() {
 
 #[test]
 fn mfd_bytes_keep_what_was_given() {
-    assert_eq!(text(b"hello").as_bytes(), b"hello");
-    assert_eq!(text(b"").as_bytes(), b"");
+    assert_eq!(text("hello").as_bytes(), b"hello");
+    assert_eq!(text("").as_bytes(), b"");
 }
 
 #[test]
@@ -329,7 +329,7 @@ fn every_command_is_on_the_allowlist() {
             h24: false,
         },
         Command::Date(DateFields::new(1, 2, 3).unwrap_or_else(|error| panic!("{error}"))),
-        Command::MfdText(MfdLine::Three, text(b"x")),
+        Command::MfdText(MfdLine::Three, text("x")),
         Command::Shift(false),
     ];
     for command in commands {

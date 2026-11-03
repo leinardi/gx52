@@ -19,6 +19,7 @@
 //! [`ControlTransfer`] can only be built by [`Command::encode`], so nothing outside the allowlist
 //! can reach a transport.
 
+use crate::charset::MfdText;
 use crate::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
 use crate::error::RangeError;
 
@@ -250,15 +251,17 @@ impl MfdLine {
 }
 
 /// The bytes of one MFD line in the device's character set: at most 16, none of them blank.
+///
+/// Built only by [`MfdText`], from converted text.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MfdBytes {
+pub(crate) struct MfdBytes {
     bytes: [u8; Self::MAX_LEN],
     len: usize,
 }
 
 impl MfdBytes {
     /// The bytes a line holds.
-    pub const MAX_LEN: usize = 16;
+    pub(crate) const MAX_LEN: usize = 16;
 
     /// A line of character-set bytes.
     ///
@@ -266,7 +269,7 @@ impl MfdBytes {
     ///
     /// [`RangeError::OutOfRange`] for more than 16 bytes, [`RangeError::BlankByte`] for a byte the
     /// MFD shows as blank (`0x00`–`0x07`, `0xA0`).
-    pub fn new(bytes: &[u8]) -> Result<Self, RangeError> {
+    pub(crate) fn new(bytes: &[u8]) -> Result<Self, RangeError> {
         let len = bytes.len();
         if len > Self::MAX_LEN {
             return Err(RangeError::out_of_range(
@@ -290,7 +293,7 @@ impl MfdBytes {
 
     /// The bytes.
     #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         &self.bytes[..self.len]
     }
 }
@@ -341,7 +344,7 @@ pub enum Command {
     /// The date (`0xc4`, then `0xc8`).
     Date(DateFields),
     /// The text of an MFD line: a clear (`line | 0x08`), then the bytes two per write.
-    MfdText(MfdLine, MfdBytes),
+    MfdText(MfdLine, MfdText),
     /// The SHIFT label on the MFD (`0xfd`); X52 Pro only.
     Shift(bool),
 }
@@ -423,10 +426,10 @@ impl Command {
                 ),
                 ControlTransfer::new(index::DATE_THIRD, u16::from(fields.third())),
             ],
-            Self::MfdText(line, bytes) => {
+            Self::MfdText(line, text) => {
                 let write = line.write_index();
                 let mut transfers = vec![ControlTransfer::new(write | index::MFD_CLEAR, 0)];
-                transfers.extend(bytes.as_bytes().chunks(2).map(|chunk| {
+                transfers.extend(text.as_bytes().chunks(2).map(|chunk| {
                     let first = chunk.first().copied().unwrap_or(PAD);
                     let second = chunk.get(1).copied().unwrap_or(PAD);
                     ControlTransfer::new(write, pair(first, second))

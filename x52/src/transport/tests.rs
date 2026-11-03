@@ -14,7 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::command::{Brightness, MfdBytes, MfdLine};
+use crate::charset::MfdText;
+use crate::command::{Brightness, MfdLine};
 use crate::device::{BiColourLed, LedColour, SingleColourLed};
 
 #[test]
@@ -64,7 +65,7 @@ fn unsupported_message_names_the_device_and_the_command() {
 
 #[test]
 fn a_failed_transfer_stops_the_command() {
-    let bytes = MfdBytes::new(b"abcdef").unwrap_or_else(|error| panic!("{error}"));
+    let bytes = MfdText::new("abcdef").unwrap_or_else(|error| panic!("{error}"));
     let mut transport = RecordingTransport::failing_at(2);
     let result = send(
         &mut transport,
