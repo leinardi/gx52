@@ -24,4 +24,8 @@ pub mod clock;
 pub mod command;
 pub mod device;
 pub mod error;
+pub mod input;
 pub mod transport;
+
+#[cfg(test)]
+mod test_support;

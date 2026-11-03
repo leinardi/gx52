@@ -74,6 +74,11 @@ seconds  code value
 Consequences for per-mode profiles: debounce, and act only when one mode button has been held for
 about 200 ms; ignore the gaps with no mode held; don't apply mode 2 while passing from 3 to 1.
 
+The excerpt above is elided. A full recording of the same bounce (1 → 2 → 3 → 1, three times, made
+for M1) is the debounce's test fixture:
+[`x52/tests/testdata/input/mode-bounce.evtest`](../../x52/tests/testdata/input/mode-bounce.evtest),
+described in its [README](../../x52/tests/testdata/input/README.md).
+
 ## Input while the app writes to the device
 
 `x52-input --abs` ran while `x52-probe` sent both brightness commands and the full LED `cycle` (about
