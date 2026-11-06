@@ -112,6 +112,13 @@ debug = true
 lto = "thin"
 codegen-units = 1
 
-# Dependencies optimized in dev builds too, so a Devel build stays responsive.
+# Line tables only for the workspace: backtraces keep their files and lines, and the debug and
+# test binaries shrink to a fraction of their size.
+[profile.dev]
+debug = "line-tables-only"
+
+# Dependencies optimized in dev builds too, so a Devel build stays responsive; no debug info for
+# them.
 [profile.dev.package."*"]
 opt-level = 3
+debug = false
