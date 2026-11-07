@@ -384,6 +384,32 @@ fn the_polling_source_follows_the_lists() {
 }
 
 #[test]
+fn the_hotplug_source_relists_every_5_s_without_events() {
+    let (trigger, signal) = shutdown_signal();
+    // The disconnect's hotplug event was lost: the stream never yields.
+    let lister = ScriptedLister::new(vec![Ok(vec![entry(PRO, "1-4", 5)]), Ok(vec![])]);
+    let (sender, changes) = mpsc::channel();
+    let watch = thread::spawn(move || {
+        run_hotplug(lister, stream::pending(), no_x52d, &signal, |event| {
+            if let Some(change) = selection(event) {
+                sender.send(change).unwrap();
+            }
+        });
+    });
+
+    assert_eq!(
+        changes.recv().unwrap(),
+        selected(DeviceType::X52Pro, "1-4", 5, 1)
+    );
+    assert_eq!(
+        changes.recv_timeout(Duration::from_secs(10)).unwrap(),
+        gone(1)
+    );
+    drop(trigger);
+    watch.join().unwrap();
+}
+
+#[test]
 fn x52d_is_reported_at_start_then_on_change() {
     let (trigger, signal) = shutdown_signal();
     let lister = ScriptedLister::new(vec![Ok(vec![entry(PRO, "1-4", 5)])]);

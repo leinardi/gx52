@@ -209,8 +209,10 @@ flowchart LR
   - A failure to create the uinput device (no permission) is reported to the main thread, which
     shows the guidance page.
 - **Device watch.** One component, two sources (S4, `src/device/watch.rs`): `nusb::watch_devices`
-  when not sandboxed, re-listing the USB devices at start and after every hotplug event (a
-  `Disconnected` carries no vendor or product ID), and polling `nusb::list_devices` every 250 ms in
+  when not sandboxed, re-listing the USB devices at start, after every hotplug event (a
+  `Disconnected` carries no vendor or product ID) and every 5 s, because the kernel drops hotplug
+  events when the netlink socket overflows (`ENOBUFS`, seen on resume from suspend) and `nusb`
+  only logs it; and polling `nusb::list_devices` every 250 ms in
   the sandbox (detected through `/.flatpak-info`), where the hotplug stream never yields. It
   matches by vendor and product ID, never by address, and tells the writer, the reader and the
   main thread when a device is selected or gone.

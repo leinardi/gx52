@@ -17,9 +17,10 @@
 //! again (docs/architecture.md, "Threads and data flow", "Device watch").
 //!
 //! One component, two sources (S4): `nusb::watch_devices` on the host, where every hotplug event
-//! leads to a re-list, and polling `nusb::list_devices` every [`POLL_INTERVAL`] in the Flatpak
-//! sandbox, where the hotplug stream never yields. Devices are matched by vendor and product ID
-//! with [`DeviceType::from_ids`], never by address, and chosen by their sysfs path.
+//! leads to a re-list (and every [`x52d::CHECK_INTERVAL`], for the events the kernel drops), and
+//! polling `nusb::list_devices` every [`POLL_INTERVAL`] in the Flatpak sandbox, where the hotplug
+//! stream never yields. Devices are matched by vendor and product ID with
+//! [`DeviceType::from_ids`], never by address, and chosen by their sysfs path.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -301,7 +302,9 @@ pub(crate) fn run(shutdown: &ShutdownSignal, notify: impl FnMut(WatchEvent)) {
 }
 
 /// The host source: a re-list at start and after every hotplug event, and an `x52d` check at
-/// start and every [`x52d::CHECK_INTERVAL`], until shutdown.
+/// start, until shutdown. Every [`x52d::CHECK_INTERVAL`] it checks `x52d` and re-lists too: the
+/// kernel drops hotplug events when the netlink socket overflows (`ENOBUFS`, seen on resume from
+/// suspend), and `nusb` only logs that, so a lost event is made up for within that interval.
 pub(crate) fn run_hotplug<L, S>(
     lister: L,
     mut events: S,
@@ -316,7 +319,7 @@ pub(crate) fn run_hotplug<L, S>(
     enum Next<K> {
         Event(Hotplug<K>),
         StreamEnded,
-        CheckX52d,
+        Tick,
         Shutdown,
     }
 
@@ -330,7 +333,7 @@ pub(crate) fn run_hotplug<L, S>(
             future::or(
                 async {
                     ticks.next().await;
-                    Next::CheckX52d
+                    Next::Tick
                 },
                 async {
                     shutdown.signalled().await;
@@ -341,10 +344,7 @@ pub(crate) fn run_hotplug<L, S>(
         match next {
             Next::Event(Hotplug::Disconnected(key)) => watch.disconnected(key, &mut notify),
             Next::Event(Hotplug::Connected) => {}
-            Next::CheckX52d => {
-                watch.check_x52d(&mut notify);
-                continue;
-            }
+            Next::Tick => watch.check_x52d(&mut notify),
             Next::StreamEnded => {
                 tracing::warn!("The USB hotplug stream ended; the device watch stops");
                 return;
