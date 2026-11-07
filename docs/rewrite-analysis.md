@@ -254,8 +254,8 @@ everything. `--debug` maps to a `debug` filter, `RUST_LOG` overrides it. Decisio
   `cargo-sources.json`).
 - Config: `.editorconfig`, `rustfmt.toml`, `rust-toolchain.toml`, `clippy.toml`, `deny.toml`,
   `.markdownlint-cli2.yaml`, `.yamllint.yaml`, `.prettierrc.json`, `checkmake.ini`,
-  `.suppressions-baseline`, `.gitignore`.
-- The `meta` crate (repository hygiene tests: doc links, license headers, suppressions, toolchain),
+  `.gitignore`.
+- The `meta` crate (repository hygiene tests: doc links, license headers, toolchain),
   adapted: license headers become GPL-3.0-or-later, Dockerfile tests removed.
 - Docs: `CONTRIBUTING.md`, `SECURITY.md`, `docs/release.md`, `AGENTS.md`.
 - AI tooling: `.agents/skills/` (adversarial review, Rust style guide), `.claude/settings.json`,
@@ -266,7 +266,7 @@ everything. `--debug` maps to a `debug` filter, `RUST_LOG` overrides it. Decisio
 
 Keep: `pre-commit-hooks` (merge conflicts, EOF, whitespace, YAML/JSON/TOML, large files), checkmake,
 markdownlint-cli2, shellcheck, prettier (YAML), yamllint, conventional-pre-commit, cargo fmt /
-clippy / test / deny, cargo-machete, local docs-links / license-headers / suppressions checks.
+clippy / test / deny, cargo-machete, local docs-links / license-headers checks.
 
 Drop: dclint, droast, trivy, Docker-related checks. Keep actionlint (CI moves to GitHub Actions).
 

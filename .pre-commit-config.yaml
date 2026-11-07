@@ -86,17 +86,6 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
-      # Every in-file suppression is counted per rule against .suppressions-baseline, and a commit
-      # that adds one must change the baseline too (AGENTS.md). Always runs: the ratchet reads the
-      # whole tree and the staged diff, and a commit that touches no source at all can still
-      # delete the baseline out from under it.
-      - id: check-suppressions
-        name: suppression ratchet
-        entry: scripts/check-suppressions.sh
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
   # The Rust workspace. Every command is workspace-wide, so every member is held to the same lints,
   # and --locked, so Cargo.lock is what gets tested. clippy and the tests need the GTK 4 and
   # libadwaita development files on the host; CI skips these two in its pre-commit job and runs

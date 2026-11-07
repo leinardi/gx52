@@ -17,8 +17,6 @@ A task marked **(code)** touches code, build files or CI. For each one:
   `rust-best-practices`), as [architecture.md](architecture.md#skills) explains.
 - **Done when**, in addition to the task's own condition (written "DW, plus" below):
   - `make verify` and `make check` pass;
-  - the suppressions ratchet is updated if the task added or removed a suppression
-    ([AGENTS.md](../AGENTS.md#suppressions-are-ratcheted));
   - the `adversarial-review` skill reports no open findings on the task's diff;
   - the rows of the AGENTS.md validation matrix for the files touched have been run.
 
@@ -31,7 +29,7 @@ The code base that becomes `0.99.0`. Nothing is published before M8.
 Already done, in `583fc54` (tooling) and `a763177` (workspace):
 
 - Makefile and `.mk` fragments
-- pre-commit, with markdownlint and the license-header and suppression ratchets
+- pre-commit, with markdownlint and the license-header check
 - lints in `[workspace.lints]`, `clippy.toml`, `deny.toml`, `rust-toolchain.toml`
 - the workspace with the `gx52`, `x52` and `meta` stubs
 - `AGENTS.md`, the `adversarial-review` skill

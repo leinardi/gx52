@@ -17,7 +17,7 @@ item off, or delete it, in the commit that does it.
       version features from spike S6, the constants of `src/config.rs` set by Meson through the
       environment. `x52` stays a doc-only library until M1.
 - [x] The `meta` crate, adapted from `swarm-device-access/meta`: `docs` (relative links and
-      fragments), `license_headers` and `suppressions` (driving the two `scripts/check-*.sh` against
+      fragments), `license_headers` (driving `scripts/check-license-headers.sh` against
       scratch repositories), `toolchain` (rust-toolchain.toml, `rust-version` and the CI pins
       agree), `version` (`Cargo.toml` and `meson.build` agree, and the newest metainfo `<release>`
       too once the version is not `0.0.0`, [release.md](release.md#one-version-source)),
@@ -26,7 +26,6 @@ item off, or delete it, in the commit that does it.
         `.pre-commit-config.yaml`;
   - [x] point the "Run" column of the validation matrix in `AGENTS.md` and §6 of the
         `adversarial-review` skill at the meta-tests, as `swarm-device-access` does;
-  - [x] update the "to be exercised by" note in `scripts/check-suppressions.sh`.
 - [x] The `ci_gates` meta-test (every job in `ci-result.needs`, every skipped hook mapped to the
       job that runs it), with `ci.yaml`.
 - [x] `deny.toml`: add each licence the dependency graph needs (MIT, Apache-2.0, Unicode-3.0, ...)

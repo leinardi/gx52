@@ -42,7 +42,7 @@ unsafe_code = "deny"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 # Only `#[expect(lint, reason = "...")]` may silence a lint: it fails once the lint stops firing,
-# and the reason is mandatory. Every one is counted by scripts/check-suppressions.sh.
+# and the reason is mandatory.
 allow_attributes = "deny"
 allow_attributes_without_reason = "deny"
 # No panics outside tests; clippy.toml allows both in tests.

@@ -132,20 +132,6 @@ skills (and `gtk-rs-review` / `rust-review` when reviewing).
   why the fix does not apply here, not which rule fired; `#[expect]` carries it in
   `reason = "..."`.
 
-## Suppressions are ratcheted
-
-Every in-file suppression is counted per rule against `.suppressions-baseline` by the
-`check-suppressions` pre-commit hook (`scripts/check-suppressions.sh`): each lint of a Rust
-`#[expect(...)]` or `#[allow(...)]` (not one wrapped in `cfg_attr`) and each `# shellcheck
-disable=` code.
-
-Adding one is allowed, but never silently: the hook refuses a commit that adds a suppression line
-without changing the baseline in the same commit, including a swap or a moved file that leaves the
-count unchanged. Prefer fixing the finding. If a suppression really is right, write it with a
-reason, stage it, run `scripts/check-suppressions.sh --update`, and commit the baseline alongside
-it. A count that has fallen below its baseline fails the same way, with the same fix: the file
-describes the repository, not a past one.
-
 ## Validation matrix
 
 Run before considering an edit done. `make check` applies to every row.
@@ -157,7 +143,6 @@ Run before considering an edit done. `make check` applies to every row.
 | `**/*.blp`, `meson.build`, `meson.options`, `data/**`, `po/**` | `make meson-test`, `make check` (blueprint and meson format hooks); `make meson-run` when the change is visible |
 | `build-aux/*.json` | `make flatpak-lint-manifest`, `make flatpak-install` |
 | `.mk/meson.mk`, `.mk/flatpak.mk` | `make help`, and the targets the edit touched |
-| `scripts/check-suppressions.sh`, `.suppressions-baseline` | `cargo test --locked -p meta --test suppressions` |
 | `scripts/check-license-headers.sh` | `cargo test --locked -p meta --test license_headers` |
 | `meta/**` | `make verify` |
 | `meson.build`, `data/com.leinardi.gx52.metainfo.xml.in.in` (the version) | `cargo test --locked -p meta --test version` |

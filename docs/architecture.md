@@ -26,7 +26,7 @@ As committed in `a763177`; the crates are still stubs.
 | --- | --- | --- |
 | `gx52` | the repository root (`Cargo.toml`, `src/`), next to `meson.build` | The application: GTK 4 + libadwaita UI, device service, profile store, tray, virtual mouse |
 | `x52` | `x52/` | Protocol encoding over a transport trait, device model (X52 Pro / X52 capabilities and LED set), MFD character set, evdev input map. Pure and unit-tested, no GTK dependency |
-| `meta` | `meta/` | Repository meta-tests: docs links, license headers, suppressions, toolchain pins, vacuous flags, workspace lints, one version source. Run by cargo only, on the bare CI runner: they read the git checkout |
+| `meta` | `meta/` | Repository meta-tests: docs links, license headers, toolchain pins, vacuous flags, workspace lints, one version source. Run by cargo only, on the bare CI runner: they read the git checkout |
 
 - **Lints** live only in `[workspace.lints]` of the root `Cargo.toml`; every member opts in with
   `[lints] workspace = true`. `unsafe_code = "deny"`: nothing in the app needs `unsafe`. USB goes
@@ -64,9 +64,8 @@ encoded control transfer; the app implements it with `nusb`, the tests with a re
   next instant to re-send) takes the current time and zone as input from a time source the app
   passes in, never from a direct `now()` call. Then `clippy.toml` `disallowed-methods` can ban
   `jiff::Timestamp::now`, `jiff::Zoned::now` and `std::time::SystemTime::now` everywhere except the
-  one production time source, whose exception is an `#[expect]` with a reason, counted by the
-  suppression ratchet. This is the [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace)
-  `clippy.toml` item.
+  one production time source, whose exception is an `#[expect]` with a reason. This is the
+  [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace) `clippy.toml` item.
 - **Event timestamps:** the mode debounce uses the timestamps evdev puts on each event, not the
   wall clock, so it is tested with recorded event sequences (the S3 bounce log is the first
   fixture).
