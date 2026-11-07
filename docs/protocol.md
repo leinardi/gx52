@@ -134,8 +134,10 @@ Notes on the commands:
   first normalises the difference into `−720`–`+720` minutes by adding or subtracting whole days
   (1440 minutes); the time shown is the same, and every normalised value fits the 10-bit field. For
   example clock 1 at UTC−5 and clock 2 at UTC+14 is `+1140`, sent as `−300`. S2 tested only
-  differences that stay within the same day (`+60`, `−120`); that the device wraps past midnight
-  correctly is still to be checked on the device (an acceptance check of the device service). The
+  differences that stay within the same day (`+60`, `−120`). On 2026-11-07, with clock 1 at 14:43,
+  clock 2 at `+617` showed 01:00, past midnight forward, and clock 3 at `−719` showed 02:44 (the
+  device-check `midnight`). A negative offset that crosses midnight backward needs clock 1 before
+  noon and is still to be checked. The
   12 h / 24 h flag is independent per clock (clock 1 and 2 in 12 h with clock 3 in 24 h works).
 - **Clock display.** The MFD shows one clock at a time, with the date below it by default.
   Start/Stop and Reset on the throttle cycle through clocks 1, 2 and 3 (a small `1` / `2` / `3`
@@ -328,6 +330,9 @@ One device-watch component with two sources (S4, verified on 2026-11-02):
   `nusb::watch_devices` is created without error in the sandbox but never yields, because the udev
   netlink multicast does not reach the sandbox's network namespace. Both lists are sysfs and `/dev`
   reads. The inotify fallback was not needed.
+- **Lost events on the host:** the kernel drops udev netlink messages when the socket's buffer
+  overflows (`ENOBUFS`, seen on resume from suspend on 2026-11-07); `nusb` logs it and carries on,
+  so the host watch also re-lists every 5 s.
 
 Devices are matched by **vendor and product ID** (later also serial or port path, for several
 devices), **never by USB address**: the address changes on every replug (S4 saw `4`, `5`, `6`).

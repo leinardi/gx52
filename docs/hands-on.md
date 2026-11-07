@@ -70,8 +70,9 @@ Results go to a new `docs/spikes/03-input.md` and later to `docs/protocol.md`.
       events?
 - [x] Flatpak (`--device=all`, no network): same test. Expected: the udev netlink events do not
       arrive; check whether the inotify fallback on `/dev/bus/usb` and `/dev/input` sees the change.
-- [ ] After replug, confirm the app re-sends brightness (MFD backlight and throttle LEDs come back).
-      Not testable before the app exists: an acceptance check for the device service.
+- [x] After replug, confirm the app re-sends brightness (MFD backlight and throttle LEDs come back).
+      Checked on 2026-11-07 with the device service (`gx52 --device-check replug`, host and Devel
+      Flatpak): brightness, every LED, the MFD lines and the clocks come back.
 - [x] Remove the udev rule temporarily (or test as another user) and note the exact error, for the
       in-app guidance page.
 
