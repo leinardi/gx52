@@ -85,7 +85,12 @@ libx52's `x52d` daemon drives the same LEDs, MFD and clocks, so the two would ov
   prefix at `/usr/local/var/run/x52d.cmd`. GX52 checks all three.
 - **Check:** a nonblocking `connect` to the socket. A successful connection (or a full backlog) is a
   running daemon; a refused connection is a stale file left by a daemon that died, not a running
-  one. The device watch checks at start and every 5 s.
+  one. A daemon running as root under the default umask leaves a socket mode `0755`, which a
+  normal user may not connect to (`EACCES`, seen on 2026-11-07 with a root `socat` listener). Then
+  the pid file next to the socket (`x52d.pid`, also in `daemon/constants.h`) decides: running if
+  `/proc/<pid>/comm` is `x52d`. Without a readable pid file, as in the sandbox, which exposes only
+  the socket, a socket that refuses this user counts as a running daemon. The device watch checks
+  at start and every 5 s.
 - **Sandbox:** the sandbox has its own `/run`, so the Flatpak exposes the socket read-only with
   `--filesystem=/run/x52d.cmd:ro` (accepted by `flatpak-builder-lint`; a host socket exposed this
   way accepts connections from the sandbox, checked on 2026-11-03). Two limitations remain: Flatpak

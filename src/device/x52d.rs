@@ -18,8 +18,11 @@
 //!
 //! The daemon listens on a Unix command socket; a successful `connect` means it is running. A
 //! socket file nobody listens on (left by a daemon that died) refuses the connection and is not a
-//! running daemon.
+//! running daemon. A daemon running as root under the default umask leaves a socket other users
+//! may not write to, so their `connect` fails with `EACCES`: then its pid file decides, and without
+//! a readable pid file (inside the Flatpak) the protected socket counts as a running daemon.
 
+use std::fs;
 use std::path::Path;
 use std::time::Duration;
 
@@ -36,6 +39,17 @@ pub(crate) const SOCKET_PATHS: [&str; 3] = [
     "/usr/local/var/run/x52d.cmd",
 ];
 
+/// Where `x52d` writes its pid file, next to each socket path: `$(localstatedir)/run/x52d.pid`
+/// (`daemon/constants.h`).
+pub(crate) const PID_FILES: [&str; 3] = [
+    "/run/x52d.pid",
+    "/var/run/x52d.pid",
+    "/usr/local/var/run/x52d.pid",
+];
+
+/// Where the kernel lists the processes.
+const PROC: &str = "/proc";
+
 /// How often the device watch checks for the daemon.
 pub(crate) const CHECK_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -43,16 +57,47 @@ pub(crate) const CHECK_INTERVAL: Duration = Duration::from_secs(5);
 pub(crate) fn is_running() -> bool {
     SOCKET_PATHS
         .iter()
-        .any(|path| is_listening(Path::new(path)))
+        .zip(PID_FILES)
+        .any(|(socket, pid_file)| runs_at(Path::new(socket), Path::new(pid_file), Path::new(PROC)))
 }
 
-/// Whether something accepts connections on the Unix socket at `path`.
+/// Whether a daemon runs behind the socket at `socket`, with `pid_file` and the process list at
+/// `proc` to decide when the socket refuses this user.
+pub(crate) fn runs_at(socket: &Path, pid_file: &Path, proc: &Path) -> bool {
+    match probe(socket) {
+        Socket::Listening => true,
+        Socket::Absent => false,
+        Socket::Protected => match fs::read_to_string(pid_file) {
+            Ok(text) => match text.trim().parse::<u32>() {
+                Ok(pid) => fs::read_to_string(proc.join(pid.to_string()).join("comm"))
+                    .is_ok_and(|comm| comm.trim() == "x52d"),
+                // An unreadable pid cannot rule the daemon out.
+                Err(_) => true,
+            },
+            // No pid file to look at (inside the Flatpak): the protected socket decides.
+            Err(_) => true,
+        },
+    }
+}
+
+/// What a `connect` to a Unix socket found.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Socket {
+    /// Something accepts connections.
+    Listening,
+    /// The socket exists, but this user may not connect to it (`EACCES`).
+    Protected,
+    /// No socket, or nobody listening on it (a stale file).
+    Absent,
+}
+
+/// Connects to the Unix socket at `path`.
 ///
 /// The socket is nonblocking, so a daemon whose backlog is full (`EAGAIN`) never blocks the
-/// caller; it is running all the same.
-pub(crate) fn is_listening(path: &Path) -> bool {
+/// caller; it is listening all the same.
+pub(crate) fn probe(path: &Path) -> Socket {
     let Ok(address) = SocketAddrUnix::new(path) else {
-        return false;
+        return Socket::Absent;
     };
     let Ok(socket) = net::socket_with(
         AddressFamily::UNIX,
@@ -60,11 +105,12 @@ pub(crate) fn is_listening(path: &Path) -> bool {
         SocketFlags::NONBLOCK | SocketFlags::CLOEXEC,
         None,
     ) else {
-        return false;
+        return Socket::Absent;
     };
     match net::connect(&socket, &address) {
-        Ok(()) | Err(Errno::AGAIN | Errno::INPROGRESS) => true,
-        Err(_) => false,
+        Ok(()) | Err(Errno::AGAIN | Errno::INPROGRESS) => Socket::Listening,
+        Err(Errno::ACCESS | Errno::PERM) => Socket::Protected,
+        Err(_) => Socket::Absent,
     }
 }
 
@@ -87,7 +133,10 @@ impl X52dWatch {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::Permissions;
+    use std::os::unix::fs::PermissionsExt;
     use std::os::unix::net::UnixListener;
+    use std::path::PathBuf;
 
     use super::*;
 
@@ -97,7 +146,7 @@ mod tests {
         let path = dir.path().join("x52d.cmd");
         let _listener = UnixListener::bind(&path).unwrap();
 
-        assert!(is_listening(&path));
+        assert_eq!(probe(&path), Socket::Listening);
     }
 
     #[test]
@@ -107,16 +156,91 @@ mod tests {
         drop(UnixListener::bind(&path).unwrap());
         assert!(path.exists(), "the socket file stays behind");
 
-        assert!(!is_listening(&path));
+        assert_eq!(probe(&path), Socket::Absent);
     }
 
     #[test]
     fn no_socket_is_not_a_running_daemon() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(!is_listening(&dir.path().join("x52d.cmd")));
+        assert_eq!(probe(&dir.path().join("x52d.cmd")), Socket::Absent);
         let file = dir.path().join("plain");
         std::fs::write(&file, "").unwrap();
-        assert!(!is_listening(&file));
+        assert_eq!(probe(&file), Socket::Absent);
+    }
+
+    /// A listening socket this user may not connect to, as root's daemon leaves it; `None` when
+    /// the tests run as root, who connects anyway.
+    fn protected_socket(dir: &Path) -> Option<(PathBuf, UnixListener)> {
+        let path = dir.join("x52d.cmd");
+        let listener = UnixListener::bind(&path).unwrap();
+        fs::set_permissions(&path, Permissions::from_mode(0o555)).unwrap();
+        (probe(&path) == Socket::Protected).then_some((path, listener))
+    }
+
+    /// A process list at `dir/proc` with `pid` running `comm`.
+    fn proc_with(dir: &Path, pid: u32, comm: &str) -> PathBuf {
+        let proc = dir.join("proc");
+        fs::create_dir_all(proc.join(pid.to_string())).unwrap();
+        fs::write(proc.join(pid.to_string()).join("comm"), format!("{comm}\n")).unwrap();
+        proc
+    }
+
+    #[test]
+    fn a_protected_socket_with_the_daemon_in_its_pid_file_is_running() {
+        let dir = tempfile::tempdir().unwrap();
+        let Some((socket, _listener)) = protected_socket(dir.path()) else {
+            return;
+        };
+        let pid_file = dir.path().join("x52d.pid");
+        fs::write(&pid_file, "1234\n").unwrap();
+
+        assert!(runs_at(
+            &socket,
+            &pid_file,
+            &proc_with(dir.path(), 1234, "x52d")
+        ));
+    }
+
+    #[test]
+    fn a_protected_socket_whose_pid_is_another_process_is_stale() {
+        let dir = tempfile::tempdir().unwrap();
+        let Some((socket, _listener)) = protected_socket(dir.path()) else {
+            return;
+        };
+        let pid_file = dir.path().join("x52d.pid");
+        fs::write(&pid_file, "1234\n").unwrap();
+
+        assert!(!runs_at(
+            &socket,
+            &pid_file,
+            &proc_with(dir.path(), 1234, "bash")
+        ));
+        assert!(!runs_at(&socket, &pid_file, &dir.path().join("empty-proc")));
+    }
+
+    #[test]
+    fn a_protected_socket_without_a_pid_file_is_running() {
+        let dir = tempfile::tempdir().unwrap();
+        let Some((socket, _listener)) = protected_socket(dir.path()) else {
+            return;
+        };
+
+        assert!(runs_at(
+            &socket,
+            &dir.path().join("x52d.pid"),
+            &dir.path().join("proc")
+        ));
+    }
+
+    #[test]
+    fn a_listening_or_absent_socket_needs_no_pid_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let socket = dir.path().join("x52d.cmd");
+        let pid_file = dir.path().join("x52d.pid");
+        let proc = dir.path().join("proc");
+        assert!(!runs_at(&socket, &pid_file, &proc));
+        let _listener = UnixListener::bind(&socket).unwrap();
+        assert!(runs_at(&socket, &pid_file, &proc));
     }
 
     #[test]
