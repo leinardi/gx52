@@ -132,8 +132,8 @@ Results on 2026-11-07, on the X52 Pro with `gx52 --device-check <scenario>`: `re
 host and in the Devel Flatpak (9 of 9 each, every CHECK confirmed on the device); `mode` (6 of 6),
 `permission` (11 of 11), `resume` (6 of 6: clock 1 right 0.1 s after a suspend of 2 min 38 s) and
 the `x52d` banner (with a root-owned socket) passed on the host. `midnight` passed in the forward
-direction only (`+617` from 14:43 showed 01:00); the backward direction stays open until a run
-before noon.
+direction only (`+617` from 14:43 showed 01:00); the backward direction, which needs a run before
+noon, became an optional check on 2026-11-07 ([preparation.md](preparation.md)), so M2 is accepted.
 
 ## M3: profiles
 
