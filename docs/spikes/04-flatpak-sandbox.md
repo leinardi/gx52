@@ -84,7 +84,10 @@ replugging**, the user ACL came back on the existing node and `open` worked at o
 page can say "no need to unplug" and the app only has to retry `open` while in the "no permission"
 state (on each device poll, or when the user presses "Try again").
 
-## Not done yet
+## With the real app: verified 2026-11-07
 
-- Running the real app build (Flatpak bundle from S6 with the device code) instead of the spike
-  binaries.
+The Devel Flatpak with the M2 device service (`gx52 --device-check replug`) behaves as the spike
+binaries did: the 250 ms polling notices the unplug and the replug, the replug is a new generation
+at a new USB address, and the full state is replayed with no failed transfer. On the host, the
+kernel dropped hotplug events on resume from suspend (`ENOBUFS` on the udev netlink socket, which
+`nusb` only logs), so the host watch also re-lists every 5 s.

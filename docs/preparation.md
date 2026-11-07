@@ -107,7 +107,8 @@ Where each spike and hands-on item stands now that stage C is written. Open item
 
 **Deferred acceptance tests** (need the real app):
 
-- Full-state replay after replug, and clock offsets across midnight
+- Clock offsets across midnight, the backward direction (a negative offset with clock 1 before
+  noon); full-state replay after replug and the forward direction passed on 2026-11-07
   ([M2](roadmap.md#m2-the-device-service)).
 - Background portal dialog and autostart after logging out and in, and the tray inside the Flatpak
   build ([M6](roadmap.md#m6-tray-and-background)).

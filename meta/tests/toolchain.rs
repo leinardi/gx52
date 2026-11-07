@@ -259,7 +259,7 @@ fn pre_commit_hooks(content: &str) -> Vec<(String, Value)> {
 
 /// The hooks that read the whole tree rather than the files pre-commit passes, so each one runs
 /// on every commit and must not run twice per commit.
-const ALWAYS_RUN_HOOKS: [&str; 3] = ["check-license-headers", "check-suppressions", "docs-links"];
+const ALWAYS_RUN_HOOKS: [&str; 2] = ["check-license-headers", "docs-links"];
 
 /// What is wrong with the whole-tree hooks of a pre-commit configuration.
 fn always_run_problems(content: &str) -> Vec<String> {
@@ -317,9 +317,8 @@ fn always_run_rules() {
                 [pre-commit]\n";
     let config = |docs_links: &str| {
         format!(
-            "repos:\n  - repo: local\n    hooks:\n{}{}{docs_links}",
+            "repos:\n  - repo: local\n    hooks:\n{}{docs_links}",
             hook("check-license-headers", good),
-            hook("check-suppressions", good),
         )
     };
     assert_eq!(

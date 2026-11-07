@@ -5,3 +5,4 @@ data/com.leinardi.gx52.metainfo.xml.in.in
 data/resources/ui/shortcuts-dialog.blp
 data/resources/ui/window.blp
 src/application.rs
+src/device/status.rs

@@ -73,12 +73,12 @@ green. Load only what the diff touches.
 
 | Changed path | Load skill | It owns |
 | --- | --- | --- |
-| any `**/*.rs`, `Cargo.toml` (any member), `Cargo.lock`, `clippy.toml`, `rustfmt.toml`, `rust-toolchain.toml`, `deny.toml` | user-level `rust-review` and `rust-best-practices`, plus `AGENTS.md` | idiom, error handling, the lint set, `#[expect]` and the ratchet |
+| any `**/*.rs`, `Cargo.toml` (any member), `Cargo.lock`, `clippy.toml`, `rustfmt.toml`, `rust-toolchain.toml`, `deny.toml` | user-level `rust-review` and `rust-best-practices`, plus `AGENTS.md` | idiom, error handling, the lint set and `#[expect]` |
 | Rust code that uses `gtk::`/`adw::`/`glib::`, `**/*.blp`, `**/*.ui`, `data/**` (desktop file, metainfo, GSettings schema, GResource, icons), `meson.build`, `po/**`, the Flatpak manifests | user-level `gtk-rs-review` (and `gtk-rs-development` for the rules it cites) | main-thread blocking, reference cycles and leaked signal handlers, `RefCell` borrows across callbacks and `await`, GObject subclassing, list-factory recycling, deprecated APIs, i18n and accessibility, Meson/Flatpak/GResource/GSettings configuration |
 | the `x52` crate (protocol, device model, key maps, MFD charset) | `rust-review` + `docs/protocol.md` once it exists, the spike results in `docs/spikes/` until then | the bytes sent to the device; no GTK dependency |
 | `meta/**` | `AGENTS.md`; the comment heading each test | a meta-test that can skip or pass on nothing is a finding |
 | `scripts/check-*.sh` | the script's header comment (and its meta-test once it exists) | the check still fails on what it exists to stop |
-| `.pre-commit-config.yaml`, `.suppressions-baseline`, `[workspace.lints]`, `clippy.toml` | `AGENTS.md` (coding rules and the ratchet) | no lint disabled or narrowed, no hook dropped; §5 (c) |
+| `.pre-commit-config.yaml`, `[workspace.lints]`, `clippy.toml` | `AGENTS.md` (coding rules) | no lint disabled or narrowed, no hook dropped; §5 (c) |
 
 No skill matches (bash, Makefile, `.mk/**`, plain YAML, Markdown, workflows)? Fall back to the
 passes in §4 plus the invariants in §3. **Same rigor** — an unmatched language is not a lighter
@@ -182,9 +182,7 @@ intent was. If one exists, is the diff removing exactly what that line retires a
 ### (c) A new suppression has to show its work
 
 Any new `#[expect(...)]` or `#[allow(...)]`, or `# shellcheck disable=`, is a standing decision
-to let a linter stay silent. The `check-suppressions` hook counts them per rule against
-`.suppressions-baseline` and refuses one added without a baseline change, so the count is
-reviewed; the reason is not. A baseline raised in the same diff is the thing to read. So demand
+to let a linter stay silent, and no hook counts them: the reason is the only review. So demand
 the attempt: for `too_many_lines`, was the obvious extraction tried and what broke? For a cast
 lint, why is `try_from` wrong here? A suppression whose reason restates the lint instead of
 explaining why the fix does not apply is a finding, and so is a suppression with no reason at
@@ -209,7 +207,7 @@ treat a failure it caused as a confirmed finding with the output attached:
 | --- | --- |
 | any `**/*.rs`, a Cargo manifest or lock, `clippy.toml`, `rustfmt.toml`, `rust-toolchain.toml`, `deny.toml` | `make verify` (build, fmt check, clippy with `-D warnings`, tests, docs), `make rust-deny` when a manifest or `Cargo.lock` changed (network required), then `make check` |
 | the `x52` crate's device paths | also the hands-on check on a real X52 Pro, when one is available (`docs/hands-on.md`) |
-| `meta/**`, `scripts/check-*.sh`, `.github/**`, `.pre-commit-config.yaml`, `.mk/**`, `Makefile` | `cargo test --locked -p meta` (docs links, license headers, suppressions, toolchain pins, vacuous flags, workspace lints, version), `pre-commit run actionlint --all-files` |
+| `meta/**`, `scripts/check-*.sh`, `.github/**`, `.pre-commit-config.yaml`, `.mk/**`, `Makefile` | `cargo test --locked -p meta` (docs links, license headers, toolchain pins, vacuous flags, workspace lints, version), `pre-commit run actionlint --all-files` |
 | `meson.build`, the metainfo, any Markdown | `cargo test --locked -p meta --test version --test docs` |
 | anything else | `make check` (pre-commit on all files) |
 

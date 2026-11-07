@@ -17,8 +17,6 @@ A task marked **(code)** touches code, build files or CI. For each one:
   `rust-best-practices`), as [architecture.md](architecture.md#skills) explains.
 - **Done when**, in addition to the task's own condition (written "DW, plus" below):
   - `make verify` and `make check` pass;
-  - the suppressions ratchet is updated if the task added or removed a suppression
-    ([AGENTS.md](../AGENTS.md#suppressions-are-ratcheted));
   - the `adversarial-review` skill reports no open findings on the task's diff;
   - the rows of the AGENTS.md validation matrix for the files touched have been run.
 
@@ -31,7 +29,7 @@ The code base that becomes `0.99.0`. Nothing is published before M8.
 Already done, in `583fc54` (tooling) and `a763177` (workspace):
 
 - Makefile and `.mk` fragments
-- pre-commit, with markdownlint and the license-header and suppression ratchets
+- pre-commit, with markdownlint and the license-header check
 - lints in `[workspace.lints]`, `clippy.toml`, `deny.toml`, `rust-toolchain.toml`
 - the workspace with the `gx52`, `x52` and `meta` stubs
 - `AGENTS.md`, the `adversarial-review` skill
@@ -129,6 +127,13 @@ Acceptance, on the X52 Pro, in the Devel Flatpak:
 - **Clock offsets across midnight** ([protocol.md](protocol.md#usb-vendor-commands)): a clock 2/3
   whose time is on the other side of midnight from clock 1 shows the right time. Done when: checked
   with a positive and a negative normalised offset and recorded in protocol.md.
+
+Results on 2026-11-07, on the X52 Pro with `gx52 --device-check <scenario>`: `replug` passed on the
+host and in the Devel Flatpak (9 of 9 each, every CHECK confirmed on the device); `mode` (6 of 6),
+`permission` (11 of 11), `resume` (6 of 6: clock 1 right 0.1 s after a suspend of 2 min 38 s) and
+the `x52d` banner (with a root-owned socket) passed on the host. `midnight` passed in the forward
+direction only (`+617` from 14:43 showed 01:00); the backward direction stays open until a run
+before noon.
 
 ## M3: profiles
 

@@ -85,6 +85,9 @@ impl Brightness {
     /// The highest level the app sends (`255` looks the same on the device and is never sent).
     pub const MAX: u8 = 128;
 
+    /// Full brightness, [`Self::MAX`].
+    pub const FULL: Self = Self(Self::MAX);
+
     /// A brightness level.
     ///
     /// # Errors
@@ -263,6 +266,12 @@ impl MfdBytes {
     /// The bytes a line holds.
     pub(crate) const MAX_LEN: usize = 16;
 
+    /// An empty line.
+    pub(crate) const EMPTY: Self = Self {
+        bytes: [0; Self::MAX_LEN],
+        len: 0,
+    };
+
     /// A line of character-set bytes.
     ///
     /// # Errors
@@ -310,6 +319,32 @@ pub enum OffsetClock {
     Clock2,
     /// Clock 3.
     Clock3,
+}
+
+/// What a command sets on the device: two commands with the same slot overwrite each other, and a
+/// resolved device state holds at most one command per slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum CommandSlot {
+    /// The MFD backlight.
+    MfdBrightness,
+    /// The LED brightness.
+    LedBrightness,
+    /// One bi-colour LED.
+    BiColourLed(BiColourLed),
+    /// One single-colour LED.
+    SingleColourLed(SingleColourLed),
+    /// Clock 1.
+    Clock1,
+    /// Clock 2 or clock 3.
+    ClockOffset(OffsetClock),
+    /// The date.
+    Date,
+    /// One MFD line.
+    MfdLine(MfdLine),
+    /// The SHIFT label.
+    Shift,
+    /// The blinking of the i and POV 1 LEDs.
+    Blink,
 }
 
 /// A command the app may send: the allowlist of docs/protocol.md as a type.
@@ -363,6 +398,23 @@ impl Command {
             Self::Date(_) => "date",
             Self::MfdText(..) => "MFD text",
             Self::Shift(_) => "shift",
+        }
+    }
+
+    /// What this command sets.
+    #[must_use]
+    pub const fn slot(&self) -> CommandSlot {
+        match *self {
+            Self::MfdBrightness(_) => CommandSlot::MfdBrightness,
+            Self::LedBrightness(_) => CommandSlot::LedBrightness,
+            Self::Blink(_) => CommandSlot::Blink,
+            Self::Led(led, _) => CommandSlot::BiColourLed(led),
+            Self::LedSwitch(led, _) => CommandSlot::SingleColourLed(led),
+            Self::Clock1 { .. } => CommandSlot::Clock1,
+            Self::ClockOffset { clock, .. } => CommandSlot::ClockOffset(clock),
+            Self::Date(_) => CommandSlot::Date,
+            Self::MfdText(line, _) => CommandSlot::MfdLine(line),
+            Self::Shift(_) => CommandSlot::Shift,
         }
     }
 

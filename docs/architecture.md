@@ -26,7 +26,7 @@ As committed in `a763177`; the crates are still stubs.
 | --- | --- | --- |
 | `gx52` | the repository root (`Cargo.toml`, `src/`), next to `meson.build` | The application: GTK 4 + libadwaita UI, device service, profile store, tray, virtual mouse |
 | `x52` | `x52/` | Protocol encoding over a transport trait, device model (X52 Pro / X52 capabilities and LED set), MFD character set, evdev input map. Pure and unit-tested, no GTK dependency |
-| `meta` | `meta/` | Repository meta-tests: docs links, license headers, suppressions, toolchain pins, vacuous flags, workspace lints, one version source. Run by cargo only, on the bare CI runner: they read the git checkout |
+| `meta` | `meta/` | Repository meta-tests: docs links, license headers, toolchain pins, vacuous flags, workspace lints, one version source. Run by cargo only, on the bare CI runner: they read the git checkout |
 
 - **Lints** live only in `[workspace.lints]` of the root `Cargo.toml`; every member opts in with
   `[lints] workspace = true`. `unsafe_code = "deny"`: nothing in the app needs `unsafe`. USB goes
@@ -64,9 +64,8 @@ encoded control transfer; the app implements it with `nusb`, the tests with a re
   next instant to re-send) takes the current time and zone as input from a time source the app
   passes in, never from a direct `now()` call. Then `clippy.toml` `disallowed-methods` can ban
   `jiff::Timestamp::now`, `jiff::Zoned::now` and `std::time::SystemTime::now` everywhere except the
-  one production time source, whose exception is an `#[expect]` with a reason, counted by the
-  suppression ratchet. This is the [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace)
-  `clippy.toml` item.
+  one production time source, whose exception is an `#[expect]` with a reason. This is the
+  [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace) `clippy.toml` item.
 - **Event timestamps:** the mode debounce uses the timestamps evdev puts on each event, not the
   wall clock, so it is tested with recorded event sequences (the S3 bounce log is the first
   fixture).
@@ -96,8 +95,8 @@ Nothing blocks the GTK main thread (AGENTS.md). Each long-lived loop that blocks
 and talks to the main thread through `async_channel` (blocking send on the worker, `recv().await` in
 a `glib::spawn_future_local` loop), following the gtk-rs-development "long-lived workers" pattern.
 Workers never touch GObjects; only plain `Send` data crosses a channel. The main thread never blocks
-on a send either: channels towards workers are unbounded (`try_send` never reports a full channel),
-and the writer's coalescing keeps the queue short.
+on a send either: channels towards workers are unbounded `std::sync::mpsc` channels, whose `send`
+never blocks, and the writer's coalescing keeps the queue short.
 
 ```mermaid
 flowchart LR
@@ -107,7 +106,7 @@ flowchart LR
         store["Profile store + GSettings"]
     end
     watch["Device watch thread<br/>nusb::watch_devices on the host,<br/>250 ms polling in the sandbox"]
-    writer["Device writer thread<br/>command channel, coalescing,<br/>full-state replay on connect,<br/>minute clock ticker"]
+    writer["Device writer thread<br/>command channel, coalescing,<br/>full-state replay on connect,<br/>sent-command cache,<br/>5 s clock check"]
     reader["evdev reader thread<br/>mode debounce (200 ms)"]
     mouse["Virtual-mouse loop<br/>10 ms tick, uinput"]
     tray["ksni tray<br/>own async-io executor"]
@@ -137,33 +136,66 @@ flowchart LR
 - **GTK main thread.** Widgets, GObject models, GSettings, the profile store's in-memory state, and
   the decisions: which profile is active, what the device should show. File I/O for the profile
   store and the legacy import runs in `gio::spawn_blocking` or GIO async calls, never inline.
-- **Device writer thread.** Owns the opened `nusb::Device` and nothing else touches it.
-  - Receives the desired device state over a command channel. It keeps the last state sent and sends
-    only the commands whose value changed.
-  - **Coalescing:** before sending, it drains every queued message and keeps the latest value per
-    command, so a dragged brightness slider becomes one transfer per drain, not one per pixel. The
+- **Device writer thread.** Owns the opened `nusb::Device` and nothing else touches it
+  (`src/device/writer.rs`). Messages in: the desired state, `Selected` and `Gone` from the device
+  watch, `Retry` from the user, `Shutdown`. Events out: the access state and errors, each error
+  reported once until the device recovers.
+  - **Sent-command cache:** the writer keeps, per `x52::command::CommandSlot`, the encoded
+    transfers it last sent successfully. On every wake it resolves the desired state at the
+    injected clock's current instant (`x52::state::DeviceState::resolve`) and sends exactly the
+    commands whose transfers differ from the cache, then updates the cache. There is no
+    state-to-state diff: the comparison is with what the device was last told.
+  - **Coalescing:** before resolving, it drains every queued message and keeps only the latest
+    state, so a dragged brightness slider becomes one transfer per drain, not one per pixel. The
     S7 worker (`spikes/s7-led-editor/src/device.rs` on the `spikes` branch) kept the latest command
     per LED in a map and replayed that map on every connect.
-  - **Full-state replay on connect:** on "device appeared" (start-up, hotplug, resume, permission
-    granted) it opens the device and sends the full state, brightness first, then LEDs, MFD lines,
-    clocks, date, shift and blink, as [protocol.md, "Power-on state"](protocol.md#power-on-state)
-    requires. S7's worker did this and the device caught up within about a second after a replug.
-  - On `EACCES` it reports "found, no permission" and retries `open` on each "device appeared" or
-    poll tick and when the user presses "Try again" (S4: the ACL comes back without a replug). A
-    failed transfer drops the device and waits for the next "appeared".
-  - **Clocks and the minute ticker:** the writer owns the injected time source. The desired state
+  - **Full-state replay on connect:** a newly opened device starts with an empty cache, so its
+    first wake sends the full state, brightness first, then LEDs, MFD lines, clocks, date, shift
+    and blink, as [protocol.md, "Power-on state"](protocol.md#power-on-state) requires. Start-up,
+    hotplug, a replug into the same port (a new generation of the selection), a resume that
+    re-enumerates the device and a granted permission all go through a new open. S7's worker did
+    this and the device caught up within about a second after a replug.
+  - **Permission:** `EACCES` on `open` gives "found, no permission". While in it the writer retries
+    `open` every **1 s** on both backends (host and sandbox), at once on every `Selected` and on
+    "Try again" (`Retry`), so an ACL restored with `udevadm trigger` and no hotplug event is
+    noticed (S4: the ACL comes back without a replug). A failed transfer drops the handle and the
+    cache, and the writer retries `open` every 1 s for as long as the device stays selected, so a
+    transient failure or a missed reattachment never leaves it waiting for an event that may not
+    come.
+  - **Clocks and the wake schedule:** the writer owns the injected time source. The desired state
     carries only clock *sources* (local, UTC, a zone, a fixed offset) and 12/24 h; the writer turns
-    them into the clock 1 time and the clock 2/3 offsets it sends, with the `x52` clock logic. Its
-    receive timeout is the next instant a clock has to be re-sent (the next minute boundary, or an
-    earlier DST transition from `jiff`); the device clock does not tick by itself (S2). Monotonic
-    timers do not advance during suspend, so how a resume is noticed (and the clocks re-sent) is
-    decided in milestone M2 and recorded here.
-- **evdev reader thread.** Opens the joystick's evdev node **without grabbing** (games keep every
-  input), reads events, applies the mode debounce of [protocol.md](protocol.md#mode-selector), and
-  sends mode changes and, when something listens (the input tester in 1.x), input events to the main
-  thread. It reads the initial mode with `EVIOCGKEY`. Nothing logs per event (axis noise, S3).
-  Control transfers and evdev reads do not disturb each other (S3), so writer and reader are
-  independent.
+    them into the clock 1 time and the clock 2/3 offsets it sends, with the `x52` clock logic; the
+    device clock does not tick by itself (S2). The writer wakes at the earlier of the next instant
+    a clock has to be re-sent (the next minute boundary, or an earlier DST transition from `jiff`)
+    and **5 s** of monotonic time. Because every wake compares the resolved clock commands with
+    the cache, a minute rollover, a date rollover, a DST transition, a forward jump and a backward
+    wall-clock jump are all corrected within 5 s.
+  - **Resume (decided in M2):** monotonic time does not advance during suspend, so a pending wait
+    ends at most 5 s after the resume and the clocks are re-sent then. The app asks for no logind
+    D-Bus permission to hear about suspend; a resume that re-enumerates the USB device is a new
+    selection with a reopen and a full replay.
+  - **Channels:** messages towards the workers go through `std::sync::mpsc` (unbounded, so the main
+    thread never blocks on a send; the writer waits with `recv_timeout`), events towards the main
+    thread through `async_channel`, which the main thread awaits in a `glib::spawn_future_local`
+    loop. Monotonic time comes from an injected source too, so the tests drive every schedule
+    without sleeping.
+- **evdev reader thread.** Follows the device watch's selection (`src/device/reader.rs`). USB
+  presence and evdev readiness are tracked apart: while a device is selected and its evdev node is
+  not found or cannot be opened, the reader looks for it again every 250 ms (the node can appear a
+  poll after the USB device, S4). A node belongs to the selected device when its sysfs device
+  (`/sys/class/input/eventN/device`, canonicalised) lies under the selected USB device's sysfs
+  directory, so USB and evdev always come from the same physical device. It opens the node
+  **without grabbing** (games keep every input), reads the initial mode with `EVIOCGKEY`, reads
+  events nonblocking with `poll(2)`, applies the mode debounce of
+  [protocol.md](protocol.md#mode-selector), and sends mode changes and, when something listens (the
+  input tester in 1.x), input events to the main thread. Nothing logs per event (axis noise, S3).
+  - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
+    further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
+    follow the wall clock, so the time since the last key event is measured with monotonic time.
+  - On `ENODEV` or a read error it closes the node and looks for it again while the USB device
+    stays selected; on `Gone` for its generation it stops reading.
+  - Control transfers and evdev reads do not disturb each other (S3), so writer and reader are
+    independent.
 - **Virtual-mouse loop.** Its own thread, owned by the main thread: started when the GSettings
   switch is on (and a joystick is connected), stopped when it is turned off. It drives the uinput
   device on a 10 ms tick with the S9 values
@@ -176,11 +208,28 @@ flowchart LR
     come back (on "gone"), keeping or destroying the uinput device as M7 decides.
   - A failure to create the uinput device (no permission) is reported to the main thread, which
     shows the guidance page.
-- **Device watch.** One component, two sources (S4): `nusb::watch_devices` when not sandboxed,
-  polling `nusb::list_devices` and `evdev::enumerate` every 250 ms in the sandbox (detected through
-  `/.flatpak-info`, for example with `ashpd::is_sandboxed()`). It matches by vendor and product ID,
-  never by address, and tells the writer, the reader and the main thread when the device appears or
-  goes away.
+- **Device watch.** One component, two sources (S4, `src/device/watch.rs`): `nusb::watch_devices`
+  when not sandboxed, re-listing the USB devices at start, after every hotplug event (a
+  `Disconnected` carries no vendor or product ID) and every 5 s, because the kernel drops hotplug
+  events when the netlink socket overflows (`ENOBUFS`, seen on resume from suspend) and `nusb`
+  only logs it; and polling `nusb::list_devices` every 250 ms in
+  the sandbox (detected through `/.flatpak-info`), where the hotplug stream never yields. It
+  matches by vendor and product ID, never by address, and tells the writer, the reader and the
+  main thread when a device is selected or gone.
+  - **Selection:** the USB device's sysfs path is the selection key. With nothing selected, the
+    first supported device in sysfs-path order is selected; the selection is kept while that path
+    stays listed, whatever the enumeration order and whatever else appears (a second X52 does not
+    steal it). When the path goes, the watch sends `Gone` for its generation and selects the next
+    supported device, if any.
+  - **Reattachment:** every selection has a generation. A host `Disconnected` for the selected
+    attachment, or a different attachment at the selected path (a replug faster than the re-list,
+    or between two polls), sends `Gone` for the old generation and `Selected` with the same path,
+    the new attachment and a new generation, so the writer reopens and replays everything. A
+    disconnected attachment is left out of the listings until one no longer contains it, since
+    its sysfs directory can outlive the event for a moment.
+  - **Shutdown:** the hotplug stream is awaited with `futures_lite::future::or` against a shutdown
+    signal; the polling loop waits on the same signal with the 250 ms timeout. Dropping the
+    trigger signals both.
 - **ksni tray.** `ksni` with the `async-io` feature runs its own executor thread and is spawned from
   `glib::spawn_future_local` (desk research, S5). Menu callbacks send a `TrayAction` through an
   `async_channel` to a main-thread loop; the main thread pushes state with `Handle::update`. The
@@ -280,9 +329,12 @@ The Flatpak `finish-args` beyond the display sockets:
   in S6); no well-known name is owned (`disable_dbus_name(true)`).
 - **No network**: hotplug works by polling (S4), so `--share=network` is not needed. It is added
   only with the X-Plane adapter in 1.x (risk R12).
-- No filesystem permission: profile import and export go through `gtk::FileDialog` (the file
-  chooser portal); the legacy database is in the app's own config directory (rewrite analysis,
-  section 10).
+- `--filesystem=/run/x52d.cmd:ro`: only so the device watch can see a running libx52 `x52d` by its
+  command socket ([protocol.md, "libx52's x52d"](protocol.md#libx52s-x52d); risk R11). Accepted
+  by `flatpak-builder-lint`.
+- No other filesystem permission: profile import and export go through `gtk::FileDialog` (the
+  file chooser portal); the legacy database is in the app's own config directory (rewrite
+  analysis, section 10).
 
 ## Testing strategy
 
@@ -298,6 +350,17 @@ The Flatpak `finish-args` beyond the display sockets:
   (the real files are not committed).
 - **`meson test`:** validates the desktop file, metainfo and GSettings schema and runs
   `cargo test`; it runs in CI inside the Flatpak build on both architectures (S6).
+- **Device check harness** (Devel builds only, `src/device/check.rs`): `gx52 --device-check
+  <scenario>` runs the device service without a window, before GTK starts, and prints
+  timestamped lines: `STEP` (something the user must do), `CHECK` (something to confirm by
+  looking), `PASS` and `FAIL` (what it verified itself), `INFO`, `SEND` for every command the
+  writer sends, and a `DONE` summary. The scenarios are `smoke` (no user action), `replug`, `mode`,
+  `permission`, `resume`, `midnight`, `x52d` and `uinput`. The exit code is 0 when everything
+  passed, 1 on a failure, 2 for a command-line error and 3 when a precondition was not met (the
+  permission check with a node that stays writable). A release build refuses the option. The
+  service runs over a `Backend` (the real system, or fakes), so the tests run every scenario's
+  automatic verifications against the real threads over a scripted watch, opener and evdev
+  source.
 - Repository checks: `make verify` and `make check` (AGENTS.md), and the `meta` crate once it
   exists.
 

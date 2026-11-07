@@ -10,6 +10,7 @@
         "--socket=fallback-x11",
         "--socket=wayland",
         "--device=all",
+        "--filesystem=/run/x52d.cmd:ro",
         "--talk-name=org.kde.StatusNotifierWatcher"
     ],
     "build-options": {

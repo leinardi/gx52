@@ -25,6 +25,7 @@ pub mod command;
 pub mod device;
 pub mod error;
 pub mod input;
+pub mod state;
 pub mod transport;
 
 #[cfg(test)]

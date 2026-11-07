@@ -118,6 +118,9 @@ pub fn decode(bytes: &[u8]) -> String {
 pub struct MfdText(MfdBytes);
 
 impl MfdText {
+    /// An empty line.
+    pub const EMPTY: Self = Self(MfdBytes::EMPTY);
+
     /// `text` converted with [`encode`].
     ///
     /// # Errors
