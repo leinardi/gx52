@@ -670,3 +670,68 @@ fn a_database_with_a_hot_journal_is_read_as_before_the_interrupted_write() {
         .collect();
     assert_eq!(after, before, "the originals are never touched");
 }
+
+/// A reader that returns, for each read of the set (database, then each companion), the state
+/// `states` gives for that read's index, and the last state from then on.
+fn scripted(states: Vec<Snapshot>) -> impl FnMut(&Path) -> Result<Option<Vec<u8>>, DatabaseError> {
+    let mut calls = 0;
+    move |path| {
+        let state = &states[(calls / 3).min(states.len() - 1)];
+        let file = calls % 3;
+        calls += 1;
+        let name = path.file_name().unwrap().to_str().unwrap();
+        let expected = ["gx52.db", "gx52.db-journal", "gx52.db-wal"][file];
+        assert_eq!(name, expected);
+        Ok(match file {
+            0 => Some(state.database.clone()),
+            other => state.companions[other - 1].clone(),
+        })
+    }
+}
+
+fn state(database: &str, journal: Option<&str>) -> Snapshot {
+    Snapshot {
+        database: database.as_bytes().to_vec(),
+        companions: [journal.map(|journal| journal.as_bytes().to_vec()), None],
+    }
+}
+
+#[test]
+fn a_rollback_between_two_files_is_never_taken_as_a_snapshot() {
+    let path = Path::new("/nowhere/gx52.db");
+    // First read: uncommitted pages with their journal. The writer then rolls back: the pages are
+    // restored and the journal deleted.
+    let mut read = scripted(vec![
+        state("uncommitted", Some("journal")),
+        state("committed", None),
+    ]);
+    let taken = snapshot(path, Duration::ZERO, &mut read).unwrap();
+    assert_eq!(taken, state("committed", None));
+
+    // The mixed state the race used to produce, uncommitted pages without their journal, is never
+    // returned unless two reads agree on it.
+    let mut read = scripted(vec![
+        state("uncommitted", None),
+        state("committed", None),
+        state("committed", None),
+    ]);
+    assert_eq!(
+        snapshot(path, Duration::ZERO, &mut read).unwrap(),
+        state("committed", None)
+    );
+}
+
+#[test]
+fn a_database_that_keeps_changing_defers_the_import() {
+    let path = Path::new("/nowhere/gx52.db");
+    let mut count = 0_u32;
+    let mut read = |path: &Path| {
+        count += 1;
+        Ok(path
+            .ends_with("gx52.db")
+            .then(|| count.to_string().into_bytes()))
+    };
+    let error = snapshot(path, Duration::ZERO, &mut read).unwrap_err();
+    assert!(matches!(error, DatabaseError::Changing));
+    assert!(!error.is_final());
+}

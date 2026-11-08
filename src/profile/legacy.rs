@@ -27,6 +27,8 @@ use std::fmt::Write as _;
 use std::fs;
 use std::io::{self, Read as _};
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
 
 use gettextrs::gettext;
 use gtk::glib;
@@ -97,9 +99,14 @@ impl LegacyTable {
     }
 }
 
-/// Why the database could not be read. Final: the import is marked done and not tried again.
+/// Why the database could not be read. Every error but [`DatabaseError::Changing`] is final: the
+/// import is marked done and not tried again.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum DatabaseError {
+    /// The database or its journal kept changing while it was read: GX52 0.7 is running and
+    /// writing it. Not final; the import is tried again at the next start.
+    #[error("the database kept changing while it was read")]
+    Changing,
     /// The file is larger than [`DATABASE_LIMIT`].
     #[error("the database is larger than {DATABASE_LIMIT} bytes")]
     TooLarge,
@@ -112,6 +119,16 @@ pub(crate) enum DatabaseError {
     /// Neither profile table exists.
     #[error("the database has no GX52 profile table")]
     NoProfileTable,
+}
+
+impl DatabaseError {
+    /// Whether the import is over after this error, so it is marked done.
+    pub(crate) const fn is_final(&self) -> bool {
+        match self {
+            Self::Changing => false,
+            Self::TooLarge | Self::Io(_) | Self::Sqlite(_) | Self::NoProfileTable => true,
+        }
+    }
 }
 
 /// The two GX52 0.7 settings the rewrite keeps.
@@ -151,32 +168,35 @@ pub(crate) struct LegacyDatabase {
 /// and the write-ahead log.
 const COMPANION_SUFFIXES: [&str; 2] = ["-journal", "-wal"];
 
+/// How many times the files are read before the database counts as changing.
+const SNAPSHOT_ATTEMPTS: usize = 5;
+
+/// The pause between two reads that differ.
+const SNAPSHOT_PAUSE: Duration = Duration::from_millis(200);
+
 /// Reads the database at `path`, never opening or modifying the original.
 ///
-/// The database and its journal or write-ahead log, when there is one, are copied into a private
-/// temporary directory and the copy is read. A GX52 0.7 that stopped in the middle of a write
-/// leaves a hot journal that SQLite must roll back before anything can be read, which a read-only
-/// open cannot do; the copy can, and a running GX52 0.7 never holds a lock on it.
+/// The database and its journal or write-ahead log, when there is one, are read into memory (see
+/// [`snapshot`]), written to a private temporary directory, and the copy is opened. A GX52 0.7
+/// that stopped in the middle of a write leaves a hot journal that SQLite must roll back before
+/// anything can be read, which a read-only open cannot do; the copy can, and a running GX52 0.7
+/// never holds a lock on it.
 ///
 /// # Errors
 ///
-/// [`DatabaseError`] when a file is too large or cannot be copied, or the copy cannot be read or
-/// has no profile table.
+/// [`DatabaseError`] when a file is too large or cannot be read, the files keep changing, or the
+/// copy cannot be read or has no profile table.
 pub(crate) fn read_database(path: &Path) -> Result<LegacyDatabase, DatabaseError> {
+    let files = snapshot(path, SNAPSHOT_PAUSE, &mut read_database_file)?;
     let copy = tempfile::Builder::new()
         .prefix("gx52-legacy-")
         .tempdir()
         .map_err(DatabaseError::Io)?;
     let copied = copy.path().join("gx52.db");
-    copy_limited(path, &copied)?;
-    for suffix in COMPANION_SUFFIXES {
-        let companion = PathBuf::from(format!("{}{suffix}", path.display()));
-        match copy_limited(
-            &companion,
-            &PathBuf::from(format!("{}{suffix}", copied.display())),
-        ) {
-            Err(DatabaseError::Io(error)) if error.kind() == io::ErrorKind::NotFound => {}
-            other => other?,
+    fs::write(&copied, &files.database).map_err(DatabaseError::Io)?;
+    for (suffix, contents) in COMPANION_SUFFIXES.iter().zip(&files.companions) {
+        if let Some(contents) = contents {
+            fs::write(companion_path(&copied, suffix), contents).map_err(DatabaseError::Io)?;
         }
     }
     let connection = Connection::open_with_flags(
@@ -199,18 +219,89 @@ pub(crate) fn read_database(path: &Path) -> Result<LegacyDatabase, DatabaseError
     Ok(LegacyDatabase { rows, settings })
 }
 
-/// Copies `source` to `target` when it is at most [`DATABASE_LIMIT`] bytes.
-fn copy_limited(source: &Path, target: &Path) -> Result<(), DatabaseError> {
-    let size = fs::metadata(source).map_err(DatabaseError::Io)?.len();
-    if size > DATABASE_LIMIT {
+/// The contents of the database and of its companion files, `None` for a companion that does not
+/// exist.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Snapshot {
+    pub(crate) database: Vec<u8>,
+    pub(crate) companions: [Option<Vec<u8>>; COMPANION_SUFFIXES.len()],
+}
+
+/// Reads the database and its companions through `read` until two reads in a row agree, up to
+/// [`SNAPSHOT_ATTEMPTS`] times, pausing `pause` after a read that differs from the one before.
+///
+/// Files copied one after the other can come from two states: a rollback between the copy of the
+/// database and the copy of its journal leaves uncommitted pages and no journal to undo them. Two
+/// identical reads of the set mean that no file changed between its two reads, so the database
+/// as read and every companion as read were all on disk together at the moment the first read
+/// ended: one state SQLite can recover from, as from a crash.
+///
+/// # Errors
+///
+/// [`DatabaseError::Changing`] when no two reads in a row agree, or the error of `read`.
+pub(crate) fn snapshot(
+    path: &Path,
+    pause: Duration,
+    read: &mut impl FnMut(&Path) -> Result<Option<Vec<u8>>, DatabaseError>,
+) -> Result<Snapshot, DatabaseError> {
+    let mut previous = read_once(path, read)?;
+    for _ in 1..SNAPSHOT_ATTEMPTS {
+        let current = read_once(path, read)?;
+        if current == previous {
+            return Ok(current);
+        }
+        tracing::debug!(
+            "{} changed while it was read; reading it again",
+            path.display()
+        );
+        previous = current;
+        thread::sleep(pause);
+    }
+    Err(DatabaseError::Changing)
+}
+
+fn read_once(
+    path: &Path,
+    read: &mut impl FnMut(&Path) -> Result<Option<Vec<u8>>, DatabaseError>,
+) -> Result<Snapshot, DatabaseError> {
+    let database = read(path)?.ok_or_else(|| {
+        DatabaseError::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "the database does not exist",
+        ))
+    })?;
+    let mut companions = [None, None];
+    for (suffix, contents) in COMPANION_SUFFIXES.iter().zip(&mut companions) {
+        *contents = read(&companion_path(path, suffix))?;
+    }
+    Ok(Snapshot {
+        database,
+        companions,
+    })
+}
+
+fn companion_path(database: &Path, suffix: &str) -> PathBuf {
+    let mut name = database.as_os_str().to_owned();
+    name.push(suffix);
+    PathBuf::from(name)
+}
+
+/// The contents of `path` when it is at most [`DATABASE_LIMIT`] bytes, `None` when it does not
+/// exist.
+fn read_database_file(path: &Path) -> Result<Option<Vec<u8>>, DatabaseError> {
+    let file = match fs::File::open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(DatabaseError::Io(error)),
+    };
+    let mut contents = Vec::new();
+    file.take(DATABASE_LIMIT + 1)
+        .read_to_end(&mut contents)
+        .map_err(DatabaseError::Io)?;
+    if u64::try_from(contents.len()).unwrap_or(u64::MAX) > DATABASE_LIMIT {
         return Err(DatabaseError::TooLarge);
     }
-    let mut reader = fs::File::open(source)
-        .map_err(DatabaseError::Io)?
-        .take(DATABASE_LIMIT);
-    let mut writer = fs::File::create(target).map_err(DatabaseError::Io)?;
-    io::copy(&mut reader, &mut writer).map_err(DatabaseError::Io)?;
-    Ok(())
+    Ok(Some(contents))
 }
 
 /// The rows of `table` by column name, in `id` order, or `None` when the table does not exist.

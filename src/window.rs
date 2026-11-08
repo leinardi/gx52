@@ -93,6 +93,15 @@ mod imp {
     impl AdwApplicationWindowImpl for Window {}
 }
 
+/// A toast showing `message` as text: profile and file names may contain `&` or `<`, which a
+/// markup title would drop or misrender.
+pub(crate) fn plain_toast(message: &str) -> adw::Toast {
+    adw::Toast::builder()
+        .title(message)
+        .use_markup(false)
+        .build()
+}
+
 /// The filter of the import and export dialogs: profile files.
 fn profile_filter() -> gtk::FileFilter {
     let filter = gtk::FileFilter::new();
@@ -129,7 +138,7 @@ impl Window {
 
     /// Shows `message` in a toast.
     pub(crate) fn show_toast(&self, message: &str) {
-        self.add_toast(adw::Toast::new(message));
+        self.add_toast(plain_toast(message));
     }
 
     /// Shows `toast`.
@@ -186,6 +195,11 @@ impl Window {
         let Some(app) = self.app() else {
             return;
         };
+        // Held until the end of the import: two imports at once could both keep the same name.
+        let Some(_import) = app.begin_profile_import() else {
+            self.show_toast(&gettext("Another profile import is in progress"));
+            return;
+        };
         let (Some(taken), Some(dir)) = (app.profile_names(device_type), app.profiles_dir()) else {
             self.show_toast(&gettext("The profiles are still loading"));
             return;
@@ -208,7 +222,7 @@ impl Window {
             exchange::prepare_import(&bytes, device_type, &taken)
         })
         .await;
-        let preview = match prepared {
+        let mut preview = match prepared {
             Ok(Ok(preview)) => preview,
             Ok(Err(refusal)) => {
                 tracing::info!("Profile import refused: {refusal}");
@@ -216,8 +230,18 @@ impl Window {
             }
             Err(_) => return tracing::error!("The profile import task panicked"),
         };
-        if !self.confirm_import(&preview).await {
-            return;
+        // Confirmed against the names in the store right before the write; a profile added
+        // while the dialog was open changes the name, and the user confirms the new one.
+        loop {
+            if !self.confirm_import(&preview).await {
+                return;
+            }
+            let Some(current) = app.profile_names(device_type) else {
+                return;
+            };
+            if !exchange::revalidate_name(&mut preview, &current) {
+                break;
+            }
         }
         let name = preview.profile.name.clone();
         let written = gio::spawn_blocking(move || {

@@ -35,10 +35,38 @@ use crate::profile::legacy::{self, FileWriter};
 use crate::profile::startup::{self, ImportOutcome};
 use crate::profile::store::{Entry, LoadReport, ProfileStore};
 use crate::profile::{self, Profile, ProfileId, mapping};
-use crate::window::Window;
+use crate::window::{self, Window};
 
 /// The settings key that records the one-time GX52 0.7 import as done.
 const LEGACY_IMPORT_DONE: &str = "legacy-import-done";
+
+/// A running profile import: see [`Application::begin_profile_import`].
+pub(crate) struct ImportGuard(glib::WeakRef<Application>);
+
+impl Drop for ImportGuard {
+    fn drop(&mut self) {
+        if let Some(app) = self.0.upgrade() {
+            app.imp().importing.set(false);
+        }
+    }
+}
+
+/// Marks the legacy import's plan completed once the imported settings and the done flag are on
+/// disk, so an exit before that point runs the plan again at the next start instead of losing the
+/// settings.
+fn finish_legacy_import(plan: legacy::Plan) {
+    glib::spawn_future_local(async move {
+        let finished = gio::spawn_blocking(move || {
+            // Waits for the settings backend to write the pending changes.
+            gio::Settings::sync();
+            startup::finish_import(&profile::config_dir(), &plan, &mut FileWriter);
+        })
+        .await;
+        if finished.is_err() {
+            tracing::error!("The task completing the GX52 0.7 import panicked");
+        }
+    });
+}
 
 /// The version of Cargo.toml and meson.build until the release workflow sets the first one
 /// (docs/release.md, "One version source").
@@ -72,6 +100,8 @@ mod imp {
         pub(crate) active_mode: Cell<Option<Mode>>,
         /// Messages for a toast, kept until a window can show them.
         pub(crate) pending_toasts: RefCell<Vec<adw::Toast>>,
+        /// Whether a profile import is running, from the file chooser to the write.
+        pub(crate) importing: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -266,6 +296,9 @@ impl Application {
             if let Err(error) = settings.set_boolean(LEGACY_IMPORT_DONE, true) {
                 tracing::warn!("Cannot record the GX52 0.7 import as done: {error}");
             }
+            if let ImportOutcome::Completed { plan, .. } = outcome {
+                finish_legacy_import(plan.clone());
+            }
         }
         match outcome {
             ImportOutcome::NotDue => {}
@@ -306,6 +339,12 @@ impl Application {
                 tracing::warn!("GX52 0.7 profiles not imported: {error}");
                 self.toast(&gettext(
                     "The GX52 0.7 profiles could not be imported: their database cannot be read",
+                ));
+            }
+            ImportOutcome::Deferred(error) => {
+                tracing::warn!("GX52 0.7 import deferred: {error}");
+                self.toast(&gettext(
+                    "The GX52 0.7 profiles could not be imported because GX52 0.7 is running; close it and start GX52 again",
                 ));
             }
             ImportOutcome::WriteFailed(error) => {
@@ -366,6 +405,16 @@ impl Application {
     }
 
     /// Adds a profile an import has just written under `id`.
+    /// Marks a profile import as running until the returned guard is dropped; `None` while
+    /// another import runs, so two imports never pick the same name.
+    pub(crate) fn begin_profile_import(&self) -> Option<ImportGuard> {
+        if self.imp().importing.replace(true) {
+            None
+        } else {
+            Some(ImportGuard(self.downgrade()))
+        }
+    }
+
     pub(crate) fn add_imported_profile(&self, id: ProfileId, profile: Profile) {
         if let Some(store) = self.imp().profiles.borrow_mut().as_mut() {
             store.insert(id, profile);
@@ -374,7 +423,7 @@ impl Application {
 
     /// Shows `message` in the active window, or keeps it until a window is presented.
     fn toast(&self, message: &str) {
-        self.queue_toast(adw::Toast::new(message));
+        self.queue_toast(window::plain_toast(message));
     }
 
     /// Shows `message` with a "Details" button that lists `details` in a dialog.

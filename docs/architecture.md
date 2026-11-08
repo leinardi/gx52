@@ -83,8 +83,9 @@ ones in the profile directory) and the legacy `gx52.db`. Both are parsed as untr
   commands in `x52` are built only through constructors that check every range at run time
   (brightness `0`–`128`, offsets `0`–`720`, ...), and the type system guarantees that nothing
   reaches the transport without going through them;
-- the legacy database is never opened or modified: a private copy is read (rewrite analysis,
-  section 10; [profiles.md](profiles.md#files)).
+- the legacy database is never opened or modified: a private copy of a consistent snapshot is
+  read, and an import whose files keep changing is deferred (rewrite analysis, section 10;
+  [profiles.md](profiles.md#files)).
 
 The boundaries, with the rule each keeps and the tests that hold it, are listed in the
 `adversarial-review` skill's untrusted-input pass; M3 decided against a separate `trust-boundary`
@@ -314,8 +315,9 @@ From S9; the 1.0.0 scope is an on/off switch with fixed values.
   `gio::spawn_blocking`, keeps it on the main thread, logs the load report and shows its one toast.
   The GObject wrappers the UI binds to come with the profile editor in M5.
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
-  and `gx52.db` exists; a private copy is read; the flag is set even when the database is
-  unreadable, so start-up never fails because of it (rewrite analysis, section 10; S8 for the
+  and `gx52.db` exists; a private copy of a consistent snapshot is read; the flag is set even when
+  the database is unreadable, so start-up never fails because of it, but not while GX52 0.7 keeps
+  writing it (rewrite analysis, section 10; S8 for the
   schema).
 
 ## Errors and logging

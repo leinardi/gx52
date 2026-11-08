@@ -163,10 +163,16 @@ offsets from clock 1 move because clock 1 moved.
 - **Legacy database lookup**, separate from the new store:
   `glib::user_config_dir().join("gx52/gx52.db")`, the path GX52 0.7 used, for every build profile.
   It is never opened, modified or deleted, so users can go back to `0.7.6` (rewrite analysis,
-  section 10). The import copies it, with its `-journal` or `-wal` file when there is one, into a
-  private temporary directory and reads the copy. A GX52 0.7 that stopped in the middle of a write
-  leaves a hot journal that SQLite has to roll back before anything can be read, which a read-only
-  open cannot do; the copy can, and a running GX52 0.7 never holds a lock on it. Inside the production
+  section 10). The import reads it, with its `-journal` or `-wal` file when there is one, into
+  memory, and reads the whole set again until two reads in a row agree (up to five reads, 200 ms
+  apart). Two identical reads mean that every file, as read, was on disk at the same moment, so a
+  rollback between the copy of the database and the copy of its journal can never produce
+  uncommitted pages without the journal that undoes them. When the files keep changing (GX52 0.7
+  is running and writing them) the import is **deferred**: the flag stays unset, a toast asks to
+  close GX52 0.7, and the next start tries again. The agreed set is written to a private temporary
+  directory and the copy is opened. A GX52 0.7 that stopped in the middle of a write leaves a hot
+  journal that SQLite has to roll back before anything can be read, which a read-only open cannot
+  do; the copy can, and a running GX52 0.7 never holds a lock on it. Inside the production
   Flatpak that is `~/.var/app/com.leinardi.gx52/config/gx52/gx52.db`, the file the automatic import
   finds; a source-install database in `~/.config/gx52/gx52.db` is outside the sandbox and needs the
   documented manual copy (R10). A host Devel build reads the host's `~/.config/gx52/gx52.db`, which
@@ -233,9 +239,11 @@ profiles as one clean run:
   failure (an I/O error in the config directory) leaves the flag unset, and the next start resumes
   from the plan.
 - The settings are applied and the flag is set only after every planned entry is written or
-  skipped. The plan file is then saved again marked `completed`, and stays as the record of the
-  import. A completed plan keeps the import from running again even if the flag is lost (a reset
-  of the settings), so a profile removed after the import does not come back.
+  skipped. Only once the settings backend has written them (`g_settings_sync`) is the plan file
+  saved again marked `completed`; it stays as the record of the import. An exit before that point
+  leaves the plan unmarked, so the next start runs it again: every file is already in place, and
+  the settings are applied again. A completed plan keeps the import from running again even if the
+  flag is lost (a reset of the settings), so a profile removed after the import does not come back.
 - **No built-in default while pending.** While the import is due and not over, the store keeps a
   missing default profile in memory only and does not write its file (see
   [Persisting the default](#persisting-the-default)). Otherwise a failed write of the imported
@@ -316,7 +324,9 @@ it is replaced only through the confirm-and-back-up path there.
   - a newer `schema_version` is refused with a message (it could only be read-only); an older one is
     migrated;
   - per-field problems are fixed to the type defaults and listed before the import is confirmed;
-  - a name that clashes within the type gets `(2)`, `(3)`, ... appended;
+  - a name that clashes within the type gets `(2)`, `(3)`, ... appended. Only one import runs at
+    a time, and the name is checked against the store again after the confirmation, right before
+    the write; when a profile added meanwhile changed it, the user confirms the new name;
   - the imported profile gets a new random id and is never a default profile.
 - **In the app:** the window actions `win.import-profile` (parameter: the device type, `x52-pro` or
   `x52`) and `win.export-profile` (parameter: the profile id). Reading and checking the file and

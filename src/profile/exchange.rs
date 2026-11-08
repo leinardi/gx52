@@ -105,7 +105,7 @@ pub(crate) fn prepare_import(
     device_type: DeviceType,
     taken: &[String],
 ) -> Result<ImportPreview, ImportRefusal> {
-    let (mut profile, problems) = match schema::parse(bytes, Schema::CURRENT)? {
+    let (profile, problems) = match schema::parse(bytes, Schema::CURRENT)? {
         Parsed::Newer { version, .. } => return Err(ImportRefusal::Newer(version)),
         Parsed::Readable {
             profile, problems, ..
@@ -117,16 +117,33 @@ pub(crate) fn prepare_import(
             found: profile.device_type,
         });
     }
-    let unique = name::unique(&profile.name, |candidate| {
-        taken.iter().any(|name| name == candidate)
-    });
-    let renamed_from =
-        (unique != profile.name).then(|| std::mem::replace(&mut profile.name, unique));
-    Ok(ImportPreview {
+    let mut preview = ImportPreview {
         profile,
         problems,
-        renamed_from,
-    })
+        renamed_from: None,
+    };
+    revalidate_name(&mut preview, taken);
+    Ok(preview)
+}
+
+/// Makes the name of `preview` unique against `taken`, starting again from the name in the file,
+/// and returns whether it changed. The caller checks the name against the store again right before
+/// [`write_import`], since profiles can be added while the user reads the preview, and asks for a
+/// new confirmation when it changed.
+pub(crate) fn revalidate_name(preview: &mut ImportPreview, taken: &[String]) -> bool {
+    let original = preview
+        .renamed_from
+        .clone()
+        .unwrap_or_else(|| preview.profile.name.clone());
+    let unique = name::unique(&original, |candidate| {
+        taken.iter().any(|name| name == candidate)
+    });
+    if unique == preview.profile.name {
+        return false;
+    }
+    preview.renamed_from = (unique != original).then_some(original);
+    preview.profile.name = unique;
+    true
 }
 
 /// Writes the confirmed import into `profiles_dir` under a new random id, never a default one,

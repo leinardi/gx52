@@ -107,11 +107,20 @@ fn setup(build: fn(&Path)) -> Setup {
 }
 
 impl Setup {
-    /// One start, with the flag as the main thread would keep it.
+    /// One start, with the flag as the main thread would keep it: set when the import is done,
+    /// then the plan marked completed.
     fn start(&self, done: &mut bool, writer: &mut impl ProfileWriter) -> Startup {
-        let startup = prepare_profiles(self.config.path(), &self.database, *done, writer);
+        let startup = self.start_and_exit(*done, writer);
         *done |= startup.import.is_done();
+        if let ImportOutcome::Completed { plan, .. } = &startup.import {
+            finish_import(self.config.path(), plan, writer);
+        }
         startup
+    }
+
+    /// One start that ends before the main thread applies the settings and sets the flag.
+    fn start_and_exit(&self, done: bool, writer: &mut impl ProfileWriter) -> Startup {
+        prepare_profiles(self.config.path(), &self.database, done, writer)
     }
 
     /// The profile files: the defaults by name, the others by contents only, since their ids are
@@ -152,7 +161,10 @@ fn a_clean_start_imports_every_row_and_the_settings() {
     let setup = setup(flatpak_database);
     let mut done = false;
     let startup = setup.start(&mut done, &mut FileWriter);
-    let ImportOutcome::Completed { report, settings } = &startup.import else {
+    let ImportOutcome::Completed {
+        report, settings, ..
+    } = &startup.import
+    else {
         panic!("{:?}", startup.import);
     };
     assert!(done);
@@ -348,6 +360,44 @@ fn a_failed_completion_mark_still_completes_and_a_rerun_writes_nothing_new() {
         matches!(rerun.import, ImportOutcome::Completed { ref report, .. } if report.conflicts.is_empty())
     );
     assert_eq!(setup.profiles(), expected);
+}
+
+#[test]
+fn an_exit_before_the_settings_are_written_imports_them_at_the_next_start() {
+    let (expected, _) = clean_run(flatpak_database);
+    let setup = setup(flatpak_database);
+    let first = setup.start_and_exit(false, &mut FileWriter);
+    assert!(matches!(first.import, ImportOutcome::Completed { .. }));
+    assert!(
+        !legacy::saved_plan(setup.config.path()).unwrap().completed,
+        "the worker never marks the plan completed itself"
+    );
+
+    // The flag was never written: the next start runs the plan again, writes no new profile and
+    // returns the settings to apply.
+    let before = setup.profiles();
+    let mut done = false;
+    let next = setup.start(&mut done, &mut FileWriter);
+    let ImportOutcome::Completed {
+        report, settings, ..
+    } = &next.import
+    else {
+        panic!("{:?}", next.import);
+    };
+    assert!(report.conflicts.is_empty());
+    assert_eq!(settings.launch_on_login, Some(true));
+    assert_eq!(setup.profiles(), before, "no profile written again");
+    assert!(done);
+    assert!(legacy::saved_plan(setup.config.path()).unwrap().completed);
+    setup.start(&mut done, &mut FileWriter);
+    assert_eq!(setup.profiles(), expected);
+}
+
+#[test]
+fn a_deferred_import_is_not_done() {
+    let outcome = ImportOutcome::Deferred(DatabaseError::Changing);
+    assert!(!outcome.is_done());
+    assert!(!DatabaseError::Changing.is_final());
 }
 
 #[test]

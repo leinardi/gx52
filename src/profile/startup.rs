@@ -30,18 +30,24 @@ use super::store::{DefaultPersistence, LoadReport, ProfileStore};
 pub(crate) enum ImportOutcome {
     /// Not due: already done, or there is nothing to import.
     NotDue,
-    /// Every row is imported; the import is done.
+    /// Every row is imported. The import is done once the caller has applied the settings and
+    /// set the flag, then called [`finish_import`] with the plan.
     Completed {
         /// What was imported.
         report: ImportReport,
         /// The settings to apply.
         settings: LegacySettings,
+        /// The plan, to mark completed once the settings and the flag are written.
+        plan: legacy::Plan,
     },
     /// The database cannot be read; the import is done all the same, so a start never fails
     /// because of it.
     DatabaseFailed(DatabaseError),
     /// A file could not be written; the import is not done and resumes at the next start.
     WriteFailed(WriteError),
+    /// The database changed while it was copied (GX52 0.7 is running and writing it); the import
+    /// is not done and is tried again at the next start.
+    Deferred(DatabaseError),
 }
 
 impl ImportOutcome {
@@ -49,7 +55,7 @@ impl ImportOutcome {
     pub(crate) const fn is_done(&self) -> bool {
         match self {
             Self::Completed { .. } | Self::DatabaseFailed(_) => true,
-            Self::NotDue | Self::WriteFailed(_) => false,
+            Self::NotDue | Self::WriteFailed(_) | Self::Deferred(_) => false,
         }
     }
 }
@@ -69,9 +75,9 @@ pub(crate) struct Startup {
 /// `config_dir`.
 ///
 /// The import is due while `import_done` is false and there is a database or a saved plan that is
-/// not marked completed. A
-/// missing default profile's file is written only once the import is no longer pending, so a
-/// failed write of an imported default is retried instead of being replaced by the built-in one.
+/// not marked completed. A missing default profile's file is written only once the import is no
+/// longer pending, so a failed write of an imported default is retried instead of being replaced
+/// by the built-in one.
 pub(crate) fn prepare_profiles(
     config_dir: &Path,
     legacy_db: &Path,
@@ -120,19 +126,29 @@ fn import(
                 let (store, _) = ProfileStore::load(profiles_dir, DefaultPersistence::MemoryOnly);
                 legacy::plan(&database, &store)
             }
-            Err(error) => return ImportOutcome::DatabaseFailed(error),
+            Err(error) if error.is_final() => return ImportOutcome::DatabaseFailed(error),
+            Err(error) => return ImportOutcome::Deferred(error),
         },
     };
     match legacy::execute(&plan, plan_saved, config_dir, profiles_dir, writer) {
-        Ok(report) => {
-            legacy::mark_completed(&plan, config_dir, writer);
-            ImportOutcome::Completed {
-                report,
-                settings: plan.settings,
-            }
-        }
+        Ok(report) => ImportOutcome::Completed {
+            report,
+            settings: plan.settings,
+            plan,
+        },
         Err(error) => ImportOutcome::WriteFailed(error),
     }
+}
+
+/// Marks the import's plan completed, after the caller applied its settings and set the done
+/// flag: from then on a lost flag never runs the import again. A start that ends before this
+/// runs the plan again, which writes nothing new and applies the settings again.
+pub(crate) fn finish_import(
+    config_dir: &Path,
+    plan: &legacy::Plan,
+    writer: &mut impl ProfileWriter,
+) {
+    legacy::mark_completed(plan, config_dir, writer);
 }
 
 #[cfg(test)]

@@ -181,3 +181,23 @@ fn a_cancelled_import_changes_nothing() {
     let entries_after: Vec<_> = store.entries().map(|(id, _)| id.clone()).collect();
     assert_eq!(entries_after, entries_before);
 }
+
+#[test]
+fn a_name_taken_after_the_preview_is_made_unique_again() {
+    let exported = export(&custom_profile());
+    let mut first = prepare_import(exported.as_bytes(), DeviceType::X52Pro, &[]).unwrap();
+    let second = prepare_import(exported.as_bytes(), DeviceType::X52Pro, &[]).unwrap();
+    assert_eq!(first.profile.name, second.profile.name);
+
+    // The second import was written while the first was waiting for its confirmation.
+    let taken = vec![second.profile.name.clone()];
+    assert!(revalidate_name(&mut first, &taken));
+    assert_eq!(first.profile.name, "Night flying (2)");
+    assert_eq!(first.renamed_from.as_deref(), Some("Night flying"));
+    assert!(!revalidate_name(&mut first, &taken), "stable once unique");
+
+    // The clash is gone again: the name in the file comes back.
+    assert!(revalidate_name(&mut first, &[]));
+    assert_eq!(first.profile.name, "Night flying");
+    assert_eq!(first.renamed_from, None);
+}
