@@ -254,10 +254,11 @@ GSettings keys, one per device type, each an array of three profile ids for mode
 Resolution, per mode, when the active mode or the device changes:
 
 - an id that names a loaded profile of the **same device type** is used;
-- a missing id, an id of a profile that is not loaded (unreadable, future schema, removed), an id of
-  a profile of the other type, or an array that does not have three entries falls back to **that
-  type's default profile** for the affected entries. The setting itself is left as it is, so the
-  mapping comes back when the profile does.
+- a missing id, an id of a profile that is not loaded (unreadable, future schema, removed) or an id
+  of a profile of the other type falls back to **that type's default profile** for that entry;
+- an array that does not have exactly three entries is treated as corrupt: **all three** modes use
+  that type's default profile;
+- the setting itself is left as it is, so the mapping comes back when the profile does.
 
 Removing a profile resets the entries that named it to the default id, after the user confirmed the
 removal.
