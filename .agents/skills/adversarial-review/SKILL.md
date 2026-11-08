@@ -166,6 +166,22 @@ descriptor or an evdev event, a command-line argument. Each must be validated by
 boundary and fail with a message the user can act on, never with a panic or a silently wrong
 device command.
 
+The boundaries that exist, the rule each one keeps, and the tests that hold it. A change to one of
+these paths that weakens the rule, or that adds a new boundary without the same guards, is a
+finding:
+
+| Boundary | Rule | Held by |
+| --- | --- | --- |
+| Profile files in the store (`src/profile/schema.rs`, `store.rs`) | 64 KiB cap before parsing; two-step parse, a bad field gets its built-in value; a file that could not be read is never rewritten or deleted; a reserved default id holds only its own device type | `src/profile/store/tests.rs` (a fixture per validation row, each checking that the file is unchanged), `schema/tests.rs` |
+| Imported profile files (`src/profile/exchange.rs`, `src/window.rs`) | The same cap and parse; the other device type, an unknown type and a newer schema are refused with a message; nothing is written before the user confirms | `src/profile/exchange/tests.rs` |
+| The GX52 0.7 database (`src/profile/legacy.rs`, `startup.rs`) | 16 MiB cap; opened read-only and never modified; bad values cost only their field; the plan-first import never imports twice or loses a row across an interrupted start | `src/profile/legacy/tests.rs`, `src/profile/startup/tests.rs` (every write failing in turn) |
+| Values that become device commands (`x52::command`) | Only the range-checked constructors build a command; only listed vendor and product IDs are driven | the `x52` encoding tests |
+| evdev events (`src/device/reader.rs`) | Only the input map's codes mean anything; nothing is logged per event | `src/device/reader/tests.rs` |
+
+The rules are written in [architecture.md, "Untrusted input"](../../../docs/architecture.md#untrusted-input)
+and [profiles.md](../../../docs/profiles.md#validation-and-recovery); there is no separate
+trust-boundary skill (docs/tooling-todo.md records why).
+
 ### (b) Deletion smell
 
 A diff that removes a user-visible surface — a setting, a profile field, a CLI option, a

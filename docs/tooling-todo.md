@@ -87,8 +87,14 @@ item off, or delete it, in the commit that does it.
 - [ ] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
 - [x] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists.
 - [x] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
-- [ ] `.agents/skills/`: decide whether gx52 needs a domain skill like `swarm-device-access`'s
+- [x] `.agents/skills/`: decide whether gx52 needs a domain skill like `swarm-device-access`'s
       `trust-boundary` (candidates: profile and legacy-database parsing, the device command path).
+      Decided in M3: no. That skill exists because a privileged daemon there turns config into
+      device access, and a fail-open parse exposes the host. In gx52, a sandboxed desktop app, the
+      worst parse failure is a profile shown with built-in values. A wrong device command is
+      already impossible by type: only the range-checked `x52` constructors build one. The
+      boundaries, their rules and their tests are listed once, in the `adversarial-review`
+      skill's untrusted-input pass, which every review runs.
 - [ ] `SECURITY.md`: check the security model against the final Flatpak `finish-args` (spike S4
       may need `--share=network` for hotplug) and the profile import/export path (portal or
       filesystem permission).

@@ -85,9 +85,10 @@ ones in the profile directory) and the legacy `gx52.db`. Both are parsed as untr
   reaches the transport without going through them;
 - the legacy database is opened read-only and never modified (rewrite analysis, section 10).
 
-This feeds two open items of [tooling-todo.md](tooling-todo.md#docs-and-project-files): the decision
-whether gx52 needs a `trust-boundary` skill (profile and legacy-database parsing, the device command
-path) and the check of [SECURITY.md](../SECURITY.md) against the final import/export path.
+The boundaries, with the rule each keeps and the tests that hold it, are listed in the
+`adversarial-review` skill's untrusted-input pass; M3 decided against a separate `trust-boundary`
+skill ([tooling-todo.md](tooling-todo.md#docs-and-project-files)). The check of
+[SECURITY.md](../SECURITY.md) against the final import/export path is still open there.
 
 ## Threads and data flow
 
