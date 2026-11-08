@@ -217,7 +217,9 @@ flowchart LR
   only logs it; and polling `nusb::list_devices` every 250 ms in
   the sandbox (detected through `/.flatpak-info`), where the hotplug stream never yields. It
   matches by vendor and product ID, never by address, and tells the writer, the reader and the
-  main thread when a device is selected or gone.
+  main thread when a device is selected or gone. The main thread is told first: the reader's
+  first mode for a selection always reaches the main thread after the `Selected` that starts it,
+  so the `Selected` never clears that mode.
   - **Selection:** the USB device's sysfs path is the selection key. With nothing selected, the
     first supported device in sysfs-path order is selected; the selection is kept while that path
     stays listed, whatever the enumeration order and whatever else appears (a second X52 does not

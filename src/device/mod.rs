@@ -206,13 +206,17 @@ impl DeviceService {
         threads.push(spawn("device-watch", move || {
             backend.watch(&signal, |event| match event {
                 WatchEvent::Selection(change) => {
+                    // The main thread hears of the change first: the reader and the writer report
+                    // through the same FIFO channel only after they hear of it, so every event of
+                    // a selection (the reader's initial mode above all) arrives after its
+                    // `Selected` and is never discarded as belonging to the previous one.
+                    let _ = events.try_send(match &change {
+                        SelectionChange::Selected(device) => DeviceEvent::Selected(device.clone()),
+                        SelectionChange::Gone(generation) => DeviceEvent::Gone(*generation),
+                    });
                     // A send fails only once that thread has stopped, at shutdown.
                     let _ = to_writer.send(change.to_writer());
                     let _ = to_reader.send(change.to_reader());
-                    let _ = events.try_send(match change {
-                        SelectionChange::Selected(device) => DeviceEvent::Selected(device),
-                        SelectionChange::Gone(generation) => DeviceEvent::Gone(generation),
-                    });
                 }
                 WatchEvent::X52dRunning(running) => {
                     let _ = events.try_send(DeviceEvent::X52dRunning(running));
