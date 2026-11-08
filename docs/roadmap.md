@@ -158,6 +158,26 @@ noon, became an optional check on 2026-11-07 ([preparation.md](preparation.md)),
    ([tooling-todo.md](tooling-todo.md#docs-and-project-files)), now that the parsers exist. Done
    when: the item is ticked or deleted with the reason.
 
+Results on 2026-11-08:
+
+- **Profile store:** a fixture per row of the validation table, each checking the file's bytes and
+  modification time after the load, and both directions of a default file of the other device
+  type.
+- **Mode mapping:** passed on the X52 Pro with the Devel build on the host. The selector applied
+  the mapped profile at each position (1 → 2 → 3 → 2 → 1, one push per position). With mode 2
+  mapped to an `x52` id and mode 3 to an unknown id, both fell back to `x52-pro-default`.
+- **Legacy import:** round-trip tests on fixture databases of both S8 schemas. The interruption
+  tests fail every write in turn, before and after the file is in place, and each start then
+  resumes to the profiles of one clean run. A hot rollback journal is rolled back in the private
+  copy. The maintainer's two real databases imported as S8 describes, every value checked against
+  the raw rows, and neither file changed.
+- **Import and export:** an exported profile imports back unchanged; a file of the other type, an
+  unknown type and a newer schema are refused with a message; a cancelled import writes nothing.
+  The actions have no menu entry until M5, so these are covered by tests only.
+- **Trust boundary:** no separate skill; the boundaries are listed in the `adversarial-review`
+  skill (tooling-todo.md has the reason).
+- The Devel Flatpak builds and passes `meson test` with rusqlite linked to the GNOME SDK's SQLite.
+
 ## M4: UI design session
 
 Before any UI work. A dedicated session that writes `docs/ui.md` (postponed from stage C because the
