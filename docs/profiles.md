@@ -142,7 +142,13 @@ offsets from clock 1 move because clock 1 moved.
     (`*.rejected-*`, `*.bak`, editor leftovers such as `x.toml~`) are ignored silently.
 - **Atomic writes:** the new content is written to a temporary file in the same directory and
   renamed over the old one (`gio::File::replace_contents_future`, which does that), off the main
-  thread. A crash leaves either the old file or the new one, never half of each.
+  thread. A crash leaves either the old file or the new one, never half of each. A **new** file
+  (a missing default, an imported profile, a backup) is written to a temporary file that is then
+  hard-linked to its name, so it never replaces an existing file. On a file system without hard
+  links (vfat, exFAT, some FUSE mounts) it is created in place with create-new semantics instead:
+  still never over an existing file, but a crash can leave it incomplete. The store then reports
+  it as unreadable and keeps it, and the legacy import reports a conflict instead of counting it
+  as imported.
 - **Size limits:** a profile file (and an import file) larger than 64 KiB is not parsed; it is
   handled like a malformed file. A valid profile is well under 2 KiB. A legacy database larger than
   16 MiB is not opened and is handled like an unreadable one (the two S8 databases are 32 KiB each).
@@ -156,12 +162,15 @@ offsets from clock 1 move because clock 1 moved.
   writes to `~/.config/gx52-devel/profiles/` on the host and to the path above in its Flatpak.
 - **Legacy database lookup**, separate from the new store:
   `glib::user_config_dir().join("gx52/gx52.db")`, the path GX52 0.7 used, for every build profile.
-  It is only ever opened **read-only** (`rusqlite` with the read-only open flag), never modified or
-  deleted, so users can go back to `0.7.6` (rewrite analysis, section 10). Inside the production
+  It is never opened, modified or deleted, so users can go back to `0.7.6` (rewrite analysis,
+  section 10). The import copies it, with its `-journal` or `-wal` file when there is one, into a
+  private temporary directory and reads the copy. A GX52 0.7 that stopped in the middle of a write
+  leaves a hot journal that SQLite has to roll back before anything can be read, which a read-only
+  open cannot do; the copy can, and a running GX52 0.7 never holds a lock on it. Inside the production
   Flatpak that is `~/.var/app/com.leinardi.gx52/config/gx52/gx52.db`, the file the automatic import
   finds; a source-install database in `~/.config/gx52/gx52.db` is outside the sandbox and needs the
   documented manual copy (R10). A host Devel build reads the host's `~/.config/gx52/gx52.db`, which
-  is safe because it is read-only.
+  is safe because only a copy is read.
 
 ## Defaults
 
@@ -193,7 +202,8 @@ At the first start that finds `gx52.db` (rewrite analysis, section 10; the S8 sc
 | Bad values | A value outside its range (a brightness above `32`, an offset outside `−720`–`+840`, an unknown enum digit) gets the type default for that field and is listed in the import report; the row is still imported. A name is trimmed; an empty one becomes "Imported profile", one over 64 characters is cut to 64, and the result is made unique as above |
 | Existing files | The import never overwrites a profile file. If a default profile's file already exists when the import runs, the legacy default row is imported as a normal profile with a unique name instead |
 
-The result is reported once ("Imported N profiles from GX52 0.7", with any field problems).
+The result is reported once: a toast "Imported N profiles from GX52 0.7". When values were
+replaced or a row was not imported, the toast has a "Details" button with the list.
 `current_profile` is empty in both real databases (S8), so nothing is imported for the selected
 profile: the mode mapping starts at its defaults. Test fixtures are two small databases reproducing
 both S8 schemas, created by the test suite.
@@ -218,11 +228,14 @@ profiles as one clean run:
   imported. Only ids the plan assigned are ever checked, so an unrelated file never stands in for an
   imported row. A plan file that cannot be read is logged and the import plans again; at worst
   that duplicates a profile, never loses one.
-- **Two kinds of failure.** A **database** failure (too large, unreadable, not a GX52 database) is
-  final: the flag is set, nothing is written, and the toast says so. A **write** failure (an I/O
-  error in the config directory) leaves the flag unset, and the next start resumes from the plan.
+- **Two kinds of failure.** A **database** failure (too large, unreadable even as a copy, not a
+  GX52 database) is final: the flag is set, nothing is written, and the toast says so. A **write**
+  failure (an I/O error in the config directory) leaves the flag unset, and the next start resumes
+  from the plan.
 - The settings are applied and the flag is set only after every planned entry is written or
-  skipped. The plan file stays afterwards, as the record of the import.
+  skipped. The plan file is then saved again marked `completed`, and stays as the record of the
+  import. A completed plan keeps the import from running again even if the flag is lost (a reset
+  of the settings), so a profile removed after the import does not come back.
 - **No built-in default while pending.** While the import is due and not over, the store keeps a
   missing default profile in memory only and does not write its file (see
   [Persisting the default](#persisting-the-default)). Otherwise a failed write of the imported

@@ -21,7 +21,7 @@
 //! existing file, atomically.
 
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read as _, Write as _};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use gtk::gio::{self, prelude::*};
@@ -91,29 +91,65 @@ pub(crate) enum Created {
 ///
 /// The contents go to a temporary file in the same directory, which is synced and then
 /// hard-linked to `path`; the link fails if `path` exists, so even a file created a moment before
-/// by someone else is never replaced.
+/// by someone else is never replaced. See [`create_new_from`] for file systems without hard links.
 ///
 /// # Errors
 ///
 /// The I/O error of the temporary file or the link.
 pub(crate) fn create_new(path: &Path, contents: &[u8]) -> io::Result<Created> {
+    create_new_from(path, &mut &contents[..])
+}
+
+/// [`create_new`] with the contents streamed from `source`.
+///
+/// On a file system that has no hard links (vfat, exFAT, some FUSE mounts) the link fails with
+/// an error other than "exists"; the file is then created directly with create-new semantics and
+/// written in place. That is still never over an existing file, but a crash can leave it
+/// incomplete: the store reports such a file as unreadable and keeps it, and the legacy import
+/// reports it as a conflict instead of counting it as imported.
+///
+/// # Errors
+///
+/// The I/O error of reading `source`, the temporary file, the link or the direct write.
+pub(crate) fn create_new_from(path: &Path, source: &mut impl Read) -> io::Result<Created> {
     let (temporary, mut file) = temporary_beside(path)?;
-    let linked = file
-        .write_all(contents)
-        .and_then(|()| file.sync_all())
-        .and_then(|()| fs::hard_link(&temporary, path));
+    let written = io::copy(source, &mut file).and_then(|_| file.sync_all());
     drop(file);
-    let removed = fs::remove_file(&temporary);
-    match linked {
-        Ok(()) => {
-            if let Err(error) = removed {
-                tracing::warn!("Cannot remove {}: {error}", temporary.display());
-            }
-            Ok(Created::Written)
-        }
+    let linked = written.and_then(|()| fs::hard_link(&temporary, path));
+    let outcome = match linked {
+        Ok(()) => Ok(Created::Written),
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => Ok(Created::AlreadyExists),
+        Err(error) if is_link_unsupported(&error) => {
+            tracing::debug!("No hard links for {}: {error}", path.display());
+            create_in_place(path, &temporary)
+        }
         Err(error) => Err(error),
+    };
+    if let Err(error) = fs::remove_file(&temporary) {
+        tracing::warn!("Cannot remove {}: {error}", temporary.display());
     }
+    outcome
+}
+
+/// Whether a failed `link(2)` means the file system has no hard links.
+fn is_link_unsupported(error: &io::Error) -> bool {
+    error.kind() == io::ErrorKind::Unsupported
+        || error.kind() == io::ErrorKind::PermissionDenied
+        || error.raw_os_error() == Some(rustix::io::Errno::OPNOTSUPP.raw_os_error())
+}
+
+/// Creates `path` with create-new semantics and copies the synced `temporary` into it.
+fn create_in_place(path: &Path, temporary: &Path) -> io::Result<Created> {
+    let mut file = match OpenOptions::new().write(true).create_new(true).open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+            return Ok(Created::AlreadyExists);
+        }
+        Err(error) => return Err(error),
+    };
+    io::copy(&mut File::open(temporary)?, &mut file)?;
+    file.sync_all()?;
+    Ok(Created::Written)
 }
 
 /// A new, empty temporary file next to `path`, named so the store ignores it.
@@ -140,6 +176,8 @@ fn temporary_beside(path: &Path) -> io::Result<(PathBuf, File)> {
 /// Copies `source` to `<source>.<suffix>`, or to `<source>.<suffix>-2`, `-3`, ... when that name is
 /// taken, so a backup never overwrites a backup. Returns the path of the copy.
 ///
+/// The copy is streamed, so a bad file of any size is backed up without reading it into memory.
+///
 /// # Errors
 ///
 /// The I/O error of reading `source` or creating the copy.
@@ -151,7 +189,6 @@ fn temporary_beside(path: &Path) -> io::Result<(PathBuf, File)> {
     )
 )]
 pub(crate) fn backup(source: &Path, suffix: &str) -> io::Result<PathBuf> {
-    let contents = fs::read(source)?;
     let base = format!("{}.{suffix}", source.display());
     for counter in 1_u32.. {
         let candidate = if counter == 1 {
@@ -159,7 +196,7 @@ pub(crate) fn backup(source: &Path, suffix: &str) -> io::Result<PathBuf> {
         } else {
             PathBuf::from(format!("{base}-{counter}"))
         };
-        match create_new(&candidate, &contents)? {
+        match create_new_from(&candidate, &mut File::open(source)?)? {
             Created::Written => return Ok(candidate),
             Created::AlreadyExists => {}
         }

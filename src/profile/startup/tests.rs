@@ -178,7 +178,8 @@ fn an_interrupted_import_resumes_to_the_result_of_a_clean_one() {
     for build in [flatpak_database as fn(&Path), source_database] {
         let (expected, write_count) = clean_run(build);
         for after_write in [false, true] {
-            for fail_at in 0..write_count {
+            // The last write marks the plan completed; its failure is covered below.
+            for fail_at in 0..write_count - 1 {
                 let case = format!("fail_at {fail_at}, after_write {after_write}");
                 let setup = setup(build);
                 let mut done = false;
@@ -318,13 +319,35 @@ fn nothing_runs_again_after_a_completed_import() {
     assert!(matches!(again.import, ImportOutcome::NotDue));
     assert_eq!(writer.0, 0);
 
-    // Even with the flag lost, the saved plan makes a rerun write nothing new.
+    // Even with the flag lost, the completed plan keeps the import from running again.
+    let mut lost = false;
+    let mut writer = CountingWriter::default();
+    let rerun = setup.start(&mut lost, &mut writer);
+    assert!(matches!(rerun.import, ImportOutcome::NotDue));
+    assert_eq!(writer.0, 0);
+    assert_eq!(setup.profiles(), before);
+}
+
+#[test]
+fn a_failed_completion_mark_still_completes_and_a_rerun_writes_nothing_new() {
+    let (expected, write_count) = clean_run(source_database);
+    let setup = setup(source_database);
+    let mut done = false;
+    let mut writer = FailingWriter {
+        calls: 0,
+        fail_at: write_count - 1,
+        after_write: false,
+    };
+    let first = setup.start(&mut done, &mut writer);
+    assert!(matches!(first.import, ImportOutcome::Completed { .. }));
+    assert!(done);
+    // The flag is lost as well: the unmarked plan runs again and finds every file in place.
     let mut lost = false;
     let rerun = setup.start(&mut lost, &mut FileWriter);
     assert!(
         matches!(rerun.import, ImportOutcome::Completed { ref report, .. } if report.conflicts.is_empty())
     );
-    assert_eq!(setup.profiles(), before);
+    assert_eq!(setup.profiles(), expected);
 }
 
 #[test]

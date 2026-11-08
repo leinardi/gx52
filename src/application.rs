@@ -71,7 +71,7 @@ mod imp {
         /// reopened, cleared when the device goes.
         pub(crate) active_mode: Cell<Option<Mode>>,
         /// Messages for a toast, kept until a window can show them.
-        pub(crate) pending_toasts: RefCell<Vec<String>>,
+        pub(crate) pending_toasts: RefCell<Vec<adw::Toast>>,
     }
 
     #[glib::object_subclass]
@@ -283,30 +283,34 @@ impl Application {
                 }
                 let count = u32::try_from(report.imported.len()).unwrap_or(u32::MAX);
                 tracing::info!("Imported {count} profiles from GX52 0.7");
-                let message = if report.problems.is_empty() && report.conflicts.is_empty() {
-                    gettextrs::ngettext(
-                        "Imported {count} profile from GX52 0.7",
-                        "Imported {count} profiles from GX52 0.7",
-                        count,
+                let message = gettextrs::ngettext(
+                    "Imported {count} profile from GX52 0.7",
+                    "Imported {count} profiles from GX52 0.7",
+                    count,
+                )
+                .replace("{count}", &count.to_string());
+                let mut details = report.problems.clone();
+                details.extend(report.conflicts.iter().map(|conflict| {
+                    gettext(
+                        "A profile was not imported because its file was changed meanwhile: {file}",
                     )
+                    .replace("{file}", &conflict.target.file_name())
+                }));
+                if details.is_empty() {
+                    self.toast(&message);
                 } else {
-                    gettextrs::ngettext(
-                        "Imported {count} profile from GX52 0.7, with problems listed in the log",
-                        "Imported {count} profiles from GX52 0.7, with problems listed in the log",
-                        count,
-                    )
-                };
-                self.toast(message.replace("{count}", &count.to_string()));
+                    self.toast_with_details(message, details);
+                }
             }
             ImportOutcome::DatabaseFailed(error) => {
                 tracing::warn!("GX52 0.7 profiles not imported: {error}");
-                self.toast(gettext(
+                self.toast(&gettext(
                     "The GX52 0.7 profiles could not be imported: their database cannot be read",
                 ));
             }
             ImportOutcome::WriteFailed(error) => {
                 tracing::warn!("GX52 0.7 import interrupted: {error}");
-                self.toast(gettext(
+                self.toast(&gettext(
                     "The GX52 0.7 profiles could not be imported yet; GX52 tries again at the next start",
                 ));
             }
@@ -328,7 +332,7 @@ impl Application {
         self.imp().profiles.replace(Some(store));
         self.push_desired_state();
         if report.unlisted.is_some() {
-            self.toast(gettext("The profile folder could not be read"));
+            self.toast(&gettext("The profile folder could not be read"));
         }
         if !files.is_empty() {
             let count = u32::try_from(files.len()).unwrap_or(u32::MAX);
@@ -339,7 +343,7 @@ impl Application {
             )
             .replace("{count}", &count.to_string())
             .replace("{files}", &files.join(", "));
-            self.toast(message);
+            self.toast(&message);
         }
     }
 
@@ -369,8 +373,32 @@ impl Application {
     }
 
     /// Shows `message` in the active window, or keeps it until a window is presented.
-    fn toast(&self, message: String) {
-        self.imp().pending_toasts.borrow_mut().push(message);
+    fn toast(&self, message: &str) {
+        self.queue_toast(adw::Toast::new(message));
+    }
+
+    /// Shows `message` with a "Details" button that lists `details` in a dialog.
+    fn toast_with_details(&self, message: String, details: Vec<String>) {
+        let toast = adw::Toast::builder()
+            .title(message)
+            .button_label(gettext("_Details"))
+            .use_markup(false)
+            .build();
+        toast.connect_button_clicked(glib::clone!(
+            #[weak(rename_to = app)]
+            self,
+            move |toast| {
+                let dialog =
+                    adw::AlertDialog::new(toast.title().as_deref(), Some(&details.join("\n")));
+                dialog.add_response("close", &gettext("_Close"));
+                dialog.present(app.active_window().as_ref());
+            }
+        ));
+        self.queue_toast(toast);
+    }
+
+    fn queue_toast(&self, toast: adw::Toast) {
+        self.imp().pending_toasts.borrow_mut().push(toast);
         self.show_pending_toasts();
     }
 
@@ -381,9 +409,9 @@ impl Application {
         else {
             return;
         };
-        let messages = self.imp().pending_toasts.take();
-        for message in messages {
-            window.show_toast(&message);
+        let toasts = self.imp().pending_toasts.take();
+        for toast in toasts {
+            window.add_toast(toast);
         }
     }
 
@@ -402,7 +430,11 @@ impl Application {
             }
         }
         match event {
-            DeviceEvent::Selected(_) => self.push_desired_state(),
+            DeviceEvent::Selected(_) => {
+                // A new selection's mode is unknown until its reader reports it.
+                imp.active_mode.set(None);
+                self.push_desired_state();
+            }
             DeviceEvent::Mode(mode) => {
                 if imp.active_mode.replace(Some(*mode)) != Some(*mode) {
                     self.push_desired_state();

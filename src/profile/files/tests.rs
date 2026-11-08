@@ -91,3 +91,38 @@ fn backups_never_overwrite_backups() {
 fn schema_backups_are_named_after_the_old_version() {
     assert_eq!(schema_suffix(1), "schema-1.bak");
 }
+
+#[test]
+fn the_direct_create_never_replaces_a_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let temporary = dir.path().join("temporary");
+    fs::write(&temporary, "contents").unwrap();
+    let path = dir.path().join("a.toml");
+    assert_eq!(
+        create_in_place(&path, &temporary).unwrap(),
+        Created::Written
+    );
+    assert_eq!(fs::read(&path).unwrap(), b"contents");
+    fs::write(&temporary, "other").unwrap();
+    assert_eq!(
+        create_in_place(&path, &temporary).unwrap(),
+        Created::AlreadyExists
+    );
+    assert_eq!(fs::read(&path).unwrap(), b"contents");
+}
+
+#[test]
+fn a_missing_link_support_is_recognised() {
+    assert!(is_link_unsupported(&io::Error::from(
+        io::ErrorKind::Unsupported
+    )));
+    assert!(is_link_unsupported(&io::Error::from(
+        io::ErrorKind::PermissionDenied
+    )));
+    assert!(!is_link_unsupported(&io::Error::from(
+        io::ErrorKind::AlreadyExists
+    )));
+    assert!(!is_link_unsupported(&io::Error::from(
+        io::ErrorKind::StorageFull
+    )));
+}

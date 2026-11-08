@@ -567,7 +567,12 @@ fn the_plan_file_round_trips() {
     let (_db, database) = database(flatpak_database);
     let dir = tempfile::tempdir().unwrap();
     let plan = plan(&database, &empty_store(dir.path()));
-    assert_eq!(Plan::from_toml(&plan.to_toml()), Some(plan));
+    assert_eq!(Plan::from_toml(&plan.to_toml()), Some(plan.clone()));
+    let completed = Plan {
+        completed: true,
+        ..plan
+    };
+    assert_eq!(Plan::from_toml(&completed.to_toml()), Some(completed));
     assert_eq!(Plan::from_toml("version = 2"), None);
     assert_eq!(Plan::from_toml("not toml ["), None);
 }
@@ -607,4 +612,61 @@ fn text_that_is_not_utf8_costs_only_its_field() {
     assert_eq!(row.profile.name, "Night \u{fffd}");
     assert_eq!(row.problems.len(), 1, "{:?}", row.problems);
     assert_eq!(row.problems[0].key, "led_a");
+}
+
+/// GX52 0.7 stopped in the middle of a write: the database comes with a hot rollback journal,
+/// which a read-only open cannot roll back. The import reads the rolled-back copy and leaves both
+/// original files untouched.
+#[test]
+fn a_database_with_a_hot_journal_is_read_as_before_the_interrupted_write() {
+    let source = tempfile::tempdir().unwrap();
+    let source_path = source.path().join("gx52.db");
+    source_database(&source_path);
+    let crashed = tempfile::tempdir().unwrap();
+    let path = crashed.path().join("gx52.db");
+    {
+        let connection = Connection::open(&source_path).unwrap();
+        connection
+            .execute_batch(
+                "PRAGMA journal_mode = DELETE; PRAGMA cache_size = 1; BEGIN;
+                 UPDATE x52_pro_profile SET name = 'Half written', led_brightness = 99;
+                 CREATE TABLE filler (data BLOB);
+                 INSERT INTO filler VALUES (zeroblob(200000));",
+            )
+            .unwrap();
+        // A copy taken now is what a crash leaves behind: the changed pages and a hot journal.
+        fs::copy(&source_path, &path).unwrap();
+        fs::copy(
+            source.path().join("gx52.db-journal"),
+            crashed.path().join("gx52.db-journal"),
+        )
+        .unwrap();
+    }
+    let read_only = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    assert!(
+        read_only
+            .query_row("SELECT count(*) FROM x52_pro_profile", [], |row| row
+                .get::<_, i64>(0))
+            .is_err(),
+        "the fixture needs a hot journal that a read-only open cannot roll back"
+    );
+    drop(read_only);
+    let before: Vec<Vec<u8>> = ["gx52.db", "gx52.db-journal"]
+        .iter()
+        .map(|name| fs::read(crashed.path().join(name)).unwrap())
+        .collect();
+
+    let database = read_database(&path).unwrap();
+    let names: Vec<&str> = database
+        .rows
+        .iter()
+        .map(|row| row.profile.name.as_str())
+        .collect();
+    assert_eq!(names, ["Default Profile", "Asia", "Default Profile"]);
+    assert!(database.rows.iter().all(|row| row.problems.is_empty()));
+    let after: Vec<Vec<u8>> = ["gx52.db", "gx52.db-journal"]
+        .iter()
+        .map(|name| fs::read(crashed.path().join(name)).unwrap())
+        .collect();
+    assert_eq!(after, before, "the originals are never touched");
 }

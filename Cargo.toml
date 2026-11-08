@@ -103,10 +103,11 @@ toml = "1.1.8"
 # The one-time import of the GX52 0.7 database, opened read-only. Linked to the system SQLite
 # (libsqlite3-dev on the host, the GNOME SDK in the Flatpak), not bundled.
 rusqlite = "0.40"
+# The private copy of the GX52 0.7 database that the import reads.
+tempfile = "3.27.0"
 
 [dev-dependencies]
 x52 = { path = "x52", features = ["test-support"] }
-tempfile = "3.27.0"
 
 [lints]
 workspace = true

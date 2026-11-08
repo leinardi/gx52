@@ -16,16 +16,16 @@
 //! The one-time import of the GX52 0.7 profile database (docs/profiles.md, "Legacy import";
 //! spike S8 for the schema).
 //!
-//! The database is opened read-only and never modified. The import is planned before anything is
-//! written: every row gets its target id and final name, and the plan is saved next to the profile
-//! directory. A start that is interrupted between two writes resumes from the saved plan, so a
+//! The original database is never opened or modified: a private copy is read. The import is
+//! planned before anything is written: every row gets its target id and final name, and the plan
+//! is saved next to the profile directory. A start that is interrupted between two writes resumes from the saved plan, so a
 //! rerun gives the same profiles as one clean run, and a file that is already there never stands
 //! in for a row unless it is the file the plan wrote.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
-use std::io;
+use std::io::{self, Read as _};
 use std::path::{Path, PathBuf};
 
 use gettextrs::gettext;
@@ -147,19 +147,41 @@ pub(crate) struct LegacyDatabase {
     pub(crate) settings: LegacySettings,
 }
 
-/// Reads the database at `path`, read-only.
+/// The files SQLite may keep next to a database: the rollback journal of an interrupted write,
+/// and the write-ahead log.
+const COMPANION_SUFFIXES: [&str; 2] = ["-journal", "-wal"];
+
+/// Reads the database at `path`, never opening or modifying the original.
+///
+/// The database and its journal or write-ahead log, when there is one, are copied into a private
+/// temporary directory and the copy is read. A GX52 0.7 that stopped in the middle of a write
+/// leaves a hot journal that SQLite must roll back before anything can be read, which a read-only
+/// open cannot do; the copy can, and a running GX52 0.7 never holds a lock on it.
 ///
 /// # Errors
 ///
-/// [`DatabaseError`] when the file is too large, cannot be opened, or has no profile table.
+/// [`DatabaseError`] when a file is too large or cannot be copied, or the copy cannot be read or
+/// has no profile table.
 pub(crate) fn read_database(path: &Path) -> Result<LegacyDatabase, DatabaseError> {
-    let size = fs::metadata(path).map_err(DatabaseError::Io)?.len();
-    if size > DATABASE_LIMIT {
-        return Err(DatabaseError::TooLarge);
+    let copy = tempfile::Builder::new()
+        .prefix("gx52-legacy-")
+        .tempdir()
+        .map_err(DatabaseError::Io)?;
+    let copied = copy.path().join("gx52.db");
+    copy_limited(path, &copied)?;
+    for suffix in COMPANION_SUFFIXES {
+        let companion = PathBuf::from(format!("{}{suffix}", path.display()));
+        match copy_limited(
+            &companion,
+            &PathBuf::from(format!("{}{suffix}", copied.display())),
+        ) {
+            Err(DatabaseError::Io(error)) if error.kind() == io::ErrorKind::NotFound => {}
+            other => other?,
+        }
     }
     let connection = Connection::open_with_flags(
-        path,
-        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        &copied,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )?;
     let mut rows = Vec::new();
     let mut any_table = false;
@@ -175,6 +197,20 @@ pub(crate) fn read_database(path: &Path) -> Result<LegacyDatabase, DatabaseError
     }
     let settings = read_settings(&connection)?;
     Ok(LegacyDatabase { rows, settings })
+}
+
+/// Copies `source` to `target` when it is at most [`DATABASE_LIMIT`] bytes.
+fn copy_limited(source: &Path, target: &Path) -> Result<(), DatabaseError> {
+    let size = fs::metadata(source).map_err(DatabaseError::Io)?.len();
+    if size > DATABASE_LIMIT {
+        return Err(DatabaseError::TooLarge);
+    }
+    let mut reader = fs::File::open(source)
+        .map_err(DatabaseError::Io)?
+        .take(DATABASE_LIMIT);
+    let mut writer = fs::File::create(target).map_err(DatabaseError::Io)?;
+    io::copy(&mut reader, &mut writer).map_err(DatabaseError::Io)?;
+    Ok(())
 }
 
 /// The rows of `table` by column name, in `id` order, or `None` when the table does not exist.
@@ -459,7 +495,7 @@ pub(crate) struct PlanEntry {
     pub(crate) name: String,
     /// The file's contents.
     pub(crate) contents: String,
-    /// The values that were replaced, for the report.
+    /// The values that were replaced, in the user's language, for the report.
     pub(crate) problems: Vec<String>,
 }
 
@@ -470,6 +506,8 @@ pub(crate) struct Plan {
     pub(crate) entries: Vec<PlanEntry>,
     /// The settings to apply once every row is written.
     pub(crate) settings: LegacySettings,
+    /// Every entry is written or skipped: the import is over even if the done flag is lost.
+    pub(crate) completed: bool,
 }
 
 /// Decides where every row of `database` goes, against the profiles already in `store`.
@@ -514,19 +552,20 @@ pub(crate) fn plan(database: &LegacyDatabase, store: &ProfileStore) -> Plan {
             target,
             name: profile.name.clone(),
             contents: schema::write(&profile),
-            problems: row.problems.iter().map(ToString::to_string).collect(),
+            problems: row.problems.iter().map(FieldProblem::message).collect(),
         });
     }
     Plan {
         entries,
         settings: database.settings,
+        completed: false,
     }
 }
 
 impl Plan {
     /// The plan file.
     pub(crate) fn to_toml(&self) -> String {
-        let mut out = format!("version = {PLAN_VERSION}\n");
+        let mut out = format!("version = {PLAN_VERSION}\ncompleted = {}\n", self.completed);
         for (key, value) in [
             ("launch_on_login", self.settings.launch_on_login),
             ("show_app_indicator", self.settings.show_app_indicator),
@@ -574,7 +613,15 @@ impl Plan {
                 .map(plan_entry)
                 .collect::<Option<Vec<_>>>()?,
         };
-        Some(Self { entries, settings })
+        let completed = document
+            .get("completed")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        Some(Self {
+            entries,
+            settings,
+            completed,
+        })
     }
 }
 
@@ -719,6 +766,19 @@ pub(crate) fn execute(
         }
     }
     Ok(report)
+}
+
+/// Saves `plan` again, marked completed, so a lost done flag never runs the import a second time.
+/// A failure is only logged: the done flag is still set.
+pub(crate) fn mark_completed(plan: &Plan, config_dir: &Path, writer: &mut impl ProfileWriter) {
+    let completed = Plan {
+        completed: true,
+        ..plan.clone()
+    };
+    let path = plan_path(config_dir);
+    if let Err(error) = writer.replace(&path, completed.to_toml().as_bytes()) {
+        tracing::warn!("Cannot mark {} as completed: {error}", path.display());
+    }
 }
 
 /// The saved plan in `config_dir`, if there is one this app can use.

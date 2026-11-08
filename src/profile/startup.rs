@@ -68,7 +68,8 @@ pub(crate) struct Startup {
 /// Imports the GX52 0.7 database at `legacy_db` when the import is due, then loads the store of
 /// `config_dir`.
 ///
-/// The import is due while `import_done` is false and there is a database or a saved plan. A
+/// The import is due while `import_done` is false and there is a database or a saved plan that is
+/// not marked completed. A
 /// missing default profile's file is written only once the import is no longer pending, so a
 /// failed write of an imported default is retried instead of being replaced by the built-in one.
 pub(crate) fn prepare_profiles(
@@ -83,7 +84,9 @@ pub(crate) fn prepare_profiles(
     } else {
         legacy::saved_plan(config_dir)
     };
-    let due = !import_done && (saved.is_some() || legacy_db.exists());
+    // A completed plan means the import is over, even if the done flag was lost.
+    let completed = saved.as_ref().is_some_and(|plan| plan.completed);
+    let due = !import_done && !completed && (saved.is_some() || legacy_db.exists());
     let import = if due {
         import(config_dir, &dir, legacy_db, saved, writer)
     } else {
@@ -121,10 +124,13 @@ fn import(
         },
     };
     match legacy::execute(&plan, plan_saved, config_dir, profiles_dir, writer) {
-        Ok(report) => ImportOutcome::Completed {
-            report,
-            settings: plan.settings,
-        },
+        Ok(report) => {
+            legacy::mark_completed(&plan, config_dir, writer);
+            ImportOutcome::Completed {
+                report,
+                settings: plan.settings,
+            }
+        }
         Err(error) => ImportOutcome::WriteFailed(error),
     }
 }

@@ -129,7 +129,12 @@ impl Window {
 
     /// Shows `message` in a toast.
     pub(crate) fn show_toast(&self, message: &str) {
-        self.imp().toast_overlay.add_toast(adw::Toast::new(message));
+        self.add_toast(adw::Toast::new(message));
+    }
+
+    /// Shows `toast`.
+    pub(crate) fn add_toast(&self, toast: adw::Toast) {
+        self.imp().toast_overlay.add_toast(toast);
     }
 
     /// `win.import-profile` (a device type id: `x52-pro` or `x52`) and `win.export-profile` (a
