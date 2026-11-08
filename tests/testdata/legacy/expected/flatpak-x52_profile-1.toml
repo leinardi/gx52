@@ -1,0 +1,22 @@
+schema_version = 1
+device_type = "x52"
+name = "Default"
+
+led_brightness = 128
+mfd_brightness = 128
+date_format = "mm-dd-yy"
+
+[mfd]
+lines = ["", "", ""]
+
+[clock_1]
+source = "utc"
+use_24h = true
+
+[clock_2]
+source = { fixed_offset_minutes = 345 }
+use_24h = true
+
+[clock_3]
+source = { fixed_offset_minutes = -240 }
+use_24h = true

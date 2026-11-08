@@ -65,14 +65,16 @@ make flatpak-lint-repo      # flatpak-builder-lint on _flatpak/repo; reports mis
 make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (network required)
 ```
 
-The cargo and Meson targets need the GTK 4 and libadwaita development files on the host, at the
-versions the crate features require (see
+The cargo and Meson targets need the GTK 4, libadwaita and SQLite development files on the host,
+at the versions the crate features require (see
 [`docs/spikes/06-build-and-release.md`](docs/spikes/06-build-and-release.md)), plus Meson,
 `blueprint-compiler` and the two validators `meson setup` refuses to run without
-(`desktop-file-validate`, `appstreamcli`). On Ubuntu 26.04:
+(`desktop-file-validate`, `appstreamcli`). SQLite is linked from the system (the GNOME SDK in the
+Flatpak) for the GX52 0.7 import. On Ubuntu 26.04:
 
 ```bash
-sudo apt install libgtk-4-dev libadwaita-1-dev blueprint-compiler meson desktop-file-utils appstream
+sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler meson desktop-file-utils \
+    appstream
 ```
 
 The Flatpak targets need `flatpak` with the `org.flatpak.Builder` Flatpak from Flathub;

@@ -42,13 +42,6 @@ pub(crate) fn normalise(raw: &str) -> Result<String, NameProblem> {
 
 /// `raw` trimmed and cut to [`MAX_CHARS`] characters, or `None` when nothing is left: the legacy
 /// import keeps a long name instead of replacing it.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the legacy import cuts long GX52 0.7 names with it"
-    )
-)]
 pub(crate) fn truncate(raw: &str) -> Option<String> {
     let cut = cut(raw.trim(), MAX_CHARS);
     (!cut.is_empty()).then_some(cut)

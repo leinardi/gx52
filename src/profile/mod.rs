@@ -20,10 +20,12 @@
 //! through `gio::spawn_blocking`; the tests call them directly on a temporary directory.
 
 pub(crate) mod files;
+pub(crate) mod legacy;
 pub(crate) mod mapping;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod schema;
+pub(crate) mod startup;
 pub(crate) mod store;
 
 use std::fmt;
@@ -66,10 +68,6 @@ impl ProfileId {
     }
 
     /// A new random id, which can never be a reserved one.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "profiles added by the imports get one")
-    )]
     pub(crate) fn random() -> Self {
         Self(glib::uuid_string_random().to_lowercase())
     }
@@ -82,13 +80,6 @@ impl ProfileId {
     }
 
     /// The id as text.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the mode mapping compares ids with the GSettings strings"
-        )
-    )]
     pub(crate) fn as_str(&self) -> &str {
         &self.0
     }

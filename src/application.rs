@@ -29,9 +29,14 @@ use x52::state::DeviceState;
 
 use crate::config;
 use crate::device::{DeviceEvent, DeviceService, access};
-use crate::profile::store::{DefaultPersistence, Entry, LoadReport, ProfileStore};
+use crate::profile::legacy::{self, FileWriter};
+use crate::profile::startup::{self, ImportOutcome};
+use crate::profile::store::{Entry, LoadReport, ProfileStore};
 use crate::profile::{self, mapping};
 use crate::window::Window;
+
+/// The settings key that records the one-time GX52 0.7 import as done.
+const LEGACY_IMPORT_DONE: &str = "legacy-import-done";
 
 /// The version of Cargo.toml and meson.build until the release workflow sets the first one
 /// (docs/release.md, "One version source").
@@ -206,22 +211,104 @@ impl Application {
 
     /// Loads the profile store off the main thread.
     fn load_profiles(&self) {
+        let import_done = self
+            .imp()
+            .settings
+            .get()
+            .is_some_and(|settings| settings.boolean(LEGACY_IMPORT_DONE));
         glib::spawn_future_local(glib::clone!(
             #[weak(rename_to = app)]
             self,
             async move {
-                let dir = profile::profiles_dir(&profile::config_dir());
-                let loaded = gio::spawn_blocking(move || {
-                    ProfileStore::load(&dir, DefaultPersistence::Write)
+                let prepared = gio::spawn_blocking(move || {
+                    startup::prepare_profiles(
+                        &profile::config_dir(),
+                        &legacy::database_path(),
+                        import_done,
+                        &mut FileWriter,
+                    )
                 })
                 .await;
-                if let Ok((store, report)) = loaded {
-                    app.on_profiles_loaded(store, &report);
+                if let Ok(prepared) = prepared {
+                    app.on_legacy_import(&prepared.import);
+                    app.on_profiles_loaded(prepared.store, &prepared.load_report);
                 } else {
                     tracing::error!("The profile loading task panicked");
                 }
             }
         ));
+    }
+
+    /// Records what the legacy import did: the settings and the done flag when it is over, and
+    /// one toast.
+    fn on_legacy_import(&self, outcome: &ImportOutcome) {
+        let settings = self.imp().settings.get();
+        if outcome.is_done()
+            && let Some(settings) = settings
+        {
+            if let ImportOutcome::Completed {
+                settings: legacy, ..
+            } = outcome
+            {
+                for (key, value) in [
+                    ("autostart", legacy.launch_on_login),
+                    ("show-tray", legacy.show_app_indicator),
+                ] {
+                    if let Some(value) = value
+                        && let Err(error) = settings.set_boolean(key, value)
+                    {
+                        tracing::warn!("Cannot import the GX52 0.7 setting {key}: {error}");
+                    }
+                }
+            }
+            if let Err(error) = settings.set_boolean(LEGACY_IMPORT_DONE, true) {
+                tracing::warn!("Cannot record the GX52 0.7 import as done: {error}");
+            }
+        }
+        match outcome {
+            ImportOutcome::NotDue => {}
+            ImportOutcome::Completed { report, .. } => {
+                for problem in &report.problems {
+                    tracing::warn!("GX52 0.7 import: {problem}");
+                }
+                for conflict in &report.conflicts {
+                    tracing::warn!(
+                        "GX52 0.7 import: row {} of {} not imported, {} was changed meanwhile",
+                        conflict.row_id,
+                        conflict.table.name(),
+                        conflict.target.file_name()
+                    );
+                }
+                let count = u32::try_from(report.imported.len()).unwrap_or(u32::MAX);
+                tracing::info!("Imported {count} profiles from GX52 0.7");
+                let message = if report.problems.is_empty() && report.conflicts.is_empty() {
+                    gettextrs::ngettext(
+                        "Imported {count} profile from GX52 0.7",
+                        "Imported {count} profiles from GX52 0.7",
+                        count,
+                    )
+                } else {
+                    gettextrs::ngettext(
+                        "Imported {count} profile from GX52 0.7, with problems listed in the log",
+                        "Imported {count} profiles from GX52 0.7, with problems listed in the log",
+                        count,
+                    )
+                };
+                self.toast(message.replace("{count}", &count.to_string()));
+            }
+            ImportOutcome::DatabaseFailed(error) => {
+                tracing::warn!("GX52 0.7 profiles not imported: {error}");
+                self.toast(gettext(
+                    "The GX52 0.7 profiles could not be imported: their database cannot be read",
+                ));
+            }
+            ImportOutcome::WriteFailed(error) => {
+                tracing::warn!("GX52 0.7 import interrupted: {error}");
+                self.toast(gettext(
+                    "The GX52 0.7 profiles could not be imported yet; GX52 tries again at the next start",
+                ));
+            }
+        }
     }
 
     /// Keeps the loaded store and reports its problems once.

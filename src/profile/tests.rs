@@ -20,12 +20,17 @@ use x52::device::{BiColourLed, LedColour};
 
 use super::*;
 
+/// The bytes of `relative` under `tests/testdata`.
+pub(crate) fn testdata(relative: &str) -> Vec<u8> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/testdata")
+        .join(relative);
+    std::fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
+}
+
 /// The bytes of `name` under `tests/testdata/profiles`.
 pub(crate) fn fixture(name: &str) -> Vec<u8> {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/testdata/profiles")
-        .join(name);
-    std::fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
+    testdata(&format!("profiles/{name}"))
 }
 
 #[test]

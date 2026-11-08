@@ -113,13 +113,6 @@ pub(crate) enum DefaultPersistence {
     Write,
     /// Keep the built-in values in memory only: the legacy import has not completed yet and may
     /// still write the default from GX52 0.7's values.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the legacy import loads with it until it completes"
-        )
-    )]
     MemoryOnly,
 }
 

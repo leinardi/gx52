@@ -189,7 +189,7 @@ At the first start that finds `gx52.db` (rewrite analysis, section 10; the S8 sc
 | Brightness scale | `led_brightness`, `mfd_brightness` × 4 (`0`–`32` becomes `0`–`128`) |
 | Clock 2/3 offsets | Unchanged as `{ fixed_offset_minutes = n }` (see [Clocks](#clocks)) |
 | Other columns | `clock_1_use_local_time` `1` → `local`, `0` → `utc`; `clock_N_use_24h` as is; `date_format` `'0'` → `yy-mm-dd`, `'1'` → `dd-mm-yy`, `'2'` → `mm-dd-yy`; LED text digits `'0'`/`'1'` → `off`/`on` for Fire and Throttle, `'0'`–`'3'` → `off`/`green`/`red`/`amber` for the others. `shift`, `blink` (not in GX52 0.7) off; MFD lines empty |
-| Settings | Only `settings_launch_on_login` (→ the autostart setting) and `settings_show_app_indicator` (→ the tray setting) are imported; all other keys are ignored |
+| Settings | Only `settings_launch_on_login` (→ the `autostart` key) and `settings_show_app_indicator` (→ the `show-tray` key) are imported; all other keys are ignored |
 | Bad values | A value outside its range (a brightness above `32`, an offset outside `−720`–`+840`, an unknown enum digit) gets the type default for that field and is listed in the import report; the row is still imported. A name is trimmed; an empty one becomes "Imported profile", one over 64 characters is cut to 64, and the result is made unique as above |
 | Existing files | The import never overwrites a profile file. If a default profile's file already exists when the import runs, the legacy default row is imported as a normal profile with a unique name instead |
 
@@ -197,6 +197,37 @@ The result is reported once ("Imported N profiles from GX52 0.7", with any field
 `current_profile` is empty in both real databases (S8), so nothing is imported for the selected
 profile: the mode mapping starts at its defaults. Test fixtures are two small databases reproducing
 both S8 schemas, created by the test suite.
+
+**Done flag.** The GSettings key `legacy-import-done` (`b`, default `false`) records that the import
+is over. The import is due while the flag is unset and there is a `gx52.db` or a saved plan (below).
+With neither, nothing happens and the flag stays unset, so a database copied in later (R10) is still
+imported.
+
+**Restart safety.** A start can stop between two file writes, and the next start must give the same
+profiles as one clean run:
+
+- **Plan first.** Before writing any profile, the import reads every row and decides its target
+  (the type's default id when that default's file does not exist yet, otherwise a new random id), its
+  final name and its file contents. It saves this plan atomically to `legacy-import.toml` in the
+  app's config directory (`gx52/` or `gx52-devel/`, next to `profiles/`, outside the store's
+  scan). Collisions are resolved once, there, and every retry reuses the saved plan instead of
+  planning again.
+- **Execute.** Each planned file is created with create-new semantics, never over an existing file.
+  On a retry, a target that holds exactly the planned contents counts as done. A target that holds
+  anything else was written by someone else since planning: it is kept and reported as not
+  imported. Only ids the plan assigned are ever checked, so an unrelated file never stands in for an
+  imported row. A plan file that cannot be read is logged and the import plans again; at worst
+  that duplicates a profile, never loses one.
+- **Two kinds of failure.** A **database** failure (too large, unreadable, not a GX52 database) is
+  final: the flag is set, nothing is written, and the toast says so. A **write** failure (an I/O
+  error in the config directory) leaves the flag unset, and the next start resumes from the plan.
+- The settings are applied and the flag is set only after every planned entry is written or
+  skipped. The plan file stays afterwards, as the record of the import.
+- **No built-in default while pending.** While the import is due and not over, the store keeps a
+  missing default profile in memory only and does not write its file (see
+  [Persisting the default](#persisting-the-default)). Otherwise a failed write of the imported
+  default would be followed by a built-in file, and the next start would import the legacy default
+  as a normal profile.
 
 ## Mode mapping
 
@@ -244,6 +275,8 @@ it is replaced only through the confirm-and-back-up path there.
 
 - If a default profile's file is **missing** (first start, or deleted by hand), it is written from
   the built-in values (or from the legacy default row, during the import), with the atomic write.
+  The exception: while the legacy import is pending, the built-in values stay in memory and nothing
+  is written (see [Legacy import](#legacy-import)).
 - If it is **unreadable or of a future schema**, the file is preserved untouched. The built-in
   default is used in memory, and the problem is reported like any other failed file.
 - **Edits to the default in that state** are saved only after the user explicitly confirms

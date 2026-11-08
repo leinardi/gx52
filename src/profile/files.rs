@@ -65,13 +65,6 @@ pub(crate) fn read_limited(path: &Path, limit: u64) -> Result<Vec<u8>, ReadError
 /// # Errors
 ///
 /// The I/O error of GIO's temporary file, write or rename.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "saving, wired to the profile editor in M5, uses it"
-    )
-)]
 pub(crate) fn replace(path: &Path, contents: &[u8]) -> io::Result<()> {
     gio::File::for_path(path)
         .replace_contents(

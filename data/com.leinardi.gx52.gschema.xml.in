@@ -23,5 +23,20 @@
       <summary>X52 profiles of the modes</summary>
       <description>The ids of the profiles that modes 1, 2 and 3 of the mode selector use on an X52. An id that names no X52 profile uses the default profile.</description>
     </key>
+    <key name="autostart" type="b">
+      <default>false</default>
+      <summary>Start when logging in</summary>
+      <description>Start GX52 in the background when logging in.</description>
+    </key>
+    <key name="show-tray" type="b">
+      <default>true</default>
+      <summary>Show the tray icon</summary>
+      <description>Show GX52 in the system tray, where the desktop has one.</description>
+    </key>
+    <key name="legacy-import-done" type="b">
+      <default>false</default>
+      <summary>GX52 0.7 profiles imported</summary>
+      <description>Whether the one-time import of the GX52 0.7 profile database is over.</description>
+    </key>
   </schema>
 </schemalist>

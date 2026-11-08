@@ -59,6 +59,9 @@ allow = [
     # unicode-ident (through proc-macro2), whose Unicode data tables carry it; a permissive,
     # GPL-compatible licence.
     "Unicode-3.0",
+    # foldhash, the default hasher of hashbrown, through hashlink, rusqlite's statement cache (the
+    # GX52 0.7 import); a permissive, GPL-compatible licence.
+    "Zlib",
 ]
 confidence-threshold = 0.9
 
