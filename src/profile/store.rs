@@ -438,6 +438,11 @@ impl ProfileStore {
         }
     }
 
+    /// The directory the store reads and writes.
+    pub(crate) fn dir(&self) -> &Path {
+        &self.dir
+    }
+
     /// Every profile, in id order.
     pub(crate) fn entries(&self) -> impl Iterator<Item = (&ProfileId, &Entry)> {
         self.entries.iter()
@@ -458,6 +463,27 @@ impl ProfileStore {
             Entry::Loaded(loaded) => Some(loaded),
             Entry::Newer(_) => None,
         }
+    }
+
+    /// The names of `device_type`'s profiles, for a name check off the main thread.
+    pub(crate) fn names(&self, device_type: DeviceType) -> Vec<String> {
+        self.entries
+            .values()
+            .filter(|entry| entry.device_type() == device_type)
+            .filter_map(|entry| entry.name().map(str::to_owned))
+            .collect()
+    }
+
+    /// Adds a profile whose file was just written under `id` (by an import); writes nothing.
+    pub(crate) fn insert(&mut self, id: ProfileId, profile: Profile) {
+        self.entries.insert(
+            id,
+            Entry::Loaded(Loaded {
+                profile,
+                problems: Vec::new(),
+                origin: Origin::File,
+            }),
+        );
     }
 
     /// Whether a profile of `device_type` other than `except` is named `name`.

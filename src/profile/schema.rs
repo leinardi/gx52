@@ -140,6 +140,30 @@ impl fmt::Display for FieldProblem {
     }
 }
 
+impl FieldProblem {
+    /// The problem in the user's language, for the UI; [`fmt::Display`] is for the log.
+    pub(crate) fn message(&self) -> String {
+        let text = match &self.kind {
+            ProblemKind::Missing => gettext("{key} is missing; the default is used"),
+            ProblemKind::WrongType { .. } | ProblemKind::UnknownValue(_) => {
+                gettext("{key} has a value that is not valid; the default is used")
+            }
+            ProblemKind::OutOfRange(_) => gettext("{key} is out of range; the default is used"),
+            ProblemKind::Name(_) => {
+                gettext("The name is empty or too long; a default name is used")
+            }
+            ProblemKind::UnknownKey => gettext("{key} is not a profile setting and is ignored"),
+            ProblemKind::NotForDeviceType => {
+                gettext("{key} does not apply to this joystick and is ignored")
+            }
+            ProblemKind::DuplicateName { to } => {
+                gettext("The name is already used; it is shown as “{name}”").replace("{name}", to)
+            }
+        };
+        text.replace("{key}", &self.key)
+    }
+}
+
 /// The keys of the top-level table, in the order they are written.
 const TOP_LEVEL_KEYS: [&str; 13] = [
     "schema_version",

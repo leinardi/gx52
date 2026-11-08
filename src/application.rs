@@ -19,6 +19,8 @@
 //! The `AdwApplication` subclass: application actions, accelerators, the About dialog, and the
 //! device service, whose events it turns into the device status the windows show.
 
+use std::path::PathBuf;
+
 use adw::{prelude::*, subclass::prelude::*};
 use gettextrs::gettext;
 use gtk::{gio, glib};
@@ -32,7 +34,7 @@ use crate::device::{DeviceEvent, DeviceService, access};
 use crate::profile::legacy::{self, FileWriter};
 use crate::profile::startup::{self, ImportOutcome};
 use crate::profile::store::{Entry, LoadReport, ProfileStore};
-use crate::profile::{self, mapping};
+use crate::profile::{self, Profile, ProfileId, mapping};
 use crate::window::Window;
 
 /// The settings key that records the one-time GX52 0.7 import as done.
@@ -338,6 +340,31 @@ impl Application {
             .replace("{count}", &count.to_string())
             .replace("{files}", &files.join(", "));
             self.toast(message);
+        }
+    }
+
+    /// The names of `device_type`'s profiles, once the profiles are loaded.
+    pub(crate) fn profile_names(&self, device_type: DeviceType) -> Option<Vec<String>> {
+        let profiles = self.imp().profiles.borrow();
+        Some(profiles.as_ref()?.names(device_type))
+    }
+
+    /// A copy of the usable profile `id` and the profile directory, once the profiles are loaded.
+    pub(crate) fn profile(&self, id: &ProfileId) -> Option<Profile> {
+        let profiles = self.imp().profiles.borrow();
+        Some(profiles.as_ref()?.loaded(id)?.profile.clone())
+    }
+
+    /// The profile directory, once the profiles are loaded.
+    pub(crate) fn profiles_dir(&self) -> Option<PathBuf> {
+        let profiles = self.imp().profiles.borrow();
+        Some(profiles.as_ref()?.dir().to_owned())
+    }
+
+    /// Adds a profile an import has just written under `id`.
+    pub(crate) fn add_imported_profile(&self, id: ProfileId, profile: Profile) {
+        if let Some(store) = self.imp().profiles.borrow_mut().as_mut() {
+            store.insert(id, profile);
         }
     }
 

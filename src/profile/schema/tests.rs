@@ -272,3 +272,21 @@ fn an_older_schema_is_migrated_in_memory() {
         other => panic!("{other:?}"),
     }
 }
+
+#[test]
+fn problems_have_a_message_for_the_user() {
+    let (_, problems) = readable("out-of-range.toml");
+    let messages: Vec<String> = problems.iter().map(FieldProblem::message).collect();
+    assert_eq!(
+        messages[0],
+        "The name is empty or too long; a default name is used"
+    );
+    assert_eq!(
+        messages[1],
+        "led_brightness is out of range; the default is used"
+    );
+    assert_eq!(
+        messages[2],
+        "mfd_brightness is missing; the default is used"
+    );
+}

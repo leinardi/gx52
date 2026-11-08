@@ -19,6 +19,7 @@
 //! Everything here is plain Rust. The functions that touch the disk block, so the app runs them
 //! through `gio::spawn_blocking`; the tests call them directly on a temporary directory.
 
+pub(crate) mod exchange;
 pub(crate) mod files;
 pub(crate) mod legacy;
 pub(crate) mod mapping;

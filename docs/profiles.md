@@ -304,6 +304,11 @@ it is replaced only through the confirm-and-back-up path there.
   - per-field problems are fixed to the type defaults and listed before the import is confirmed;
   - a name that clashes within the type gets `(2)`, `(3)`, ... appended;
   - the imported profile gets a new random id and is never a default profile.
+- **In the app:** the window actions `win.import-profile` (parameter: the device type, `x52-pro` or
+  `x52`) and `win.export-profile` (parameter: the profile id). Reading and checking the file and
+  writing the imported one run off the main thread; the confirmation is an `adw::AlertDialog`
+  that names the profile and lists every problem, and only "Import" writes anything. The profile
+  list of milestone M5 calls these actions; until then they have no menu entry.
 
 ## Migration policy
 

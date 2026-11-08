@@ -6,6 +6,8 @@ data/resources/ui/shortcuts-dialog.blp
 data/resources/ui/window.blp
 src/application.rs
 src/device/status.rs
+src/profile/exchange.rs
 src/profile/legacy.rs
 src/profile/mod.rs
 src/profile/schema.rs
+src/window.rs
