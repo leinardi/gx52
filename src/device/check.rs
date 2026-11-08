@@ -475,13 +475,13 @@ impl Session<'_> {
                 self.seen.access = Some(access);
                 self.info(&format!("access: {access:?}"));
             }
-            DeviceEvent::InputNode(node) => {
+            DeviceEvent::InputNode { node, .. } => {
                 if node.is_none() {
                     self.seen.mode = None;
                 }
                 self.seen.node = node;
             }
-            DeviceEvent::Mode(mode) => {
+            DeviceEvent::Mode { mode, .. } => {
                 self.seen.modes.push(mode);
                 self.seen.mode = Some(mode);
             }

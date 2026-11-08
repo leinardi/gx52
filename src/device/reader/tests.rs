@@ -247,6 +247,13 @@ fn opened(number: u32) -> ReaderEvent {
     }
 }
 
+fn mode_event(mode: Mode) -> ReaderEvent {
+    ReaderEvent::Mode {
+        generation: Generation(1),
+        mode,
+    }
+}
+
 fn closed() -> ReaderEvent {
     ReaderEvent::NodeClosed {
         generation: Generation(1),
@@ -310,7 +317,7 @@ fn the_recorded_bounce_gives_one_change_per_selector_position() {
         Mode::One,
     ];
     let mut expected = vec![opened(20)];
-    expected.extend(modes.map(ReaderEvent::Mode));
+    expected.extend(modes.map(mode_event));
     expected.push(closed());
     assert_eq!(events, expected);
 }
@@ -335,7 +342,7 @@ fn other_buttons_and_axes_change_nothing() {
 
     let (events, _) = harness.run(source);
 
-    assert_eq!(events, [opened(20), ReaderEvent::Mode(Mode::One), closed()]);
+    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
 }
 
 #[test]
@@ -346,7 +353,7 @@ fn the_node_appearing_a_poll_after_the_usb_device_is_found() {
 
     let (events, harness) = harness.run(source);
 
-    assert_eq!(events, [opened(20), ReaderEvent::Mode(Mode::One), closed()]);
+    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
     assert!(*harness.discoveries.lock().unwrap() >= 2);
 }
 
@@ -361,7 +368,7 @@ fn a_node_denied_at_first_is_opened_once_readable() {
 
     let (events, harness) = harness.run(source);
 
-    assert_eq!(events, [opened(20), ReaderEvent::Mode(Mode::One), closed()]);
+    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
     assert_eq!(
         harness.opened.lock().unwrap().len(),
         2,
@@ -385,10 +392,10 @@ fn enodev_while_the_usb_device_stays_selected_reopens_the_node_when_it_is_back()
         events,
         [
             opened(20),
-            ReaderEvent::Mode(Mode::One),
+            mode_event(Mode::One),
             closed(),
             opened(21),
-            ReaderEvent::Mode(Mode::One),
+            mode_event(Mode::One),
             closed(),
         ]
     );
@@ -425,7 +432,7 @@ fn gone_for_the_selection_stops_and_a_stale_gone_does_not() {
 
     let (events, harness) = harness.run(source);
 
-    assert_eq!(events, [opened(20), ReaderEvent::Mode(Mode::One), closed()]);
+    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
     assert_eq!(
         harness.timeouts.lock().unwrap().len(),
         2,
@@ -450,13 +457,16 @@ fn a_new_selection_closes_the_node_and_follows_the_new_one() {
         events,
         [
             opened(20),
-            ReaderEvent::Mode(Mode::One),
+            mode_event(Mode::One),
             closed(),
             ReaderEvent::NodeOpened {
                 generation: Generation(2),
                 node: PathBuf::from("/dev/input/event20"),
             },
-            ReaderEvent::Mode(Mode::One),
+            ReaderEvent::Mode {
+                generation: Generation(2),
+                mode: Mode::One,
+            },
             ReaderEvent::NodeClosed {
                 generation: Generation(2),
             },

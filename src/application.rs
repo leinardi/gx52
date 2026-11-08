@@ -80,8 +80,8 @@ mod imp {
     use gtk::{gio, glib};
     use x52::input::Mode;
 
-    use crate::device::DeviceService;
     use crate::device::status::DeviceStatus;
+    use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::store::ProfileStore;
     use crate::{config, window::Window};
 
@@ -98,6 +98,9 @@ mod imp {
         /// The selected device's mode: the last one reported, kept while the evdev node is
         /// reopened, cleared when the device goes.
         pub(crate) active_mode: Cell<Option<Mode>>,
+        /// The selection the device events are followed for; events of an earlier one are
+        /// dropped.
+        pub(crate) selection: Cell<CurrentSelection>,
         /// Messages for a toast, kept until a window can show them.
         pub(crate) pending_toasts: RefCell<Vec<adw::Toast>>,
         /// Whether a profile import is running, from the file chooser to the write.
@@ -468,6 +471,13 @@ impl Application {
     /// state when the device or its mode changed.
     fn on_device_event(&self, event: &DeviceEvent) {
         let imp = self.imp();
+        let mut selection = imp.selection.get();
+        let current = selection.accept(event);
+        imp.selection.set(selection);
+        if !current {
+            tracing::debug!("Dropped an event of an earlier selection: {event:?}");
+            return;
+        }
         let mut status = imp.device_status.get();
         if status.apply(event) {
             tracing::info!("Device status: {status:?}");
@@ -484,14 +494,14 @@ impl Application {
                 imp.active_mode.set(None);
                 self.push_desired_state();
             }
-            DeviceEvent::Mode(mode) => {
+            DeviceEvent::Mode { mode, .. } => {
                 if imp.active_mode.replace(Some(*mode)) != Some(*mode) {
                     self.push_desired_state();
                 }
             }
             DeviceEvent::Gone(_) => imp.active_mode.set(None),
             DeviceEvent::Access(_)
-            | DeviceEvent::InputNode(_)
+            | DeviceEvent::InputNode { .. }
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)
             | DeviceEvent::Sent(_) => {}

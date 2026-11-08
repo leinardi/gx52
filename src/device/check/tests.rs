@@ -869,13 +869,13 @@ fn a_selection_reaches_the_main_thread_before_its_initial_mode() {
         loop {
             match events.recv_blocking().unwrap() {
                 DeviceEvent::Selected(_) => selected_seen = true,
-                DeviceEvent::Mode(_) => {
+                DeviceEvent::Mode { .. } => {
                     assert!(selected_seen, "the initial mode came before its selection");
                     break;
                 }
                 DeviceEvent::Gone(_)
                 | DeviceEvent::Access(_)
-                | DeviceEvent::InputNode(_)
+                | DeviceEvent::InputNode { .. }
                 | DeviceEvent::X52dRunning(_)
                 | DeviceEvent::Error(_)
                 | DeviceEvent::Sent(_) => {}

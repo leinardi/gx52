@@ -57,12 +57,12 @@ impl DeviceStatus {
                 self.mode = None;
             }
             DeviceEvent::Access(access) => self.access = *access,
-            DeviceEvent::InputNode(node) => {
+            DeviceEvent::InputNode { node, .. } => {
                 if node.is_none() {
                     self.mode = None;
                 }
             }
-            DeviceEvent::Mode(mode) => self.mode = Some(*mode),
+            DeviceEvent::Mode { mode, .. } => self.mode = Some(*mode),
             DeviceEvent::X52dRunning(running) => self.x52d_running = *running,
             DeviceEvent::Error(_) | DeviceEvent::Sent(_) => {}
         }
@@ -201,10 +201,14 @@ mod tests {
         assert!(status.apply(&DeviceEvent::Selected(device)));
         assert!(status.apply(&DeviceEvent::Access(AccessState::Ready)));
         assert!(!status.apply(&DeviceEvent::Access(AccessState::Ready)));
-        assert!(!status.apply(&DeviceEvent::InputNode(Some(PathBuf::from(
-            "/dev/input/event20"
-        )))));
-        assert!(status.apply(&DeviceEvent::Mode(Mode::Two)));
+        assert!(!status.apply(&DeviceEvent::InputNode {
+            generation: Generation(1),
+            node: Some(PathBuf::from("/dev/input/event20")),
+        }));
+        assert!(status.apply(&DeviceEvent::Mode {
+            generation: Generation(1),
+            mode: Mode::Two,
+        }));
         assert!(status.apply(&DeviceEvent::X52dRunning(true)));
         assert!(!status.apply(&DeviceEvent::Error("busy".into())));
         assert_eq!(
@@ -217,9 +221,15 @@ mod tests {
             }
         );
 
-        assert!(status.apply(&DeviceEvent::InputNode(None)));
+        assert!(status.apply(&DeviceEvent::InputNode {
+            generation: Generation(1),
+            node: None,
+        }));
         assert_eq!(status.mode, None, "no mode without the evdev node");
-        status.apply(&DeviceEvent::Mode(Mode::One));
+        status.apply(&DeviceEvent::Mode {
+            generation: Generation(1),
+            mode: Mode::One,
+        });
         assert!(status.apply(&DeviceEvent::Gone(Generation(1))));
         assert_eq!(status.mode, None);
     }
