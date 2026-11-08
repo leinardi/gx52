@@ -13,5 +13,15 @@
       <default>false</default>
       <summary>Window maximized state</summary>
     </key>
+    <key name="mode-profiles-x52-pro" type="as">
+      <default>['x52-pro-default', 'x52-pro-default', 'x52-pro-default']</default>
+      <summary>X52 Pro profiles of the modes</summary>
+      <description>The ids of the profiles that modes 1, 2 and 3 of the mode selector use on an X52 Pro. An id that names no X52 Pro profile uses the default profile.</description>
+    </key>
+    <key name="mode-profiles-x52" type="as">
+      <default>['x52-default', 'x52-default', 'x52-default']</default>
+      <summary>X52 profiles of the modes</summary>
+      <description>The ids of the profiles that modes 1, 2 and 3 of the mode selector use on an X52. An id that names no X52 profile uses the default profile.</description>
+    </key>
   </schema>
 </schemalist>

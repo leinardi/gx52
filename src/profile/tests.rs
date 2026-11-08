@@ -104,7 +104,7 @@ fn the_builtin_default_is_the_default_device_state() {
 fn the_device_state_has_the_profile_values() {
     let mut profile = Profile::builtin_default(DeviceType::X52Pro);
     profile.mfd_lines[0] = "GX52".to_owned();
-    profile.clock2.source = ZoneSpec::Iana("Europe/Rome".to_owned());
+    profile.clock2.source = ZoneSpec::Iana(IanaZone::new("Europe/Rome").unwrap());
     profile.shift = true;
     let state = profile.to_device_state();
     assert_eq!(state.mfd_lines[0], MfdText::new("GX52").unwrap());
@@ -130,12 +130,7 @@ fn the_x52_state_never_has_leds_shift_or_blink() {
 }
 
 #[test]
-fn an_unknown_zone_falls_back_to_the_builtin_clock() {
-    let mut profile = Profile::builtin_default(DeviceType::X52Pro);
-    profile.clock3.source = ZoneSpec::Iana("Mars/Olympus_Mons".to_owned());
-    let state = profile.to_device_state();
-    assert_eq!(
-        state.clock3.source,
-        DeviceState::default_for(DeviceType::X52Pro).clock3.source
-    );
+fn unknown_zones_cannot_be_named() {
+    assert!(IanaZone::new("Mars/Olympus_Mons").is_err());
+    assert_eq!(IanaZone::new("Europe/Rome").unwrap().name(), "Europe/Rome");
 }

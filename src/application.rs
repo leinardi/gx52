@@ -23,12 +23,14 @@ use adw::{prelude::*, subclass::prelude::*};
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use x52::clock::SystemClock;
+use x52::device::DeviceType;
+use x52::input::Mode;
 use x52::state::DeviceState;
 
 use crate::config;
 use crate::device::{DeviceEvent, DeviceService, access};
 use crate::profile::store::{DefaultPersistence, Entry, LoadReport, ProfileStore};
-use crate::profile::{self};
+use crate::profile::{self, mapping};
 use crate::window::Window;
 
 /// The version of Cargo.toml and meson.build until the release workflow sets the first one
@@ -36,11 +38,12 @@ use crate::window::Window;
 const UNRELEASED_VERSION: &str = "0.0.0";
 
 mod imp {
-    use std::cell::{Cell, RefCell};
+    use std::cell::{Cell, OnceCell, RefCell};
 
     use adw::{prelude::*, subclass::prelude::*};
     use gettextrs::gettext;
-    use gtk::glib;
+    use gtk::{gio, glib};
+    use x52::input::Mode;
 
     use crate::device::DeviceService;
     use crate::device::status::DeviceStatus;
@@ -53,8 +56,13 @@ mod imp {
         pub(crate) device: RefCell<Option<DeviceService>>,
         /// What the windows show about the device.
         pub(crate) device_status: Cell<DeviceStatus>,
+        /// The app's settings, from `startup`.
+        pub(crate) settings: OnceCell<gio::Settings>,
         /// The profiles, once loaded.
         pub(crate) profiles: RefCell<Option<ProfileStore>>,
+        /// The selected device's mode: the last one reported, kept while the evdev node is
+        /// reopened, cleared when the device goes.
+        pub(crate) active_mode: Cell<Option<Mode>>,
         /// Messages for a toast, kept until a window can show them.
         pub(crate) pending_toasts: RefCell<Vec<String>>,
     }
@@ -78,6 +86,7 @@ mod imp {
             gtk::Window::set_default_icon_name(config::APP_ID);
             let app = self.obj();
             app.setup_actions();
+            app.setup_settings();
             app.start_device_service();
             app.load_profiles();
         }
@@ -152,6 +161,23 @@ impl Application {
         self.set_accels_for_action("window.close", &["<Control>w"]);
     }
 
+    /// Creates the settings and follows the mode mappings.
+    fn setup_settings(&self) {
+        let settings = gio::Settings::new(config::APP_ID);
+        for device_type in DeviceType::ALL {
+            settings.connect_changed(
+                Some(mapping::settings_key(device_type)),
+                glib::clone!(
+                    #[weak(rename_to = app)]
+                    self,
+                    move |_, _| app.push_desired_state()
+                ),
+            );
+        }
+        // Set once, in startup.
+        let _ = self.imp().settings.set(settings);
+    }
+
     /// Starts the device service and follows its events on the main loop.
     fn start_device_service(&self) {
         match DeviceService::start(SystemClock) {
@@ -211,6 +237,7 @@ impl Application {
             Entry::Loaded(_) | Entry::Newer(_) => None,
         }));
         self.imp().profiles.replace(Some(store));
+        self.push_desired_state();
         if report.unlisted.is_some() {
             self.toast(gettext("The profile folder could not be read"));
         }
@@ -246,15 +273,10 @@ impl Application {
         }
     }
 
-    /// Applies a device event: pushes the default state of a newly selected device type and
-    /// shows a changed status in every window.
+    /// Applies a device event: shows a changed status in every window and pushes the desired
+    /// state when the device or its mode changed.
     fn on_device_event(&self, event: &DeviceEvent) {
         let imp = self.imp();
-        if let DeviceEvent::Selected(selected) = event
-            && let Some(device) = imp.device.borrow().as_ref()
-        {
-            device.set_state(DeviceState::default_for(selected.device_type));
-        }
         let mut status = imp.device_status.get();
         if status.apply(event) {
             tracing::info!("Device status: {status:?}");
@@ -265,6 +287,51 @@ impl Application {
                 }
             }
         }
+        match event {
+            DeviceEvent::Selected(_) => self.push_desired_state(),
+            DeviceEvent::Mode(mode) => {
+                if imp.active_mode.replace(Some(*mode)) != Some(*mode) {
+                    self.push_desired_state();
+                }
+            }
+            DeviceEvent::Gone(_) => imp.active_mode.set(None),
+            DeviceEvent::Access(_)
+            | DeviceEvent::InputNode(_)
+            | DeviceEvent::X52dRunning(_)
+            | DeviceEvent::Error(_)
+            | DeviceEvent::Sent(_) => {}
+        }
+    }
+
+    /// Sends the device the profile its type's mapping gives the active mode (mode 1 until the
+    /// mode is known), or the built-in default until the profiles are loaded.
+    fn push_desired_state(&self) {
+        let imp = self.imp();
+        let Some(device_type) = imp.device_status.get().device_type else {
+            return;
+        };
+        let device = imp.device.borrow();
+        let Some(device) = device.as_ref() else {
+            return;
+        };
+        let mode = imp.active_mode.get().unwrap_or(Mode::One);
+        let profiles = imp.profiles.borrow();
+        let state = match (profiles.as_ref(), imp.settings.get()) {
+            (Some(store), Some(settings)) => {
+                let entries: Vec<String> = settings
+                    .strv(mapping::settings_key(device_type))
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect();
+                let id = mapping::resolve(&entries, device_type, mode, store);
+                tracing::info!("Mode {mode:?} on the {device_type}: profile {id}");
+                store
+                    .loaded(&id)
+                    .map(|loaded| loaded.profile.to_device_state())
+            }
+            _ => None,
+        };
+        device.set_state(state.unwrap_or_else(|| DeviceState::default_for(device_type)));
     }
 
     fn show_about_dialog(&self) {

@@ -20,6 +20,7 @@
 //! through `gio::spawn_blocking`; the tests call them directly on a temporary directory.
 
 pub(crate) mod files;
+pub(crate) mod mapping;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod schema;
@@ -30,8 +31,9 @@ use std::path::{Path, PathBuf};
 
 use gettextrs::gettext;
 use gtk::glib;
+use jiff::tz::TimeZone;
 use x52::charset::MfdText;
-use x52::clock::{FixedOffset, ZoneSource};
+use x52::clock::{ClockError, FixedOffset, ZoneSource};
 use x52::command::{Brightness, MfdLine};
 use x52::device::DeviceType;
 use x52::state::{Clock1Settings, DeviceState, Leds, ZoneClockSettings};
@@ -110,14 +112,48 @@ pub(crate) fn device_type_from_id(id: &str) -> Option<DeviceType> {
         .find(|device_type| device_type.id() == id)
 }
 
-/// What clock 2 or 3 of a profile shows: a named zone, kept by name so it is written back as it
-/// was read, or a fixed offset from UTC.
+/// What clock 2 or 3 of a profile shows: a named zone or a fixed offset from UTC.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ZoneSpec {
-    /// An IANA time zone the system's database knows, for example `Europe/Rome`.
-    Iana(String),
+    /// An IANA time zone the system's database knows.
+    Iana(IanaZone),
     /// A fixed offset from UTC, with no daylight saving time.
     Fixed(FixedOffset),
+}
+
+/// An IANA time zone, looked up once in the system's database and kept with the name it was
+/// written under, so the profile is written back as it was read and turning it into a device
+/// state reads no file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct IanaZone {
+    name: String,
+    zone: TimeZone,
+}
+
+impl IanaZone {
+    /// The zone `name`, for example `Europe/Rome`, from the system's database.
+    ///
+    /// Reads the database, so it runs off the main thread (while parsing).
+    ///
+    /// # Errors
+    ///
+    /// [`ClockError::UnknownZone`] when the database has no zone of that name.
+    pub(crate) fn new(name: &str) -> Result<Self, ClockError> {
+        TimeZone::get(name)
+            .map(|zone| Self {
+                name: name.to_owned(),
+                zone,
+            })
+            .map_err(|source| ClockError::UnknownZone {
+                name: name.to_owned(),
+                source,
+            })
+    }
+
+    /// The name the zone was looked up by.
+    pub(crate) fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 /// Clock 2 or clock 3 of a profile.
@@ -189,13 +225,6 @@ impl Profile {
     }
 
     /// The desired device state this profile stands for.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the mode mapping pushes the mapped profile's state"
-        )
-    )]
     pub(crate) fn to_device_state(&self) -> DeviceState {
         let builtin = DeviceState::default_for(self.device_type);
         let mfd_lines = self.mfd_lines.each_ref().map(|line| {
@@ -217,8 +246,8 @@ impl Profile {
             },
             mfd_lines,
             clock1: self.clock1,
-            clock2: self.clock2.to_settings(&builtin.clock2),
-            clock3: self.clock3.to_settings(&builtin.clock3),
+            clock2: self.clock2.to_settings(),
+            clock3: self.clock3.to_settings(),
             date_format: self.date_format,
             shift: self.device_type.has_shift() && self.shift,
             blink: self.device_type.has_blink() && self.blink,
@@ -231,7 +260,10 @@ impl ZoneClock {
     fn from_settings(settings: &ZoneClockSettings) -> Self {
         let source = match &settings.source {
             ZoneSource::Fixed(offset) => ZoneSpec::Fixed(*offset),
-            ZoneSource::Zone(zone) => ZoneSpec::Iana(zone.iana_name().unwrap_or("UTC").to_owned()),
+            ZoneSource::Zone(zone) => ZoneSpec::Iana(IanaZone {
+                name: zone.iana_name().unwrap_or("UTC").to_owned(),
+                zone: zone.clone(),
+            }),
         };
         Self {
             source,
@@ -239,24 +271,11 @@ impl ZoneClock {
         }
     }
 
-    /// The device-state form, or `fallback` when the zone is no longer in the database.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the mode mapping pushes the mapped profile's state"
-        )
-    )]
-    fn to_settings(&self, fallback: &ZoneClockSettings) -> ZoneClockSettings {
+    /// The device-state form.
+    fn to_settings(&self) -> ZoneClockSettings {
         let source = match &self.source {
             ZoneSpec::Fixed(offset) => ZoneSource::Fixed(*offset),
-            ZoneSpec::Iana(name) => match ZoneSource::iana(name) {
-                Ok(source) => source,
-                Err(error) => {
-                    tracing::warn!("Time zone {name:?} not shown: {error}");
-                    fallback.source.clone()
-                }
-            },
+            ZoneSpec::Iana(iana) => ZoneSource::Zone(iana.zone.clone()),
         };
         ZoneClockSettings {
             source,

@@ -24,7 +24,7 @@ fn readable(name: &str) -> (Profile, Vec<FieldProblem>) {
             profile,
             problems,
             migrated_from: None,
-        }) => (profile, problems),
+        }) => (*profile, problems),
         other => panic!("{name}: {other:?}"),
     }
 }
@@ -63,7 +63,7 @@ fn the_profiles_md_example_reads_completely() {
     assert_eq!(profile.clock1.source, Clock1Source::Local);
     assert_eq!(
         profile.clock2.source,
-        ZoneSpec::Iana("Europe/Rome".to_owned())
+        ZoneSpec::Iana(IanaZone::new("Europe/Rome").unwrap())
     );
     assert_eq!(
         profile.clock3.source,
@@ -98,7 +98,7 @@ fn written_profiles_read_back_unchanged() {
     let mut odd = Profile::builtin(DeviceType::X52Pro, "\"Quoted\" \\ 'name' — 飛行".to_owned());
     odd.mfd_lines = ["a\"b".to_owned(), "\\".to_owned(), "ÄÖÜ".to_owned()];
     odd.leds = Leds::uniform(LedColour::Amber, false);
-    odd.clock2.source = ZoneSpec::Iana("America/Santiago".to_owned());
+    odd.clock2.source = ZoneSpec::Iana(IanaZone::new("America/Santiago").unwrap());
     for profile in [
         Profile::builtin_default(DeviceType::X52Pro),
         Profile::builtin_default(DeviceType::X52),
@@ -112,7 +112,7 @@ fn written_profiles_read_back_unchanged() {
                 migrated_from: None,
             }) => {
                 assert_eq!(problems, [], "{written}");
-                assert_eq!(read, profile, "{written}");
+                assert_eq!(*read, profile, "{written}");
             }
             other => panic!("{written}: {other:?}"),
         }
@@ -184,7 +184,7 @@ fn out_of_range_fields_get_the_builtin_value() {
     // The rest of the profile loads.
     assert_eq!(
         profile.clock2.source,
-        ZoneSpec::Iana("Europe/Rome".to_owned())
+        ZoneSpec::Iana(IanaZone::new("Europe/Rome").unwrap())
     );
     assert_eq!(profile.leds.colour(BiColourLed::ButtonD), LedColour::Red);
 }

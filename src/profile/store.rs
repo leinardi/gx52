@@ -344,7 +344,7 @@ impl ProfileStore {
                 }),
                 _,
             ) => Ok(Entry::Loaded(Loaded {
-                profile,
+                profile: *profile,
                 problems,
                 origin: migrated_from.map_or(Origin::File, |from| Origin::Migrated { from }),
             })),
@@ -460,10 +460,6 @@ impl ProfileStore {
     }
 
     /// The usable profile `id`.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the mode mapping looks the mapped profiles up")
-    )]
     pub(crate) fn loaded(&self, id: &ProfileId) -> Option<&Loaded> {
         match self.entries.get(id)? {
             Entry::Loaded(loaded) => Some(loaded),

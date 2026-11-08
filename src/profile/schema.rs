@@ -25,13 +25,13 @@ use std::fmt::{self, Write as _};
 use gettextrs::gettext;
 use toml::{Table, Value};
 use x52::charset::MfdText;
-use x52::clock::{Clock1Source, DateFormat, FixedOffset, ZoneSource};
+use x52::clock::{Clock1Source, DateFormat, FixedOffset};
 use x52::command::Brightness;
 use x52::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
 
 use super::migrate::{Schema, Version};
 use super::name::{self, NameProblem};
-use super::{MFD_LINES, Profile, ZoneClock, ZoneSpec, device_type_from_id};
+use super::{IanaZone, MFD_LINES, Profile, ZoneClock, ZoneSpec, device_type_from_id};
 
 /// Why a document is not a profile at all.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -62,7 +62,7 @@ pub(crate) enum Parsed {
     /// A profile of the supported schema version, or migrated up to it.
     Readable {
         /// The profile, with built-in values for the fields that had problems.
-        profile: Profile,
+        profile: Box<Profile>,
         /// What was wrong, field by field.
         problems: Vec<FieldProblem>,
         /// The file's version, when it was older and has been migrated.
@@ -193,7 +193,7 @@ pub(crate) fn parse(bytes: &[u8], schema: Schema) -> Result<Parsed, ParseError> 
             let mut reader = Reader::default();
             let profile = reader.profile(&document, device_type);
             Ok(Parsed::Readable {
-                profile,
+                profile: Box::new(profile),
                 problems: reader.problems,
                 migrated_from,
             })
@@ -460,8 +460,8 @@ fn zone_spec_from(value: &Value) -> Result<ZoneSpec, ProblemKind> {
         return Err(unknown());
     };
     match (tag.as_str(), inner) {
-        ("iana", Value::String(name)) => ZoneSource::iana(name)
-            .map(|_| ZoneSpec::Iana(name.clone()))
+        ("iana", Value::String(name)) => IanaZone::new(name)
+            .map(ZoneSpec::Iana)
             .map_err(|_| ProblemKind::UnknownValue(quoted(name))),
         ("fixed_offset_minutes", Value::Integer(minutes)) => i16::try_from(*minutes)
             .ok()
@@ -582,7 +582,7 @@ fn write_into(out: &mut String, profile: &Profile, device_type: DeviceType) -> f
     writeln!(out, "use_24h = {}", profile.clock1.h24)?;
     for (key, clock) in [("clock_2", &profile.clock2), ("clock_3", &profile.clock3)] {
         let source = match &clock.source {
-            ZoneSpec::Iana(zone) => format!("{{ iana = {} }}", toml_string(zone)),
+            ZoneSpec::Iana(zone) => format!("{{ iana = {} }}", toml_string(zone.name())),
             ZoneSpec::Fixed(offset) => {
                 format!("{{ fixed_offset_minutes = {} }}", offset.minutes())
             }

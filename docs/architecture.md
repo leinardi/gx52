@@ -262,7 +262,11 @@ overrides ───────────────────────�
     [protocol.md](protocol.md#x52-non-pro));
   - the **active mode** (from the reader) mapped to a profile **for that device type** through the
     per-type mode mapping in GSettings (see [profiles.md](profiles.md#mode-mapping)); a missing or
-    wrong-type profile falls back to that type's default profile;
+    wrong-type profile falls back to that type's default profile. Until the reader reports a
+    mode, mode 1 is used. The last reported mode is kept while the evdev node is reopened and
+    dropped when the device goes. Until the store has loaded, the built-in default is sent. The
+    state is pushed again on a new selection, a mode change, a change of either mapping key and
+    once the store has loaded (`src/application.rs`, `push_desired_state`);
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
   - **overrides**: temporary values on top of the profile, such as live edits not yet saved and,
