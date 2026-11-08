@@ -37,6 +37,8 @@ mod imp {
     pub struct Window {
         pub settings: OnceCell<gio::Settings>,
         #[template_child]
+        pub toast_overlay: TemplateChild<adw::ToastOverlay>,
+        #[template_child]
         pub x52d_banner: TemplateChild<adw::Banner>,
         #[template_child]
         pub status_page: TemplateChild<adw::StatusPage>,
@@ -109,6 +111,11 @@ impl Window {
             }
             None => imp.x52d_banner.set_revealed(false),
         }
+    }
+
+    /// Shows `message` in a toast.
+    pub(crate) fn show_toast(&self, message: &str) {
+        self.imp().toast_overlay.add_toast(adw::Toast::new(message));
     }
 
     fn settings(&self) -> &gio::Settings {

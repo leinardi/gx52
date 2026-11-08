@@ -27,6 +27,8 @@ use x52::state::DeviceState;
 
 use crate::config;
 use crate::device::{DeviceEvent, DeviceService, access};
+use crate::profile::store::{DefaultPersistence, Entry, LoadReport, ProfileStore};
+use crate::profile::{self};
 use crate::window::Window;
 
 /// The version of Cargo.toml and meson.build until the release workflow sets the first one
@@ -42,6 +44,7 @@ mod imp {
 
     use crate::device::DeviceService;
     use crate::device::status::DeviceStatus;
+    use crate::profile::store::ProfileStore;
     use crate::{config, window::Window};
 
     #[derive(Debug, Default)]
@@ -50,6 +53,10 @@ mod imp {
         pub(crate) device: RefCell<Option<DeviceService>>,
         /// What the windows show about the device.
         pub(crate) device_status: Cell<DeviceStatus>,
+        /// The profiles, once loaded.
+        pub(crate) profiles: RefCell<Option<ProfileStore>>,
+        /// Messages for a toast, kept until a window can show them.
+        pub(crate) pending_toasts: RefCell<Vec<String>>,
     }
 
     #[glib::object_subclass]
@@ -72,6 +79,7 @@ mod imp {
             let app = self.obj();
             app.setup_actions();
             app.start_device_service();
+            app.load_profiles();
         }
 
         // Runs on every launch, including a second launch of the single instance:
@@ -85,6 +93,7 @@ mod imp {
                 window.upcast()
             });
             window.present();
+            app.show_pending_toasts();
         }
 
         fn shutdown(&self) {
@@ -167,6 +176,74 @@ impl Application {
                 tracing::info!("uinput access: {access:?}");
             }
         });
+    }
+
+    /// Loads the profile store off the main thread.
+    fn load_profiles(&self) {
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = app)]
+            self,
+            async move {
+                let dir = profile::profiles_dir(&profile::config_dir());
+                let loaded = gio::spawn_blocking(move || {
+                    ProfileStore::load(&dir, DefaultPersistence::Write)
+                })
+                .await;
+                if let Ok((store, report)) = loaded {
+                    app.on_profiles_loaded(store, &report);
+                } else {
+                    tracing::error!("The profile loading task panicked");
+                }
+            }
+        ));
+    }
+
+    /// Keeps the loaded store and reports its problems once.
+    fn on_profiles_loaded(&self, store: ProfileStore, report: &LoadReport) {
+        report.log(&store);
+        let mut files: Vec<String> = report
+            .failed_files()
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        files.extend(store.entries().filter_map(|(id, entry)| match entry {
+            Entry::Loaded(loaded) if !loaded.problems.is_empty() => Some(id.file_name()),
+            Entry::Loaded(_) | Entry::Newer(_) => None,
+        }));
+        self.imp().profiles.replace(Some(store));
+        if report.unlisted.is_some() {
+            self.toast(gettext("The profile folder could not be read"));
+        }
+        if !files.is_empty() {
+            let count = u32::try_from(files.len()).unwrap_or(u32::MAX);
+            let message = gettextrs::ngettext(
+                "A profile file has problems: {files}",
+                "{count} profile files have problems: {files}",
+                count,
+            )
+            .replace("{count}", &count.to_string())
+            .replace("{files}", &files.join(", "));
+            self.toast(message);
+        }
+    }
+
+    /// Shows `message` in the active window, or keeps it until a window is presented.
+    fn toast(&self, message: String) {
+        self.imp().pending_toasts.borrow_mut().push(message);
+        self.show_pending_toasts();
+    }
+
+    fn show_pending_toasts(&self) {
+        let Some(window) = self
+            .active_window()
+            .and_then(|window| window.downcast::<Window>().ok())
+        else {
+            return;
+        };
+        let messages = self.imp().pending_toasts.take();
+        for message in messages {
+            window.show_toast(&message);
+        }
     }
 
     /// Applies a device event: pushes the default state of a newly selected device type and

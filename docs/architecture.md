@@ -299,7 +299,12 @@ From S9; the 1.0.0 scope is an on/off switch with fixed values.
   flag) and the **per-type mode mappings** (profile ids for modes 1/2/3 per device type). One
   `gio::Settings` instance, held by the application.
 - **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
-  format, defaults, validation and recovery rules are in [profiles.md](profiles.md).
+  format, defaults, validation and recovery rules are in [profiles.md](profiles.md). The code is
+  in `src/profile/`: plain Rust with no GObject, whose file operations block (`files.rs`: the
+  size-capped read, `gio::File::replace_contents` for a save, create-new writes for every new file,
+  backups that never overwrite a backup). The application loads the store once at start-up in
+  `gio::spawn_blocking`, keeps it on the main thread, logs the load report and shows its one toast.
+  The GObject wrappers the UI binds to come with the profile editor in M5.
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
   and `gx52.db` exists; read-only; the flag is set even when the database is unreadable, so start-up
   never fails because of it (rewrite analysis, section 10; S8 for the schema).

@@ -643,6 +643,7 @@ dependencies = [
  "rustix",
  "tempfile",
  "thiserror",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "x52",

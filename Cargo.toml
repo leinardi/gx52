@@ -98,6 +98,8 @@ async-io = "2"
 evdev = "0.13"
 # poll(2) on the evdev node with a timeout.
 rustix = { version = "1", features = ["event", "fs", "net"] }
+# Profile files (docs/profiles.md): parsed into a table first, then field by field.
+toml = "1.1.8"
 
 [dev-dependencies]
 x52 = { path = "x52", features = ["test-support"] }
