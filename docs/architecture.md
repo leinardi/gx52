@@ -190,8 +190,16 @@ flowchart LR
   directory, so USB and evdev always come from the same physical device. It opens the node
   **without grabbing** (games keep every input), reads the initial mode with `EVIOCGKEY`, reads
   events nonblocking with `poll(2)`, applies the mode debounce of
-  [protocol.md](protocol.md#mode-selector), and sends mode changes and, when something listens (the
-  input tester), input events to the main thread. Nothing logs per event (axis noise, S3).
+  [protocol.md](protocol.md#mode-selector), and sends to the main thread mode changes, **every key
+  event** (buttons, toggles, the hats that are keys) and **the POV 1 hat axes** (`ABS_HAT0X` /
+  `ABS_HAT0Y`), a few events per second at most, and the other **axis events** only while the
+  input tester listens. Nothing logs per event (axis noise, S3).
+  - Key and hat events always flow because the MFD "Last button" source needs them while the
+    window is hidden. The main thread keeps the set of held buttons and hat directions from them.
+    On every open of the node the reader sends the current key and hat state (`EVIOCGKEY`,
+    `EVIOCGABS`) first, so the set is rebuilt; on `ENODEV`, a read error, `Gone` or a reader
+    shutdown the main thread clears the set, so no button stays "held" on the MFD after a
+    disconnect.
   - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
     further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
     follow the wall clock, so the time since the last key event is measured with monotonic time.
@@ -242,9 +250,11 @@ flowchart LR
   `async_channel` to a main-thread loop; the main thread pushes state with `Handle::update`. The
   `Handle` is stored and `shutdown()` is called from the application's `shutdown`. Tray
   availability is a tri-state (unknown, available, not available) where a successful `spawn()` only
-  fills "unknown", because the offline report can arrive first (S5). "Close hides to tray" uses it,
-  and a watcher that goes away while the window is hidden brings the window back and drops the
-  application hold.
+  fills "unknown", because the offline report can arrive first (S5). The tray shows only while
+  "Run in background" is on. Closing the window with "Run in background" on hides it whether or not
+  a tray is available (GNOME lists the app under Background Apps, and launching it again shows the
+  window; [ui.md](ui.md#preferences)); with it off, closing quits. A watcher that goes away while
+  the window is hidden brings the window back.
 - **Background and autostart:** the Background portal through `ashpd` (`request_background` with
   autostart), with `default-features = false` and the `async-io` and `background` features (ashpd
   0.13), awaited on the main context, so the app adds no tokio runtime. While the window is hidden
@@ -253,11 +263,10 @@ flowchart LR
 ## State model
 
 ```text
-device type ─┐
-active mode ─┼─> mapped profile for that type ─┐
-             │                                 ├─> desired device state ─> writer
-clocks ──────┴─────────────────────────────────┤
-overrides ─────────────────────────────────────┘
+device type ──> active profile for that type ─┐
+active mode ──> its mode settings (per-mode) ─┼─> desired device state ─> writer
+clocks, MFD line sources ─────────────────────┤
+overrides ────────────────────────────────────┘
 ```
 
 - The **desired device state** is a plain `x52` value: LED states (X52 Pro only), both brightness
@@ -267,16 +276,24 @@ overrides ───────────────────────�
   - the **device type** of the connected device (`x52-pro` or `x52`), which also decides which
     fields exist (no LEDs, shift or blink on the non-Pro, per
     [protocol.md](protocol.md#x52-non-pro));
-  - the **active mode** (from the reader) mapped to a profile **for that device type** through the
-    per-type mode mapping in GSettings (see [profiles.md](profiles.md#mode-mapping)); a missing or
-    wrong-type profile falls back to that type's default profile. Until the reader reports a
-    mode, mode 1 is used. The last reported mode is kept while the evdev node is reopened and
-    dropped when the device goes. Until the store has loaded, the built-in default is sent. The
-    state is pushed again on a new selection, a mode change, a change of either mapping key and
-    once the store has loaded (`src/application.rs`, `push_desired_state`);
+  - the **active profile for that device type** (GSettings, see
+    [profiles.md](profiles.md#active-profile)); a missing or wrong-type profile falls back to that
+    type's default profile. Until the store has loaded, the built-in default is sent;
+  - the **active mode** (from the reader), which picks the mode settings of a per-mode profile; a
+    single profile has one set and ignores it. Until the reader reports a mode, mode 1 is used. The
+    last reported mode is kept while the evdev node is reopened and dropped when the device goes.
+    The state is pushed again on a new selection, a mode change, a change of the active profile
+    and once the store has loaded (`src/application.rs`, `push_desired_state`; the mode-mapping
+    version of M3 is reworked in the
+    [M3 follow-up](roadmap.md#m3-follow-up-single-and-per-mode-profiles));
+  - the **MFD line sources**, resolved into three lines of text: custom text, the active profile's
+    name, the mode, the name of the most recently pressed button that is still held (from the set of
+    held buttons above), or empty. Every dynamic value is converted and cut to 16 bytes as
+    [profiles.md](profiles.md#mfd-lines) says;
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
-  - **overrides**: temporary values on top of the profile, such as live edits not yet saved and,
+  - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode
+    bar, shown until the selector moves ([ui.md](ui.md#mode-bar)), live edits not yet saved and,
     in 1.x, MFD pages and D-Bus requests.
 - It is **pushed to the writer** whenever an input changes. The writer decides what to send (only
   changes, or everything on connect).
@@ -285,7 +302,7 @@ overrides ───────────────────────�
   Widgets bind in Blueprint or with `bind_property(...).sync_create()`; behaviour is exposed as
   actions. Models never import widgets.
 - **Connecting a different supported model** (an X52 Pro unplugged, an X52 plugged in) switches to
-  that type's mapping and that type's profiles; the UI shows only the fields the type has.
+  that type's active profile and that type's profiles; the UI shows only the fields the type has.
 
 ## Virtual mouse
 
@@ -307,8 +324,9 @@ settings, defaulting to the S9 values.
 ## Persistence
 
 - **GSettings** (schema id and path from the app ID; the Devel build has its own): app settings
-  (tray, run in background / autostart, virtual mouse switch, window state, the legacy-import-done
-  flag) and the **per-type mode mappings** (profile ids for modes 1/2/3 per device type). One
+  (run in background, autostart, the virtual mouse switch and settings, window state, the
+  legacy-import-done flag) and, per device type, the **active profile** and the **profile order**
+  ([profiles.md](profiles.md#active-profile)). One
   `gio::Settings` instance, held by the application.
 - **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
   format, defaults, validation and recovery rules are in [profiles.md](profiles.md). The code is

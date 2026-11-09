@@ -49,7 +49,7 @@ Sources analysed:
 | UI definition | The current GTK 4 best practice: Blueprint templates. See [section 5.4](#54-ui-definition-blueprint). |
 | AI tooling | Port everything from the reference repositories (`AGENTS.md`, `.agents/skills`, `.claude/`, `.serena/`). |
 | Architectures | `x86_64` and `aarch64` (the current `flathub.json` restricts to `x86_64`). |
-| Per-mode profiles | A profile is one full state for one device type. A setting maps modes 1/2/3 to profiles **per device type** (GSettings `mode-profiles-x52-pro`, `mode-profiles-x52`); by default all three use that type's default profile. See [profiles.md](profiles.md#mode-mapping). |
+| Per-mode profiles | A profile is single (the mode selector changes nothing) or per-mode (one set of LED, MFD and brightness settings per mode; clocks shared). One profile per device type is active. Replaced the per-type mode mapping on 2026-11-09; see [profiles.md](profiles.md#model). |
 | GNOME versions | **Required GNOME 50, runtime GNOME 51** (S6): crate features `gnome_50` / `v1_9` + `gtk_v4_22`, Meson `gtk4 >= 4.22`, `libadwaita-1 >= 1.9`; raised only when an API needs it. |
 | Hotplug in the sandbox | `nusb::watch_devices` on the host, **polling every 250 ms** in the Flatpak sandbox, where the udev netlink events never arrive (S4). No `--share=network`. |
 | Virtual mouse | **In 1.0.0, off by default**, enabled by a switch; uinput through the `evdev` crate, with the S9 values (S9, [protocol.md](protocol.md#virtual-mouse-uinput)). |
@@ -506,7 +506,8 @@ the whole list from the start, so 1.x features don't need rework.
 
 - Feature parity with section 2, minus the update check, with the defects in section 3 fixed.
 - Legacy profile import (section 10).
-- Per-mode profiles: LEDs and MFD switch automatically with the mode selector (1/2/3).
+- Per-mode profiles: a per-mode profile switches its LED, MFD and brightness settings with the
+  mode selector (1/2/3); a single profile ignores it.
 - LED editor: a schematic layout of the LEDs per part of the device (stick, stick base,
   throttle), each a clickable LED with a popover of states; no pictures of the device
   (`docs/spikes/07-led-editor.md`).

@@ -181,6 +181,25 @@ Results on 2026-11-08:
   skill (tooling-todo.md has the reason).
 - The Devel Flatpak builds and passes `meson test` with rusqlite linked to the GNOME SDK's SQLite.
 
+## M3 follow-up: single and per-mode profiles
+
+The profile model changed in the M4 UI session ([profiles.md](profiles.md#model)): a profile is
+single or per-mode, and the active profile replaces the per-type mode mapping of M3 task 2. Nothing
+is published yet, so schema 1 and the GSettings keys are redefined without a migration. Done before
+M5, so the UI is built on the new model.
+
+1. **(code) Schema and store.** `kind`, `[settings]` / `[mode_1]`–`[mode_3]`, the shared clocks and
+   date format, the MFD line sources, and the new validation cases of
+   [profiles.md](profiles.md#validation-and-recovery); the legacy import writes single profiles and
+   maps `settings_show_app_indicator` to `run-in-background`. Done when: DW, plus a fixture per new
+   validation case, and the round-trip tests of M3 pass with single and per-mode profiles.
+2. **(code) Active profile and mode sets.** The `active-profile-*` and `profile-order-*` keys in
+   place of `mode-profiles-*`, `run-in-background` in place of `show-tray`; the state model picks
+   the mode's set of a per-mode profile and resolves the dynamic MFD line sources
+   ([architecture.md](architecture.md#state-model)). Done when: DW, plus on the X52 Pro a per-mode
+   profile switches sets with the selector, a single profile ignores it, and an unknown or
+   wrong-type active id falls back to the type's default.
+
 ## M4: UI design session
 
 Before any UI work. A dedicated session that writes `docs/ui.md` (postponed from stage C because the
@@ -189,39 +208,44 @@ UI is redesigned from scratch).
 The app ships no pictures or drawings of the device; the LED editor is the schematic layout of
 [spike S7](spikes/07-led-editor.md#design-for-the-app), decided on 2026-11-09.
 
-1. **`docs/ui.md`.** Screens, navigation, libadwaita widgets, adaptive layout, the guidance pages,
-   the LED editor's schematic layout, and the open question of
-   [profiles.md](profiles.md#mfd-lines): whether MFD lines show dynamic content (mode, pressed
-   button, profile name, as GX52 0.7 did) and how. Done when: `make check` passes and the user has
-   reviewed it.
+1. **[`docs/ui.md`](ui.md).** Screens, navigation, libadwaita widgets, adaptive layout, the
+   guidance pages, the LED editor's schematic layout, the MFD line sources. Drafted on 2026-11-09
+   from an interview with the maintainer; the items marked "Proposed" are the assistant's. Done
+   when: `make check` passes and the user has reviewed it.
 
 ## M5: UI implementation
 
 Per `docs/ui.md`. Every string translatable, every interactive widget with an accessible label
 (AGENTS.md).
 
-1. **(code) Main window and profiles UI**: profile list per device type, add, rename, remove,
-   import, export, mode mapping, the problem toasts of profiles.md. Done when: DW, plus every
-   profiles.md user-visible outcome is reachable.
+1. **(code) Main window and profiles UI**: the split view, the profile list (active profile,
+   order, per-mode badges, failed profiles), the "+" and row menus, inline naming, remove with
+   confirmation and Undo, import and export, the device status footer, the problem states and
+   toasts of [ui.md](ui.md). Done when: DW, plus every profiles.md user-visible outcome is
+   reachable, and the window works at 360×294.
 2. **(code) LED editor**: the schematic layout of
    [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
-   of states, grid positions as data), POV 1 shown fixed green with its explanation, live preview to
-   the device. Every LED is shown off while brightness is `0`, with its state kept. Done when: DW,
-   plus brightness `0` shows every LED off in the editor and on the device and the states come back
-   above `0`, plus the S7 checks skipped on 2026-11-02 pass: keyboard only, the narrowest window,
-   light and dark style. The Orca check ("<LED> LED: <state>"), optional in hands-on.md, is
-   required here because the editor is the app's main custom widget.
-3. **(code) MFD**: three lines with the converted preview, brightness, shift and blink. Done when:
-   DW, plus text with characters outside the table shows the fallback in the preview and on the
-   device.
-4. **(code) Clocks**: clock 1 local or UTC, clocks 2/3 zone or fixed offset, 12/24 h, date format.
-   Done when: DW, plus a zone with DST and a fixed offset both show correctly on the device.
-5. **(code) Preferences**: tray, run in background / autostart, virtual mouse switch (wired in M7).
-   Done when: DW, plus each preference is a GSettings key bound to its row.
-6. **(code) udev/uinput guidance page**: the rule file, a copy button, the commands, "no need to
-   unplug", what works without access, the uinput security note
-   ([protocol.md](protocol.md#udev-rule)). Done when: DW, plus it appears in the "no permission"
-   state and goes away after `udevadm trigger` without a replug.
+   of states, grid positions as data), the mode bar of a per-mode profile, POV 1 shown fixed green
+   with its explanation, every change sent to the device at once. Every LED is shown off while
+   brightness is `0`, with its state kept. Done when: DW, plus brightness `0` shows every LED off in
+   the editor and on the device and the states come back above `0`, plus the S7 checks skipped on
+   2026-11-02 pass: keyboard only, the narrowest window, light and dark style. The Orca check
+   ("<LED> LED: <state>"), optional in hands-on.md, is required here because the editor is the
+   app's main custom widget.
+3. **(code) MFD**: the simulated display with live values and the clock switcher, the line sources,
+   brightness and shift. Done when: DW, plus text with characters outside the table shows the
+   fallback in the display and on the device, and each dynamic source follows the device (profile,
+   mode, a held button).
+4. **(code) Clocks**: clock 1 local or UTC, clocks 2/3 time zone (search dialog) or fixed offset,
+   12/24 h, date format, the live time per clock. Done when: DW, plus a zone with DST and a fixed
+   offset both show correctly on the device.
+5. **(code) Preferences**: run in background, start on login, the virtual mouse switch and settings
+   (wired in M7). Done when: DW, plus each preference is a GSettings key bound to its row.
+6. **(code) udev/uinput guidance**: the udev page in place of the content area, the uinput subpage
+   in Preferences; the rule file, a copy button, the commands, "no need to unplug", what works
+   without access, the uinput security note ([protocol.md](protocol.md#udev-rule)). Done when: DW,
+   plus the udev page appears in the "no permission" state and goes away after `udevadm trigger`
+   without a replug.
 7. **(code) Input tester**: the "Test input" page of
    [S7](spikes/07-led-editor.md#input-tester-test-page), reading evdev without grabbing the device.
    Done when: DW, plus every button, axis, hat, toggle and the mode selector of the X52 Pro shows on
@@ -230,8 +254,10 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
 ## M6: tray and background
 
 1. **(code) Tray** with `ksni` as in [architecture.md](architecture.md#threads-and-data-flow): the
-   tri-state availability, "Show GX52" / "Hide GX52" as the first menu item, close hides only when a
-   tray is available, the window comes back when the watcher goes away, the app's symbolic icon.
+   tri-state availability, the menu of [ui.md](ui.md#tray-menu) (status line, Show / Hide GX52,
+   the Profile submenu, Preferences, About, Quit), the app's symbolic icon. With "Run in
+   background" on, closing the window keeps the app running whether or not a tray is available;
+   with a tray, a watcher that goes away while the window is hidden brings the window back.
    Done when: DW, plus the S5 visual checks pass with the real app on the host.
 2. **(code) Background and autostart** through the Background portal (`ashpd` `async-io`). Done
    when: DW, plus the acceptance below.
@@ -257,7 +283,7 @@ Acceptance:
 Acceptance:
 
 - Off by default; turning the switch on enables it.
-- With `/dev/uinput` not writable, turning it on shows the guidance page.
+- With `/dev/uinput` not writable, turning it on shows the warning and "How to Fix" in Preferences.
 - No button stays held after unplugging the joystick or turning the switch off while a button is
   held.
 - Optional: an X11 session ([spike S9](spikes/09-virtual-mouse.md#not-done-yet)); other games,

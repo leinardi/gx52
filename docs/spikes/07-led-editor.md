@@ -65,8 +65,8 @@ Findings:
   kept: the popover still shows and changes the chosen state, the accessible label says
   "<LED> LED: <state>, brightness 0", and the LEDs light again as soon as brightness goes above `0`.
   Above `0` the button shows the state colour at full strength; it does not dim with brightness.
-- The editor edits the profile in memory; changes go to the device immediately (live preview) and
-  are saved with the profile.
+- The editor edits the active profile; changes go to the device immediately and are saved
+  automatically ([ui.md](../ui.md#profile-editor)).
 - The grid positions are data (LED, card, row, column) next to the LED bits, so moving an LED does
   not touch widget code.
 
@@ -77,7 +77,8 @@ every axis, button, toggle, hat and the mode selector, read from evdev without g
 (games keep receiving input). S4 already showed evdev works in the sandbox with `--device=all`.
 
 Layout (decided 2026-11-09 from the maintainer's mockup): a "Test input" row in the sidebar opens
-the page in the content area, in place of the profile editor; opening it ends a running preview.
+the page in the content area, in place of the profile editor; the active profile stays on the
+device.
 Grouped by kind of input, not by part of the device:
 
 - **Axes**: stick X/Y as a square with a dot, throttle Z as a vertical bar, X/Y/Z rotation and the

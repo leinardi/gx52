@@ -1,52 +1,44 @@
 # GX52 profiles
 
-The profile data format: the TOML schema, where the files live, the default profiles, the per-type
-mode mapping, validation and recovery, import and export, the legacy import from GX52 0.7 and the
-migration policy. Sources: [spike S8](spikes/08-legacy-import.md) (the legacy database and the
-importer decisions), [rewrite-analysis.md](rewrite-analysis.md) sections 1, 2.4 and 10, and the
-device facts in [protocol.md](protocol.md). Where the profile store sits in the app is in
-[architecture.md](architecture.md#persistence).
+The profile data format: the TOML schema, where the files live, the default profiles, the active
+profile and the profile order, validation and recovery, import and export, the legacy import from
+GX52 0.7 and the migration policy. Sources: [spike S8](spikes/08-legacy-import.md) (the legacy
+database and the importer decisions), [rewrite-analysis.md](rewrite-analysis.md) sections 1, 2.4
+and 10, the device facts in [protocol.md](protocol.md) and the UI decisions in [ui.md](ui.md).
+Where the profile store sits in the app is in [architecture.md](architecture.md#persistence).
 
 ## Model
 
-- A **profile** is one full device state for **one device type**: `x52-pro` or `x52` (the device
-  types of [protocol.md](protocol.md#device-ids-and-access)). A profile never applies to the other
-  type.
-- A **mode mapping** per device type says which profile each position of the mode selector (1, 2,
-  3) uses. By default all three modes use that type's default profile, so a user who never touches
-  the mapping gets one profile, as in GX52 0.7.
+- A **profile** is the device state for **one device type**: `x52-pro` or `x52` (the device types
+  of [protocol.md](protocol.md#device-ids-and-access)). A profile never applies to the other type.
+- A profile is one of two **kinds**:
+  - **single**: one set of mode settings; the mode selector on the stick changes nothing;
+  - **per-mode**: three sets of mode settings, one per position of the mode selector (1, 2, 3);
+    the selector picks the set.
+- **Mode settings** are what may differ between modes: LED states, LED brightness, MFD
+  brightness, MFD lines, shift and blink. The **clocks and the date format** belong to the whole
+  profile and are the same in every mode.
+- One profile per device type is **active**: the one the device shows. Selecting a profile in the
+  UI makes it active ([Active profile](#active-profile)).
 - Each device type has exactly one **default profile**, with a stable id, that cannot be removed.
+  It starts as a single profile.
+
+Decided on 2026-11-09 in the M4 UI session ([ui.md](ui.md#profile-kinds)). It replaces the per-type
+mode mapping that M3 built (three profile ids per device type), which never shipped: schema 1 and
+the GSettings keys are redefined without a migration, because nothing is published before M8
+([roadmap.md](roadmap.md#m3-follow-up-single-and-per-mode-profiles)).
 
 ## TOML schema (version 1)
 
-One file holds one profile. A complete X52 Pro profile:
+One file holds one profile. A per-mode X52 Pro profile (a single profile has `kind = "single"` and
+one `[settings]` table in place of the three `[mode_N]` tables):
 
 ```toml
 schema_version = 1
 device_type = "x52-pro"
-name = "Night flying"
-
-led_brightness = 64          # 0–128, the wire value of protocol.md
-mfd_brightness = 32          # 0–128
-shift = false                # SHIFT label on the MFD (x52-pro only)
-blink = false                # i and POV 1 LEDs blink (x52-pro only)
+name = "DCS World"
+kind = "per_mode"            # "single" or "per_mode"
 date_format = "dd-mm-yy"     # "dd-mm-yy", "mm-dd-yy" or "yy-mm-dd"
-
-[leds]                       # x52-pro only
-fire = "on"                  # single-colour: "off" or "on"
-throttle = "on"
-a = "green"                  # bi-colour: "off", "green", "red" or "amber"
-b = "green"
-d = "red"
-e = "red"
-t1_t2 = "amber"
-t3_t4 = "amber"
-t5_t6 = "amber"
-pov_2 = "green"
-i = "off"
-
-[mfd]
-lines = ["GX52", "", "Night flying"]   # exactly 3 entries
 
 [clock_1]
 source = "local"             # "local" or "utc"
@@ -59,43 +51,90 @@ use_24h = true
 [clock_3]
 source = { fixed_offset_minutes = 345 }
 use_24h = false
+
+[mode_1]                     # [settings] in a single profile; [mode_2] and [mode_3] alike
+led_brightness = 64          # 0–128, the wire value of protocol.md
+mfd_brightness = 32          # 0–128
+shift = false                # SHIFT label on the MFD (x52-pro only)
+blink = false                # i and POV 1 LEDs blink (x52-pro only)
+
+[mode_1.leds]                # x52-pro only
+fire = "on"                  # single-colour: "off" or "on"
+throttle = "on"
+a = "green"                  # bi-colour: "off", "green", "red" or "amber"
+b = "green"
+d = "red"
+e = "red"
+t1_t2 = "amber"
+t3_t4 = "amber"
+t5_t6 = "amber"
+pov_2 = "green"
+i = "off"
+
+[mode_1.mfd]
+lines = [                    # exactly 3 entries
+  { source = "text", text = "GX52" },
+  { source = "last_button" },
+  { source = "profile_name" },
+]
+
+# [mode_2], [mode_2.leds], [mode_2.mfd], [mode_3], ... with the same keys
 ```
 
-An X52 profile has the same keys **except** `[leds]`, `shift` and `blink`: the non-Pro has no
-individually controllable LEDs, and shift and blink are not sent to it until verified
-([protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro)).
+An X52 profile has the same keys **except** `leds`, `shift` and `blink` in its mode settings: the
+non-Pro has no individually controllable LEDs, and shift and blink are not sent to it until
+verified ([protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro)).
 
 | Key | Type | Values | Notes |
 | --- | --- | --- | --- |
 | `schema_version` | integer | `1` | Read first; see [Validation and recovery](#validation-and-recovery) and [Migration policy](#migration-policy) |
 | `device_type` | string | `"x52-pro"`, `"x52"` | Decides which keys exist |
 | `name` | string | 1–64 characters after trimming, unique per device type | Shown in the UI |
-| `led_brightness`, `mfd_brightness` | integer | `0`–`128` | The wire scale of `0xb2` / `0xb1`. GX52 0.7 stored `0`–`32` and multiplied by 4; imported values are multiplied by 4 |
-| `shift`, `blink` | boolean |  | `x52-pro` only |
+| `kind` | string | `"single"`, `"per_mode"` | Decides whether the file has `[settings]` or `[mode_1]`–`[mode_3]` |
 | `date_format` | string | `"dd-mm-yy"`, `"mm-dd-yy"`, `"yy-mm-dd"` | Field order of [protocol.md](protocol.md#usb-vendor-commands) |
-| `leds.<name>` | string | single-colour `fire`, `throttle`: `"off"`, `"on"`; bi-colour `a`, `b`, `d`, `e`, `t1_t2`, `t3_t4`, `t5_t6`, `pov_2`, `i`: `"off"`, `"green"`, `"red"`, `"amber"` | `x52-pro` only. The set of names comes from the `x52` device model (the [LED bits](protocol.md#led-bits)). POV 1 is not stored: its LED is fixed green |
-| `mfd.lines` | array of 3 strings | each at most 16 bytes **after** conversion through the [MFD character set](protocol.md#mfd-character-set) | Characters without a glyph are stored as typed and converted (with the protocol.md fallback) when sent; the length is checked on the converted bytes |
 | `clock_1.source` | string | `"local"`, `"utc"` |  |
 | `clock_2.source`, `clock_3.source` | table | `{ iana = "<zone>" }` or `{ fixed_offset_minutes = <n> }` | See [Clocks](#clocks) |
 | `clock_N.use_24h` | boolean |  | Per clock (S2: the 12/24 h flag is independent per clock) |
+| `<set>.led_brightness`, `<set>.mfd_brightness` | integer | `0`–`128` | `<set>` is `settings` or `mode_1`–`mode_3`. The wire scale of `0xb2` / `0xb1`. GX52 0.7 stored `0`–`32` and multiplied by 4; imported values are multiplied by 4 |
+| `<set>.shift`, `<set>.blink` | boolean |  | `x52-pro` only |
+| `<set>.leds.<name>` | string | single-colour `fire`, `throttle`: `"off"`, `"on"`; bi-colour `a`, `b`, `d`, `e`, `t1_t2`, `t3_t4`, `t5_t6`, `pov_2`, `i`: `"off"`, `"green"`, `"red"`, `"amber"` | `x52-pro` only. The set of names comes from the `x52` device model (the [LED bits](protocol.md#led-bits)). POV 1 is not stored: its LED is fixed green |
+| `<set>.mfd.lines` | array of 3 tables | each `{ source = ... }`, see [MFD lines](#mfd-lines) |  |
 
 Every key is required in a file the app writes. A missing key in a file being read is handled like
-an out-of-range value (see below).
+an out-of-range value (see below); a missing mode table gets the type defaults for every field in
+it.
 
-In Rust (`gx52` crate, with `serde` and `toml`): `DeviceType`, `LedState`, `DateFormat` and
-`ClockSource` are enums, never strings, past the parser. `ClockSource` for clocks 2/3 is an
-externally tagged enum (`Iana(String)` / `FixedOffsetMinutes(i16)`, `rename_all = "snake_case"`),
-which is exactly the `{ iana = ... }` / `{ fixed_offset_minutes = ... }` shape. Reading is two-step,
-so one bad field does not lose the whole profile: parse the document into a `toml::Table`, read
-`schema_version` and `device_type`, then convert field by field into the typed profile, collecting
-a list of field problems instead of failing on the first.
+In Rust (`gx52` crate, with `serde` and `toml`): `DeviceType`, `ProfileKind`, `LedState`,
+`DateFormat`, `ClockSource` and `MfdLine` are enums, never strings, past the parser. The mode
+settings are one `ModeSettings` struct, held as `Single(ModeSettings)` or
+`PerMode([ModeSettings; 3])`. `ClockSource` for clocks 2/3 is an externally tagged enum
+(`Iana(String)` / `FixedOffsetMinutes(i16)`, `rename_all = "snake_case"`), which is exactly the
+`{ iana = ... }` / `{ fixed_offset_minutes = ... }` shape. Reading is two-step, so one bad field
+does not lose the whole profile: parse the document into a `toml::Table`, read `schema_version`,
+`device_type` and `kind`, then convert field by field into the typed profile, collecting a list of
+field problems instead of failing on the first.
+
+**Changing the kind** (ui.md): single → per-mode copies `[settings]` into all three modes;
+per-mode → single keeps `[mode_1]`, after the user confirmed that modes 2 and 3 are dropped.
 
 ### MFD lines
 
-Schema 1 stores three lines of static text. GX52 0.7 filled the lines itself (mode name while the
-selector moves, the pressed button, the profile name); whether the rewrite keeps that, and how a
-line refers to dynamic content, is decided with the UI in milestone M4 and, if it needs new keys,
-ships as a schema bump under the [migration policy](#migration-policy).
+Each of the three lines has a **source** (decided in the M4 UI session, [ui.md](ui.md#mfd-view)):
+
+| `source` | Extra keys | The line shows |
+| --- | --- | --- |
+| `"text"` | `text`: at most 16 bytes **after** conversion through the [MFD character set](protocol.md#mfd-character-set) | The text. Characters without a glyph are stored as typed and converted (with the protocol.md fallback) when sent; the length is checked on the converted bytes |
+| `"empty"` |  | Nothing |
+| `"profile_name"` |  | The active profile's name |
+| `"mode"` |  | The mode selector position, "Mode 2" (translated), also with a single profile active |
+| `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), translated); empty when none is held |
+
+The dynamic sources are resolved on the main thread into the desired device state
+([architecture.md](architecture.md#state-model)), which still carries three lines of text. **Every
+dynamic value** (profile name, mode, button name, in any language) is converted through the MFD
+character set with its fallback and then cut to 16 bytes, at a character boundary of the converted
+bytes, before it goes into the state. Names longer than that ("Trigger, first stage") are shown
+cut; the UI's simulated display shows the same cut text, so nothing differs from the device.
 
 ## Clocks
 
@@ -181,15 +220,17 @@ offsets from clock 1 move because clock 1 moved.
 ## Defaults
 
 - **One default profile per device type**, ids `x52-pro-default` and `x52-default`, named "Default".
-  It cannot be removed or change device type; it can be renamed and edited.
+  It cannot be removed or change device type; it can be renamed, edited and changed to per-mode.
+  It is created as a single profile.
 - **Built-in values** (GX52 0.7's defaults, `gx52/model/*_profile.py` and `gx52/conf.py`): both
   brightness values `128`; on the X52 Pro every bi-colour LED green and Fire and Throttle on; clock
   1 `local`, 24 h; clock 2 `{ fixed_offset_minutes = -240 }`, clock 3 `{ fixed_offset_minutes = 480
   }`, both 24 h; date `yy-mm-dd`; shift and blink off; MFD lines empty. GX52 0.7's X52 table
   defaulted clock 1 to UTC while the Pro table used local time; the rewrite uses `local` for both.
+  A new per-mode profile has these values in all three modes.
 - **Built-ins always exist in memory:** each default profile exists in memory with its stable id
-  even when its file is missing, unreadable or of a future schema, so every mapping fallback has a
-  target. See [Persisting the default](#persisting-the-default).
+  even when its file is missing, unreadable or of a future schema, so every fallback of the
+  [active profile](#active-profile) has a target. See [Persisting the default](#persisting-the-default).
 
 ### Legacy import
 
@@ -200,18 +241,19 @@ At the first start that finds `gx52.db` (rewrite analysis, section 10; the S8 sc
 | Device type per table | `x52_pro_profile` rows become `x52-pro` profiles, `x52_profile` rows become `x52` profiles. Columns are read by name; extra columns are ignored |
 | LED columns | Taken only from `x52_pro_profile`. `x52_profile` rows **never** take LED columns, even in the 2019 schema that has them |
 | Per-type default | The row with `can_be_removed = 0` maps onto **that type's default profile** (its values replace the built-in values; the id stays `x52-…-default` and the name stays "Default", so `Default` / `Default Profile` from S8 is not carried over). If a table has more than one such row, the one with the lowest `id` is the default and the others are imported as normal profiles |
+| Kind | Every imported row becomes a **single** profile (GX52 0.7 had no modes) |
 | Other rows | Become new profiles with new ids, names kept; a name that clashes with an existing profile of the same type gets `(2)`, `(3)`, ... appended |
 | Brightness scale | `led_brightness`, `mfd_brightness` × 4 (`0`–`32` becomes `0`–`128`) |
 | Clock 2/3 offsets | Unchanged as `{ fixed_offset_minutes = n }` (see [Clocks](#clocks)) |
 | Other columns | `clock_1_use_local_time` `1` → `local`, `0` → `utc`; `clock_N_use_24h` as is; `date_format` `'0'` → `yy-mm-dd`, `'1'` → `dd-mm-yy`, `'2'` → `mm-dd-yy`; LED text digits `'0'`/`'1'` → `off`/`on` for Fire and Throttle, `'0'`–`'3'` → `off`/`green`/`red`/`amber` for the others. `shift`, `blink` (not in GX52 0.7) off; MFD lines empty |
-| Settings | Only `settings_launch_on_login` (→ the `autostart` key) and `settings_show_app_indicator` (→ the `show-tray` key) are imported; all other keys are ignored |
+| Settings | Only `settings_launch_on_login` (→ the `autostart` key) and `settings_show_app_indicator` (→ the `run-in-background` key: in GX52 0.7 the indicator was what kept the app running with the window closed) are imported; all other keys are ignored |
 | Bad values | A value outside its range (a brightness above `32`, an offset outside `−720`–`+840`, an unknown enum digit) gets the type default for that field and is listed in the import report; the row is still imported. A name is trimmed; an empty one becomes "Imported profile", one over 64 characters is cut to 64, and the result is made unique as above |
 | Existing files | The import never overwrites a profile file. If a default profile's file already exists when the import runs, the legacy default row is imported as a normal profile with a unique name instead |
 
 The result is reported once: a toast "Imported N profiles from GX52 0.7". When values were
 replaced or a row was not imported, the toast has a "Details" button with the list.
 `current_profile` is empty in both real databases (S8), so nothing is imported for the selected
-profile: the mode mapping starts at its defaults. Test fixtures are two small databases reproducing
+profile: the default profile is active after the import. Test fixtures are two small databases reproducing
 both S8 schemas, created by the test suite.
 
 **Done flag.** The GSettings key `legacy-import-done` (`b`, default `false`) records that the import
@@ -250,26 +292,33 @@ profiles as one clean run:
   default would be followed by a built-in file, and the next start would import the legacy default
   as a normal profile.
 
-## Mode mapping
+## Active profile
 
-GSettings keys, one per device type, each an array of three profile ids for modes 1, 2 and 3:
+GSettings keys, one per device type, each the id of the active profile:
 
 | Key | Type | Default |
 | --- | --- | --- |
-| `mode-profiles-x52-pro` | `as` | `['x52-pro-default', 'x52-pro-default', 'x52-pro-default']` |
-| `mode-profiles-x52` | `as` | `['x52-default', 'x52-default', 'x52-default']` |
+| `active-profile-x52-pro` | `s` | `'x52-pro-default'` |
+| `active-profile-x52` | `s` | `'x52-default'` |
 
-Resolution, per mode, when the active mode or the device changes:
+Resolution, when the device, the key or the store changes:
 
-- an id that names a loaded profile of the **same device type** is used;
-- a missing id, an id of a profile that is not loaded (unreadable, future schema, removed) or an id
-  of a profile of the other type falls back to **that type's default profile** for that entry;
-- an array that does not have exactly three entries is treated as corrupt: **all three** modes use
-  that type's default profile;
-- the setting itself is left as it is, so the mapping comes back when the profile does.
+- an id that names a loaded, editable profile of the **same device type** is used;
+- a missing id, an id of a profile that is not loaded (unreadable, newer schema, removed) or an id
+  of a profile of the other type falls back to **that type's default profile**;
+- the setting itself is left as it is, so the profile comes back when it loads again.
 
-Removing a profile resets the entries that named it to the default id, after the user confirmed the
-removal.
+Removing the active profile sets the key to the default id. The mode selector picks the set of a
+per-mode profile ([architecture.md](architecture.md#state-model)); with a single profile it changes
+nothing.
+
+## Profile order
+
+GSettings keys `profile-order-x52-pro` and `profile-order-x52` (`as`, default `[]`): the ids of the
+non-default profiles in the order the user set ([ui.md](ui.md#sidebar)). The default profile is
+always first and never listed. Ids that name no loaded profile are skipped; loaded profiles missing
+from the list follow it in name order. A new or imported profile is appended; a duplicate is
+inserted right after its original (first in the list when the original is the default profile).
 
 ## Validation and recovery
 
@@ -287,10 +336,10 @@ it is replaced only through the confirm-and-back-up path there.
 | --- | --- | --- |
 | Malformed TOML, over the size limit, not UTF-8, or a missing or wrong `schema_version` / `device_type` | The profile is not loaded. The problem is logged and shown once: one toast per start that lists every file that failed. Other profiles load normally | Kept as is |
 | Out-of-range value: brightness outside `0`–`128`, an MFD line over 16 bytes after conversion or not exactly 3 lines, `fixed_offset_minutes` outside `−720`–`+840`, an empty or too long name, a missing key | Rejected **per field**: that field gets the type default in memory, the rest of the profile loads. The problem is reported (log and the same toast) | Unchanged until the user saves the profile, which writes the corrected values |
-| Unknown enum value: LED state, date format, clock 1 source, a clock 2/3 source tag, an IANA zone the tz database does not know | Same as out of range | Same |
+| Unknown enum value: LED state, date format, clock 1 source, a clock 2/3 source tag, an MFD line source, the profile `kind` (read as `"single"`, from `[settings]`), an IANA zone the tz database does not know | Same as out of range | Same |
 | A key the schema does not have, or a key the device type does not have (`[leds]` in an `x52` file) | Ignored in memory and reported | Same: the key is dropped only when the user saves |
 | Duplicate name within a type | Loaded with `(2)`, `(3)`, ... appended in memory and reported | Same |
-| `schema_version` newer than supported | Listed **read-only** with a message ("made by a newer GX52"). It cannot be edited, applied to the device or selected in the mode mapping (the mapping falls back as above). It is never silently downgraded or re-saved in the old format | Never written |
+| `schema_version` newer than supported | Listed **read-only** with a message ("made by a newer GX52"). It cannot be edited, applied to the device or made active (the active profile falls back as above). It is never silently downgraded or re-saved in the old format | Never written |
 | `schema_version` older than supported | Migrated in memory through the [migration functions](#migration-policy) and loaded | Rewritten only when the user saves, and only after the original is copied to `<id>.toml.schema-<old version>.bak` |
 
 ### Persisting the default
