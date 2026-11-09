@@ -188,9 +188,11 @@ UI is redesigned from scratch).
 
 1. **Photos** ([hands-on.md](hands-on.md#1-photos-for-the-device-artwork-s7), section 1): all six
    views, LEDs on and off. Done when: the photos are in the maintainer's folder, named by view.
-2. **Artwork.** Line drawings traced from the photos, licence decided (GPL-3.0-or-later or
-   CC-BY-SA-4.0, [spike S7](spikes/07-led-editor.md#artwork)), LED and button coordinates as data.
-   Done when: the SVGs and the coordinate tables exist and render in the S7 hotspot technique.
+2. **Artwork.** Drawings traced from the photos in a style similar to Piper's, with its
+   [SVG guidelines](https://github.com/libratbag/piper/blob/master/data/svgs/README.md) as the
+   reference ([spike S7](spikes/07-led-editor.md#artwork)); licence decided (GPL-3.0-or-later or
+   CC-BY-SA-4.0); LED and button coordinates as data. Done when: the SVGs and the coordinate tables
+   exist and render in the technique `docs/ui.md` chooses (S7 hotspots or Piper-style leaders).
 3. **`docs/ui.md`.** Screens, navigation, libadwaita widgets, adaptive layout, the guidance pages,
    the device views, and the open question of [profiles.md](profiles.md#mfd-lines): whether MFD
    lines show dynamic content (mode, pressed button, profile name, as GX52 0.7 did) and how. Done

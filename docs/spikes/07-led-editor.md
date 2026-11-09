@@ -70,8 +70,16 @@ Findings:
 
 Source: line drawings traced (Inkscape) from the maintainer's own photos. No Logitech or Saitek
 product images or manual scans (copyright). Released with the app under GPL-3.0-or-later (or
-CC-BY-SA-4.0 for the SVGs, decide when adding them). Style: monochrome outline drawn with
-`currentColor`-like neutral grey so it works in light and dark mode, no shading.
+CC-BY-SA-4.0 for the SVGs, decide when adding them).
+
+Style: aim for drawings similar to Piper's device artwork, following its
+[SVG guidelines](https://github.com/libratbag/piper/blob/master/data/svgs/README.md) as the
+reference: flat, muted shapes with no shading, a canvas of about 500 × 500 px, a stable id per
+button and LED, and leader lines that end in an anchor where the app places the control. The
+guidelines are a style reference only; no Piper file is copied. Two points of this spike are
+reopened by that choice and settled in M4 (roadmap): the colours, since filled shapes need a
+palette that also works in dark mode where this spike assumed grey outlines, and whether the
+controls sit on the drawing as hotspots or beside it at the leader anchors.
 
 The shots needed and how to take them are in [../hands-on.md](../hands-on.md), section 1.
 
