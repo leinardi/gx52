@@ -165,7 +165,10 @@ Results on 2026-11-08:
   type.
 - **Mode mapping:** passed on the X52 Pro with the Devel build on the host. The selector applied
   the mapped profile at each position (1 → 2 → 3 → 2 → 1, one push per position). With mode 2
-  mapped to an `x52` id and mode 3 to an unknown id, both fell back to `x52-pro-default`.
+  mapped to an `x52` id and mode 3 to an unknown id, both fell back to `x52-pro-default`. Checked
+  again after the review fixes to the device event order: started with the selector on mode 3, the
+  mode 3 profile applied without moving it, and a replug in mode 2 came back to the mode 2
+  profile.
 - **Legacy import:** round-trip tests on fixture databases of both S8 schemas. The interruption
   tests fail every write in turn, before and after the file is in place, and each start then
   resumes to the profiles of one clean run. A hot rollback journal is rolled back in the private
