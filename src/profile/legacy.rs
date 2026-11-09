@@ -317,11 +317,7 @@ fn read_table(
         "SELECT * FROM \"{}\" ORDER BY \"id\"",
         table.name()
     ))?;
-    let names: Vec<String> = statement
-        .column_names()
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
+    let names: Vec<String> = statement.column_names().map(str::to_owned).collect();
     let mut query = statement.query([])?;
     let mut rows = Vec::new();
     while let Some(row) = query.next()? {
