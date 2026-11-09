@@ -1,0 +1,37 @@
+schema_version = 1
+device_type = "x52-pro"
+name = "Night flying"
+
+led_brightness = 64
+mfd_brightness = 32
+shift = false
+blink = false
+date_format = "dd-mm-yy"
+
+[leds]
+fire = "on"
+throttle = "on"
+a = "green"
+b = "green"
+d = "red"
+e = "red"
+t1_t2 = "amber"
+t3_t4 = "amber"
+t5_t6 = "amber"
+pov_2 = "green"
+i = "off"
+
+[mfd]
+lines = ["GX52", "", "Night flying"]
+
+[clock_1]
+source = "local"
+use_24h = true
+
+[clock_2]
+source = { iana = "Europe/Rome" }
+use_24h = true
+
+[clock_3]
+source = { fixed_offset_minutes = 345 }
+use_24h = false

@@ -102,14 +102,14 @@ Where each spike and hands-on item stands now that stage C is written. Open item
 - Tray on KDE Plasma ([M6](roadmap.md#m6-tray-and-background)).
 - Virtual mouse in an X11 session and in games that bind every axis
   ([M7](roadmap.md#m7-virtual-mouse)).
+- Clock offsets across midnight in the backward direction: a negative offset with clock 1 before
+  noon (`gx52 --device-check midnight`); the forward direction passed on 2026-11-07
+  ([M2](roadmap.md#m2-the-device-service)).
 - X52 (non-Pro) input map and commands, needing a user with the device (the 1.x input tester and the
   [`1.0.0` gate](roadmap.md#100-gate-checklist)).
 
 **Deferred acceptance tests** (need the real app):
 
-- Clock offsets across midnight, the backward direction (a negative offset with clock 1 before
-  noon); full-state replay after replug and the forward direction passed on 2026-11-07
-  ([M2](roadmap.md#m2-the-device-service)).
 - Background portal dialog and autostart after logging out and in, and the tray inside the Flatpak
   build ([M6](roadmap.md#m6-tray-and-background)).
 - Virtual mouse: off by default, guidance page without uinput permission, no button held after

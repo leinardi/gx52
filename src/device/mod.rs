@@ -105,10 +105,21 @@ pub(crate) enum DeviceEvent {
     Gone(Generation),
     /// The access state changed.
     Access(AccessState),
-    /// The selected device's evdev node was opened, or closed (`None`).
-    InputNode(Option<PathBuf>),
-    /// The active mode: the initial one, then every debounced change.
-    Mode(Mode),
+    /// The evdev node of the selection `generation` was opened, or closed (`None`).
+    InputNode {
+        /// The selection it belongs to.
+        generation: Generation,
+        /// The node, `None` once closed.
+        node: Option<PathBuf>,
+    },
+    /// The active mode of the selection `generation`: the initial one, then every debounced
+    /// change.
+    Mode {
+        /// The selection it belongs to.
+        generation: Generation,
+        /// The mode.
+        mode: Mode,
+    },
     /// libx52's `x52d` started or stopped running.
     X52dRunning(bool),
     /// Something failed; already logged by the thread that reports it.
@@ -130,9 +141,51 @@ impl From<WriterEvent> for DeviceEvent {
 impl From<ReaderEvent> for DeviceEvent {
     fn from(event: ReaderEvent) -> Self {
         match event {
-            ReaderEvent::NodeOpened { node, .. } => Self::InputNode(Some(node)),
-            ReaderEvent::NodeClosed { .. } => Self::InputNode(None),
-            ReaderEvent::Mode(mode) => Self::Mode(mode),
+            ReaderEvent::NodeOpened { generation, node } => Self::InputNode {
+                generation,
+                node: Some(node),
+            },
+            ReaderEvent::NodeClosed { generation } => Self::InputNode {
+                generation,
+                node: None,
+            },
+            ReaderEvent::Mode { generation, mode } => Self::Mode { generation, mode },
+        }
+    }
+}
+
+/// The selection the main thread follows, to drop the reader events of an earlier one.
+///
+/// The reader can still be reporting on the previous selection when the next `Selected` reaches
+/// the main thread (a mode change in flight, its node closing): those events carry the earlier
+/// generation and must not apply to the new device.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct CurrentSelection(Option<Generation>);
+
+impl CurrentSelection {
+    /// Follows `event` and returns whether it belongs to the current selection: `false` for a
+    /// node or mode event of another generation and for a `Gone` of a selection that is not the
+    /// current one.
+    pub(crate) fn accept(&mut self, event: &DeviceEvent) -> bool {
+        match event {
+            DeviceEvent::Selected(device) => {
+                self.0 = Some(device.generation);
+                true
+            }
+            DeviceEvent::Gone(generation) => {
+                let current = self.0 == Some(*generation);
+                if current {
+                    self.0 = None;
+                }
+                current
+            }
+            DeviceEvent::InputNode { generation, .. } | DeviceEvent::Mode { generation, .. } => {
+                self.0 == Some(*generation)
+            }
+            DeviceEvent::Access(_)
+            | DeviceEvent::X52dRunning(_)
+            | DeviceEvent::Error(_)
+            | DeviceEvent::Sent(_) => true,
         }
     }
 }
@@ -206,13 +259,17 @@ impl DeviceService {
         threads.push(spawn("device-watch", move || {
             backend.watch(&signal, |event| match event {
                 WatchEvent::Selection(change) => {
+                    // The main thread hears of the change first: the reader and the writer report
+                    // through the same FIFO channel only after they hear of it, so every event of
+                    // a selection (the reader's initial mode above all) arrives after its
+                    // `Selected` and is never discarded as belonging to the previous one.
+                    let _ = events.try_send(match &change {
+                        SelectionChange::Selected(device) => DeviceEvent::Selected(device.clone()),
+                        SelectionChange::Gone(generation) => DeviceEvent::Gone(*generation),
+                    });
                     // A send fails only once that thread has stopped, at shutdown.
                     let _ = to_writer.send(change.to_writer());
                     let _ = to_reader.send(change.to_reader());
-                    let _ = events.try_send(match change {
-                        SelectionChange::Selected(device) => DeviceEvent::Selected(device),
-                        SelectionChange::Gone(generation) => DeviceEvent::Gone(generation),
-                    });
                 }
                 WatchEvent::X52dRunning(running) => {
                     let _ = events.try_send(DeviceEvent::X52dRunning(running));
@@ -307,17 +364,76 @@ mod tests {
                 generation: Generation(1),
                 node: node.clone(),
             }),
-            DeviceEvent::InputNode(Some(node))
+            DeviceEvent::InputNode {
+                generation: Generation(1),
+                node: Some(node)
+            }
         );
         assert_eq!(
             DeviceEvent::from(ReaderEvent::NodeClosed {
                 generation: Generation(1)
             }),
-            DeviceEvent::InputNode(None)
+            DeviceEvent::InputNode {
+                generation: Generation(1),
+                node: None
+            }
         );
         assert_eq!(
-            DeviceEvent::from(ReaderEvent::Mode(Mode::Two)),
-            DeviceEvent::Mode(Mode::Two)
+            DeviceEvent::from(ReaderEvent::Mode {
+                generation: Generation(1),
+                mode: Mode::Two
+            }),
+            DeviceEvent::Mode {
+                generation: Generation(1),
+                mode: Mode::Two
+            }
         );
+    }
+
+    fn selected(generation: u64) -> DeviceEvent {
+        DeviceEvent::Selected(DeviceId {
+            device_type: x52::device::DeviceType::X52Pro,
+            sysfs_path: PathBuf::from("/sys/bus/usb/devices/1-1"),
+            attachment: id::Attachment {
+                bus: 1,
+                address: u8::try_from(generation).unwrap(),
+            },
+            generation: Generation(generation),
+        })
+    }
+
+    fn mode(generation: u64, mode: Mode) -> DeviceEvent {
+        DeviceEvent::Mode {
+            generation: Generation(generation),
+            mode,
+        }
+    }
+
+    #[test]
+    fn a_late_event_of_the_previous_selection_is_dropped() {
+        let mut current = CurrentSelection::default();
+        assert!(
+            !current.accept(&mode(1, Mode::Three)),
+            "nothing selected yet"
+        );
+        assert!(current.accept(&selected(1)));
+        assert!(current.accept(&mode(1, Mode::Three)));
+        // The next device is selected while the reader still reports on the first one.
+        assert!(current.accept(&DeviceEvent::Gone(Generation(1))));
+        assert!(current.accept(&selected(2)));
+        assert!(!current.accept(&mode(1, Mode::Two)));
+        assert!(!current.accept(&DeviceEvent::InputNode {
+            generation: Generation(1),
+            node: None,
+        }));
+        assert!(!current.accept(&DeviceEvent::Gone(Generation(1))));
+        assert!(current.accept(&mode(2, Mode::One)));
+        assert!(current.accept(&DeviceEvent::InputNode {
+            generation: Generation(2),
+            node: None,
+        }));
+        assert!(current.accept(&DeviceEvent::Access(AccessState::NoPermission)));
+        assert!(current.accept(&DeviceEvent::Gone(Generation(2))));
+        assert!(!current.accept(&mode(2, Mode::One)), "gone");
     }
 }

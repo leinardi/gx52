@@ -850,3 +850,37 @@ fn x52d_fails_when_the_daemon_is_not_seen_to_start() {
         "{report}"
     );
 }
+
+/// The main thread clears the mode on a new selection, so the reader's initial mode of that
+/// selection must never arrive before its `Selected`.
+#[test]
+fn a_selection_reaches_the_main_thread_before_its_initial_mode() {
+    for _ in 0..50 {
+        let backend = FakeBackend {
+            script: vec![(ms(0), selected(1, 5))],
+            allowed: Arc::new(AtomicBool::new(true)),
+            clock: Arc::new(FakeClock::new(NOON.parse().unwrap())),
+            keys: Vec::new(),
+            setup: Setup::default(),
+        };
+        let clock = SharedClock(Arc::clone(&backend.clock));
+        let (service, events) = DeviceService::start_with(clock, backend).unwrap();
+        let mut selected_seen = false;
+        loop {
+            match events.recv_blocking().unwrap() {
+                DeviceEvent::Selected(_) => selected_seen = true,
+                DeviceEvent::Mode { .. } => {
+                    assert!(selected_seen, "the initial mode came before its selection");
+                    break;
+                }
+                DeviceEvent::Gone(_)
+                | DeviceEvent::Access(_)
+                | DeviceEvent::InputNode { .. }
+                | DeviceEvent::X52dRunning(_)
+                | DeviceEvent::Error(_)
+                | DeviceEvent::Sent(_) => {}
+            }
+        }
+        service.shutdown();
+    }
+}

@@ -83,11 +83,14 @@ ones in the profile directory) and the legacy `gx52.db`. Both are parsed as untr
   commands in `x52` are built only through constructors that check every range at run time
   (brightness `0`–`128`, offsets `0`–`720`, ...), and the type system guarantees that nothing
   reaches the transport without going through them;
-- the legacy database is opened read-only and never modified (rewrite analysis, section 10).
+- the legacy database is never opened or modified: a private copy of a consistent snapshot is
+  read, and an import whose files keep changing is deferred (rewrite analysis, section 10;
+  [profiles.md](profiles.md#files)).
 
-This feeds two open items of [tooling-todo.md](tooling-todo.md#docs-and-project-files): the decision
-whether gx52 needs a `trust-boundary` skill (profile and legacy-database parsing, the device command
-path) and the check of [SECURITY.md](../SECURITY.md) against the final import/export path.
+The boundaries, with the rule each keeps and the tests that hold it, are listed in the
+`adversarial-review` skill's untrusted-input pass; M3 decided against a separate `trust-boundary`
+skill ([tooling-todo.md](tooling-todo.md#docs-and-project-files)). The check of
+[SECURITY.md](../SECURITY.md) against the final import/export path is still open there.
 
 ## Threads and data flow
 
@@ -215,7 +218,11 @@ flowchart LR
   only logs it; and polling `nusb::list_devices` every 250 ms in
   the sandbox (detected through `/.flatpak-info`), where the hotplug stream never yields. It
   matches by vendor and product ID, never by address, and tells the writer, the reader and the
-  main thread when a device is selected or gone.
+  main thread when a device is selected or gone. The main thread is told first: the reader's
+  first mode for a selection always reaches the main thread after the `Selected` that starts it,
+  so the `Selected` never clears that mode. The reader's node and mode events carry the
+  generation of their selection, and the main thread drops those of any selection but the current
+  one, so a mode change of the previous device still in flight never applies to the next.
   - **Selection:** the USB device's sysfs path is the selection key. With nothing selected, the
     first supported device in sysfs-path order is selected; the selection is kept while that path
     stays listed, whatever the enumeration order and whatever else appears (a second X52 does not
@@ -262,7 +269,11 @@ overrides ───────────────────────�
     [protocol.md](protocol.md#x52-non-pro));
   - the **active mode** (from the reader) mapped to a profile **for that device type** through the
     per-type mode mapping in GSettings (see [profiles.md](profiles.md#mode-mapping)); a missing or
-    wrong-type profile falls back to that type's default profile;
+    wrong-type profile falls back to that type's default profile. Until the reader reports a
+    mode, mode 1 is used. The last reported mode is kept while the evdev node is reopened and
+    dropped when the device goes. Until the store has loaded, the built-in default is sent. The
+    state is pushed again on a new selection, a mode change, a change of either mapping key and
+    once the store has loaded (`src/application.rs`, `push_desired_state`);
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
   - **overrides**: temporary values on top of the profile, such as live edits not yet saved and,
@@ -299,10 +310,17 @@ From S9; the 1.0.0 scope is an on/off switch with fixed values.
   flag) and the **per-type mode mappings** (profile ids for modes 1/2/3 per device type). One
   `gio::Settings` instance, held by the application.
 - **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
-  format, defaults, validation and recovery rules are in [profiles.md](profiles.md).
+  format, defaults, validation and recovery rules are in [profiles.md](profiles.md). The code is
+  in `src/profile/`: plain Rust with no GObject, whose file operations block (`files.rs`: the
+  size-capped read, `gio::File::replace_contents` for a save, create-new writes for every new file,
+  backups that never overwrite a backup). The application loads the store once at start-up in
+  `gio::spawn_blocking`, keeps it on the main thread, logs the load report and shows its one toast.
+  The GObject wrappers the UI binds to come with the profile editor in M5.
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
-  and `gx52.db` exists; read-only; the flag is set even when the database is unreadable, so start-up
-  never fails because of it (rewrite analysis, section 10; S8 for the schema).
+  and `gx52.db` exists; a private copy of a consistent snapshot is read; the flag is set even when
+  the database is unreadable, so start-up never fails because of it, but not while GX52 0.7 keeps
+  writing it (rewrite analysis, section 10; S8 for the
+  schema).
 
 ## Errors and logging
 

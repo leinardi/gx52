@@ -74,7 +74,12 @@ pub(crate) enum ReaderEvent {
         generation: Generation,
     },
     /// The active mode: the initial one read with `EVIOCGKEY`, then every debounced change.
-    Mode(Mode),
+    Mode {
+        /// The selection it belongs to.
+        generation: Generation,
+        /// The mode.
+        mode: Mode,
+    },
 }
 
 /// One input event, reduced to what the reader needs.
@@ -327,7 +332,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             node: path,
         });
         if let Some(mode) = tracker.active() {
-            self.send(ReaderEvent::Mode(mode));
+            self.send(ReaderEvent::Mode { generation, mode });
         }
         let stop = loop {
             let Ok(readable) = node.wait(tracker.timeout(self.monotonic.elapsed())) else {
@@ -342,7 +347,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
                         let read_at = self.monotonic.elapsed();
                         for event in &events {
                             if let Some(mode) = tracker.on_event(event, read_at) {
-                                self.send(ReaderEvent::Mode(mode));
+                                self.send(ReaderEvent::Mode { generation, mode });
                             }
                         }
                     }
@@ -356,7 +361,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
                 }
             }
             if let Some(mode) = tracker.on_time(self.monotonic.elapsed()) {
-                self.send(ReaderEvent::Mode(mode));
+                self.send(ReaderEvent::Mode { generation, mode });
             }
         };
         tracing::info!("Stopped reading input");

@@ -19,29 +19,70 @@
 //! The `AdwApplication` subclass: application actions, accelerators, the About dialog, and the
 //! device service, whose events it turns into the device status the windows show.
 
+use std::path::PathBuf;
+
 use adw::{prelude::*, subclass::prelude::*};
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use x52::clock::SystemClock;
+use x52::device::DeviceType;
+use x52::input::Mode;
 use x52::state::DeviceState;
 
 use crate::config;
 use crate::device::{DeviceEvent, DeviceService, access};
-use crate::window::Window;
+use crate::profile::legacy::{self, FileWriter};
+use crate::profile::startup::{self, ImportOutcome};
+use crate::profile::store::{Entry, LoadReport, ProfileStore};
+use crate::profile::{self, Profile, ProfileId, mapping};
+use crate::window::{self, Window};
+
+/// The settings key that records the one-time GX52 0.7 import as done.
+const LEGACY_IMPORT_DONE: &str = "legacy-import-done";
+
+/// A running profile import: see [`Application::begin_profile_import`].
+pub(crate) struct ImportGuard(glib::WeakRef<Application>);
+
+impl Drop for ImportGuard {
+    fn drop(&mut self) {
+        if let Some(app) = self.0.upgrade() {
+            app.imp().importing.set(false);
+        }
+    }
+}
+
+/// Marks the legacy import's plan completed once the imported settings and the done flag are on
+/// disk, so an exit before that point runs the plan again at the next start instead of losing the
+/// settings.
+fn finish_legacy_import(plan: legacy::Plan) {
+    glib::spawn_future_local(async move {
+        let finished = gio::spawn_blocking(move || {
+            // Waits for the settings backend to write the pending changes.
+            gio::Settings::sync();
+            startup::finish_import(&profile::config_dir(), &plan, &mut FileWriter);
+        })
+        .await;
+        if finished.is_err() {
+            tracing::error!("The task completing the GX52 0.7 import panicked");
+        }
+    });
+}
 
 /// The version of Cargo.toml and meson.build until the release workflow sets the first one
 /// (docs/release.md, "One version source").
 const UNRELEASED_VERSION: &str = "0.0.0";
 
 mod imp {
-    use std::cell::{Cell, RefCell};
+    use std::cell::{Cell, OnceCell, RefCell};
 
     use adw::{prelude::*, subclass::prelude::*};
     use gettextrs::gettext;
-    use gtk::glib;
+    use gtk::{gio, glib};
+    use x52::input::Mode;
 
-    use crate::device::DeviceService;
     use crate::device::status::DeviceStatus;
+    use crate::device::{CurrentSelection, DeviceService};
+    use crate::profile::store::ProfileStore;
     use crate::{config, window::Window};
 
     #[derive(Debug, Default)]
@@ -50,6 +91,20 @@ mod imp {
         pub(crate) device: RefCell<Option<DeviceService>>,
         /// What the windows show about the device.
         pub(crate) device_status: Cell<DeviceStatus>,
+        /// The app's settings, from `startup`.
+        pub(crate) settings: OnceCell<gio::Settings>,
+        /// The profiles, once loaded.
+        pub(crate) profiles: RefCell<Option<ProfileStore>>,
+        /// The selected device's mode: the last one reported, kept while the evdev node is
+        /// reopened, cleared when the device goes.
+        pub(crate) active_mode: Cell<Option<Mode>>,
+        /// The selection the device events are followed for; events of an earlier one are
+        /// dropped.
+        pub(crate) selection: Cell<CurrentSelection>,
+        /// Messages for a toast, kept until a window can show them.
+        pub(crate) pending_toasts: RefCell<Vec<adw::Toast>>,
+        /// Whether a profile import is running, from the file chooser to the write.
+        pub(crate) importing: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -71,7 +126,9 @@ mod imp {
             gtk::Window::set_default_icon_name(config::APP_ID);
             let app = self.obj();
             app.setup_actions();
+            app.setup_settings();
             app.start_device_service();
+            app.load_profiles();
         }
 
         // Runs on every launch, including a second launch of the single instance:
@@ -85,6 +142,7 @@ mod imp {
                 window.upcast()
             });
             window.present();
+            app.show_pending_toasts();
         }
 
         fn shutdown(&self) {
@@ -143,6 +201,23 @@ impl Application {
         self.set_accels_for_action("window.close", &["<Control>w"]);
     }
 
+    /// Creates the settings and follows the mode mappings.
+    fn setup_settings(&self) {
+        let settings = gio::Settings::new(config::APP_ID);
+        for device_type in DeviceType::ALL {
+            settings.connect_changed(
+                Some(mapping::settings_key(device_type)),
+                glib::clone!(
+                    #[weak(rename_to = app)]
+                    self,
+                    move |_, _| app.push_desired_state()
+                ),
+            );
+        }
+        // Set once, in startup.
+        let _ = self.imp().settings.set(settings);
+    }
+
     /// Starts the device service and follows its events on the main loop.
     fn start_device_service(&self) {
         match DeviceService::start(SystemClock) {
@@ -169,14 +244,239 @@ impl Application {
         });
     }
 
-    /// Applies a device event: pushes the default state of a newly selected device type and
-    /// shows a changed status in every window.
+    /// Loads the profile store off the main thread.
+    fn load_profiles(&self) {
+        let import_done = self
+            .imp()
+            .settings
+            .get()
+            .is_some_and(|settings| settings.boolean(LEGACY_IMPORT_DONE));
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = app)]
+            self,
+            async move {
+                let prepared = gio::spawn_blocking(move || {
+                    startup::prepare_profiles(
+                        &profile::config_dir(),
+                        &legacy::database_path(),
+                        import_done,
+                        &mut FileWriter,
+                    )
+                })
+                .await;
+                if let Ok(prepared) = prepared {
+                    app.on_legacy_import(&prepared.import);
+                    app.on_profiles_loaded(prepared.store, &prepared.load_report);
+                } else {
+                    tracing::error!("The profile loading task panicked");
+                }
+            }
+        ));
+    }
+
+    /// Records what the legacy import did: the settings and the done flag when it is over, and
+    /// one toast.
+    fn on_legacy_import(&self, outcome: &ImportOutcome) {
+        let settings = self.imp().settings.get();
+        if outcome.is_done()
+            && let Some(settings) = settings
+        {
+            if let ImportOutcome::Completed {
+                settings: legacy, ..
+            } = outcome
+            {
+                for (key, value) in [
+                    ("autostart", legacy.launch_on_login),
+                    ("show-tray", legacy.show_app_indicator),
+                ] {
+                    if let Some(value) = value
+                        && let Err(error) = settings.set_boolean(key, value)
+                    {
+                        tracing::warn!("Cannot import the GX52 0.7 setting {key}: {error}");
+                    }
+                }
+            }
+            if let Err(error) = settings.set_boolean(LEGACY_IMPORT_DONE, true) {
+                tracing::warn!("Cannot record the GX52 0.7 import as done: {error}");
+            }
+            if let ImportOutcome::Completed { plan, .. } = outcome {
+                finish_legacy_import(plan.clone());
+            }
+        }
+        match outcome {
+            ImportOutcome::NotDue => {}
+            ImportOutcome::Completed { report, .. } => {
+                for problem in &report.problems {
+                    tracing::warn!("GX52 0.7 import: {problem}");
+                }
+                for conflict in &report.conflicts {
+                    tracing::warn!(
+                        "GX52 0.7 import: row {} of {} not imported, {} was changed meanwhile",
+                        conflict.row_id,
+                        conflict.table.name(),
+                        conflict.target.file_name()
+                    );
+                }
+                let count = u32::try_from(report.imported.len()).unwrap_or(u32::MAX);
+                tracing::info!("Imported {count} profiles from GX52 0.7");
+                let message = gettextrs::ngettext(
+                    "Imported {count} profile from GX52 0.7",
+                    "Imported {count} profiles from GX52 0.7",
+                    count,
+                )
+                .replace("{count}", &count.to_string());
+                let mut details = report.problems.clone();
+                details.extend(report.conflicts.iter().map(|conflict| {
+                    gettext(
+                        "A profile was not imported because its file was changed meanwhile: {file}",
+                    )
+                    .replace("{file}", &conflict.target.file_name())
+                }));
+                if details.is_empty() {
+                    self.toast(&message);
+                } else {
+                    self.toast_with_details(message, details);
+                }
+            }
+            ImportOutcome::DatabaseFailed(error) => {
+                tracing::warn!("GX52 0.7 profiles not imported: {error}");
+                self.toast(&gettext(
+                    "The GX52 0.7 profiles could not be imported: their database cannot be read",
+                ));
+            }
+            ImportOutcome::Deferred(error) => {
+                tracing::warn!("GX52 0.7 import deferred: {error}");
+                self.toast(&gettext(
+                    "The GX52 0.7 profiles could not be imported because GX52 0.7 is running; close it and start GX52 again",
+                ));
+            }
+            ImportOutcome::WriteFailed(error) => {
+                tracing::warn!("GX52 0.7 import interrupted: {error}");
+                self.toast(&gettext(
+                    "The GX52 0.7 profiles could not be imported yet; GX52 tries again at the next start",
+                ));
+            }
+        }
+    }
+
+    /// Keeps the loaded store and reports its problems once.
+    fn on_profiles_loaded(&self, store: ProfileStore, report: &LoadReport) {
+        report.log(&store);
+        let mut files: Vec<String> = report
+            .failed_files()
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        files.extend(store.entries().filter_map(|(id, entry)| match entry {
+            Entry::Loaded(loaded) if !loaded.problems.is_empty() => Some(id.file_name()),
+            Entry::Loaded(_) | Entry::Newer(_) => None,
+        }));
+        self.imp().profiles.replace(Some(store));
+        self.push_desired_state();
+        if report.unlisted.is_some() {
+            self.toast(&gettext("The profile folder could not be read"));
+        }
+        if !files.is_empty() {
+            let count = u32::try_from(files.len()).unwrap_or(u32::MAX);
+            let message = gettextrs::ngettext(
+                "A profile file has problems: {files}",
+                "{count} profile files have problems: {files}",
+                count,
+            )
+            .replace("{count}", &count.to_string())
+            .replace("{files}", &files.join(", "));
+            self.toast(&message);
+        }
+    }
+
+    /// The names of `device_type`'s profiles, once the profiles are loaded.
+    pub(crate) fn profile_names(&self, device_type: DeviceType) -> Option<Vec<String>> {
+        let profiles = self.imp().profiles.borrow();
+        Some(profiles.as_ref()?.names(device_type))
+    }
+
+    /// A copy of the usable profile `id` and the profile directory, once the profiles are loaded.
+    pub(crate) fn profile(&self, id: &ProfileId) -> Option<Profile> {
+        let profiles = self.imp().profiles.borrow();
+        Some(profiles.as_ref()?.loaded(id)?.profile.clone())
+    }
+
+    /// The profile directory, once the profiles are loaded.
+    pub(crate) fn profiles_dir(&self) -> Option<PathBuf> {
+        let profiles = self.imp().profiles.borrow();
+        Some(profiles.as_ref()?.dir().to_owned())
+    }
+
+    /// Adds a profile an import has just written under `id`.
+    /// Marks a profile import as running until the returned guard is dropped; `None` while
+    /// another import runs, so two imports never pick the same name.
+    pub(crate) fn begin_profile_import(&self) -> Option<ImportGuard> {
+        if self.imp().importing.replace(true) {
+            None
+        } else {
+            Some(ImportGuard(self.downgrade()))
+        }
+    }
+
+    pub(crate) fn add_imported_profile(&self, id: ProfileId, profile: Profile) {
+        if let Some(store) = self.imp().profiles.borrow_mut().as_mut() {
+            store.insert(id, profile);
+        }
+    }
+
+    /// Shows `message` in the active window, or keeps it until a window is presented.
+    fn toast(&self, message: &str) {
+        self.queue_toast(window::plain_toast(message));
+    }
+
+    /// Shows `message` with a "Details" button that lists `details` in a dialog.
+    fn toast_with_details(&self, message: String, details: Vec<String>) {
+        let toast = adw::Toast::builder()
+            .title(message)
+            .button_label(gettext("_Details"))
+            .use_markup(false)
+            .build();
+        toast.connect_button_clicked(glib::clone!(
+            #[weak(rename_to = app)]
+            self,
+            move |toast| {
+                let dialog =
+                    adw::AlertDialog::new(toast.title().as_deref(), Some(&details.join("\n")));
+                dialog.add_response("close", &gettext("_Close"));
+                dialog.present(app.active_window().as_ref());
+            }
+        ));
+        self.queue_toast(toast);
+    }
+
+    fn queue_toast(&self, toast: adw::Toast) {
+        self.imp().pending_toasts.borrow_mut().push(toast);
+        self.show_pending_toasts();
+    }
+
+    fn show_pending_toasts(&self) {
+        let Some(window) = self
+            .active_window()
+            .and_then(|window| window.downcast::<Window>().ok())
+        else {
+            return;
+        };
+        let toasts = self.imp().pending_toasts.take();
+        for toast in toasts {
+            window.add_toast(toast);
+        }
+    }
+
+    /// Applies a device event: shows a changed status in every window and pushes the desired
+    /// state when the device or its mode changed.
     fn on_device_event(&self, event: &DeviceEvent) {
         let imp = self.imp();
-        if let DeviceEvent::Selected(selected) = event
-            && let Some(device) = imp.device.borrow().as_ref()
-        {
-            device.set_state(DeviceState::default_for(selected.device_type));
+        let mut selection = imp.selection.get();
+        let current = selection.accept(event);
+        imp.selection.set(selection);
+        if !current {
+            tracing::debug!("Dropped an event of an earlier selection: {event:?}");
+            return;
         }
         let mut status = imp.device_status.get();
         if status.apply(event) {
@@ -188,6 +488,55 @@ impl Application {
                 }
             }
         }
+        match event {
+            DeviceEvent::Selected(_) => {
+                // A new selection's mode is unknown until its reader reports it.
+                imp.active_mode.set(None);
+                self.push_desired_state();
+            }
+            DeviceEvent::Mode { mode, .. } => {
+                if imp.active_mode.replace(Some(*mode)) != Some(*mode) {
+                    self.push_desired_state();
+                }
+            }
+            DeviceEvent::Gone(_) => imp.active_mode.set(None),
+            DeviceEvent::Access(_)
+            | DeviceEvent::InputNode { .. }
+            | DeviceEvent::X52dRunning(_)
+            | DeviceEvent::Error(_)
+            | DeviceEvent::Sent(_) => {}
+        }
+    }
+
+    /// Sends the device the profile its type's mapping gives the active mode (mode 1 until the
+    /// mode is known), or the built-in default until the profiles are loaded.
+    fn push_desired_state(&self) {
+        let imp = self.imp();
+        let Some(device_type) = imp.device_status.get().device_type else {
+            return;
+        };
+        let device = imp.device.borrow();
+        let Some(device) = device.as_ref() else {
+            return;
+        };
+        let mode = imp.active_mode.get().unwrap_or(Mode::One);
+        let profiles = imp.profiles.borrow();
+        let state = match (profiles.as_ref(), imp.settings.get()) {
+            (Some(store), Some(settings)) => {
+                let entries: Vec<String> = settings
+                    .strv(mapping::settings_key(device_type))
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect();
+                let id = mapping::resolve(&entries, device_type, mode, store);
+                tracing::info!("Mode {mode:?} on the {device_type}: profile {id}");
+                store
+                    .loaded(&id)
+                    .map(|loaded| loaded.profile.to_device_state())
+            }
+            _ => None,
+        };
+        device.set_state(state.unwrap_or_else(|| DeviceState::default_for(device_type)));
     }
 
     fn show_about_dialog(&self) {

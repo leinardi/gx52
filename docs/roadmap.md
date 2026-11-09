@@ -132,8 +132,8 @@ Results on 2026-11-07, on the X52 Pro with `gx52 --device-check <scenario>`: `re
 host and in the Devel Flatpak (9 of 9 each, every CHECK confirmed on the device); `mode` (6 of 6),
 `permission` (11 of 11), `resume` (6 of 6: clock 1 right 0.1 s after a suspend of 2 min 38 s) and
 the `x52d` banner (with a root-owned socket) passed on the host. `midnight` passed in the forward
-direction only (`+617` from 14:43 showed 01:00); the backward direction stays open until a run
-before noon.
+direction only (`+617` from 14:43 showed 01:00); the backward direction, which needs a run before
+noon, became an optional check on 2026-11-07 ([preparation.md](preparation.md)), so M2 is accepted.
 
 ## M3: profiles
 
@@ -158,6 +158,29 @@ before noon.
    ([tooling-todo.md](tooling-todo.md#docs-and-project-files)), now that the parsers exist. Done
    when: the item is ticked or deleted with the reason.
 
+Results on 2026-11-08:
+
+- **Profile store:** a fixture per row of the validation table, each checking the file's bytes and
+  modification time after the load, and both directions of a default file of the other device
+  type.
+- **Mode mapping:** passed on the X52 Pro with the Devel build on the host. The selector applied
+  the mapped profile at each position (1 → 2 → 3 → 2 → 1, one push per position). With mode 2
+  mapped to an `x52` id and mode 3 to an unknown id, both fell back to `x52-pro-default`. Checked
+  again after the review fixes to the device event order: started with the selector on mode 3, the
+  mode 3 profile applied without moving it, and a replug in mode 2 came back to the mode 2
+  profile.
+- **Legacy import:** round-trip tests on fixture databases of both S8 schemas. The interruption
+  tests fail every write in turn, before and after the file is in place, and each start then
+  resumes to the profiles of one clean run. A hot rollback journal is rolled back in the private
+  copy. The maintainer's two real databases imported as S8 describes, every value checked against
+  the raw rows, and neither file changed.
+- **Import and export:** an exported profile imports back unchanged; a file of the other type, an
+  unknown type and a newer schema are refused with a message; a cancelled import writes nothing.
+  The actions have no menu entry until M5, so these are covered by tests only.
+- **Trust boundary:** no separate skill; the boundaries are listed in the `adversarial-review`
+  skill (tooling-todo.md has the reason).
+- The Devel Flatpak builds and passes `meson test` with rusqlite linked to the GNOME SDK's SQLite.
+
 ## M4: UI design session
 
 Before any UI work. A dedicated session that writes `docs/ui.md` (postponed from stage C because the
@@ -165,9 +188,11 @@ UI is redesigned from scratch).
 
 1. **Photos** ([hands-on.md](hands-on.md#1-photos-for-the-device-artwork-s7), section 1): all six
    views, LEDs on and off. Done when: the photos are in the maintainer's folder, named by view.
-2. **Artwork.** Line drawings traced from the photos, licence decided (GPL-3.0-or-later or
-   CC-BY-SA-4.0, [spike S7](spikes/07-led-editor.md#artwork)), LED and button coordinates as data.
-   Done when: the SVGs and the coordinate tables exist and render in the S7 hotspot technique.
+2. **Artwork.** Drawings traced from the photos in a style similar to Piper's, with its
+   [SVG guidelines](https://github.com/libratbag/piper/blob/master/data/svgs/README.md) as the
+   reference ([spike S7](spikes/07-led-editor.md#artwork)); licence decided (GPL-3.0-or-later or
+   CC-BY-SA-4.0); LED and button coordinates as data. Done when: the SVGs and the coordinate tables
+   exist and render in the technique `docs/ui.md` chooses (S7 hotspots or Piper-style leaders).
 3. **`docs/ui.md`.** Screens, navigation, libadwaita widgets, adaptive layout, the guidance pages,
    the device views, and the open question of [profiles.md](profiles.md#mfd-lines): whether MFD
    lines show dynamic content (mode, pressed button, profile name, as GX52 0.7 did) and how. Done

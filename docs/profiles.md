@@ -142,7 +142,13 @@ offsets from clock 1 move because clock 1 moved.
     (`*.rejected-*`, `*.bak`, editor leftovers such as `x.toml~`) are ignored silently.
 - **Atomic writes:** the new content is written to a temporary file in the same directory and
   renamed over the old one (`gio::File::replace_contents_future`, which does that), off the main
-  thread. A crash leaves either the old file or the new one, never half of each.
+  thread. A crash leaves either the old file or the new one, never half of each. A **new** file
+  (a missing default, an imported profile, a backup) is written to a temporary file that is then
+  hard-linked to its name, so it never replaces an existing file. On a file system without hard
+  links (vfat, exFAT, some FUSE mounts) it is created in place with create-new semantics instead:
+  still never over an existing file, but a crash can leave it incomplete. The store then reports
+  it as unreadable and keeps it, and the legacy import reports a conflict instead of counting it
+  as imported.
 - **Size limits:** a profile file (and an import file) larger than 64 KiB is not parsed; it is
   handled like a malformed file. A valid profile is well under 2 KiB. A legacy database larger than
   16 MiB is not opened and is handled like an unreadable one (the two S8 databases are 32 KiB each).
@@ -156,12 +162,21 @@ offsets from clock 1 move because clock 1 moved.
   writes to `~/.config/gx52-devel/profiles/` on the host and to the path above in its Flatpak.
 - **Legacy database lookup**, separate from the new store:
   `glib::user_config_dir().join("gx52/gx52.db")`, the path GX52 0.7 used, for every build profile.
-  It is only ever opened **read-only** (`rusqlite` with the read-only open flag), never modified or
-  deleted, so users can go back to `0.7.6` (rewrite analysis, section 10). Inside the production
+  It is never opened, modified or deleted, so users can go back to `0.7.6` (rewrite analysis,
+  section 10). The import reads it, with its `-journal` or `-wal` file when there is one, into
+  memory, and reads the whole set again until two reads in a row agree (up to five reads, 200 ms
+  apart). Two identical reads mean that every file, as read, was on disk at the same moment, so a
+  rollback between the copy of the database and the copy of its journal can never produce
+  uncommitted pages without the journal that undoes them. When the files keep changing (GX52 0.7
+  is running and writing them) the import is **deferred**: the flag stays unset, a toast asks to
+  close GX52 0.7, and the next start tries again. The agreed set is written to a private temporary
+  directory and the copy is opened. A GX52 0.7 that stopped in the middle of a write leaves a hot
+  journal that SQLite has to roll back before anything can be read, which a read-only open cannot
+  do; the copy can, and a running GX52 0.7 never holds a lock on it. Inside the production
   Flatpak that is `~/.var/app/com.leinardi.gx52/config/gx52/gx52.db`, the file the automatic import
   finds; a source-install database in `~/.config/gx52/gx52.db` is outside the sandbox and needs the
   documented manual copy (R10). A host Devel build reads the host's `~/.config/gx52/gx52.db`, which
-  is safe because it is read-only.
+  is safe because only a copy is read.
 
 ## Defaults
 
@@ -189,14 +204,51 @@ At the first start that finds `gx52.db` (rewrite analysis, section 10; the S8 sc
 | Brightness scale | `led_brightness`, `mfd_brightness` × 4 (`0`–`32` becomes `0`–`128`) |
 | Clock 2/3 offsets | Unchanged as `{ fixed_offset_minutes = n }` (see [Clocks](#clocks)) |
 | Other columns | `clock_1_use_local_time` `1` → `local`, `0` → `utc`; `clock_N_use_24h` as is; `date_format` `'0'` → `yy-mm-dd`, `'1'` → `dd-mm-yy`, `'2'` → `mm-dd-yy`; LED text digits `'0'`/`'1'` → `off`/`on` for Fire and Throttle, `'0'`–`'3'` → `off`/`green`/`red`/`amber` for the others. `shift`, `blink` (not in GX52 0.7) off; MFD lines empty |
-| Settings | Only `settings_launch_on_login` (→ the autostart setting) and `settings_show_app_indicator` (→ the tray setting) are imported; all other keys are ignored |
+| Settings | Only `settings_launch_on_login` (→ the `autostart` key) and `settings_show_app_indicator` (→ the `show-tray` key) are imported; all other keys are ignored |
 | Bad values | A value outside its range (a brightness above `32`, an offset outside `−720`–`+840`, an unknown enum digit) gets the type default for that field and is listed in the import report; the row is still imported. A name is trimmed; an empty one becomes "Imported profile", one over 64 characters is cut to 64, and the result is made unique as above |
 | Existing files | The import never overwrites a profile file. If a default profile's file already exists when the import runs, the legacy default row is imported as a normal profile with a unique name instead |
 
-The result is reported once ("Imported N profiles from GX52 0.7", with any field problems).
+The result is reported once: a toast "Imported N profiles from GX52 0.7". When values were
+replaced or a row was not imported, the toast has a "Details" button with the list.
 `current_profile` is empty in both real databases (S8), so nothing is imported for the selected
 profile: the mode mapping starts at its defaults. Test fixtures are two small databases reproducing
 both S8 schemas, created by the test suite.
+
+**Done flag.** The GSettings key `legacy-import-done` (`b`, default `false`) records that the import
+is over. The import is due while the flag is unset and there is a `gx52.db` or a saved plan (below).
+With neither, nothing happens and the flag stays unset, so a database copied in later (R10) is still
+imported.
+
+**Restart safety.** A start can stop between two file writes, and the next start must give the same
+profiles as one clean run:
+
+- **Plan first.** Before writing any profile, the import reads every row and decides its target
+  (the type's default id when that default's file does not exist yet, otherwise a new random id), its
+  final name and its file contents. It saves this plan atomically to `legacy-import.toml` in the
+  app's config directory (`gx52/` or `gx52-devel/`, next to `profiles/`, outside the store's
+  scan). Collisions are resolved once, there, and every retry reuses the saved plan instead of
+  planning again.
+- **Execute.** Each planned file is created with create-new semantics, never over an existing file.
+  On a retry, a target that holds exactly the planned contents counts as done. A target that holds
+  anything else was written by someone else since planning: it is kept and reported as not
+  imported. Only ids the plan assigned are ever checked, so an unrelated file never stands in for an
+  imported row. A plan file that cannot be read is logged and the import plans again; at worst
+  that duplicates a profile, never loses one.
+- **Two kinds of failure.** A **database** failure (too large, unreadable even as a copy, not a
+  GX52 database) is final: the flag is set, nothing is written, and the toast says so. A **write**
+  failure (an I/O error in the config directory) leaves the flag unset, and the next start resumes
+  from the plan.
+- The settings are applied and the flag is set only after every planned entry is written or
+  skipped. Only once the settings backend has written them (`g_settings_sync`) is the plan file
+  saved again marked `completed`; it stays as the record of the import. An exit before that point
+  leaves the plan unmarked, so the next start runs it again: every file is already in place, and
+  the settings are applied again. A completed plan keeps the import from running again even if the
+  flag is lost (a reset of the settings), so a profile removed after the import does not come back.
+- **No built-in default while pending.** While the import is due and not over, the store keeps a
+  missing default profile in memory only and does not write its file (see
+  [Persisting the default](#persisting-the-default)). Otherwise a failed write of the imported
+  default would be followed by a built-in file, and the next start would import the legacy default
+  as a normal profile.
 
 ## Mode mapping
 
@@ -210,10 +262,11 @@ GSettings keys, one per device type, each an array of three profile ids for mode
 Resolution, per mode, when the active mode or the device changes:
 
 - an id that names a loaded profile of the **same device type** is used;
-- a missing id, an id of a profile that is not loaded (unreadable, future schema, removed), an id of
-  a profile of the other type, or an array that does not have three entries falls back to **that
-  type's default profile** for the affected entries. The setting itself is left as it is, so the
-  mapping comes back when the profile does.
+- a missing id, an id of a profile that is not loaded (unreadable, future schema, removed) or an id
+  of a profile of the other type falls back to **that type's default profile** for that entry;
+- an array that does not have exactly three entries is treated as corrupt: **all three** modes use
+  that type's default profile;
+- the setting itself is left as it is, so the mapping comes back when the profile does.
 
 Removing a profile resets the entries that named it to the default id, after the user confirmed the
 removal.
@@ -244,6 +297,8 @@ it is replaced only through the confirm-and-back-up path there.
 
 - If a default profile's file is **missing** (first start, or deleted by hand), it is written from
   the built-in values (or from the legacy default row, during the import), with the atomic write.
+  The exception: while the legacy import is pending, the built-in values stay in memory and nothing
+  is written (see [Legacy import](#legacy-import)).
 - If it is **unreadable or of a future schema**, the file is preserved untouched. The built-in
   default is used in memory, and the problem is reported like any other failed file.
 - **Edits to the default in that state** are saved only after the user explicitly confirms
@@ -269,8 +324,15 @@ it is replaced only through the confirm-and-back-up path there.
   - a newer `schema_version` is refused with a message (it could only be read-only); an older one is
     migrated;
   - per-field problems are fixed to the type defaults and listed before the import is confirmed;
-  - a name that clashes within the type gets `(2)`, `(3)`, ... appended;
+  - a name that clashes within the type gets `(2)`, `(3)`, ... appended. Only one import runs at
+    a time, and the name is checked against the store again after the confirmation, right before
+    the write; when a profile added meanwhile changed it, the user confirms the new name;
   - the imported profile gets a new random id and is never a default profile.
+- **In the app:** the window actions `win.import-profile` (parameter: the device type, `x52-pro` or
+  `x52`) and `win.export-profile` (parameter: the profile id). Reading and checking the file and
+  writing the imported one run off the main thread; the confirmation is an `adw::AlertDialog`
+  that names the profile and lists every problem, and only "Import" writes anything. The profile
+  list of milestone M5 calls these actions; until then they have no menu entry.
 
 ## Migration policy
 
