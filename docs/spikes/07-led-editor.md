@@ -1,47 +1,36 @@
-# S7: visual LED editor
+# S7: LED editor
 
-Spike `spikes/s7-led-editor` on the `spikes` branch: an `adw::Application` with one page per side of
-the device (stick, stick base, throttle) in an `adw::ViewStack`. Each page draws placeholder SVG
-artwork and places one round button per LED on it; the button opens a popover with an
+Spike `spikes/s7-led-editor` on the `spikes` branch: an `adw::Application` with one page per part of
+the device (stick, stick base, throttle) in an `adw::ViewStack`. Each page placed one round button
+per LED over a placeholder outline of the device; the button opens a popover with an
 `adw::ToggleGroup` of the LED's states. Built against the required versions (`gtk4` 0.11.5
 `gnome_50`, `libadwaita` 0.9.2 `v1_9` + `gtk_v4_22`) and run on the Ubuntu 26.04 host (GTK 4.22.4)
-on 2026-10-28. The artwork is placeholder outlines; real drawings come later (see "Artwork").
+on 2026-10-28.
 
 Run it with `cargo run`; set `GX52_SPIKE_SCREENSHOT_DIR=<dir>` to render every page to
 `<dir>/<page>.png` and quit (used to check the result without a person at the screen).
 
-## Technique
+## Decision: no device artwork (2026-11-09)
 
-`HotspotView` (`src/hotspot_view.rs`) is a small `gtk::Widget` subclass:
+The spike drew the LEDs over a picture of the device, and the plan was to replace the placeholder
+with drawings traced from photos. That plan is dropped: drawing and maintaining artwork for every
+view costs more than it gives for 10 editable LEDs, and the editor needs a palette, hotspots and
+coordinates that work at every size and in both styles. The app ships **no pictures or drawings of
+the device**: no photos, no SVG artwork, no coordinate tables. The LED editor is a **schematic
+layout** of stock widgets (below), chosen from three mockups on 2026-11-09 over a list of preference
+rows and a grid of LED cards.
 
-- Holds a `gdk::Paintable` (the artwork) and draws it scaled to fit with its aspect ratio kept
-  ("contain"), centred in the allocation. It redraws when the paintable invalidates its contents and
-  disconnects that handler when the paintable changes.
-- Children are added with a position in artwork coordinates (`0.0..=1.0` of width and height). In
-  `size_allocate` each child gets its natural size, centred on its point inside the artwork rectangle,
-  so the LEDs stay on the drawing at any window size while the buttons keep their size.
-- Height-for-width, natural size from the paintable's intrinsic size, small minimum, so it works at
-  the 360×294 minimum window size.
-- Accessible role `Group` with the page title as label; the children are normal focusable widgets, so
-  keyboard navigation and screen readers work without extra code.
+What the spike proved and the app keeps: the round LED button (a `gtk::MenuButton` with a popover of
+states, styled by state), the LED data (bits, states, the fixed POV 1 LED) and the device worker
+(live preview, replay on connect). The `HotspotView` widget that positioned buttons on the artwork
+is not used.
 
-The artwork is loaded with `gtk::Svg::from_bytes` (GTK 4.22, part of `gnome_50`): GTK's own SVG
-paintable, no `librsvg` or `resvg` dependency, and it scales without blurring. In the app the SVG
-files go into the GResource.
+## LED button
 
 Each LED is a `gtk::MenuButton` with an empty child. Its colour comes from CSS classes on the
 `menubutton` node (`led-off`, `led-on`, `led-green`, `led-red`, `led-amber`) styled with libadwaita's
 palette variables (`--green-3`, `--red-3`, `--yellow-3`); the tooltip and the accessible label say
 "<LED> LED: <state>".
-
-## Results
-
-| Check | Result |
-| --- | --- |
-| Builds with `clippy -D warnings` (pedantic) against GNOME 50 features | OK |
-| Runs on the host, all three pages render, no GTK criticals or warnings | OK |
-| LED buttons placed on the artwork at the given points, coloured by state | OK (after the CSS fix below) |
-| Popover state selection, keyboard navigation, live resize | to check by hand on the hands-on day |
 
 Findings:
 
@@ -50,38 +39,36 @@ Findings:
   to be `menubutton.led > button`.
 - **A `MenuButton` without label, icon or child draws a drop-down arrow** even with
   `always-show-arrow` false. Setting an empty `gtk::Box` as child gives a plain round button.
-- Placing hotspots by fractional coordinates keeps the artwork data-driven: a view is an SVG plus a
-  table of `(LED, x, y)`. The same `HotspotView` can host the input tester's indicators (below).
 
 ## Design for the app
 
-- **One view per side**, because no single photo shows every LED (and every button, for the tester):
-  stick (front/top: Fire, A, B, POV 2), stick base (T1/T2, T3/T4, T5/T6), throttle (D, E, i,
-  throttle-axis LED). Switched with a view switcher, or shown side by side when the window is wide
-  (breakpoint). Exact split decided when the photos exist.
-- The editor edits the profile in memory; changes go to the device immediately (live preview) and are
-  saved with the profile.
-- Brightness and the blink toggle stay as regular rows next to the picture; the picture is only for
-  per-LED state.
-- Placeholder outlines are fine for development; the views and coordinates are data, so replacing
-  the artwork does not touch code.
+- **One card per part of the device**: Stick, Stick base, Throttle. Inside each card the LED
+  buttons sit in a `gtk::Grid` that roughly follows where the LEDs are on the device, each with its
+  name below it:
 
-## Artwork
+  | Card | Rows |
+  | --- | --- |
+  | Stick | POV 2, Fire; A, B; POV 1 |
+  | Stick base | T1/T2, T3/T4, T5/T6 |
+  | Throttle | D, E; i, Throttle |
 
-Source: line drawings traced (Inkscape) from the maintainer's own photos. No Logitech or Saitek
-product images or manual scans (copyright). Released with the app under GPL-3.0-or-later (or
-CC-BY-SA-4.0 for the SVGs, decide when adding them).
-
-Style: aim for drawings similar to Piper's device artwork, following its
-[SVG guidelines](https://github.com/libratbag/piper/blob/master/data/svgs/README.md) as the
-reference: flat, muted shapes with no shading, a canvas of about 500 × 500 px, a stable id per
-button and LED, and leader lines that end in an anchor where the app places the control. The
-guidelines are a style reference only; no Piper file is copied. Two points of this spike are
-reopened by that choice and settled in M4 (roadmap): the colours, since filled shapes need a
-palette that also works in dark mode where this spike assumed grey outlines, and whether the
-controls sit on the drawing as hotspots or beside it at the leader anchors.
-
-The shots needed and how to take them are in [../hands-on.md](../hands-on.md), section 1.
+  The cards sit side by side when the window is wide and stack when it is narrow (a breakpoint or a
+  wrapping box); the grid inside a card does not change.
+- A click (or Enter / Space) on an LED opens a popover with its states: Off / Green / Amber / Red for
+  the bi-colour LEDs, Off / On for Fire and Throttle. Choosing a state closes the popover.
+- **POV 1** is shown as a fixed green LED that does not open a popover; its tooltip and accessible
+  label explain that it cannot be changed and follows brightness and blink
+  ([protocol.md](../protocol.md#led-bits)).
+- **Brightness and blink** are regular rows below the cards.
+- **The LED shown follows the brightness.** When LED brightness is `0`, every LED is dark on the
+  device (POV 1 included), so the editor shows every LED as off, whatever its state. The states are
+  kept: the popover still shows and changes the chosen state, the accessible label says
+  "<LED> LED: <state>, brightness 0", and the LEDs light again as soon as brightness goes above `0`.
+  Above `0` the button shows the state colour at full strength; it does not dim with brightness.
+- The editor edits the profile in memory; changes go to the device immediately (live preview) and
+  are saved with the profile.
+- The grid positions are data (LED, card, row, column) next to the LED bits, so moving an LED does
+  not touch widget code.
 
 ## Input tester (test page)
 
@@ -93,9 +80,8 @@ Layout proposal:
 
 - **Axes**: X/Y as a square with a dot (stick), Z rotation (twist), throttle Z, rotary X/Y, slider,
   each as a bar with its raw value; the ministick ("mouse") as a second square.
-- **Buttons**: the button positions on the same `HotspotView` artwork, lighting up when pressed (the
-  same coordinates idea as the LED editor), plus a compact numbered grid as a fallback that does not
-  depend on artwork.
+- **Buttons**: indicators that light up when pressed, laid out in the same per-part cards as the LED
+  editor, plus a compact numbered grid for the buttons that have no LED position.
 - **Hats**: POV 1 (stick), POV 2 and the throttle hat as 8-direction indicators.
 - **Toggles and mode**: T1–T6 and the mode selector (1/2/3) as their own indicators.
 - **MFD buttons** (Start/Stop, Reset, function wheel) if they come through evdev (S3 checks it).
@@ -108,8 +94,7 @@ Out of scope or later:
 - Clutch mode: needs a virtual input device (`uinput`) to swallow and re-map buttons, which means
   `/dev/uinput` access and a much bigger scope. Not planned.
 
-Release: the tester was a 1.x item; with the hotspot widget shared with the LED editor it is cheap
-enough to consider for 1.0.0 (decide in the roadmap, Stage C).
+Release: a 1.x item; it reuses the per-part cards of the LED editor.
 
 ## Hands-on check (2026-11-02)
 
@@ -124,7 +109,7 @@ Missing in the spike: the POV 1 LED (lower hat between B and C). It cannot be co
 ## Not done yet
 
 - Keyboard navigation, screen reader labels, narrow window, light/dark: skipped on purpose
-  (2026-11-02). The UI will be redesigned from scratch; this spike only provides the data (LED
-  bits, positions as data, states) and the device logic (worker thread, replay on connect).
-- Photos and traced artwork.
+  (2026-11-02) and checked on the app's editor instead ([roadmap M5](../roadmap.md)). This spike
+  provides the LED button, the data (LED bits, states) and the device logic (worker thread, replay
+  on connect).
 - Input tester prototype: depends on S3 (key codes, mode selector, MFD buttons on evdev).

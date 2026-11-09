@@ -507,7 +507,9 @@ the whole list from the start, so 1.x features don't need rework.
 - Feature parity with section 2, minus the update check, with the defects in section 3 fixed.
 - Legacy profile import (section 10).
 - Per-mode profiles: LEDs and MFD switch automatically with the mode selector (1/2/3).
-- Visual LED editor: a picture of stick and throttle with clickable LEDs (needs SVG artwork).
+- LED editor: a schematic layout of the LEDs per part of the device (stick, stick base,
+  throttle), each a clickable LED with a popover of states; no pictures of the device
+  (`docs/spikes/07-led-editor.md`).
 - Time zones (`jiff`, see `docs/spikes/00-desk-research.md`) for clocks 2 and 3 instead of minute
   offsets, with daylight saving handled; the MFD clocks are re-synced when an offset changes.
 - Custom MFD text, shift indicator and blink controls.
@@ -523,8 +525,7 @@ the whole list from the start, so 1.x features don't need rework.
 
 - Multiple devices with a device selector (the maintainer owns one device; needs testers).
 - Input tester: live view of axes, buttons, hats, toggles and the mode selector, modelled on the
-  Windows driver's Test tab (`docs/spikes/07-led-editor.md`). Shares the hotspot widget with the LED
-  editor, so it may move into 1.0.0.
+  Windows driver's Test tab (`docs/spikes/07-led-editor.md`). Reuses the LED editor's per-part cards.
 - CLI / D-Bus control: GApplication actions plus a D-Bus interface on `com.leinardi.gx52` (apply a
   profile, set MFD lines or pages, set LEDs). A Flatpak app owns its app-ID bus name with no extra
   permission, so host scripts can call it.
@@ -564,8 +565,8 @@ sandbox has its own PID namespace.
 
 Resolved during the spikes and stage C:
 
-- Artwork for the visual LED editor: line drawings traced from the maintainer's own photos (S7);
-  the photos and the tracing are roadmap M4.
+- Artwork for the LED editor: none. The editor is a schematic layout of stock widgets, so the
+  app ships no pictures or drawings of the device (S7, decided 2026-11-09).
 - Exact TOML schema for profiles and its versioning: [profiles.md](profiles.md).
 - Whether `game-devices-udev` / `steam-devices` already cover the X52 product IDs: no (desk
   research); the app ships its guidance page.

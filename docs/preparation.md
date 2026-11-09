@@ -40,7 +40,7 @@ Throwaway code on a separate `spikes` branch that is never merged. Each spike re
 | S4 ✅ | S1 to S3 inside a minimal Flatpak with `--device=all`: USB access, input device, hotplug events, behaviour when the udev rule is missing. | X52 Pro |
 | S5 (D-Bus and visual ✅; portal and tray in the Flatpak build: roadmap M6) | Tray: integrating `ksni` with the GLib main loop; GNOME with the AppIndicator extension, KDE, inside Flatpak, behaviour without a tray host. Background portal for autostart and hidden-window running. | desktop session |
 | S6 ✅ | CI and release dry run: hello-world gtk-rs + Meson + Blueprint + Flatpak app; GitHub Actions on x86_64 and aarch64 (clippy in the SDK build shell, caching, durations); `cargo-sources.json` generation and `flatpak-builder-lint`. | nothing |
-| S7 (✅ technique, worker and hands-on check; artwork: roadmap M4; skipped UI checks: M5) | Visual LED editor: rendering stick and throttle with clickable LEDs in GTK 4 (SVG plus hotspot overlay, or custom snapshot drawing); source and licence of the artwork. | look and feel input |
+| S7 (✅ LED button, worker and hands-on check; schematic layout without artwork, decided 2026-11-09; skipped UI checks: M5) | LED editor: clickable LEDs in GTK 4 with a popover of states, driving the device live. | look and feel input |
 | S8 ✅ | Legacy import: read a real `gx52.db` and check schema and enum values against the mapping in the analysis. | old database, if available |
 | S9 ✅ (optional X11 check: roadmap M7) | Virtual mouse: ministick as mouse pointer like the Windows driver; prior art, evdev codes, uinput access on the host and in the sandbox. | X52 Pro |
 
@@ -55,8 +55,8 @@ Desk research, can run in parallel with the spikes (results in
 
 Start with S1 and S2: S1 is the risk that changes the most if it fails.
 
-The remaining steps that need a person at the device (photos, button presses, hotplug, looking
-at the tray and the LED editor) are collected in [hands-on.md](hands-on.md).
+The remaining steps that need a person at the device (button presses, hotplug, looking at the
+tray and the LED editor) are collected in [hands-on.md](hands-on.md).
 
 ## Stage C: documentation and roadmap
 
@@ -68,8 +68,7 @@ Written after the spikes, so they describe what has been proven.
 - [x] [`docs/profiles.md`](profiles.md): TOML schema and versioning, legacy import mapping.
 - [-] `docs/ui.md`: screens, navigation, libadwaita widgets, wireframes (Blueprint sketches or
       ASCII). **Postponed** to the UI design session,
-      [roadmap.md, M4](roadmap.md#m4-ui-design-session): the UI is redesigned from scratch and needs
-      the photos and artwork first.
+      [roadmap.md, M4](roadmap.md#m4-ui-design-session): the UI is redesigned from scratch.
 - [x] [`docs/release.md`](release.md): Flatpak, beta and stable channels, versioning procedure.
 - [x] [`docs/roadmap.md`](roadmap.md): milestones `0.99.0`, `0.99.x`, `1.0.0`, `1.x`, each with an
       ordered task list and a "done when" condition per task. The first milestone is the project
@@ -92,7 +91,8 @@ Where each spike and hands-on item stands now that stage C is written. Open item
   states.
 - S5: tray over D-Bus and the visual check on the host, GNOME.
 - S6: build, CI and release dry run.
-- S7: LED editor technique and device worker (the UI checks are redone on the redesigned UI).
+- S7: LED button and device worker; the editor is a schematic layout with no device artwork (the
+  UI checks are redone on the redesigned UI).
 - S8: legacy database.
 - S9: virtual mouse on the host and in the sandbox, in a game, unplug while held.
 - Desk research: udev coverage, Flathub beta, time zones, ksni.
@@ -116,6 +116,3 @@ Where each spike and hands-on item stands now that stage C is written. Open item
   unplug or disable ([M7](roadmap.md#m7-virtual-mouse)).
 - The LED editor checks skipped on 2026-11-02: keyboard, narrow window, light and dark, Orca
   ([M5](roadmap.md#m5-ui-implementation)).
-
-**Still needed before UI work:** the photos for the device artwork
-([M4](roadmap.md#m4-ui-design-session)).

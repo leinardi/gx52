@@ -186,17 +186,14 @@ Results on 2026-11-08:
 Before any UI work. A dedicated session that writes `docs/ui.md` (postponed from stage C because the
 UI is redesigned from scratch).
 
-1. **Photos** ([hands-on.md](hands-on.md#1-photos-for-the-device-artwork-s7), section 1): all six
-   views, LEDs on and off. Done when: the photos are in the maintainer's folder, named by view.
-2. **Artwork.** Drawings traced from the photos in a style similar to Piper's, with its
-   [SVG guidelines](https://github.com/libratbag/piper/blob/master/data/svgs/README.md) as the
-   reference ([spike S7](spikes/07-led-editor.md#artwork)); licence decided (GPL-3.0-or-later or
-   CC-BY-SA-4.0); LED and button coordinates as data. Done when: the SVGs and the coordinate tables
-   exist and render in the technique `docs/ui.md` chooses (S7 hotspots or Piper-style leaders).
-3. **`docs/ui.md`.** Screens, navigation, libadwaita widgets, adaptive layout, the guidance pages,
-   the device views, and the open question of [profiles.md](profiles.md#mfd-lines): whether MFD
-   lines show dynamic content (mode, pressed button, profile name, as GX52 0.7 did) and how. Done
-   when: `make check` passes and the user has reviewed it.
+The app ships no pictures or drawings of the device; the LED editor is the schematic layout of
+[spike S7](spikes/07-led-editor.md#design-for-the-app), decided on 2026-11-09.
+
+1. **`docs/ui.md`.** Screens, navigation, libadwaita widgets, adaptive layout, the guidance pages,
+   the LED editor's schematic layout, and the open question of
+   [profiles.md](profiles.md#mfd-lines): whether MFD lines show dynamic content (mode, pressed
+   button, profile name, as GX52 0.7 did) and how. Done when: `make check` passes and the user has
+   reviewed it.
 
 ## M5: UI implementation
 
@@ -206,11 +203,14 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
 1. **(code) Main window and profiles UI**: profile list per device type, add, rename, remove,
    import, export, mode mapping, the problem toasts of profiles.md. Done when: DW, plus every
    profiles.md user-visible outcome is reachable.
-2. **(code) LED editor**, from the S7 data (LED bits, positions as data, states, the worker
-   pattern), POV 1 shown fixed green with its explanation, live preview to the device. Done when:
-   DW, plus the S7 checks skipped on 2026-11-02 pass: keyboard only, the narrowest window, light and
-   dark style. The Orca check ("<LED> LED: <state>"), optional in hands-on.md, is required here
-   because the editor is the app's main custom widget.
+2. **(code) LED editor**: the schematic layout of
+   [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
+   of states, grid positions as data), POV 1 shown fixed green with its explanation, live preview to
+   the device. Every LED is shown off while brightness is `0`, with its state kept. Done when: DW,
+   plus brightness `0` shows every LED off in the editor and on the device and the states come back
+   above `0`, plus the S7 checks skipped on 2026-11-02 pass: keyboard only, the narrowest window,
+   light and dark style. The Orca check ("<LED> LED: <state>"), optional in hands-on.md, is
+   required here because the editor is the app's main custom widget.
 3. **(code) MFD**: three lines with the converted preview, brightness, shift and blink. Done when:
    DW, plus text with characters outside the table shows the fallback in the preview and on the
    device.
@@ -299,8 +299,8 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 
 - [ ] Feature parity with rewrite analysis section 2, minus the update check, with the defects of
       section 3 fixed.
-- [ ] The `1.0.0` list of rewrite analysis section 12.1: legacy import, per-mode profiles, visual
-      LED editor, time zones for clocks 2/3, MFD text, shift and blink, profile import/export, tray
+- [ ] The `1.0.0` list of rewrite analysis section 12.1: legacy import, per-mode profiles, LED
+      editor, time zones for clocks 2/3, MFD text, shift and blink, profile import/export, tray
       and background / autostart, udev guidance, virtual mouse.
 - [ ] Every acceptance item of M2, M6 and M7 is checked and recorded (the optional ones may stay
       open).
@@ -314,9 +314,8 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 
 Through the beta channel first ([release.md](release.md#versions-and-channels)):
 
-- **Input tester**: live axes, buttons, hats, toggles and mode selector on the S7 hotspot widget
-  (it may move into 1.0.0 once that widget exists, spike S7); it is also how the X52 non-Pro map
-  gets verified.
+- **Input tester**: live axes, buttons, hats, toggles and mode selector in the LED editor's
+  per-part cards (spike S7); it is also how the X52 non-Pro map gets verified.
 - **Multiple devices** with a device selector
   ([architecture.md](architecture.md#extension-points-for-1x)).
 - **D-Bus / CLI control** on the app's bus name.
