@@ -222,6 +222,10 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    unplug", what works without access, the uinput security note
    ([protocol.md](protocol.md#udev-rule)). Done when: DW, plus it appears in the "no permission"
    state and goes away after `udevadm trigger` without a replug.
+7. **(code) Input tester**: the "Test input" page of
+   [S7](spikes/07-led-editor.md#input-tester-test-page), reading evdev without grabbing the device.
+   Done when: DW, plus every button, axis, hat, toggle and the mode selector of the X52 Pro shows on
+   the page (checked on the device), and a game keeps receiving input while the page is open.
 
 ## M6: tray and background
 
@@ -246,6 +250,9 @@ Acceptance:
    mapping and values ([protocol.md](protocol.md#virtual-mouse-uinput)); decide whether the uinput
    device is kept alive across a replug and record it in architecture.md. Done when: DW, plus the
    acceptance below.
+2. **(code) Virtual-mouse settings** in Preferences: speed, curve, deadzone and wheel direction,
+   with the S9 values as defaults. Done when: DW, plus each setting is a GSettings key bound to its
+   row and a change takes effect without turning the switch off and on.
 
 Acceptance:
 
@@ -301,7 +308,7 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
       section 3 fixed.
 - [ ] The `1.0.0` list of rewrite analysis section 12.1: legacy import, per-mode profiles, LED
       editor, time zones for clocks 2/3, MFD text, shift and blink, profile import/export, tray
-      and background / autostart, udev guidance, virtual mouse.
+      and background / autostart, udev guidance, virtual mouse with its settings, input tester.
 - [ ] Every acceptance item of M2, M6 and M7 is checked and recorded (the optional ones may stay
       open).
 - [ ] M8 and M9 are done.
@@ -314,12 +321,7 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 
 Through the beta channel first ([release.md](release.md#versions-and-channels)):
 
-- **Input tester**: live axes, buttons, hats, toggles and mode selector in the LED editor's
-  per-part cards (spike S7); it is also how the X52 non-Pro map gets verified.
-- **Multiple devices** with a device selector
-  ([architecture.md](architecture.md#extension-points-for-1x)).
 - **D-Bus / CLI control** on the app's bus name.
 - **Game integration**: the MFD pages engine and the X-Plane adapter first (needs `--share=network`,
   risk R12), later adapters as in rewrite analysis section 12.3.
-- **Virtual-mouse settings**: speed, curve, deadzone, wheel direction.
 - **udev rule upstream**: propose the verified rule to `game-devices-udev` (desk research).

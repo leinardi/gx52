@@ -76,15 +76,18 @@ Requested 2026-10-28, modelled on the Test tab of the Windows driver's control p
 every axis, button, toggle, hat and the mode selector, read from evdev without grabbing the device
 (games keep receiving input). S4 already showed evdev works in the sandbox with `--device=all`.
 
-Layout proposal:
+Layout (decided 2026-11-09 from the maintainer's mockup): a "Test input" row in the sidebar opens
+the page in the content area, in place of the profile editor; opening it ends a running preview.
+Grouped by kind of input, not by part of the device:
 
-- **Axes**: X/Y as a square with a dot (stick), Z rotation (twist), throttle Z, rotary X/Y, slider,
-  each as a bar with its raw value; the ministick ("mouse") as a second square.
-- **Buttons**: indicators that light up when pressed, laid out in the same per-part cards as the LED
-  editor, plus a compact numbered grid for the buttons that have no LED position.
-- **Hats**: POV 1 (stick), POV 2 and the throttle hat as 8-direction indicators.
-- **Toggles and mode**: T1–T6 and the mode selector (1/2/3) as their own indicators.
-- **MFD buttons** (Start/Stop, Reset, function wheel) if they come through evdev (S3 checks it).
+- **Axes**: stick X/Y as a square with a dot, throttle Z as a vertical bar, X/Y/Z rotation and the
+  slider as horizontal bars, each with its raw value.
+- **Ministick**: a second square (mouse X / mouse Y).
+- **Toggles**: T1–T6 in pairs; **Mode**: 1 / 2 / 3, the current one highlighted.
+- **Buttons**: one indicator per button that lights up while pressed, labelled with the name on the
+  device and the button number games show (for example "Fire · 2"); the evdev code in the tooltip.
+  The MFD buttons and wheels are included (they come through evdev, S3).
+- **POVs**: POV 1, POV 2 and the throttle hat as 3×3 direction grids.
 
 Out of scope or later:
 
@@ -94,7 +97,8 @@ Out of scope or later:
 - Clutch mode: needs a virtual input device (`uinput`) to swallow and re-map buttons, which means
   `/dev/uinput` access and a much bigger scope. Not planned.
 
-Release: a 1.x item; it reuses the per-part cards of the LED editor.
+Release: moved into 1.0.0 on 2026-11-09. It is also how the X52 non-Pro input map gets
+verified.
 
 ## Hands-on check (2026-11-02)
 

@@ -105,7 +105,7 @@ Where each spike and hands-on item stands now that stage C is written. Open item
 - Clock offsets across midnight in the backward direction: a negative offset with clock 1 before
   noon (`gx52 --device-check midnight`); the forward direction passed on 2026-11-07
   ([M2](roadmap.md#m2-the-device-service)).
-- X52 (non-Pro) input map and commands, needing a user with the device (the 1.x input tester and the
+- X52 (non-Pro) input map and commands, needing a user with the device (the input tester and the
   [`1.0.0` gate](roadmap.md#100-gate-checklist)).
 
 **Deferred acceptance tests** (need the real app):

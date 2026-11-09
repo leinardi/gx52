@@ -108,7 +108,8 @@ compositor), it must send `BTN_LEFT` / `BTN_RIGHT` release events itself when th
 Taken 2026-10-28 after the hands-on test: **in 1.0.0**, with only an on/off switch and the spike's
 values (deadzone 1 step, gain 0.6 px per tick, curve 1.6, 10 ms tick). The switch stays
 because the feature needs the uinput permission and some games may react to the ministick axes
-too. Speed, curve, deadzone and wheel direction settings come in 1.x.
+too. Speed, curve, deadzone and wheel direction settings come in 1.x. Updated 2026-11-09: the
+settings move into 1.0.0, with these values as the defaults.
 
 ## Not done yet
 

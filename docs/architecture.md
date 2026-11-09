@@ -191,7 +191,7 @@ flowchart LR
   **without grabbing** (games keep every input), reads the initial mode with `EVIOCGKEY`, reads
   events nonblocking with `poll(2)`, applies the mode debounce of
   [protocol.md](protocol.md#mode-selector), and sends mode changes and, when something listens (the
-  input tester in 1.x), input events to the main thread. Nothing logs per event (axis noise, S3).
+  input tester), input events to the main thread. Nothing logs per event (axis noise, S3).
   - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
     further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
     follow the wall clock, so the time since the last key event is measured with monotonic time.
@@ -289,7 +289,8 @@ overrides ───────────────────────�
 
 ## Virtual mouse
 
-From S9; the 1.0.0 scope is an on/off switch with fixed values.
+From S9; the 1.0.0 scope is an on/off switch plus speed, curve, deadzone and wheel direction
+settings, defaulting to the S9 values.
 
 - **Off by default**, enabled by a GSettings switch. The switch exists because the feature needs the
   uinput permission and some games may react to the ministick axes too.
@@ -392,7 +393,7 @@ Designed in from the start so the 1.x features need no rework (rewrite analysis,
 - **MFD pages engine:** pages of three 16-character lines built from static text and named values,
   switched with the MFD buttons (which arrive through evdev, S3). It writes into the MFD lines of
   the overrides.
-- **Several devices:** device watch, writer and reader are per device, keyed by vendor/product ID
-  plus serial or port path (never the USB address, S4); 1.0.0 drives the first device found.
+- **One device:** the app drives the first supported device it finds. Several devices at once
+  were dropped on 2026-11-09 (rewrite analysis, section 12.2).
 - **Game adapters:** data sources for the MFD pages engine; the first is X-Plane over UDP, which
   needs `--share=network` (R12).

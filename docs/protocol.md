@@ -398,7 +398,7 @@ app assumes, all unverified until a test on the device is recorded here:
   codes on the non-Pro are not known.
 - **Mode selector and virtual mouse** on the non-Pro use that candidate map (the per-type mode
   mapping exists for `x52` too). Confirming the map on a device, with an input tester, is an open
-  item owned by the roadmap (see [roadmap.md](roadmap.md): the 1.x input tester verifies the map,
+  item owned by the roadmap (see [roadmap.md](roadmap.md): the input tester verifies the map,
   and the `1.0.0` gate records the outcome); until then the non-Pro is documented as unverified.
 
 ## Commands the app may send

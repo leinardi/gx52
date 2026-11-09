@@ -517,21 +517,22 @@ the whole list from the start, so 1.x features don't need rework.
 - Tray icon (`ksni`) and background running / autostart (Background portal).
 - In-app udev guidance (R4).
 - Virtual mouse: the throttle ministick moves the pointer, with left click, right click (wheel
-  press) and wheel, through uinput (`docs/spikes/09-virtual-mouse.md`). Only an on/off switch, with
-  the spike's tuning (deadzone 1 step, gain 0.6, curve 1.6, 10 ms tick); the udev guidance covers
-  `/dev/uinput`.
+  press) and wheel, through uinput (`docs/spikes/09-virtual-mouse.md`). An on/off switch plus
+  speed, curve, deadzone and wheel direction settings, defaulting to the spike's tuning (deadzone 1
+  step, gain 0.6, curve 1.6, 10 ms tick); the udev guidance covers `/dev/uinput`.
+- Input tester: live view of axes, buttons, hats, toggles and the mode selector, modelled on the
+  Windows driver's Test tab (`docs/spikes/07-led-editor.md`).
 
 ### 12.2 `1.x` (through the beta channel first)
 
-- Multiple devices with a device selector (the maintainer owns one device; needs testers).
-- Input tester: live view of axes, buttons, hats, toggles and the mode selector, modelled on the
-  Windows driver's Test tab (`docs/spikes/07-led-editor.md`). Reuses the LED editor's per-part cards.
 - CLI / D-Bus control: GApplication actions plus a D-Bus interface on `com.leinardi.gx52` (apply a
   profile, set MFD lines or pages, set LEDs). A Flatpak app owns its app-ID bus name with no extra
   permission, so host scripts can call it.
 - Game integration (section 12.3).
-- Virtual mouse settings: speed, curve, deadzone, wheel direction (the 1.0.0 version has fixed
-  values).
+
+Dropped on 2026-11-09: **multiple devices**. Few users connect more than one X52, the maintainer
+owns one device to test with, and profiles and modes would need a per-device model. GX52 drives the
+first supported device it finds, as GX52 0.7 did.
 
 ### 12.3 Game integration
 
