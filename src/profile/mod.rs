@@ -20,8 +20,10 @@
 //! through `gio::spawn_blocking`; the tests call them directly on a temporary directory.
 
 pub(crate) mod active;
+pub(crate) mod editing;
 pub(crate) mod exchange;
 pub(crate) mod files;
+pub(crate) mod leds;
 pub(crate) mod legacy;
 pub(crate) mod list;
 pub(crate) mod migrate;
@@ -252,7 +254,7 @@ impl ModeSets {
     /// The set the device shows in `mode`, to edit.
     #[cfg_attr(
         not(test),
-        expect(dead_code, reason = "the profile editor of M5 edits the sets")
+        expect(dead_code, reason = "the LED editor of the next commit uses it")
     )]
     pub(crate) fn for_mode_mut(&mut self, mode: Mode) -> &mut ModeSettings {
         match self {

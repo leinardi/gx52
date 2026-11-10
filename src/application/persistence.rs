@@ -752,6 +752,16 @@ impl Application {
                 return tracing::warn!("Cannot change the kind of profile {id}: {error}");
             }
         }
+        // A single profile has no mode to pick: the selector's mode is shown.
+        if kind == ProfileKind::Single
+            && self
+                .shown_device_type()
+                .and_then(|device_type| self.active_profile_id(device_type))
+                .as_ref()
+                == Some(id)
+        {
+            self.clear_editing_mode();
+        }
         self.profile_edited(id);
         self.refresh_profiles();
         self.push_desired_state();

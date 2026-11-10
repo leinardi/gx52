@@ -41,6 +41,7 @@ use crate::profile::{
 };
 use crate::window::{self, Window};
 
+mod editing;
 mod persistence;
 
 pub(crate) use self::persistence::RenameProblem;
@@ -96,6 +97,7 @@ mod imp {
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
+    use crate::profile::editing::EditingMode;
     use crate::profile::removals::Removals;
     use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
@@ -115,6 +117,8 @@ mod imp {
         /// The selected device's mode: the last one reported, kept while the evdev node is
         /// reopened, cleared when the device goes.
         pub(crate) active_mode: Cell<Option<Mode>>,
+        /// The mode picked in the mode bar, shown instead of the active mode.
+        pub(crate) editing_mode: Cell<EditingMode>,
         /// The selection the device events are followed for; events of an earlier one are
         /// dropped.
         pub(crate) selection: Cell<CurrentSelection>,
@@ -273,6 +277,8 @@ impl Application {
                     #[weak(rename_to = app)]
                     self,
                     move |_, _| {
+                        // Another profile is active: the selector's mode is shown again.
+                        app.clear_editing_mode();
                         app.push_desired_state();
                         app.refresh_profiles();
                     }
@@ -569,9 +575,6 @@ impl Application {
                 _ => Vec::new(),
             }
         };
-        let active = self
-            .shown_device_type()
-            .and_then(|device_type| self.active_profile_id(device_type));
         let current: Vec<ProfileObject> = list
             .iter::<ProfileObject>()
             .filter_map(Result::ok)
@@ -591,10 +594,7 @@ impl Application {
                     )
             })
             .collect();
-        for object in &objects {
-            let is_active = active.as_ref().is_some_and(|id| object.id() == id.as_str());
-            object.show_active(is_active, imp.active_mode.get());
-        }
+        self.mark_active(&objects);
         // Only the rows that changed are recreated: a row being renamed or holding the focus
         // outside them is kept.
         if let Some(splice) = splice::between(&current, &objects) {
@@ -602,6 +602,64 @@ impl Application {
             let removed = u32::try_from(splice.removed).unwrap_or(u32::MAX);
             list.splice(position, removed, &objects[splice.added]);
         }
+        self.update_windows();
+    }
+
+    /// Marks the active profile among `objects`, with the mode shown.
+    fn mark_active(&self, objects: &[ProfileObject]) {
+        let imp = self.imp();
+        let active = self
+            .shown_device_type()
+            .and_then(|device_type| self.active_profile_id(device_type));
+        let mode = imp.editing_mode.get().shown(imp.active_mode.get());
+        for object in objects {
+            let is_active = active.as_ref().is_some_and(|id| object.id() == id.as_str());
+            object.show_active(is_active, mode);
+        }
+    }
+
+    /// Marks the active profile in the profile list, with the mode shown, without touching the
+    /// list itself.
+    #[expect(dead_code, reason = "the LED editor of the next commit uses it")]
+    fn update_markers(&self) {
+        let objects: Vec<ProfileObject> = self
+            .profile_list()
+            .iter::<ProfileObject>()
+            .filter_map(Result::ok)
+            .collect();
+        self.mark_active(&objects);
+    }
+
+    /// The mode whose settings the device and the editor show: the one picked in the mode bar,
+    /// else the selector's, else mode 1.
+    pub(crate) fn shown_mode(&self) -> Mode {
+        let imp = self.imp();
+        imp.editing_mode
+            .get()
+            .shown(imp.active_mode.get())
+            .unwrap_or(Mode::One)
+    }
+
+    /// Drops the mode picked in the mode bar.
+    fn clear_editing_mode(&self) {
+        let imp = self.imp();
+        let mut editing = imp.editing_mode.get();
+        editing.clear();
+        imp.editing_mode.set(editing);
+    }
+
+    /// Shows `mode`'s settings on the device and in the editor until the selector moves.
+    #[expect(dead_code, reason = "the LED editor of the next commit uses it")]
+    pub(crate) fn pick_editing_mode(&self, mode: Mode) {
+        let imp = self.imp();
+        let mut editing = imp.editing_mode.get();
+        editing.pick(mode, imp.active_mode.get());
+        if editing == imp.editing_mode.get() {
+            return;
+        }
+        imp.editing_mode.set(editing);
+        self.push_desired_state();
+        self.update_markers();
         self.update_windows();
     }
 
@@ -679,6 +737,7 @@ impl Application {
                 // A new selection's mode and held inputs are unknown until its reader reports
                 // them.
                 imp.active_mode.set(None);
+                self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
                 if let Some(settings) = imp.settings.get()
                     && let Err(error) =
@@ -690,11 +749,14 @@ impl Application {
             }
             DeviceEvent::Mode { mode, .. } => {
                 if imp.active_mode.replace(Some(*mode)) != Some(*mode) {
+                    // The selector moved: it picks the mode shown again.
+                    self.clear_editing_mode();
                     self.push_desired_state();
                 }
             }
             DeviceEvent::Gone(_) => {
                 imp.active_mode.set(None);
+                self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
             }
             DeviceEvent::InputNode { node: None, .. } => self.change_held(HeldInputs::clear),
@@ -726,8 +788,8 @@ impl Application {
         }
     }
 
-    /// Sends the device its type's active profile, in the set of the active mode (mode 1 until
-    /// the mode is known), or the built-in default until the profiles are loaded.
+    /// Sends the device its type's active profile, in the set of the mode shown (mode 1 until the
+    /// mode is known), or the built-in default until the profiles are loaded.
     ///
     /// Logs only when the profile or the mode changes, never per push.
     fn push_desired_state(&self) {
@@ -739,7 +801,7 @@ impl Application {
         let Some(device) = device.as_ref() else {
             return;
         };
-        let mode = imp.active_mode.get().unwrap_or(Mode::One);
+        let mode = self.shown_mode();
         imp.shows_last_button.set(false);
         let profiles = imp.profiles.borrow();
         let resolved = match (profiles.as_ref(), imp.settings.get()) {
@@ -750,7 +812,6 @@ impl Application {
                     store,
                 );
                 store.loaded(&id).map(|loaded| {
-                    // The mode shown is the active mode until M5's mode bar can override it.
                     let live = LiveValues {
                         mode_shown: mode,
                         last_button: imp.held.borrow().last().map(names::input_name),
