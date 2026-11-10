@@ -27,13 +27,6 @@ use super::ProfileId;
 use super::store::ProfileStore;
 
 /// The `GSettings` key of `device_type`'s profile order.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the profile list of M5 reads and writes the order"
-    )
-)]
 pub(crate) const fn settings_key(device_type: DeviceType) -> &'static str {
     match device_type {
         DeviceType::X52Pro => "profile-order-x52-pro",
@@ -46,10 +39,6 @@ pub(crate) const fn settings_key(device_type: DeviceType) -> &'static str {
 /// The default profile comes first. The listed ids that name a loaded profile of the type follow
 /// in their order, each once; the loaded profiles the setting does not list come last, by name
 /// (then by id, so the order is total).
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 shows the order")
-)]
 pub(crate) fn ordered(
     entries: &[impl AsRef<str>],
     device_type: DeviceType,
@@ -87,10 +76,6 @@ pub(crate) fn ordered(
 /// `id` is normally already in `store`, so the effective order lists it among the unlisted
 /// profiles; it is moved to the end. The result is complete: every loaded non-default profile,
 /// in the effective order, without the default.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 adds profiles")
-)]
 pub(crate) fn appended(
     entries: &[impl AsRef<str>],
     device_type: DeviceType,
@@ -108,10 +93,6 @@ pub(crate) fn appended(
 /// first when `original` is the default profile (or not in the order at all, then last).
 ///
 /// The result is complete, as for [`appended`].
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 duplicates profiles")
-)]
 pub(crate) fn inserted_after(
     entries: &[impl AsRef<str>],
     device_type: DeviceType,
@@ -131,6 +112,56 @@ pub(crate) fn inserted_after(
             .iter()
             .position(|listed| listed == original)
             .map_or(order.len(), |index| index + 1)
+    };
+    order.insert(position, id.clone());
+    order
+}
+
+/// The setting to store after `id` was moved to `index` of the non-default profiles (`0` is right
+/// after the default profile); an index past the end moves it last. The default profile never
+/// moves: for it the effective order is returned unchanged.
+///
+/// The result is complete, as for [`appended`].
+pub(crate) fn moved(
+    entries: &[impl AsRef<str>],
+    device_type: DeviceType,
+    store: &ProfileStore,
+    id: &ProfileId,
+    index: usize,
+) -> Vec<ProfileId> {
+    let mut order = without(entries, device_type, store, id);
+    let listed = ordered(entries, device_type, store).contains(id);
+    if listed && *id != ProfileId::default_for(device_type) {
+        order.insert(index.min(order.len()), id.clone());
+    }
+    order
+}
+
+/// The setting to store after a removed `id` came back (the removal was undone, or deleting its
+/// file failed): right after `previous`, the profile that was before it when it was removed
+/// (`None`: it was first), or at `index` when `previous` is gone too. The order may have changed
+/// meanwhile, and may not list `id` any more.
+///
+/// The result is complete, as for [`appended`].
+pub(crate) fn restored(
+    entries: &[impl AsRef<str>],
+    device_type: DeviceType,
+    store: &ProfileStore,
+    id: &ProfileId,
+    previous: Option<&ProfileId>,
+    index: usize,
+) -> Vec<ProfileId> {
+    let mut order = without(entries, device_type, store, id);
+    let listed = ordered(entries, device_type, store).contains(id);
+    if !listed || *id == ProfileId::default_for(device_type) {
+        return order;
+    }
+    let position = match previous {
+        None => 0,
+        Some(previous) => order
+            .iter()
+            .position(|listed| listed == previous)
+            .map_or(index.min(order.len()), |found| found + 1),
     };
     order.insert(position, id.clone());
     order

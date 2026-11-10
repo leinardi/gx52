@@ -180,6 +180,21 @@ offsets from clock 1 move because clock 1 moved.
   - A file whose name ends in `.toml` but whose stem is not a valid id (only lowercase letters,
     digits and `-`) is ignored and reported, never touched. Files whose names do not end in `.toml`
     (`*.rejected-*`, `*.bak`, editor leftovers such as `x.toml~`) are ignored silently.
+- **Saving:** an edit changes the profile in memory and on the device at once; its file is
+  written 500 ms after the last edit, one write at a time per profile. Closing the window writes
+  what is pending at once, and GX52 keeps running until every write is done. At the end of the
+  session GX52 asks the session to wait while it writes; a forced logout can still stop it, which
+  the atomic writes below make safe (the old file or the new one). A failed write is reported
+  once and the edits stay in memory for the next one. An edit to a default profile whose file
+  is bad cannot be confirmed once the window is closing or the session is ending, so it is then
+  kept in memory only and logged.
+- **Removing** takes the profile out of the list at once, with a toast that offers Undo; its file
+  is deleted when the toast goes away or the window closes, after any write of it still running.
+  Its name stays taken until then. A file that is deleted by hand is not a problem; a delete that
+  fails puts the profile back. Undo and a failed delete both put it where it was: right after
+  the profile that was before it, or at its old place when that one is gone too, whatever was
+  created, moved or removed meanwhile. A removed active profile is made active again only if
+  the user has not picked another profile since.
 - **Atomic writes:** the new content is written to a temporary file in the same directory and
   renamed over the old one (`gio::File::replace_contents_future`, which does that), off the main
   thread. A crash leaves either the old file or the new one, never half of each. A **new** file
@@ -335,7 +350,7 @@ it is replaced only through the confirm-and-back-up path there.
 
 | Case | Outcome | File |
 | --- | --- | --- |
-| Malformed TOML, over the size limit, not UTF-8, or a missing or wrong `schema_version` / `device_type` | The profile is not loaded. The problem is logged and shown once: one toast per start that lists every file that failed. Other profiles load normally | Kept as is |
+| Malformed TOML, over the size limit, not UTF-8, or a missing or wrong `schema_version` / `device_type` | The profile is not loaded. The problem is logged and shown once: one toast per start that lists every file that failed. Other profiles load normally. The file is listed greyed out by its file name under the device type its TOML names (`device_type` read on its own), or under every type when that cannot be read | Kept as is; deleted only when the user removes it from the list |
 | Out-of-range value: brightness outside `0`–`128`, an MFD line over 16 bytes after conversion or not exactly 3 lines, `fixed_offset_minutes` outside `−720`–`+840`, an empty or too long name, a missing key | Rejected **per field**: that field gets the type default in memory, the rest of the profile loads. The problem is reported (log and the same toast) | Unchanged until the user saves the profile, which writes the corrected values |
 | Unknown enum value: LED state, date format, clock 1 source, a clock 2/3 source tag, an MFD line source, the profile `kind` (read as `"single"`, from `[settings]`), an IANA zone the tz database does not know | Same as out of range | Same |
 | A key the schema does not have, or a key the device type does not have (`[leds]` in an `x52` file) | Ignored in memory and reported | Same: the key is dropped only when the user saves |
@@ -378,11 +393,15 @@ it is replaced only through the confirm-and-back-up path there.
     a time, and the name is checked against the store again after the confirmation, right before
     the write; when a profile added meanwhile changed it, the user confirms the new name;
   - the imported profile gets a new random id and is never a default profile.
-- **In the app:** the window actions `win.import-profile` (parameter: the device type, `x52-pro` or
-  `x52`) and `win.export-profile` (parameter: the profile id). Reading and checking the file and
-  writing the imported one run off the main thread; the confirmation is an `adw::AlertDialog`
-  that names the profile and lists every problem, and only "Import" writes anything. The profile
-  list of milestone M5 calls these actions; until then they have no menu entry.
+- **In the app:** "Import Profile…" in the main menu (Ctrl+O, the window action `win.import`, or
+  `win.import-profile` with the device type, `x52-pro` or `x52`) and "Export…" in a profile's row
+  menu (Ctrl+Shift+E, or `win.export-profile` with the profile id). Reading and checking the file
+  and writing the imported one run off the main thread. A file without problems whose name is
+  free is imported at once, with a toast; otherwise an `adw::AlertDialog` names the profile and
+  lists every problem or the new name, and only "Import" writes anything. The name is checked
+  again on the main thread after every wait and reserved in the same step as the write starts, so
+  a profile created or renamed meanwhile is never given the same name; a name that changed asks
+  again.
 
 ## Migration policy
 

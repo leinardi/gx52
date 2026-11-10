@@ -201,6 +201,14 @@ const SET_KEYS: [&str; 6] = [
     "mfd",
 ];
 
+/// The device type a file names, read leniently: the file only has to be TOML with a known
+/// `device_type` string. Used to list a damaged file under its type; `None` when that cannot be
+/// read (not UTF-8, not TOML, no or an unknown `device_type`).
+pub(crate) fn sniff_device_type(bytes: &[u8]) -> Option<DeviceType> {
+    let document: Table = std::str::from_utf8(bytes).ok()?.parse().ok()?;
+    device_type_from_id(document.get("device_type")?.as_str()?)
+}
+
 /// Parses `bytes` as a profile of `schema`, migrating an older version in memory.
 ///
 /// # Errors

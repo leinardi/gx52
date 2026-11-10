@@ -4,6 +4,11 @@
        so libadwaita auto-loads style.css, icons/ and shortcuts-dialog.ui. -->
   <gresource prefix="/com/leinardi/gx52">
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/window.ui">window.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/profile-row.ui">profile-row.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/device-footer.ui">device-footer.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/led-button.ui">led-button.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/led-editor.ui">led-editor.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/mode-bar.ui">mode-bar.ui</file>
     <!-- Root alias: AdwApplication wires app.shortcuts / Ctrl+? to it automatically. -->
     <file compressed="true" preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">shortcuts-dialog.ui</file>
     <file compressed="true">style.css</file>

@@ -58,13 +58,17 @@ on the right.
 - **Profile list:** a `gtk::ListBox` with the `navigation-sidebar` style, the connected device
   type's profiles only ([profiles.md](profiles.md#model)).
   - The **default profile** is always first. It can be renamed and edited, never removed or moved.
-  - The **other profiles** are in the user's order: drag a row to move it; "Move Up" and "Move
-    Down" in its menu do the same from the keyboard. The order is stored per device type
+  - The **other profiles** are in the user's order: drag a row to move it, by the handle
+    (`list-drag-handle-symbolic`) that shows at its start while the pointer is over it; "Move Up"
+    and "Move Down" in its menu do the same from the keyboard. The order is stored per device type
     ([profiles.md](profiles.md#profile-order)).
   - The **active profile** (the one on the device) is the selected row. Selecting a row makes that
-    profile active at once.
-  - A **per-mode profile** shows small "1 2 3" badges, the current mode highlighted while it is
-    active.
+    profile active at once. When another row is selected (a profile that failed to load), the
+    active row shows a check mark next to its menu button.
+  - **Renaming** in place: while the name is edited, the entry and the reason a name is refused
+    take the whole row; the handle, the badges, the check mark and the menu button are hidden.
+  - A **per-mode profile** shows small "1 2 3" badges, the mode shown highlighted while it is
+    active: the mode picked in the [mode bar](#mode-bar), else the selector's.
   - A profile that **failed to load** (unreadable, newer schema) is listed greyed out with a
     warning icon; it can be selected to see why, but it is never sent to the device. A damaged
     file has no readable name, so its row shows the file name; a newer-schema profile shows its
@@ -111,8 +115,9 @@ Import Profile… (Ctrl+O), Preferences (Ctrl+,), Keyboard Shortcuts (Ctrl+?), A
 - a file without problems is added at once, with the toast "Imported “Falcon BMS”";
 - a file with per-field problems opens an `adw::AlertDialog` "Import “Falcon BMS”?" that lists
   each value and what it is replaced with, with **Cancel** and **Import** (suggested);
-- a file for the other model, or made by a newer GX52, opens an `adw::AlertDialog` "Can’t Import
-  This Profile" that names the model or the version, with **Close**.
+- a file for the other model, or made by a newer GX52, is refused with a toast that says why
+  ("This is a profile for the X52", "The profile was made by a newer version of GX52"); nothing
+  is written.
 
 ## Profile kinds
 
@@ -152,8 +157,10 @@ The mode selector on the stick picks the mode.
 
 - An `adw::ToggleGroup`. It **follows the stick**: when the selector moves, the bar switches to that
   mode.
-- Picking a mode in the bar shows that mode's settings on the device until the selector on the
-  stick moves again.
+- Picking a mode in the bar shows that mode's settings on the device, in the editor and in the
+  profile row's badges until the selector on the stick moves again, another profile becomes active
+  or the profile becomes single. Edits go to the mode shown. Picking the selector's mode drops the
+  pick.
 - Not shown on the Clocks view (shared settings) or on Single profiles.
 
 ### LEDs view
@@ -163,15 +170,20 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
 - **One card per part of the device:** Stick, Stick base, Throttle, side by side when there is
   room and stacked when narrow. Inside a card the LED buttons sit in a grid that roughly follows the
   device, each with its name below.
-- **LED button:** a round `gtk::MenuButton` coloured by state; a click, Enter or Space opens a
-  popover with an `adw::ToggleGroup` of the states (Off / Green / Amber / Red, or Off / On for Fire
-  and Throttle). Tooltip and accessible label: "<LED> LED: <state>".
+- **LED button:** a round `gtk::MenuButton` coloured by state with libadwaita's palette (`--green-3`,
+  `--red-2`, `--yellow-4`, as in the prototype); a click, Enter or Space opens a popover with an
+  `adw::ToggleGroup` of the states (Off / Green / Amber / Red, or Off / On for Fire and Throttle).
+  Choosing a state closes the popover; so does a change of the mode shown. Tooltip and accessible
+  label: "<LED> LED: <state>".
 - **POV 1** is a fixed green LED that opens nothing; its tooltip explains that it cannot be changed
   and follows brightness and blink.
 - **Below the cards:** Brightness (`adw::ActionRow` with a `gtk::Scale`, 0–128, value shown) and
   Blink (`adw::SwitchRow`, subtitle "The i and POV 1 LEDs blink").
 - **Brightness 0:** every LED is shown off, whatever its state; the states are kept and still
-  editable, and the accessible label adds ", brightness 0".
+  editable, the accessible label adds ", brightness 0", and the group's description says
+  "Brightness is 0: every LED is off. The states are kept."
+- **Blink:** while Blink is on and the brightness above 0, the i LED (when not off) and POV 1 blink
+  in the editor too, with a 1 s CSS animation; GTK stops it when animations are turned off.
 - **X52 (non-Pro):** only the Brightness row, with the note "This model has no LEDs that can be
   set one by one."
 

@@ -29,7 +29,8 @@ is not used.
 
 Each LED is a `gtk::MenuButton` with an empty child. Its colour comes from CSS classes on the
 `menubutton` node (`led-off`, `led-on`, `led-green`, `led-red`, `led-amber`) styled with libadwaita's
-palette variables (`--green-3`, `--red-3`, `--yellow-3`); the tooltip and the accessible label say
+palette variables (`--green-3`, `--red-3`, `--yellow-3`; the app uses the prototype's `--green-3`,
+`--red-2`, `--yellow-4`, see [ui.md](../ui.md#leds-view)); the tooltip and the accessible label say
 "<LED> LED: <state>".
 
 Findings:

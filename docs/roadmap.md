@@ -251,6 +251,36 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    confirmation and Undo, import and export, the device status footer, the problem states and
    toasts of [ui.md](ui.md). Done when: DW, plus every profiles.md user-visible outcome is
    reachable, and the window works at 360×294.
+
+   Results on 2026-11-10:
+
+   - **Persistence:** the store hands out save, add and delete jobs that run off the main
+     thread; a write queue keeps one save or delete at a time per profile and debounces saves by
+     500 ms; name reservations keep the names of pending creates, imports and removed profiles
+     taken. The races (a delete after a slow save, Undo, a failed delete, a close during a
+     create) are unit-tested on the queue and the reservations. The application holds itself
+     until the queue is idle and inhibits logout while it drains.
+   - **Window:** split view with the profile list (default first, user order, per-mode badges,
+     greyed-out newer and damaged files, the damaged ones under the type their TOML names or
+     every type), the device footer, the "never connected" page, the no-permission page with Try
+     Again (until task 6), the x52d banner and dialog, placeholders for the LEDs, MFD and Clocks
+     views. The rows got two changes from the prototype review: a drag handle that shows on
+     hover, and no check mark on the selected active row.
+   - **Hands-on, X52 Pro, Devel build on the host:** new single and per-mode profiles with inline
+     naming (empty and duplicate names refused with the reason), rename, duplicate, move up and
+     down, drag, kind change both ways, remove with Undo (the active one falls back to the default
+     on the device and comes back), the narrow layout; one import with problems through the
+     dialog (the other import cases are covered by the unit tests); a damaged file of unknown
+     type, a damaged X52 Pro file and a newer-schema file listed and shown with Show File and
+     Remove; a broken default file replaced after the confirmation with its
+     `.rejected-<timestamp>` copy; a rename and a new profile each followed at once by Ctrl+W
+     were on disk after the exit; unplugged footer, the "never connected" page and its switch to
+     the list on replug; the x52d banner with a fake socket. No GTK criticals in any run.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. All were fixed. The
+     two that changed behaviour were checked by hand again: F2 typed in the name entry no longer
+     restarts the rename, and a row moved from its menu keeps the focus. Not checked by hand: a
+     name being typed while an import finishes is kept, because the file chooser is modal (the
+     list splice it relies on is unit-tested).
 2. **(code) LED editor**: the schematic layout of
    [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
    of states, grid positions as data), the mode bar of a per-mode profile (it overrides
@@ -262,6 +292,28 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    2026-11-02 pass: keyboard only, the narrowest window, light and dark style. The Orca check
    ("<LED> LED: <state>"), optional in hands-on.md, is required here because the editor is the
    app's main custom widget.
+
+   Results on 2026-11-10:
+
+   - **Editor:** the mode shown is the mode picked in the mode bar, else the selector's, else
+     mode 1; the device, the editor and the row's badges follow it, the footer keeps the
+     selector's. The pick is dropped when the selector moves, the active profile changes or
+     becomes single, or the device goes. The LED catalog, the card layout and what each button
+     shows are plain Rust with unit tests (brightness `0` and back, blink only while lit). Where
+     S7 and the prototype differ, the prototype won and ui.md says so: the LED colours, the
+     brightness `0` description, the blink animation.
+   - **Hands-on, X52 Pro, Devel build on the host:** every check of the plan as expected: each
+     LED and state on the device at once, POV 1 opens nothing; brightness `0` and back, Blink in
+     the editor and on the device; the mode bar, picks and the selector taking over; edits after
+     a restart; keyboard only; 360×294; light and dark style; Orca; the X52 note. Two layout
+     fixes came out of it: the last line of cards (a lone Throttle card when narrow, all three
+     when wide) did not fill the width, and POV 1 logged an Adwaita critical on every refresh.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: choosing the
+     current state closes the popover, an edit that changes nothing or cannot be stored puts the
+     widgets back, the hover ring on lit LEDs, a pick left from another profile ignored while the
+     active one is single. Fixed after the maintainer's review: with the selector's mode unknown
+     (offline), the badges highlighted nothing while the editor showed mode 1; they now show the
+     mode shown, mode 1 included.
 3. **(code) MFD**: the simulated display with live values and the clock switcher, the line sources,
    brightness and shift. Done when: DW, plus text with characters outside the table shows the
    fallback in the display and on the device, and each dynamic source follows the device (profile,

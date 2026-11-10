@@ -475,3 +475,18 @@ fn problems_have_a_message_for_the_user() {
         "settings.mfd_brightness is missing; the default is used"
     );
 }
+
+#[test]
+fn a_damaged_file_names_its_device_type_when_it_is_toml() {
+    for (name, expected) in [
+        ("missing-schema-version.toml", Some(DeviceType::X52Pro)),
+        ("wrong-schema-version.toml", Some(DeviceType::X52Pro)),
+        ("valid-x52.toml", Some(DeviceType::X52)),
+        ("malformed.txt", None),
+        ("not-utf8.bin", None),
+        ("missing-device-type.toml", None),
+        ("unknown-device-type.toml", None),
+    ] {
+        assert_eq!(sniff_device_type(&fixture(name)), expected, "{name}");
+    }
+}

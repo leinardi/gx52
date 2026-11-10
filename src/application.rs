@@ -30,15 +30,28 @@ use x52::input::{HeldInputs, Mode};
 use x52::state::DeviceState;
 
 use crate::config;
+use crate::device::status::DeviceStatus;
 use crate::device::{DeviceEvent, DeviceService, access, names};
+use crate::model::{ProfileObject, splice};
 use crate::profile::legacy::{self, FileWriter};
 use crate::profile::startup::{self, ImportOutcome};
 use crate::profile::store::{Entry, LoadReport, ProfileStore};
-use crate::profile::{self, LiveValues, MfdLineSource, Profile, ProfileId, active};
+use crate::profile::{
+    self, LiveValues, MfdLineSource, Profile, ProfileId, ProfileKind, active, list, order,
+};
 use crate::window::{self, Window};
+
+mod editing;
+mod persistence;
+
+pub(crate) use self::persistence::RenameProblem;
 
 /// The settings key that records the one-time GX52 0.7 import as done.
 const LEGACY_IMPORT_DONE: &str = "legacy-import-done";
+
+/// The settings key with the type of the last device seen, whose profiles are shown while no
+/// device is connected.
+const LAST_DEVICE_TYPE: &str = "last-device-type";
 
 /// A running profile import: see [`Application::begin_profile_import`].
 pub(crate) struct ImportGuard(glib::WeakRef<Application>);
@@ -74,6 +87,7 @@ const UNRELEASED_VERSION: &str = "0.0.0";
 
 mod imp {
     use std::cell::{Cell, OnceCell, RefCell};
+    use std::collections::{BTreeMap, BTreeSet};
 
     use adw::{prelude::*, subclass::prelude::*};
     use gettextrs::gettext;
@@ -83,7 +97,11 @@ mod imp {
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
+    use crate::profile::editing::EditingMode;
+    use crate::profile::removals::Removals;
+    use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
+    use crate::profile::writes::WriteQueue;
     use crate::{config, window::Window};
 
     #[derive(Debug, Default)]
@@ -99,6 +117,8 @@ mod imp {
         /// The selected device's mode: the last one reported, kept while the evdev node is
         /// reopened, cleared when the device goes.
         pub(crate) active_mode: Cell<Option<Mode>>,
+        /// The mode picked in the mode bar, shown instead of the active mode.
+        pub(crate) editing_mode: Cell<EditingMode>,
         /// The selection the device events are followed for; events of an earlier one are
         /// dropped.
         pub(crate) selection: Cell<CurrentSelection>,
@@ -113,6 +133,27 @@ mod imp {
         /// Whether the set last pushed has a "last button" MFD line, so a change of the held
         /// inputs pushes only when the device shows it.
         pub(crate) shows_last_button: Cell<bool>,
+        /// The shown device type's profiles, as the profile list shows them.
+        pub(crate) profile_list: OnceCell<gio::ListStore>,
+        /// Every pending save, delete and create.
+        pub(crate) writes: RefCell<WriteQueue>,
+        /// The names of profiles not in the store yet, or removed until their file is gone.
+        pub(crate) reservations: RefCell<Reservations>,
+        /// The running debounce timers, by profile.
+        pub(crate) debounces: RefCell<BTreeMap<ProfileId, glib::SourceId>>,
+        /// Holds the application while the write queue is busy.
+        pub(crate) hold: RefCell<Option<gio::ApplicationHoldGuard>>,
+        /// The logout inhibition taken at the end of the session while profiles are saved.
+        pub(crate) inhibit_cookie: Cell<Option<u32>>,
+        /// The removed profiles whose removal can still be undone.
+        pub(crate) removals: RefCell<Removals>,
+        /// The profiles whose last save failed, so the failure is reported once.
+        pub(crate) failed_saves: RefCell<BTreeSet<ProfileId>>,
+        /// The default profiles whose damaged file the user chose to keep this session.
+        pub(crate) declined_replacements: RefCell<BTreeSet<ProfileId>>,
+        /// Whether the window closed or the session is ending with writes pending, until the
+        /// queue is idle or a window opens again: no dialog asks anything meanwhile.
+        pub(crate) draining: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -135,6 +176,7 @@ mod imp {
             let app = self.obj();
             app.setup_actions();
             app.setup_settings();
+            app.connect_query_end(super::Application::on_query_end);
             app.start_device_service();
             app.load_profiles();
         }
@@ -146,14 +188,20 @@ mod imp {
             let app = self.obj();
             let window = app.active_window().unwrap_or_else(|| {
                 let window = Window::new(&app);
-                window.show_device_status(self.device_status.get());
+                window.set_profiles(&app.profile_list());
                 window.upcast()
             });
+            app.imp().draining.set(false);
             window.present();
             app.show_pending_toasts();
         }
 
         fn shutdown(&self) {
+            // The hold keeps the application alive until the queue is idle; only a forced end
+            // gets here with work pending.
+            if !self.obj().writes_idle() {
+                tracing::warn!("Exiting with profile changes not written");
+            }
             // Returns at once: the device threads are joined on a thread of their own.
             if let Some(device) = self.device.take() {
                 device.shutdown();
@@ -207,9 +255,19 @@ impl Application {
 
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("window.close", &["<Control>w"]);
+        self.set_accels_for_action("win.new-profile", &["<Control>n"]);
+        self.set_accels_for_action("win.import", &["<Control>o"]);
+        self.set_accels_for_action("win.export-selected", &["<Control><Shift>e"]);
+        for (view, accel) in [
+            ("leds", "<Control>1"),
+            ("mfd", "<Control>2"),
+            ("clocks", "<Control>3"),
+        ] {
+            self.set_accels_for_action(&format!("win.show-view::{view}"), &[accel]);
+        }
     }
 
-    /// Creates the settings and follows the active profiles.
+    /// Creates the settings and follows the active profiles and the profile order.
     fn setup_settings(&self) {
         let settings = gio::Settings::new(config::APP_ID);
         for device_type in DeviceType::ALL {
@@ -218,7 +276,20 @@ impl Application {
                 glib::clone!(
                     #[weak(rename_to = app)]
                     self,
-                    move |_, _| app.push_desired_state()
+                    move |_, _| {
+                        // Another profile is active: the selector's mode is shown again.
+                        app.clear_editing_mode();
+                        app.push_desired_state();
+                        app.refresh_profiles();
+                    }
+                ),
+            );
+            settings.connect_changed(
+                Some(order::settings_key(device_type)),
+                glib::clone!(
+                    #[weak(rename_to = app)]
+                    self,
+                    move |_, _| app.refresh_profiles()
                 ),
             );
         }
@@ -377,10 +448,11 @@ impl Application {
             .collect();
         files.extend(store.entries().filter_map(|(id, entry)| match entry {
             Entry::Loaded(loaded) if !loaded.problems.is_empty() => Some(id.file_name()),
-            Entry::Loaded(_) | Entry::Newer(_) => None,
+            Entry::Loaded(_) | Entry::Newer(_) | Entry::Damaged(_) => None,
         }));
         self.imp().profiles.replace(Some(store));
         self.push_desired_state();
+        self.refresh_profiles();
         if report.unlisted.is_some() {
             self.toast(&gettext("The profile folder could not be read"));
         }
@@ -397,25 +469,12 @@ impl Application {
         }
     }
 
-    /// The names of `device_type`'s profiles, once the profiles are loaded.
-    pub(crate) fn profile_names(&self, device_type: DeviceType) -> Option<Vec<String>> {
-        let profiles = self.imp().profiles.borrow();
-        Some(profiles.as_ref()?.names(device_type))
-    }
-
-    /// A copy of the usable profile `id` and the profile directory, once the profiles are loaded.
+    /// A copy of the usable profile `id`, once the profiles are loaded.
     pub(crate) fn profile(&self, id: &ProfileId) -> Option<Profile> {
         let profiles = self.imp().profiles.borrow();
         Some(profiles.as_ref()?.loaded(id)?.profile.clone())
     }
 
-    /// The profile directory, once the profiles are loaded.
-    pub(crate) fn profiles_dir(&self) -> Option<PathBuf> {
-        let profiles = self.imp().profiles.borrow();
-        Some(profiles.as_ref()?.dir().to_owned())
-    }
-
-    /// Adds a profile an import has just written under `id`.
     /// Marks a profile import as running until the returned guard is dropped; `None` while
     /// another import runs, so two imports never pick the same name.
     pub(crate) fn begin_profile_import(&self) -> Option<ImportGuard> {
@@ -426,12 +485,191 @@ impl Application {
         }
     }
 
-    pub(crate) fn add_imported_profile(&self, id: ProfileId, profile: Profile) {
-        if let Some(store) = self.imp().profiles.borrow_mut().as_mut() {
-            store.insert(id, profile);
+    /// The device status the windows show.
+    pub(crate) fn device_status(&self) -> DeviceStatus {
+        self.imp().device_status.get()
+    }
+
+    /// The device type whose profiles are shown: the connected one, or the last one seen; `None`
+    /// before any device was seen.
+    pub(crate) fn shown_device_type(&self) -> Option<DeviceType> {
+        self.device_status().device_type.or_else(|| {
+            let settings = self.imp().settings.get()?;
+            profile::device_type_from_id(&settings.string(LAST_DEVICE_TYPE))
+        })
+    }
+
+    /// The shown device type's profiles, as the profile list shows them.
+    pub(crate) fn profile_list(&self) -> gio::ListStore {
+        self.imp()
+            .profile_list
+            .get_or_init(gio::ListStore::new::<ProfileObject>)
+            .clone()
+    }
+
+    /// The id of `device_type`'s active profile, once the profiles are loaded.
+    fn active_profile_id(&self, device_type: DeviceType) -> Option<ProfileId> {
+        let imp = self.imp();
+        let profiles = imp.profiles.borrow();
+        let settings = imp.settings.get()?;
+        Some(active::resolve(
+            &settings.string(active::settings_key(device_type)),
+            device_type,
+            profiles.as_ref()?,
+        ))
+    }
+
+    /// The kind of the shown device type's active profile.
+    pub(crate) fn active_profile_kind(&self) -> ProfileKind {
+        self.shown_device_type()
+            .and_then(|device_type| self.active_profile_id(device_type))
+            .and_then(|id| Some(self.profile(&id)?.kind()))
+            .unwrap_or(ProfileKind::Single)
+    }
+
+    /// Makes the usable profile `id` its device type's active profile.
+    pub(crate) fn activate_profile(&self, id: &ProfileId) {
+        let device_type = {
+            let profiles = self.imp().profiles.borrow();
+            let Some(loaded) = profiles.as_ref().and_then(|store| store.loaded(id)) else {
+                tracing::debug!("Profile {id} cannot be made active: it is not usable");
+                return;
+            };
+            loaded.profile.device_type
+        };
+        let Some(settings) = self.imp().settings.get() else {
+            return;
+        };
+        self.imp().removals.borrow_mut().forget_active(device_type);
+        if let Err(error) = settings.set_string(active::settings_key(device_type), id.as_str()) {
+            tracing::warn!("Cannot make profile {id} active: {error}");
         }
-        // The active id may name the profile that just came in.
+    }
+
+    /// The path of the file of `id`.
+    pub(crate) fn profile_path(&self, id: &ProfileId) -> PathBuf {
+        let profiles = self.imp().profiles.borrow();
+        profiles.as_ref().map_or_else(
+            || profile::profiles_dir(&profile::config_dir()).join(id.file_name()),
+            |store| store.path(id),
+        )
+    }
+
+    /// Rebuilds the profile list from the store, the order and the active profile, keeping the
+    /// objects of the profiles that stay, then refreshes the windows.
+    fn refresh_profiles(&self) {
+        let imp = self.imp();
+        let list = self.profile_list();
+        let rows = {
+            let profiles = imp.profiles.borrow();
+            match (
+                self.shown_device_type(),
+                profiles.as_ref(),
+                imp.settings.get(),
+            ) {
+                (Some(device_type), Some(store), Some(settings)) => {
+                    let entries = settings.strv(order::settings_key(device_type));
+                    let entries: Vec<&str> = entries.iter().map(glib::GStringPtr::as_str).collect();
+                    list::rows(store, device_type, &entries)
+                }
+                _ => Vec::new(),
+            }
+        };
+        let current: Vec<ProfileObject> = list
+            .iter::<ProfileObject>()
+            .filter_map(Result::ok)
+            .collect();
+        let objects: Vec<ProfileObject> = rows
+            .iter()
+            .map(|row| {
+                current
+                    .iter()
+                    .find(|object| object.id() == row.id.as_str())
+                    .map_or_else(
+                        || ProfileObject::new(row),
+                        |object| {
+                            object.update(row);
+                            object.clone()
+                        },
+                    )
+            })
+            .collect();
+        self.mark_active(&objects);
+        // Only the rows that changed are recreated: a row being renamed or holding the focus
+        // outside them is kept.
+        if let Some(splice) = splice::between(&current, &objects) {
+            let position = u32::try_from(splice.position).unwrap_or(u32::MAX);
+            let removed = u32::try_from(splice.removed).unwrap_or(u32::MAX);
+            list.splice(position, removed, &objects[splice.added]);
+        }
+        self.update_windows();
+    }
+
+    /// Marks the active profile among `objects`, with the mode shown.
+    fn mark_active(&self, objects: &[ProfileObject]) {
+        let active = self
+            .shown_device_type()
+            .and_then(|device_type| self.active_profile_id(device_type));
+        // The mode the editor and the device show, mode 1 included while the selector is unknown.
+        let mode = self.shown_mode();
+        for object in objects {
+            let is_active = active.as_ref().is_some_and(|id| object.id() == id.as_str());
+            object.show_active(is_active, mode);
+        }
+    }
+
+    /// Marks the active profile in the profile list, with the mode shown, without touching the
+    /// list itself.
+    fn update_markers(&self) {
+        let objects: Vec<ProfileObject> = self
+            .profile_list()
+            .iter::<ProfileObject>()
+            .filter_map(Result::ok)
+            .collect();
+        self.mark_active(&objects);
+    }
+
+    /// The mode whose settings the device and the editor show: the one picked in the mode bar,
+    /// else the selector's, else mode 1. A pick counts only while the active profile is
+    /// per-mode: one left over from another profile is ignored.
+    pub(crate) fn shown_mode(&self) -> Mode {
+        let imp = self.imp();
+        let mut editing = imp.editing_mode.get();
+        if self.active_profile_kind() != ProfileKind::PerMode {
+            editing.clear();
+        }
+        editing.shown(imp.active_mode.get())
+    }
+
+    /// Drops the mode picked in the mode bar.
+    fn clear_editing_mode(&self) {
+        let imp = self.imp();
+        let mut editing = imp.editing_mode.get();
+        editing.clear();
+        imp.editing_mode.set(editing);
+    }
+
+    /// Shows `mode`'s settings on the device and in the editor until the selector moves.
+    pub(crate) fn pick_editing_mode(&self, mode: Mode) {
+        let imp = self.imp();
+        let mut editing = imp.editing_mode.get();
+        editing.pick(mode, imp.active_mode.get());
+        if editing == imp.editing_mode.get() {
+            return;
+        }
+        imp.editing_mode.set(editing);
         self.push_desired_state();
+        self.update_markers();
+        self.update_windows();
+    }
+
+    /// Shows the current state in every window.
+    fn update_windows(&self) {
+        for window in self.windows() {
+            if let Ok(window) = window.downcast::<Window>() {
+                window.refresh();
+            }
+        }
     }
 
     /// Shows `message` in the active window, or keeps it until a window is presented.
@@ -489,30 +727,36 @@ impl Application {
             return;
         }
         let mut status = imp.device_status.get();
-        if status.apply(event) {
+        let changed = status.apply(event);
+        if changed {
             tracing::info!("Device status: {status:?}");
             imp.device_status.set(status);
-            for window in self.windows() {
-                if let Ok(window) = window.downcast::<Window>() {
-                    window.show_device_status(status);
-                }
-            }
         }
         match event {
-            DeviceEvent::Selected(_) => {
+            DeviceEvent::Selected(device) => {
                 // A new selection's mode and held inputs are unknown until its reader reports
                 // them.
                 imp.active_mode.set(None);
+                self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
+                if let Some(settings) = imp.settings.get()
+                    && let Err(error) =
+                        settings.set_string(LAST_DEVICE_TYPE, device.device_type.id())
+                {
+                    tracing::warn!("Cannot record the device type: {error}");
+                }
                 self.push_desired_state();
             }
             DeviceEvent::Mode { mode, .. } => {
                 if imp.active_mode.replace(Some(*mode)) != Some(*mode) {
+                    // The selector moved: it picks the mode shown again.
+                    self.clear_editing_mode();
                     self.push_desired_state();
                 }
             }
             DeviceEvent::Gone(_) => {
                 imp.active_mode.set(None);
+                self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
             }
             DeviceEvent::InputNode { node: None, .. } => self.change_held(HeldInputs::clear),
@@ -522,6 +766,10 @@ impl Application {
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)
             | DeviceEvent::Sent(_) => {}
+        }
+        if changed {
+            // The device type, its mode or its state changed: the list and the footer follow.
+            self.refresh_profiles();
         }
     }
 
@@ -540,8 +788,8 @@ impl Application {
         }
     }
 
-    /// Sends the device its type's active profile, in the set of the active mode (mode 1 until
-    /// the mode is known), or the built-in default until the profiles are loaded.
+    /// Sends the device its type's active profile, in the set of the mode shown (mode 1 until the
+    /// mode is known), or the built-in default until the profiles are loaded.
     ///
     /// Logs only when the profile or the mode changes, never per push.
     fn push_desired_state(&self) {
@@ -553,7 +801,7 @@ impl Application {
         let Some(device) = device.as_ref() else {
             return;
         };
-        let mode = imp.active_mode.get().unwrap_or(Mode::One);
+        let mode = self.shown_mode();
         imp.shows_last_button.set(false);
         let profiles = imp.profiles.borrow();
         let resolved = match (profiles.as_ref(), imp.settings.get()) {
@@ -564,7 +812,6 @@ impl Application {
                     store,
                 );
                 store.loaded(&id).map(|loaded| {
-                    // The mode shown is the active mode until M5's mode bar can override it.
                     let live = LiveValues {
                         mode_shown: mode,
                         last_button: imp.held.borrow().last().map(names::input_name),

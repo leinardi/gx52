@@ -20,15 +20,21 @@
 //! through `gio::spawn_blocking`; the tests call them directly on a temporary directory.
 
 pub(crate) mod active;
+pub(crate) mod editing;
 pub(crate) mod exchange;
 pub(crate) mod files;
+pub(crate) mod leds;
 pub(crate) mod legacy;
+pub(crate) mod list;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod order;
+pub(crate) mod removals;
+pub(crate) mod reservations;
 pub(crate) mod schema;
 pub(crate) mod startup;
 pub(crate) mod store;
+pub(crate) mod writes;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -246,10 +252,6 @@ impl ModeSets {
     }
 
     /// The set the device shows in `mode`, to edit.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the profile editor of M5 edits the sets")
-    )]
     pub(crate) fn for_mode_mut(&mut self, mode: Mode) -> &mut ModeSettings {
         match self {
             Self::Single(settings) => settings,
@@ -258,10 +260,6 @@ impl ModeSets {
     }
 
     /// Per-mode sets: a single set is copied into all three modes.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the profile editor of M5 changes the kind")
-    )]
     pub(crate) fn into_per_mode(self) -> Self {
         match self {
             Self::Single(settings) => {
@@ -272,10 +270,6 @@ impl ModeSets {
     }
 
     /// A single set: per-mode sets keep mode 1 and drop modes 2 and 3.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the profile editor of M5 changes the kind")
-    )]
     pub(crate) fn into_single(self) -> Self {
         match self {
             single @ Self::Single(_) => single,

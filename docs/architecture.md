@@ -302,8 +302,13 @@ overrides ───────────────────────�
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
   - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode
-    bar, shown until the selector moves ([ui.md](ui.md#mode-bar)), live edits not yet saved and,
-    in 1.x, MFD pages and D-Bus requests.
+    bar ([ui.md](ui.md#mode-bar)), live edits not yet saved and, in 1.x, MFD pages and D-Bus
+    requests. The **mode shown** is the picked mode, else the active mode, else mode 1
+    (`src/profile/editing.rs`); the pick is dropped when the selector moves, the active profile
+    changes or becomes single, or the device goes or is selected again. The device, the editor and
+    the profile list's badges all show the mode shown; the sidebar footer keeps the selector's
+    mode. The editor's edits change the active profile's settings of the mode shown, go to the
+    device at once and are saved after the debounce (`src/application/editing.rs`).
 - It is **pushed to the writer** whenever an input changes. The writer decides what to send (only
   changes, or everything on connect).
 - The **UI binds to GObject properties**: a device object (access state, device type, active mode,
@@ -334,16 +339,42 @@ settings, defaulting to the S9 values.
 
 - **GSettings** (schema id and path from the app ID; the Devel build has its own): app settings
   (run in background, autostart, the virtual mouse switch and settings, window state, the
-  legacy-import-done flag) and, per device type, the **active profile** and the **profile order**
-  ([profiles.md](profiles.md#active-profile)). One
-  `gio::Settings` instance, held by the application.
+  legacy-import-done flag, the last device type) and, per device type, the **active profile** and
+  the **profile order** ([profiles.md](profiles.md#active-profile)). One `gio::Settings` instance,
+  held by the application.
 - **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
   format, defaults, validation and recovery rules are in [profiles.md](profiles.md). The code is
   in `src/profile/`: plain Rust with no GObject, whose file operations block (`files.rs`: the
   size-capped read, `gio::File::replace_contents` for a save, create-new writes for every new file,
   backups that never overwrite a backup). The application loads the store once at start-up in
   `gio::spawn_blocking`, keeps it on the main thread, logs the load report and shows its one toast.
-  The GObject wrappers the UI binds to come with the profile editor in M5.
+  The UI binds to `ProfileObject`s (`src/model/`), one per row of the profile list, which the
+  application keeps in one `gio::ListStore` for the shown device type and rebuilds from the
+  store, the order and the active profile (`src/profile/list.rs`), keeping the objects of the
+  profiles that stay. The shown type is the connected one, or the last one seen (GSettings
+  `last-device-type`) while no device is connected.
+  - **Edits change the store in memory; file work is a job.** `store.rs` hands out `SaveJob`,
+    `AddJob` and `DeleteJob` values (the path, the contents and how to write them) that run in
+    `gio::spawn_blocking`; the main thread then commits the result (`saved`, `added`). A removal
+    takes the entry out of the store at once (`take`) and deletes its file later; an undo or a
+    failed delete puts it back (`restore`). A file that is not a profile is a `Damaged` entry,
+    listed under the device type its TOML names (read leniently) or under every type, never
+    written, and deleted only by an explicit removal.
+  - **One write at a time per profile** (`writes.rs`). The write queue debounces saves (500 ms
+    after the last edit) and keeps one lane per profile, so a save and a delete of the same
+    profile never overlap and a save never lands after the delete. It also counts the creates (new,
+    duplicated, imported profiles) until their profile is in the store. It only decides: it returns
+    commands (arm or cancel a timer, start a job) that the application carries out, so every order
+    of events is unit-tested.
+  - **Names claimed before the store has them** (`reservations.rs`): the name of a create or an
+    import while its file is written, and the name of a removed profile until its file is deleted
+    or it is restored. Every name check (new, duplicate, rename, import) looks at the store and the
+    reservations together, so two profiles of a type never share a name.
+  - **Removals until the file is gone** (`removals.rs`): a removed entry with its reserved name,
+    its place in the list and whether it was active, until Undo or a failed delete puts it back
+    or the delete frees the name. Each removal is numbered, so a late toast signal of an undone
+    removal never ends the Undo of the next one; a profile the user makes active meanwhile is not
+    overridden by the put-back. Pure like the queue, and unit-tested the same way.
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
   and `gx52.db` exists; a private copy of a consistent snapshot is read; the flag is set even when
   the database is unreadable, so start-up never fails because of it, but not while GX52 0.7 keeps
