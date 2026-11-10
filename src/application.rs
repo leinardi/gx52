@@ -610,7 +610,8 @@ impl Application {
         let active = self
             .shown_device_type()
             .and_then(|device_type| self.active_profile_id(device_type));
-        let mode = self.known_shown_mode();
+        // The mode the editor and the device show, mode 1 included while the selector is unknown.
+        let mode = self.shown_mode();
         for object in objects {
             let is_active = active.as_ref().is_some_and(|id| object.id() == id.as_str());
             object.show_active(is_active, mode);
@@ -629,14 +630,9 @@ impl Application {
     }
 
     /// The mode whose settings the device and the editor show: the one picked in the mode bar,
-    /// else the selector's, else mode 1.
-    pub(crate) fn shown_mode(&self) -> Mode {
-        self.known_shown_mode().unwrap_or(Mode::One)
-    }
-
-    /// The mode shown, while one is known. A pick counts only while the active profile is
+    /// else the selector's, else mode 1. A pick counts only while the active profile is
     /// per-mode: one left over from another profile is ignored.
-    fn known_shown_mode(&self) -> Option<Mode> {
+    pub(crate) fn shown_mode(&self) -> Mode {
         let imp = self.imp();
         let mut editing = imp.editing_mode.get();
         if self.active_profile_kind() != ProfileKind::PerMode {

@@ -26,12 +26,12 @@ pub(crate) struct EditingMode {
 }
 
 impl EditingMode {
-    /// The mode shown when the selector is at `active`: the picked one, else `active`; `None`
-    /// while neither is known, when mode 1 is shown.
-    pub(crate) const fn shown(self, active: Option<Mode>) -> Option<Mode> {
-        match self.picked {
-            Some(mode) => Some(mode),
-            None => active,
+    /// The mode shown when the selector is at `active`: the picked one, else `active`, else
+    /// mode 1. The device, the editor and the profile list's badges all show this one.
+    pub(crate) const fn shown(self, active: Option<Mode>) -> Mode {
+        match (self.picked, active) {
+            (Some(mode), _) | (None, Some(mode)) => mode,
+            (None, None) => Mode::One,
         }
     }
 
@@ -56,14 +56,15 @@ mod tests {
     fn a_pick_shows_its_mode_while_the_selector_stays() {
         let mut editing = EditingMode::default();
         editing.pick(Mode::Two, Some(Mode::One));
-        assert_eq!(editing.shown(Some(Mode::One)), Some(Mode::Two));
+        assert_eq!(editing.shown(Some(Mode::One)), Mode::Two);
     }
 
     #[test]
     fn without_a_pick_the_selector_is_shown() {
         let editing = EditingMode::default();
-        assert_eq!(editing.shown(Some(Mode::Three)), Some(Mode::Three));
-        assert_eq!(editing.shown(None), None);
+        assert_eq!(editing.shown(Some(Mode::Three)), Mode::Three);
+        // Mode 1 until the selector is known.
+        assert_eq!(editing.shown(None), Mode::One);
     }
 
     #[test]
@@ -72,7 +73,7 @@ mod tests {
         editing.pick(Mode::Two, Some(Mode::One));
         // The application clears the pick when the selector reports a new mode.
         editing.clear();
-        assert_eq!(editing.shown(Some(Mode::Three)), Some(Mode::Three));
+        assert_eq!(editing.shown(Some(Mode::Three)), Mode::Three);
     }
 
     #[test]
@@ -85,6 +86,16 @@ mod tests {
         editing.pick(Mode::One, None);
         assert_eq!(editing, EditingMode::default());
         editing.pick(Mode::Three, None);
-        assert_eq!(editing.shown(None), Some(Mode::Three));
+        assert_eq!(editing.shown(None), Mode::Three);
+    }
+
+    #[test]
+    fn with_the_selector_unknown_dropping_a_pick_shows_mode_1() {
+        // Offline: pick 2, then 1. The badges and the editor both show mode 1, not nothing.
+        let mut editing = EditingMode::default();
+        editing.pick(Mode::Two, None);
+        assert_eq!(editing.shown(None), Mode::Two);
+        editing.pick(Mode::One, None);
+        assert_eq!(editing.shown(None), Mode::One);
     }
 }

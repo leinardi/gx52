@@ -311,8 +311,9 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: choosing the
      current state closes the popover, an edit that changes nothing or cannot be stored puts the
      widgets back, the hover ring on lit LEDs, a pick left from another profile ignored while the
-     active one is single. Not changed: the badges stay empty until the selector's mode is known
-     (as before; the device reports it on connect).
+     active one is single. Fixed after the maintainer's review: with the selector's mode unknown
+     (offline), the badges highlighted nothing while the editor showed mode 1; they now show the
+     mode shown, mode 1 included.
 3. **(code) MFD**: the simulated display with live values and the clock switcher, the line sources,
    brightness and shift. Done when: DW, plus text with characters outside the table shows the
    fallback in the display and on the device, and each dynamic source follows the device (profile,

@@ -66,8 +66,8 @@ mod imp {
         /// Whether it is the active profile, the one on the device.
         #[property(get, set)]
         pub(super) active: Cell<bool>,
-        /// The mode whose settings the device shows, `1`–`3`, while this per-mode profile is
-        /// active and the mode is known; `0` otherwise.
+        /// The mode whose settings the device and the editor show, `1`–`3`, while this per-mode
+        /// profile is active; `0` otherwise.
         #[property(get, set, maximum = 3)]
         pub(super) mode_shown: Cell<u32>,
     }
@@ -122,13 +122,14 @@ impl ProfileObject {
 
     /// Marks the profile active or not, with the mode the device shows while it is a per-mode
     /// active profile.
-    pub(crate) fn show_active(&self, active: bool, mode: Option<Mode>) {
+    pub(crate) fn show_active(&self, active: bool, mode: Mode) {
         if self.active() != active {
             self.set_active(active);
         }
-        let mode_shown = match mode {
-            Some(mode) if active && self.per_mode() => mode_number(mode),
-            _ => 0,
+        let mode_shown = if active && self.per_mode() {
+            mode_number(mode)
+        } else {
+            0
         };
         if self.mode_shown() != mode_shown {
             self.set_mode_shown(mode_shown);
