@@ -13,15 +13,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The names of the joystick's controls, as the app shows them (docs/protocol.md, "Buttons" and
-//! "Hats and names").
+//! The names of the joystick's controls, as the MFD's "last button" line shows them
+//! (docs/protocol.md, "Buttons" and "Hats and names").
+//!
+//! Each name fits an MFD line: at most 16 characters in English, shortened where the full name
+//! is longer ("Trigger stage 1", "Thr. hat left"). A longer translation is cut to 16 bytes when
+//! sent, as every dynamic line is.
 
 use gettextrs::gettext;
 use x52::input::{Button, Input, Pov1Direction};
 
 use crate::profile;
 
-/// The name of `input`, translated: "Trigger, first stage", "POV 1 up".
+/// The short name of `input`, translated: "Trigger stage 1", "POV 1 up".
 pub(crate) fn input_name(input: Input) -> String {
     match input {
         Input::Button(button) => button_name(button),
@@ -35,8 +39,11 @@ pub(crate) fn input_name(input: Input) -> String {
 /// The name of `button`, translated.
 fn button_name(button: Button) -> String {
     match button {
-        Button::TriggerStage1 => gettext("Trigger, first stage"),
-        Button::TriggerStage2 => gettext("Trigger, second stage"),
+        // Translators: shown on the joystick's 16-character display, like every name here; a
+        // longer name is cut. The trigger's first stage.
+        Button::TriggerStage1 => gettext("Trigger stage 1"),
+        // Translators: the trigger pulled all the way, its second stage.
+        Button::TriggerStage2 => gettext("Trigger stage 2"),
         Button::Fire => gettext("Fire"),
         // Translators: the A button of the joystick.
         Button::ButtonA => gettext("A"),
@@ -62,17 +69,24 @@ fn button_name(button: Button) -> String {
         // Translators: toggle switch 3 down, labelled T6 on the throttle.
         Button::T6 => gettext("T6"),
         Button::MouseButton => gettext("Mouse button"),
-        Button::ScrollDown => gettext("Scroll wheel down"),
-        Button::ScrollUp => gettext("Scroll wheel up"),
-        Button::ScrollPress => gettext("Scroll wheel press"),
+        // Translators: the throttle's scroll wheel, one notch down.
+        Button::ScrollDown => gettext("Scroll down"),
+        // Translators: the throttle's scroll wheel, one notch up.
+        Button::ScrollUp => gettext("Scroll up"),
+        // Translators: the throttle's scroll wheel pressed.
+        Button::ScrollPress => gettext("Scroll press"),
         Button::Pov2Up => gettext("POV 2 up"),
         Button::Pov2Right => gettext("POV 2 right"),
         Button::Pov2Down => gettext("POV 2 down"),
         Button::Pov2Left => gettext("POV 2 left"),
-        Button::ThrottleHatUp => gettext("Throttle hat up"),
-        Button::ThrottleHatRight => gettext("Throttle hat right"),
-        Button::ThrottleHatDown => gettext("Throttle hat down"),
-        Button::ThrottleHatLeft => gettext("Throttle hat left"),
+        // Translators: the throttle hat pushed up; "Thr." is short for throttle.
+        Button::ThrottleHatUp => gettext("Thr. hat up"),
+        // Translators: the throttle hat pushed right.
+        Button::ThrottleHatRight => gettext("Thr. hat right"),
+        // Translators: the throttle hat pushed down.
+        Button::ThrottleHatDown => gettext("Thr. hat down"),
+        // Translators: the throttle hat pushed left.
+        Button::ThrottleHatLeft => gettext("Thr. hat left"),
         // The mode selector positions are never a "last button"; named as the MFD's mode line.
         Button::Mode1 => profile::mode_text(x52::input::Mode::One),
         Button::Mode2 => profile::mode_text(x52::input::Mode::Two),

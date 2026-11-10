@@ -127,14 +127,15 @@ Each of the three lines has a **source** (decided in the M4 UI session, [ui.md](
 | `"empty"` |  | Nothing |
 | `"profile_name"` |  | The active profile's name |
 | `"mode"` |  | The mode whose settings are on the device, "Mode 2" (translated): the selector position, or the mode picked in the editor's [mode bar](ui.md#mode-bar) until the selector moves. With a single profile active, the selector position |
-| `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), translated), POV 1 directions included; the mode selector positions (keys 715–717, always one held) never count. Empty when none is held |
+| `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), shortened to fit a line: "Trigger stage 1", "Scroll press", "Thr. hat left"; translated), POV 1 directions included; the mode selector positions (keys 715–717, always one held) never count. Empty when none is held |
 
 The dynamic sources are resolved on the main thread into the desired device state
 ([architecture.md](architecture.md#state-model)), which still carries three lines of text. **Every
 dynamic value** (profile name, mode, button name, in any language) is converted through the MFD
 character set with its fallback and then cut to 16 bytes, at a character boundary of the converted
-bytes, before it goes into the state. Names longer than that ("Trigger, first stage") are shown
-cut; the UI's simulated display shows the same cut text, so nothing differs from the device.
+bytes, before it goes into the state. The English button names all fit; a longer translation or
+profile name is shown cut, and the UI's simulated display shows the same cut text, so nothing
+differs from the device.
 
 ## Clocks
 
