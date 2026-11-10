@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The evdev input map of each device type and the debounce of the mode selector.
+//! The evdev input map of each device type, the debounce of the mode selector and the set of held
+//! inputs.
 //!
 //! The codes are evdev's key and absolute-axis codes as plain numbers (docs/protocol.md, "evdev
 //! input map (X52 Pro)" and "X52 (non-Pro)"); the reader turns events into them. The mode
@@ -131,6 +132,124 @@ pub enum Axis {
     Pov1X,
     /// POV 1, up to down (`ABS_HAT0Y`).
     Pov1Y,
+}
+
+/// A direction of POV 1, the hat that is a pair of axes rather than buttons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Pov1Direction {
+    /// Up (`ABS_HAT0Y` −1).
+    Up,
+    /// Right (`ABS_HAT0X` +1).
+    Right,
+    /// Down (`ABS_HAT0Y` +1).
+    Down,
+    /// Left (`ABS_HAT0X` −1).
+    Left,
+}
+
+impl Pov1Direction {
+    /// Every direction, in snapshot order.
+    pub const ALL: [Self; 4] = [Self::Up, Self::Right, Self::Down, Self::Left];
+
+    /// Whether the hat at `x`, `y` points this way (diagonals point two ways).
+    #[must_use]
+    pub const fn is_held(self, x: i32, y: i32) -> bool {
+        match self {
+            Self::Up => y < 0,
+            Self::Right => x > 0,
+            Self::Down => y > 0,
+            Self::Left => x < 0,
+        }
+    }
+}
+
+/// A control that can be held: a button or a direction of POV 1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Input {
+    /// A button.
+    Button(Button),
+    /// A direction of POV 1.
+    Pov1(Pov1Direction),
+}
+
+/// The inputs held now, in the order they were pressed: the source of the "last button" MFD line
+/// (docs/profiles.md, "MFD lines").
+///
+/// The mode selector positions are never held here: one of them is always held, so they would
+/// hide every other button.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HeldInputs {
+    /// Oldest first.
+    held: Vec<Input>,
+}
+
+impl HeldInputs {
+    /// Nothing held.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { held: Vec::new() }
+    }
+
+    /// The inputs of a snapshot taken when a node opens, which says what is held but not since
+    /// when: the `keys` (evdev codes, as `EVIOCGKEY` gives them) in ascending code order, then the
+    /// POV 1 directions of the hat at `pov1` in [`Pov1Direction::ALL`] order. So [`Self::last`] is
+    /// the POV 1 direction if there is one, else the button of the highest key code.
+    #[must_use]
+    pub fn from_snapshot(map: &InputMap, keys: &[u16], pov1: (i32, i32)) -> Self {
+        let mut codes = keys.to_vec();
+        codes.sort_unstable();
+        let mut held = Self::new();
+        for button in codes.into_iter().filter_map(|code| map.button(code)) {
+            held.press(Input::Button(button));
+        }
+        held.set_pov1(pov1.0, pov1.1);
+        held
+    }
+
+    /// `input` was pressed. A mode selector position, or an input already held (an evdev repeat,
+    /// a snapshot), changes nothing: the input keeps its place.
+    pub fn press(&mut self, input: Input) {
+        if !is_mode(input) && !self.held.contains(&input) {
+            self.held.push(input);
+        }
+    }
+
+    /// `input` was released.
+    pub fn release(&mut self, input: Input) {
+        self.held.retain(|held| *held != input);
+    }
+
+    /// POV 1 is at `x`, `y` now: the directions that left are released and the ones that joined
+    /// are pressed; a direction held before and after keeps its place.
+    pub fn set_pov1(&mut self, x: i32, y: i32) {
+        for direction in Pov1Direction::ALL {
+            let input = Input::Pov1(direction);
+            if direction.is_held(x, y) {
+                self.press(input);
+            } else {
+                self.release(input);
+            }
+        }
+    }
+
+    /// Nothing is held any more: the device or its node went away.
+    pub fn clear(&mut self) {
+        self.held.clear();
+    }
+
+    /// The most recently pressed input that is still held.
+    #[must_use]
+    pub fn last(&self) -> Option<Input> {
+        self.held.last().copied()
+    }
+}
+
+/// Whether `input` is a position of the mode selector.
+const fn is_mode(input: Input) -> bool {
+    matches!(
+        input,
+        Input::Button(Button::Mode1 | Button::Mode2 | Button::Mode3)
+    )
 }
 
 /// A position of the mode selector.

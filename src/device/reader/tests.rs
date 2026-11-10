@@ -72,6 +72,8 @@ enum Step {
 
 struct FakeNode {
     held: Vec<u16>,
+    /// The absolute axes' values at the open, by code; every other axis is `0`.
+    abs: Vec<(u16, i32)>,
     steps: VecDeque<Step>,
     clock: FakeMonotonic,
     messages: Sender<ReaderMessage>,
@@ -88,6 +90,14 @@ struct FakeNode {
 impl InputNode for FakeNode {
     fn held_keys(&self) -> io::Result<Vec<u16>> {
         Ok(self.held.clone())
+    }
+
+    fn abs_value(&self, code: u16) -> io::Result<i32> {
+        Ok(self
+            .abs
+            .iter()
+            .find(|(axis, _)| *axis == code)
+            .map_or(0, |(_, value)| *value))
     }
 
     fn wait(&mut self, timeout: Duration) -> io::Result<bool> {
@@ -202,6 +212,7 @@ impl Harness {
     fn node(&self, steps: Vec<Step>) -> FakeNode {
         FakeNode {
             held: vec![MODE_1],
+            abs: Vec::new(),
             steps: steps.into(),
             clock: self.clock.clone(),
             messages: self.sender.clone(),
@@ -252,6 +263,26 @@ fn mode_event(mode: Mode) -> ReaderEvent {
         generation: Generation(1),
         mode,
     }
+}
+
+/// `events` without the held-input events, for the tests of the mode and of the node.
+fn without_held(events: &[ReaderEvent]) -> Vec<ReaderEvent> {
+    events
+        .iter()
+        .filter(|event| !matches!(event, ReaderEvent::Held { .. }))
+        .cloned()
+        .collect()
+}
+
+fn held(change: HeldChange) -> ReaderEvent {
+    ReaderEvent::Held {
+        generation: Generation(1),
+        change,
+    }
+}
+
+fn snapshot(held: HeldInputs) -> ReaderEvent {
+    self::held(HeldChange::Snapshot(held))
 }
 
 fn closed() -> ReaderEvent {
@@ -319,22 +350,37 @@ fn the_recorded_bounce_gives_one_change_per_selector_position() {
     let mut expected = vec![opened(20)];
     expected.extend(modes.map(mode_event));
     expected.push(closed());
-    assert_eq!(events, expected);
+    assert_eq!(without_held(&events), expected);
 }
 
 #[test]
-fn other_buttons_and_axes_change_nothing() {
+fn buttons_and_pov1_change_the_held_inputs_and_change_no_mode() {
     let harness = Harness::new();
     let ms = Duration::from_millis;
-    let node = harness.node(vec![
-        Step::Event(key(288, true, ms(10))),
+    let abs = |code, value, at| {
         Step::Event(InputEvent {
             event_type: EV_ABS,
-            code: 0x00,
-            value: 512,
-            at: ms(20),
+            code,
+            value,
+            at,
+        })
+    };
+    let node = harness.node(vec![
+        Step::Event(key(288, true, ms(10))),
+        // The stick: dropped.
+        abs(0x00, 512, ms(20)),
+        // A repeat of the held trigger: dropped.
+        Step::Event(InputEvent {
+            event_type: EV_KEY,
+            code: 288,
+            value: 2,
+            at: ms(25),
         }),
         Step::Event(key(288, false, ms(30))),
+        // POV 1 up, then up-right, then the same value again: dropped.
+        abs(0x11, -1, ms(40)),
+        abs(0x10, 1, ms(50)),
+        abs(0x10, 1, ms(60)),
         Step::Event(key(301, true, ms(400))),
         Step::Event(key(301, false, ms(900))),
     ]);
@@ -342,7 +388,55 @@ fn other_buttons_and_axes_change_nothing() {
 
     let (events, _) = harness.run(source);
 
-    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
+    let key_change = |button, pressed| held(HeldChange::Key { button, pressed });
+    assert_eq!(
+        events,
+        [
+            opened(20),
+            mode_event(Mode::One),
+            snapshot(HeldInputs::new()),
+            key_change(Button::TriggerStage1, true),
+            key_change(Button::TriggerStage1, false),
+            held(HeldChange::Pov1 { x: 0, y: -1 }),
+            held(HeldChange::Pov1 { x: 1, y: -1 }),
+            key_change(Button::T6, true),
+            key_change(Button::T6, false),
+            closed()
+        ]
+    );
+}
+
+#[test]
+fn the_snapshot_holds_the_keys_and_pov1_at_the_open() {
+    let harness = Harness::new();
+    let mut node = harness.node(vec![Step::Event(key(
+        MODE_1 + 1,
+        true,
+        Duration::from_millis(10),
+    ))]);
+    // Fire and A held with mode 1, POV 1 left.
+    node.held = vec![290, MODE_1, 289];
+    node.abs = vec![(0x10, -1)];
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+
+    let (events, _) = harness.run(source);
+
+    let map = InputMap::for_device(DeviceType::X52Pro);
+    let expected = HeldInputs::from_snapshot(&map, &[289, 290, MODE_1], (-1, 0));
+    assert_eq!(
+        expected.last(),
+        Some(x52::input::Input::Pov1(x52::input::Pov1Direction::Left))
+    );
+    assert_eq!(
+        events,
+        [
+            opened(20),
+            mode_event(Mode::One),
+            snapshot(expected),
+            // A mode key is never a held-input change.
+            closed()
+        ]
+    );
 }
 
 #[test]
@@ -353,7 +447,10 @@ fn the_node_appearing_a_poll_after_the_usb_device_is_found() {
 
     let (events, harness) = harness.run(source);
 
-    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
+    assert_eq!(
+        without_held(&events),
+        [opened(20), mode_event(Mode::One), closed()]
+    );
     assert!(*harness.discoveries.lock().unwrap() >= 2);
 }
 
@@ -368,7 +465,10 @@ fn a_node_denied_at_first_is_opened_once_readable() {
 
     let (events, harness) = harness.run(source);
 
-    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
+    assert_eq!(
+        without_held(&events),
+        [opened(20), mode_event(Mode::One), closed()]
+    );
     assert_eq!(
         harness.opened.lock().unwrap().len(),
         2,
@@ -389,7 +489,7 @@ fn enodev_while_the_usb_device_stays_selected_reopens_the_node_when_it_is_back()
     let (events, _) = harness.run(source);
 
     assert_eq!(
-        events,
+        without_held(&events),
         [
             opened(20),
             mode_event(Mode::One),
@@ -432,7 +532,10 @@ fn gone_for_the_selection_stops_and_a_stale_gone_does_not() {
 
     let (events, harness) = harness.run(source);
 
-    assert_eq!(events, [opened(20), mode_event(Mode::One), closed()]);
+    assert_eq!(
+        without_held(&events),
+        [opened(20), mode_event(Mode::One), closed()]
+    );
     assert_eq!(
         harness.timeouts.lock().unwrap().len(),
         2,
@@ -454,7 +557,7 @@ fn a_new_selection_closes_the_node_and_follows_the_new_one() {
     let (events, _) = harness.run(source);
 
     assert_eq!(
-        events,
+        without_held(&events),
         [
             opened(20),
             mode_event(Mode::One),

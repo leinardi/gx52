@@ -64,7 +64,7 @@ impl DeviceStatus {
             }
             DeviceEvent::Mode { mode, .. } => self.mode = Some(*mode),
             DeviceEvent::X52dRunning(running) => self.x52d_running = *running,
-            DeviceEvent::Error(_) | DeviceEvent::Sent(_) => {}
+            DeviceEvent::Held { .. } | DeviceEvent::Error(_) | DeviceEvent::Sent(_) => {}
         }
         *self != before
     }

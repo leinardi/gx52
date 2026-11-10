@@ -164,6 +164,10 @@ impl InputNode for FakeNode {
         Ok(vec![MODE_1])
     }
 
+    fn abs_value(&self, _code: u16) -> io::Result<i32> {
+        Ok(0)
+    }
+
     fn wait(&mut self, timeout: Duration) -> io::Result<bool> {
         let now = self.opened.elapsed();
         let until = self
@@ -876,6 +880,7 @@ fn a_selection_reaches_the_main_thread_before_its_initial_mode() {
                 DeviceEvent::Gone(_)
                 | DeviceEvent::Access(_)
                 | DeviceEvent::InputNode { .. }
+                | DeviceEvent::Held { .. }
                 | DeviceEvent::X52dRunning(_)
                 | DeviceEvent::Error(_)
                 | DeviceEvent::Sent(_) => {}

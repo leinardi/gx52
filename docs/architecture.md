@@ -195,11 +195,19 @@ flowchart LR
   `ABS_HAT0Y`), a few events per second at most, and the other **axis events** only while the
   input tester listens. Nothing logs per event (axis noise, S3).
   - Key and hat events always flow because the MFD "Last button" source needs them while the
-    window is hidden. The main thread keeps the set of held buttons and hat directions from them.
-    On every open of the node the reader sends the current key and hat state (`EVIOCGKEY`,
-    `EVIOCGABS`) first, so the set is rebuilt; on `ENODEV`, a read error, `Gone` or a reader
+    window is hidden. The reader's events (`ReaderEvent`) are `NodeOpened`, `NodeClosed`, `Mode`
+    and `Held`, whose change is a `Snapshot`, a `Key` (a button other than the mode selector,
+    pressed or released; repeats are dropped) or a `Pov1` position (sent only when it changes).
+    The main thread keeps the set of held buttons and hat directions from them, an
+    `x52::input::HeldInputs` in press order, whose newest entry is the "last button". On every
+    open of the node the reader sends the current key and hat state (`EVIOCGKEY`, `EVIOCGABS`)
+    before any event, so the set is rebuilt; on `ENODEV`, a read error, `Gone` or a reader
     shutdown the main thread clears the set, so no button stays "held" on the MFD after a
-    disconnect.
+    disconnect. A snapshot says what is held but not since when, so its order is fixed: the held
+    keys in ascending evdev code order, then the POV 1 directions (up, right, down, left). The
+    "last button" after an open is the POV 1 direction if one is held, else the highest key code.
+    A change of the set pushes the state only when the newest entry changed and the set on the
+    device shows a "last button" line, and never logs.
   - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
     further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
     follow the wall clock, so the time since the last key event is measured with monotonic time.

@@ -435,3 +435,106 @@ fn the_x52_map_is_the_unverified_candidate() {
     assert_eq!(map.axis(0x29), None);
     assert_eq!(map.axis(0x00), Some(Axis::StickX));
 }
+
+fn button(button: Button) -> Input {
+    Input::Button(button)
+}
+
+const POV1_UP: Input = Input::Pov1(Pov1Direction::Up);
+const POV1_RIGHT: Input = Input::Pov1(Pov1Direction::Right);
+
+#[test]
+fn the_last_input_is_the_newest_still_held() {
+    let mut held = HeldInputs::new();
+    assert_eq!(held.last(), None);
+    held.press(button(Button::Fire));
+    held.press(button(Button::ButtonA));
+    assert_eq!(held.last(), Some(button(Button::ButtonA)));
+    held.release(button(Button::ButtonA));
+    assert_eq!(held.last(), Some(button(Button::Fire)), "falls back");
+    held.release(button(Button::Fire));
+    assert_eq!(held.last(), None);
+}
+
+#[test]
+fn a_repeated_press_keeps_one_entry_in_its_place() {
+    let mut held = HeldInputs::new();
+    held.press(button(Button::Fire));
+    held.press(button(Button::ButtonA));
+    held.press(button(Button::Fire));
+    assert_eq!(held.last(), Some(button(Button::ButtonA)), "not reordered");
+    held.release(button(Button::Fire));
+    assert_eq!(held.last(), Some(button(Button::ButtonA)));
+    held.release(button(Button::ButtonA));
+    assert_eq!(held.last(), None, "one entry each");
+}
+
+#[test]
+fn the_mode_selector_is_never_held() {
+    let mut held = HeldInputs::new();
+    held.press(button(Button::Fire));
+    for mode in [Button::Mode1, Button::Mode2, Button::Mode3] {
+        held.press(button(mode));
+        assert_eq!(held.last(), Some(button(Button::Fire)), "{mode:?}");
+    }
+    held.release(button(Button::Fire));
+    assert_eq!(held.last(), None);
+}
+
+#[test]
+fn pov1_releases_only_the_directions_that_left() {
+    let mut held = HeldInputs::new();
+    held.set_pov1(0, -1);
+    held.set_pov1(1, -1);
+    assert_eq!(held.last(), Some(POV1_RIGHT));
+    held.press(button(Button::Fire));
+    // Right released, up still held: Fire stays the newest.
+    held.set_pov1(0, -1);
+    assert_eq!(held.last(), Some(button(Button::Fire)));
+    held.release(button(Button::Fire));
+    assert_eq!(held.last(), Some(POV1_UP));
+    held.set_pov1(0, 0);
+    assert_eq!(held.last(), None);
+}
+
+#[test]
+fn an_unchanged_pov1_direction_keeps_its_place() {
+    let mut held = HeldInputs::new();
+    held.set_pov1(0, -1);
+    held.press(button(Button::Fire));
+    held.set_pov1(0, -1);
+    assert_eq!(held.last(), Some(button(Button::Fire)));
+}
+
+#[test]
+fn a_snapshot_orders_keys_by_code_then_pov1_directions() {
+    let map = InputMap::for_device(DeviceType::X52Pro);
+    // 715 is mode 1, always held; 289 Fire, 290 A.
+    let held = HeldInputs::from_snapshot(&map, &[290, 715, 289], (0, 0));
+    assert_eq!(
+        held.last(),
+        Some(button(Button::ButtonA)),
+        "the highest code"
+    );
+    let mut held = HeldInputs::from_snapshot(&map, &[290, 715, 289], (1, -1));
+    assert_eq!(held.last(), Some(POV1_RIGHT), "POV 1 last, up before right");
+    held.set_pov1(0, -1);
+    assert_eq!(held.last(), Some(POV1_UP));
+    held.set_pov1(0, 0);
+    assert_eq!(held.last(), Some(button(Button::ButtonA)));
+    held.release(button(Button::ButtonA));
+    assert_eq!(held.last(), Some(button(Button::Fire)));
+    assert_eq!(
+        HeldInputs::from_snapshot(&map, &[715, 999], (0, 0)).last(),
+        None,
+        "mode keys and unknown codes"
+    );
+}
+
+#[test]
+fn clearing_drops_everything() {
+    let mut held =
+        HeldInputs::from_snapshot(&InputMap::for_device(DeviceType::X52Pro), &[289], (0, 1));
+    held.clear();
+    assert_eq!(held, HeldInputs::new());
+}

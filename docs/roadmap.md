@@ -214,6 +214,11 @@ Results on 2026-11-10:
   unloaded or other-type id; the order functions return the complete effective order to store, a
   new profile last and a duplicate right after its original. The applied profile and mode are
   logged only when they change.
+- **Mode sets and dynamic lines:** the reader sends the held buttons and POV 1 directions
+  (`HeldInputs`, a snapshot at every open), and the "last button" line shows the newest one still
+  held, cut to 16 bytes; the "mode" line shows the active mode. Covered by tests; the hands-on
+  check of task 2 on the X52 Pro (sets per selector position, fallback of an unknown active id, the
+  dynamic lines) is still to run.
 
 ## M4: UI design session
 
@@ -241,7 +246,9 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    reachable, and the window works at 360×294.
 2. **(code) LED editor**: the schematic layout of
    [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
-   of states, grid positions as data), the mode bar of a per-mode profile, POV 1 shown fixed green
+   of states, grid positions as data), the mode bar of a per-mode profile (it overrides
+   `LiveValues::mode_shown` and the set sent until the selector moves; until then the "mode" MFD
+   line shows the active mode), POV 1 shown fixed green
    with its explanation, every change sent to the device at once. Every LED is shown off while
    brightness is `0`, with its state kept. Done when: DW, plus brightness `0` shows every LED off in
    the editor and on the device and the states come back above `0`, plus the S7 checks skipped on

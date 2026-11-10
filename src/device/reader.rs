@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The evdev reader: the mode selector of the selected device (docs/architecture.md, "Threads and
-//! data flow", "evdev reader thread").
+//! The evdev reader: the mode selector and the held buttons of the selected device
+//! (docs/architecture.md, "Threads and data flow", "evdev reader thread").
 //!
 //! The reader follows the device watch's selection. USB presence and evdev readiness are tracked
 //! apart: the evdev node can appear a poll after the USB device (S4), be unreadable at first, or
@@ -30,7 +30,7 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, TryRecvError};
 use std::time::{Duration, UNIX_EPOCH};
 
 use rustix::event::{PollFd, PollFlags, Timespec};
-use x52::input::{InputMap, Mode, ModeDebouncer, ModeSet};
+use x52::input::{Axis, Button, HeldInputs, InputMap, Mode, ModeDebouncer, ModeSet};
 
 use super::id::{DeviceId, Generation};
 use super::monotonic::Monotonic;
@@ -43,6 +43,12 @@ pub(crate) const POLL_CAP: Duration = Duration::from_millis(250);
 
 /// The evdev event type of a key or button (`EV_KEY`).
 const EV_KEY: u16 = 0x01;
+
+/// The evdev event type of an absolute axis (`EV_ABS`).
+const EV_ABS: u16 = 0x03;
+
+/// The value of an `EV_KEY` event that repeats a held key.
+const KEY_REPEAT: i32 = 2;
 
 /// The `errno` of a device that went away.
 const ENODEV: i32 = 19;
@@ -80,6 +86,52 @@ pub(crate) enum ReaderEvent {
         /// The mode.
         mode: Mode,
     },
+    /// The held buttons and POV 1 directions changed.
+    Held {
+        /// The selection it belongs to.
+        generation: Generation,
+        /// What changed.
+        change: HeldChange,
+    },
+}
+
+/// A change of the held inputs, for [`HeldInputs`] on the main thread.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum HeldChange {
+    /// Everything held when the node opened (`EVIOCGKEY` and `EVIOCGABS`).
+    Snapshot(HeldInputs),
+    /// A button other than the mode selector was pressed or released (repeats are dropped).
+    Key {
+        /// The button.
+        button: Button,
+        /// Pressed, or released.
+        pressed: bool,
+    },
+    /// POV 1 moved to `x`, `y` (each −1, 0 or 1).
+    Pov1 {
+        /// `ABS_HAT0X`: −1 left, 1 right.
+        x: i32,
+        /// `ABS_HAT0Y`: −1 up, 1 down.
+        y: i32,
+    },
+}
+
+impl HeldChange {
+    /// Applies the change to `held`.
+    pub(crate) fn apply(&self, held: &mut HeldInputs) {
+        match self {
+            Self::Snapshot(snapshot) => snapshot.clone_into(held),
+            Self::Key { button, pressed } => {
+                let input = x52::input::Input::Button(*button);
+                if *pressed {
+                    held.press(input);
+                } else {
+                    held.release(input);
+                }
+            }
+            Self::Pov1 { x, y } => held.set_pov1(*x, *y),
+        }
+    }
 }
 
 /// One input event, reduced to what the reader needs.
@@ -103,6 +155,14 @@ pub(crate) trait InputNode {
     ///
     /// The I/O error of the ioctl.
     fn held_keys(&self) -> io::Result<Vec<u16>>;
+
+    /// The value of the absolute axis `code` now (`EVIOCGABS`); `0` for an axis the node does not
+    /// have.
+    ///
+    /// # Errors
+    ///
+    /// The I/O error of the ioctl.
+    fn abs_value(&self, code: u16) -> io::Result<i32>;
 
     /// Waits up to `timeout` for events; true when there may be some to read.
     ///
@@ -213,6 +273,75 @@ impl ModeTracker {
     }
 }
 
+/// Turns the key and POV 1 events into changes of the held inputs. Other axes are dropped.
+#[derive(Debug)]
+pub(crate) struct HeldTracker {
+    map: InputMap,
+    /// POV 1's `x`, `y` as last reported.
+    pov1: (i32, i32),
+}
+
+impl HeldTracker {
+    /// A tracker starting from POV 1 at `pov1`.
+    pub(crate) const fn new(map: InputMap, pov1: (i32, i32)) -> Self {
+        Self { map, pov1 }
+    }
+
+    /// The change `event` makes, if any.
+    pub(crate) fn on_event(&mut self, event: &InputEvent) -> Option<HeldChange> {
+        match event.event_type {
+            EV_KEY => {
+                let button = self.map.button(event.code)?;
+                if self.map.mode_for(event.code).is_some() || event.value == KEY_REPEAT {
+                    return None;
+                }
+                Some(HeldChange::Key {
+                    button,
+                    pressed: event.value != 0,
+                })
+            }
+            EV_ABS => {
+                let (x, y) = match self.map.axis(event.code)? {
+                    Axis::Pov1X => (event.value, self.pov1.1),
+                    Axis::Pov1Y => (self.pov1.0, event.value),
+                    Axis::StickX
+                    | Axis::StickY
+                    | Axis::Twist
+                    | Axis::Throttle
+                    | Axis::RotaryI
+                    | Axis::RotaryE
+                    | Axis::Slider
+                    | Axis::MinistickX
+                    | Axis::MinistickY => return None,
+                };
+                if (x, y) == self.pov1 {
+                    return None;
+                }
+                self.pov1 = (x, y);
+                Some(HeldChange::Pov1 { x, y })
+            }
+            _ => None,
+        }
+    }
+}
+
+/// The evdev codes of POV 1's two axes in `map`.
+fn pov1_codes(map: &InputMap) -> (Option<u16>, Option<u16>) {
+    let code = |wanted| {
+        map.axes()
+            .find(|(_, axis)| *axis == wanted)
+            .map(|(code, _)| code)
+    };
+    (code(Axis::Pov1X), code(Axis::Pov1Y))
+}
+
+/// POV 1's `x`, `y` on `node` now.
+fn pov1_state(node: &impl InputNode, map: &InputMap) -> io::Result<(i32, i32)> {
+    let value = |code: Option<u16>| code.map_or(Ok(0), |code| node.abs_value(code));
+    let (x, y) = pov1_codes(map);
+    Ok((value(x)?, value(y)?))
+}
+
 /// What ends following one selection.
 #[derive(Debug, PartialEq, Eq)]
 enum Next {
@@ -321,11 +450,13 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
         path: PathBuf,
         messages: &Receiver<ReaderMessage>,
     ) -> Stop {
-        let Ok(held) = node.held_keys() else {
+        let map = InputMap::for_device(device.device_type);
+        let (Ok(held), Ok(pov1)) = (node.held_keys(), pov1_state(&node, &map)) else {
             return Stop::NodeLost;
         };
         let generation = device.generation;
-        let mut tracker = ModeTracker::new(InputMap::for_device(device.device_type), &held);
+        let mut tracker = ModeTracker::new(map, &held);
+        let mut held_tracker = HeldTracker::new(map, pov1);
         tracing::info!("Reading input from {}", path.display());
         self.send(ReaderEvent::NodeOpened {
             generation,
@@ -334,6 +465,10 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
         if let Some(mode) = tracker.active() {
             self.send(ReaderEvent::Mode { generation, mode });
         }
+        self.send(ReaderEvent::Held {
+            generation,
+            change: HeldChange::Snapshot(HeldInputs::from_snapshot(&map, &held, pov1)),
+        });
         let stop = loop {
             let Ok(readable) = node.wait(tracker.timeout(self.monotonic.elapsed())) else {
                 break Stop::NodeLost;
@@ -348,6 +483,9 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
                         for event in &events {
                             if let Some(mode) = tracker.on_event(event, read_at) {
                                 self.send(ReaderEvent::Mode { generation, mode });
+                            }
+                            if let Some(change) = held_tracker.on_event(event) {
+                                self.send(ReaderEvent::Held { generation, change });
                             }
                         }
                     }
@@ -459,6 +597,11 @@ impl InputNode for EvdevNode {
             .iter()
             .map(evdev::KeyCode::code)
             .collect())
+    }
+
+    fn abs_value(&self, code: u16) -> io::Result<i32> {
+        let state = self.device.get_abs_state()?;
+        Ok(state.get(usize::from(code)).map_or(0, |info| info.value))
     }
 
     fn wait(&mut self, timeout: Duration) -> io::Result<bool> {
