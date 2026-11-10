@@ -276,6 +276,11 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
      `.rejected-<timestamp>` copy; a rename and a new profile each followed at once by Ctrl+W
      were on disk after the exit; unplugged footer, the "never connected" page and its switch to
      the list on replug; the x52d banner with a fake socket. No GTK criticals in any run.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. All were fixed. The
+     two that changed behaviour were checked by hand again: F2 typed in the name entry no longer
+     restarts the rename, and a row moved from its menu keeps the focus. Not checked by hand: a
+     name being typed while an import finishes is kept, because the file chooser is modal (the
+     list splice it relies on is unit-tested).
 2. **(code) LED editor**: the schematic layout of
    [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
    of states, grid positions as data), the mode bar of a per-mode profile (it overrides
