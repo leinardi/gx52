@@ -3,8 +3,8 @@
 The UI of the rewrite: screens, navigation, the libadwaita widgets behind them, the adaptive layout
 and the states the app can be in. Written in the M4 design session
 ([roadmap.md](roadmap.md#m4-ui-design-session)) on 2026-11-09, from an interview with the
-maintainer. Items marked **Proposed** were filled in by the assistant at the maintainer's request
-and are open to change in review; everything else was decided in the session.
+maintainer, and reviewed on 2026-11-10 against the clickable prototype in
+[`art/prototype/`](../art/prototype/) (open `Main.dc.html` through a local web server).
 
 What the device does is in [protocol.md](protocol.md), the profile model in
 [profiles.md](profiles.md), and how the pieces run in [architecture.md](architecture.md). Every
@@ -68,7 +68,7 @@ on the right.
   - A profile that **failed to load** (unreadable, newer schema) is listed greyed out with a
     warning icon; it can be selected to see why, but it is never sent to the device. A damaged
     file has no readable name, so its row shows the file name; a newer-schema profile shows its
-    name when the file can be read. **Proposed.**
+    name when the file can be read.
 - **"Test input"** row below the profiles, opening the [input tester](#input-tester) in the
   content area. Selecting it does not change the active profile; the sidebar keeps a marker on the
   active profile while the tester is open.
@@ -139,7 +139,7 @@ moves to the bottom ([Adaptive layout](#adaptive-layout)). Each view is an
 `adw::PreferencesPage`-style scrolled page, content limited by an `adw::Clamp`.
 
 Edits apply to the device at once and are saved automatically, a short moment after the last
-change (**Proposed:** 500 ms), with the atomic write of profiles.md.
+change (500 ms), with the atomic write of profiles.md.
 
 ### Mode bar
 
@@ -226,7 +226,7 @@ Three `adw::PreferencesGroup`s and the date format:
 
 ### A profile that failed to load
 
-**Proposed.** Selecting it shows an `adw::StatusPage` in the content area with the reason ("This
+Selecting it shows an `adw::StatusPage` in the content area with the reason ("This
 profile file is damaged", "Made by a newer GX52") and the actions **Show File** (opens the folder
 through the portal) and **Remove**. A newer-schema profile is never edited or rewritten
 ([profiles.md](profiles.md#validation-and-recovery)).
@@ -263,7 +263,7 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
   device yet. Names may not match the controls." ([protocol.md](protocol.md#x52-non-pro)).
 - **POVs:** POV 1, POV 2 and the throttle hat as 3×3 direction grids.
 - The indicators are not focusable; each group has an accessible label, and the page's state is
-  readable by a screen reader as text ("Buttons pressed: Fire"). **Proposed.**
+  readable by a screen reader as text ("Buttons pressed: Fire").
 - **Narrow:** the groups wrap and stack into one column.
 - Without a connected device the page is an `adw::StatusPage` "Connect your X52 or X52 Pro".
 
@@ -317,7 +317,7 @@ An `adw::PreferencesDialog` with one page:
     under Background Apps and launching GX52 again shows the window.
   - **Start on login** (`adw::SwitchRow`, subtitle "Start hidden when you log in. Needs Run in
     Background"): starts hidden, through the Background portal (works in the Flatpak).
-    **Proposed:** only sensitive while "Run in background" is on, since starting hidden needs it;
+    Only sensitive while "Run in background" is on, since starting hidden needs it;
     turning "Run in background" off also turns it off.
 - **Virtual mouse**
   - **Use the ministick as a mouse** (`adw::SwitchRow`, off by default); the uinput warning above.
@@ -356,7 +356,7 @@ With `ksni`, when running in the background and a tray host exists:
 
 An `adw::AboutDialog` filled from the metainfo: version and release notes, licence
 GPL-3.0-or-later, developer, website, issue tracker, credits and translators. Opened from the main
-menu and the tray. **Proposed.**
+menu and the tray.
 
 ## Keyboard shortcuts
 
@@ -375,7 +375,7 @@ menu and the tray. **Proposed.**
 
 ## Adaptive layout
 
-**Proposed** breakpoints, checked down to 360×294:
+Breakpoints, checked down to 360×294:
 
 - **Below about 600 px wide** the split view collapses: the sidebar is the first page (profiles,
   Test input, footer); selecting a profile or "Test input" pushes the content with a back button.

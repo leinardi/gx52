@@ -210,8 +210,9 @@ The app ships no pictures or drawings of the device; the LED editor is the schem
 
 1. **[`docs/ui.md`](ui.md).** Screens, navigation, libadwaita widgets, adaptive layout, the
    guidance pages, the LED editor's schematic layout, the MFD line sources. Drafted on 2026-11-09
-   from an interview with the maintainer; the items marked "Proposed" are the assistant's. Done
-   when: `make check` passes and the user has reviewed it.
+   from an interview with the maintainer. Done when: `make check` passes and the user has reviewed
+   it. **Done** on 2026-11-10: reviewed through the clickable prototype in
+   [`art/prototype/`](../art/prototype/), the reference for M5.
 
 ## M5: UI implementation
 
