@@ -365,6 +365,11 @@ settings, defaulting to the S9 values.
     import while its file is written, and the name of a removed profile until its file is deleted
     or it is restored. Every name check (new, duplicate, rename, import) looks at the store and the
     reservations together, so two profiles of a type never share a name.
+  - **Removals until the file is gone** (`removals.rs`): a removed entry with its reserved name,
+    its place in the list and whether it was active, until Undo or a failed delete puts it back
+    or the delete frees the name. Each removal is numbered, so a late toast signal of an undone
+    removal never ends the Undo of the next one; a profile the user makes active meanwhile is not
+    overridden by the put-back. Pure like the queue, and unit-tested the same way.
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
   and `gx52.db` exists; a private copy of a consistent snapshot is read; the flag is set even when
   the database is unreadable, so start-up never fails because of it, but not while GX52 0.7 keeps

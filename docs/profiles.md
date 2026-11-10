@@ -186,14 +186,15 @@ offsets from clock 1 move because clock 1 moved.
   session GX52 asks the session to wait while it writes; a forced logout can still stop it, which
   the atomic writes below make safe (the old file or the new one). A failed write is reported
   once and the edits stay in memory for the next one. An edit to a default profile whose file
-  is bad cannot be confirmed once the window is closed, so it is then kept in memory only and
-  logged.
+  is bad cannot be confirmed once the window is closing or the session is ending, so it is then
+  kept in memory only and logged.
 - **Removing** takes the profile out of the list at once, with a toast that offers Undo; its file
   is deleted when the toast goes away or the window closes, after any write of it still running.
   Its name stays taken until then. A file that is deleted by hand is not a problem; a delete that
   fails puts the profile back. Undo and a failed delete both put it where it was: right after
   the profile that was before it, or at its old place when that one is gone too, whatever was
-  created, moved or removed meanwhile.
+  created, moved or removed meanwhile. A removed active profile is made active again only if
+  the user has not picked another profile since.
 - **Atomic writes:** the new content is written to a temporary file in the same directory and
   renamed over the old one (`gio::File::replace_contents_future`, which does that), off the main
   thread. A crash leaves either the old file or the new one, never half of each. A **new** file

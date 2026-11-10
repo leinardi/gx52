@@ -110,6 +110,9 @@ mod imp {
         pub(super) moves: Cell<(bool, bool)>,
         /// Whether the active marker shows: the profile is active but another row is selected.
         pub(super) marked: Cell<bool>,
+        /// What the menu was built for (usable, per-mode, default), so it is rebuilt only when
+        /// that changes and an open menu is not replaced under the pointer.
+        pub(super) menu_kind: Cell<Option<(bool, bool, bool)>>,
     }
 
     #[glib::object_subclass]
@@ -220,8 +223,9 @@ impl ProfileRow {
     /// Shows the active marker: the profile is active, but another row is selected (a profile
     /// that failed to load, shown to see why), so the selection does not say which is active.
     pub(crate) fn set_marked(&self, marked: bool) {
-        self.imp().marked.set(marked);
-        self.refresh();
+        if self.imp().marked.replace(marked) != marked {
+            self.refresh();
+        }
     }
 
     /// Opens the name for editing, all of it selected.
@@ -435,7 +439,10 @@ impl ProfileRow {
                 badge.remove_css_class("current");
             }
         }
-        imp.menu_button.set_menu_model(Some(&menu(item)));
+        let menu_kind = Some((usable, item.per_mode(), item.is_default()));
+        if imp.menu_kind.replace(menu_kind) != menu_kind {
+            imp.menu_button.set_menu_model(Some(&menu(item)));
+        }
         self.update_actions();
         self.update_property(&[gtk::accessible::Property::Label(&accessible_label(item))]);
     }

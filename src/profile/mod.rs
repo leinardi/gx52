@@ -27,6 +27,7 @@ pub(crate) mod list;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod order;
+pub(crate) mod removals;
 pub(crate) mod reservations;
 pub(crate) mod schema;
 pub(crate) mod startup;

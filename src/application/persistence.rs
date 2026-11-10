@@ -31,28 +31,11 @@ use x52::device::DeviceType;
 use super::Application;
 use crate::profile::exchange::ImportPreview;
 use crate::profile::name::{self, NameProblem};
-use crate::profile::reservations::Reservation;
+use crate::profile::removals::{DeleteEnd, PutBack};
 use crate::profile::store::{Entry, SaveJob, StoreError};
 use crate::profile::writes::{Command, DEBOUNCE, Op, Outcome};
 use crate::profile::{Profile, ProfileId, ProfileKind, active, order};
 use crate::window::Window;
-
-/// A profile taken out of the store whose removal can still be undone.
-#[derive(Debug)]
-pub(crate) struct Removal {
-    /// The entry, to put back on undo or when deleting its file fails.
-    entry: Entry,
-    /// Its name, kept from new profiles until the file is gone or the entry is back.
-    reservation: Option<Reservation>,
-    /// Whether it was its type's active profile.
-    was_active: bool,
-    /// Where it was in the list: after this profile (`None`: first), at this index among the
-    /// profiles other than the default; it goes back there, whatever changed meanwhile.
-    previous: Option<ProfileId>,
-    index: usize,
-    /// The name or file name, for the toasts.
-    title: String,
-}
 
 /// Why a name was not given to a profile.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -107,13 +90,11 @@ impl Application {
     /// the window is closing, or the session is ending. Can be called any number of times.
     pub(crate) fn drain(&self) {
         let imp = self.imp();
+        imp.draining.set(true);
         let commands = imp.writes.borrow_mut().flush();
         self.run_commands(commands);
-        let removals: Vec<ProfileId> = imp.removals.borrow().keys().cloned().collect();
-        for id in removals {
-            let commands = imp.writes.borrow_mut().delete_due(&id);
-            self.run_commands(commands);
-        }
+        let commands = imp.removals.borrow().drain(&mut imp.writes.borrow_mut());
+        self.run_commands(commands);
     }
 
     /// The session is ending: drains the queue and asks the session to wait until it is idle.
@@ -160,6 +141,7 @@ impl Application {
     fn update_hold(&self) {
         let imp = self.imp();
         if imp.writes.borrow().is_idle() {
+            imp.draining.set(false);
             imp.hold.take();
             if let Some(cookie) = imp.inhibit_cookie.take() {
                 self.uninhibit(cookie);
@@ -261,11 +243,13 @@ impl Application {
         self.toast(&gettext("“{name}” could not be saved").replace("{name}", &name));
     }
 
-    /// Asks before a default profile is saved over its bad file. Without a window, or after the
-    /// user said no for this profile, the edits stay in memory only.
+    /// Asks before a default profile is saved over its bad file. Without a window, while the
+    /// window closes or the session ends (nobody would answer), or after the user said no for
+    /// this profile, the edits stay in memory only.
     async fn confirm_bad_default(&self, id: ProfileId) {
-        let window = self.active_window();
-        let declined = self.imp().declined_replacements.borrow().contains(&id);
+        let imp = self.imp();
+        let window = self.active_window().filter(|_| !imp.draining.get());
+        let declined = imp.declined_replacements.borrow().contains(&id);
         let (Some(window), false) = (window, declined) else {
             tracing::warn!("Profile {id} not saved: its damaged file is replaced only on request");
             return self.finish(&id, Outcome::Failed);
@@ -324,49 +308,61 @@ impl Application {
             self,
             async move {
                 let result = gio::spawn_blocking(move || job.run()).await;
-                let removal = app.imp().removals.borrow_mut().remove(&id);
-                let outcome = match (result, removal) {
-                    (Ok(Ok(())), removal) => {
+                let succeeded = match result {
+                    Ok(Ok(())) => {
                         tracing::info!("Profile {id} removed");
-                        if let Some(removal) = removal {
-                            app.deleted(&id, removal);
-                        }
-                        Outcome::Done
+                        true
                     }
-                    (result, removal) => {
-                        if let Ok(Err(error)) = result {
-                            tracing::warn!("Cannot remove profile {id}: {error}");
-                        } else {
-                            tracing::error!("The task removing profile {id} panicked");
-                        }
-                        if let Some(removal) = removal {
-                            let title = removal.title.clone();
-                            app.put_back(&id, removal);
-                            app.toast(
-                                &gettext("“{name}” could not be removed").replace("{name}", &title),
-                            );
-                        }
-                        Outcome::Failed
+                    Ok(Err(error)) => {
+                        tracing::warn!("Cannot remove profile {id}: {error}");
+                        false
+                    }
+                    Err(_) => {
+                        tracing::error!("The task removing profile {id} panicked");
+                        false
                     }
                 };
-                app.finish(&id, outcome);
+                let end = {
+                    let imp = app.imp();
+                    let mut profiles = imp.profiles.borrow_mut();
+                    profiles.as_mut().map(|store| {
+                        imp.removals.borrow_mut().delete_finished(
+                            store,
+                            &mut imp.reservations.borrow_mut(),
+                            &id,
+                            succeeded,
+                        )
+                    })
+                };
+                match end {
+                    Some(DeleteEnd::Gone(Some(device_type))) => app.deleted(&id, device_type),
+                    Some(DeleteEnd::PutBack(put_back)) => {
+                        let title = put_back.title.clone();
+                        app.put_back(&id, &put_back);
+                        app.toast(
+                            &gettext("“{name}” could not be removed").replace("{name}", &title),
+                        );
+                    }
+                    _ => {}
+                }
+                app.finish(
+                    &id,
+                    if succeeded {
+                        Outcome::Done
+                    } else {
+                        Outcome::Failed
+                    },
+                );
                 app.refresh_profiles();
                 app.push_desired_state();
             }
         ));
     }
 
-    /// The file of a removed profile is gone: frees its name and drops it from the order.
-    fn deleted(&self, id: &ProfileId, removal: Removal) {
-        let imp = self.imp();
-        if let Some(reservation) = removal.reservation {
-            imp.reservations.borrow_mut().release(reservation);
-        }
-        let Some(device_type) = removal.entry.device_type() else {
-            return;
-        };
+    /// The file of a removed profile is gone: drops it from the order.
+    fn deleted(&self, id: &ProfileId, device_type: DeviceType) {
         let order = {
-            let profiles = imp.profiles.borrow();
+            let profiles = self.imp().profiles.borrow();
             let Some(store) = profiles.as_ref() else {
                 return;
             };
@@ -379,38 +375,31 @@ impl Application {
         self.store_order(device_type, &order);
     }
 
-    /// Puts a removed profile back: the removal was undone, or deleting its file failed. It is
-    /// made active again when it was and the default took its place meanwhile.
-    fn put_back(&self, id: &ProfileId, removal: Removal) {
+    /// A removed profile is back in the store (the removal was undone, or deleting its file
+    /// failed): puts it back in its place, and makes it active again when it was and the default
+    /// still holds its place.
+    fn put_back(&self, id: &ProfileId, put_back: &PutBack) {
         let imp = self.imp();
-        let device_type = removal.entry.device_type();
-        if let Some(store) = imp.profiles.borrow_mut().as_mut() {
-            store.restore(id.clone(), removal.entry);
+        let Some(device_type) = put_back.device_type else {
+            return;
+        };
+        let order = {
+            let profiles = imp.profiles.borrow();
+            profiles.as_ref().map(|store| {
+                order::restored(
+                    &self.order_entries(device_type),
+                    device_type,
+                    store,
+                    id,
+                    put_back.previous.as_ref(),
+                    put_back.index,
+                )
+            })
+        };
+        if let Some(order) = order {
+            self.store_order(device_type, &order);
         }
-        if let Some(device_type) = device_type {
-            let order = {
-                let profiles = imp.profiles.borrow();
-                profiles.as_ref().map(|store| {
-                    order::restored(
-                        &self.order_entries(device_type),
-                        device_type,
-                        store,
-                        id,
-                        removal.previous.as_ref(),
-                        removal.index,
-                    )
-                })
-            };
-            if let Some(order) = order {
-                self.store_order(device_type, &order);
-            }
-        }
-        if let Some(reservation) = removal.reservation {
-            imp.reservations.borrow_mut().release(reservation);
-        }
-        if let (true, Some(device_type), Some(settings)) =
-            (removal.was_active, device_type, imp.settings.get())
-        {
+        if let (true, Some(settings)) = (put_back.reactivate, imp.settings.get()) {
             let key = active::settings_key(device_type);
             if settings.string(key) == ProfileId::default_for(device_type).as_str()
                 && let Err(error) = settings.set_string(key, id.as_str())
@@ -433,54 +422,32 @@ impl Application {
         };
         let positions =
             device_type.map_or_else(Vec::new, |device_type| self.positions(device_type));
-        let index = positions.iter().position(|listed| listed == id);
-        let previous = index
-            .and_then(|index| index.checked_sub(1))
-            .and_then(|before| positions.get(before).cloned());
-        let taken = imp
-            .profiles
-            .borrow_mut()
-            .as_mut()
-            .map(|store| store.take(id));
-        let entry = match taken {
-            Some(Ok(entry)) => entry,
-            Some(Err(error)) => return tracing::debug!("Profile {id} not removed: {error}"),
-            None => return,
+        let active = device_type
+            .zip(imp.settings.get())
+            .and_then(|(device_type, settings)| {
+                ProfileId::parse(settings.string(active::settings_key(device_type)).as_str())
+            });
+        let removed = {
+            let mut profiles = imp.profiles.borrow_mut();
+            let Some(store) = profiles.as_mut() else {
+                return;
+            };
+            imp.removals.borrow_mut().remove(
+                store,
+                &mut imp.reservations.borrow_mut(),
+                &mut imp.writes.borrow_mut(),
+                id,
+                &positions,
+                active.as_ref(),
+            )
         };
-        let device_type = entry.device_type();
-        let reservation = match (device_type, entry.name()) {
-            (Some(device_type), Some(name)) => {
-                let profiles = imp.profiles.borrow();
-                profiles.as_ref().and_then(|store| {
-                    imp.reservations
-                        .borrow_mut()
-                        .claim(store, device_type, name)
-                })
-            }
-            _ => None,
+        let removed = match removed {
+            Ok(removed) => removed,
+            Err(error) => return tracing::debug!("Profile {id} not removed: {error}"),
         };
-        let was_active = match (device_type, imp.settings.get()) {
-            (Some(device_type), Some(settings)) => {
-                settings.string(active::settings_key(device_type)) == id.as_str()
-            }
-            _ => false,
-        };
-        let title = entry.name().map_or_else(|| id.file_name(), str::to_owned);
-        let commands = imp.writes.borrow_mut().removed(id);
-        imp.removals.borrow_mut().insert(
-            id.clone(),
-            Removal {
-                entry,
-                reservation,
-                was_active,
-                title: title.clone(),
-                previous,
-                index: index.unwrap_or(usize::MAX),
-            },
-        );
-        self.run_commands(commands);
+        self.run_commands(removed.commands);
         if let (true, Some(device_type), Some(settings)) =
-            (was_active, device_type, imp.settings.get())
+            (removed.was_active, removed.device_type, imp.settings.get())
             && let Err(error) = settings.set_string(
                 active::settings_key(device_type),
                 ProfileId::default_for(device_type).as_str(),
@@ -491,6 +458,8 @@ impl Application {
         self.refresh_profiles();
         self.push_desired_state();
 
+        let title = removed.title;
+        let serial = removed.serial;
         let toast = adw::Toast::builder()
             .title(gettext("“{name}” removed").replace("{name}", &title))
             .button_label(gettext("_Undo"))
@@ -507,7 +476,11 @@ impl Application {
             #[weak(rename_to = app)]
             self,
             move |_| {
-                let commands = app.imp().writes.borrow_mut().delete_due(&due_id);
+                let imp = app.imp();
+                let commands =
+                    imp.removals
+                        .borrow()
+                        .delete_due(&mut imp.writes.borrow_mut(), &due_id, serial);
                 app.run_commands(commands);
             }
         ));
@@ -517,14 +490,21 @@ impl Application {
     /// Undoes the removal of `id`, unless its delete has started.
     fn undo_remove(&self, id: &ProfileId) {
         let imp = self.imp();
-        let commands = imp.writes.borrow_mut().undone(id);
-        if imp.writes.borrow().is_removing(id) {
-            return tracing::debug!("Profile {id}: too late to undo the removal");
-        }
-        let Some(removal) = imp.removals.borrow_mut().remove(id) else {
-            return;
+        let undone = {
+            let mut profiles = imp.profiles.borrow_mut();
+            profiles.as_mut().and_then(|store| {
+                imp.removals.borrow_mut().undo(
+                    store,
+                    &mut imp.reservations.borrow_mut(),
+                    &mut imp.writes.borrow_mut(),
+                    id,
+                )
+            })
         };
-        self.put_back(id, removal);
+        let Some((put_back, commands)) = undone else {
+            return tracing::debug!("Profile {id}: too late to undo the removal");
+        };
+        self.put_back(id, &put_back);
         self.run_commands(commands);
         self.refresh_profiles();
         self.push_desired_state();

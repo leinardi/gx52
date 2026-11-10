@@ -93,10 +93,10 @@ mod imp {
     use gtk::{gio, glib};
     use x52::input::{HeldInputs, Mode};
 
-    use super::persistence::Removal;
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
+    use crate::profile::removals::Removals;
     use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
     use crate::profile::writes::WriteQueue;
@@ -142,11 +142,14 @@ mod imp {
         /// The logout inhibition taken at the end of the session while profiles are saved.
         pub(crate) inhibit_cookie: Cell<Option<u32>>,
         /// The removed profiles whose removal can still be undone.
-        pub(crate) removals: RefCell<BTreeMap<ProfileId, Removal>>,
+        pub(crate) removals: RefCell<Removals>,
         /// The profiles whose last save failed, so the failure is reported once.
         pub(crate) failed_saves: RefCell<BTreeSet<ProfileId>>,
         /// The default profiles whose damaged file the user chose to keep this session.
         pub(crate) declined_replacements: RefCell<BTreeSet<ProfileId>>,
+        /// Whether the window closed or the session is ending with writes pending, until the
+        /// queue is idle or a window opens again: no dialog asks anything meanwhile.
+        pub(crate) draining: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -184,6 +187,7 @@ mod imp {
                 window.set_profiles(&app.profile_list());
                 window.upcast()
             });
+            app.imp().draining.set(false);
             window.present();
             app.show_pending_toasts();
         }
@@ -530,6 +534,7 @@ impl Application {
         let Some(settings) = self.imp().settings.get() else {
             return;
         };
+        self.imp().removals.borrow_mut().forget_active(device_type);
         if let Err(error) = settings.set_string(active::settings_key(device_type), id.as_str()) {
             tracing::warn!("Cannot make profile {id} active: {error}");
         }
