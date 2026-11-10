@@ -17,5 +17,6 @@
 //! widgets.
 
 mod profile_object;
+pub(crate) mod splice;
 
 pub(crate) use self::profile_object::{ProfileObject, ProfileState};

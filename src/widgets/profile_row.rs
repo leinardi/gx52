@@ -228,6 +228,11 @@ impl ProfileRow {
         }
     }
 
+    /// Whether the name is being edited.
+    pub(crate) fn is_editing(&self) -> bool {
+        self.imp().name_stack.visible_child_name().as_deref() == Some("entry")
+    }
+
     /// Opens the name for editing, all of it selected.
     pub(crate) fn start_rename(&self) {
         let imp = self.imp();
@@ -412,7 +417,7 @@ impl ProfileRow {
         let Some(item) = imp.item.get() else {
             return;
         };
-        let editing = imp.name_stack.visible_child_name().as_deref() == Some("entry");
+        let editing = self.is_editing();
         imp.active_icon
             .set_visible(!editing && item.active() && imp.marked.get());
         if item.is_usable() && !item.is_default() {

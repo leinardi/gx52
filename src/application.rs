@@ -32,7 +32,7 @@ use x52::state::DeviceState;
 use crate::config;
 use crate::device::status::DeviceStatus;
 use crate::device::{DeviceEvent, DeviceService, access, names};
-use crate::model::ProfileObject;
+use crate::model::{ProfileObject, splice};
 use crate::profile::legacy::{self, FileWriter};
 use crate::profile::startup::{self, ImportOutcome};
 use crate::profile::store::{Entry, LoadReport, ProfileStore};
@@ -595,8 +595,12 @@ impl Application {
             let is_active = active.as_ref().is_some_and(|id| object.id() == id.as_str());
             object.show_active(is_active, imp.active_mode.get());
         }
-        if objects != current {
-            list.splice(0, list.n_items(), &objects);
+        // Only the rows that changed are recreated: a row being renamed or holding the focus
+        // outside them is kept.
+        if let Some(splice) = splice::between(&current, &objects) {
+            let position = u32::try_from(splice.position).unwrap_or(u32::MAX);
+            let removed = u32::try_from(splice.removed).unwrap_or(u32::MAX);
+            list.splice(position, removed, &objects[splice.added]);
         }
         self.update_windows();
     }

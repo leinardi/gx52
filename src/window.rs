@@ -126,9 +126,14 @@ mod imp {
                 ("win.export-selected", RowAction::Export),
             ] {
                 klass.install_action(name, None, move |window, _, _| {
-                    if let Some(id) = window.selected().and_then(|item| item.profile_id()) {
-                        window.run_row_action(action, &id);
+                    let Some(id) = window.selected().and_then(|item| item.profile_id()) else {
+                        return;
+                    };
+                    // F2 and Delete typed in the name entry reach the list too.
+                    if window.row_of(&id).is_some_and(|row| row.is_editing()) {
+                        return;
                     }
+                    window.run_row_action(action, &id);
                 });
             }
         }
@@ -268,6 +273,22 @@ impl Window {
             .and_downcast()
     }
 
+    /// Gives the focus to the row of `id`, recreated by a move, once the menu that moved it has
+    /// closed and handed the focus back.
+    fn focus_row(&self, id: &ProfileId) {
+        glib::idle_add_local_once(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[strong]
+            id,
+            move || {
+                if let Some(row) = window.row_of(&id) {
+                    row.grab_focus();
+                }
+            }
+        ));
+    }
+
     /// Opens the name of `id` for editing in its row.
     pub(crate) fn start_rename(&self, id: &ProfileId) {
         if let Some(row) = self.row_of(id) {
@@ -322,8 +343,14 @@ impl Window {
                     async move { window.confirm_single(&id).await }
                 ));
             }
-            RowAction::MoveUp => app.move_profile_by(id, -1),
-            RowAction::MoveDown => app.move_profile_by(id, 1),
+            RowAction::MoveUp => {
+                app.move_profile_by(id, -1);
+                self.focus_row(id);
+            }
+            RowAction::MoveDown => {
+                app.move_profile_by(id, 1);
+                self.focus_row(id);
+            }
             RowAction::Remove => {
                 glib::spawn_future_local(glib::clone!(
                     #[weak(rename_to = window)]
