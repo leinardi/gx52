@@ -833,7 +833,9 @@ impl Application {
     ) -> Option<MfdPreview> {
         let device_type = self.shown_device_type()?;
         let (_, state) = self.desired_state(device_type, self.shown_mode())?;
-        mfd::preview(&state, device_type, shown_clock, now, local)
+        // The MODE area shows the selector's position, which the device lights by itself.
+        let selector = self.imp().active_mode.get();
+        mfd::preview(&state, device_type, selector, shown_clock, now, local)
             .inspect_err(|error| tracing::warn!("Cannot show the MFD clocks: {error}"))
             .ok()
     }

@@ -22,7 +22,12 @@ template $GX52MfdEditor: Adw.Bin {
           orientation: vertical;
           spacing: 12;
 
-          $GX52MfdDisplay display {}
+          Adw.Clamp {
+            maximum-size: 368;
+            tightening-threshold: 368;
+
+            child: $GX52MfdDisplay display {};
+          }
 
           Adw.ToggleGroup clock_toggles {
             halign: center;

@@ -2,67 +2,123 @@ using Gtk 4.0;
 using Adw 1;
 
 template $GX52MfdDisplay: Adw.Bin {
-  halign: center;
-
-  child: Overlay screen {
-    overflow: hidden;
+  child: Box screen {
+    orientation: vertical;
+    spacing: 14;
 
     styles [
       "mfd",
     ]
 
-    child: Box {
-      orientation: vertical;
-      spacing: 8;
+    Box {
+      spacing: 6;
 
       styles [
-        "mfd-content",
+        "mfd-mode-box",
       ]
 
-      Box lines {
+      Box {
         orientation: vertical;
-        spacing: 8;
+        spacing: 6;
+        hexpand: true;
+        halign: start;
+
+        Label {
+          label: "MODE";
+          xalign: 0;
+
+          styles [
+            "mfd-mode-label",
+          ]
+        }
+
+        Label shift {
+          label: "SHIFT";
+          halign: start;
+
+          styles [
+            "mfd-shift",
+          ]
+        }
       }
 
-      Box {
-        spacing: 16;
+      Label mode_1 {
+        label: "1";
 
         styles [
-          "mfd-clock",
+          "mfd-mode-number",
+        ]
+      }
+
+      Label mode_2 {
+        label: "2";
+
+        styles [
+          "mfd-mode-number",
+        ]
+      }
+
+      Label mode_3 {
+        label: "3";
+
+        styles [
+          "mfd-mode-number",
+        ]
+      }
+    }
+
+    Box lines {
+      orientation: vertical;
+      spacing: 6;
+
+      styles [
+        "mfd-text",
+      ]
+    }
+
+    Box {
+      orientation: vertical;
+      spacing: 6;
+
+      Box {
+        spacing: 12;
+
+        styles [
+          "mfd-bottom",
         ]
 
+        Image {
+          icon-name: "mfd-clock-symbolic";
+          pixel-size: 30;
+        }
+
         Box {
-          spacing: 6;
           hexpand: true;
+          halign: center;
 
-          Label clock_tag {
-            valign: baseline_fill;
-
+          Label time {
             styles [
-              "mfd-clock-tag",
+              "mfd-time",
             ]
           }
 
-          Label clock {
-            valign: baseline_fill;
+          Label half {
+            valign: start;
+
+            styles [
+              "mfd-half",
+            ]
           }
         }
-
-        Label date {
-          valign: baseline_fill;
-        }
       }
-    };
 
-    [overlay]
-    Label shift {
-      label: "SHIFT";
-      halign: end;
-      valign: start;
+      Label date {
+        xalign: 1;
 
-      styles [
-        "mfd-shift",
-      ]
+        styles [
+          "mfd-date",
+        ]
+      }
     }
   };
 }

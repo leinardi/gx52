@@ -127,7 +127,19 @@ fn state(lines: [&str; MFD_LINES]) -> DeviceState {
 }
 
 fn shown(state: &DeviceState, clock: ShownClock) -> MfdPreview {
-    preview(state, DeviceType::X52Pro, clock, noon(), &TimeZone::UTC).unwrap()
+    at(state, clock, noon(), &TimeZone::UTC)
+}
+
+fn at(state: &DeviceState, clock: ShownClock, now: Timestamp, local: &TimeZone) -> MfdPreview {
+    preview(state, DeviceType::X52Pro, None, clock, now, local).unwrap()
+}
+
+/// The time with its AM/PM indicator, as one string.
+fn time(preview: &MfdPreview) -> String {
+    match preview.half {
+        Some(half) => format!("{} {half}", preview.time),
+        None => preview.time.clone(),
+    }
 }
 
 #[test]
@@ -142,38 +154,34 @@ fn a_character_without_a_glyph_previews_as_its_fallback() {
 #[test]
 fn clock_1_shows_24_h_and_12_h() {
     let mut state = state(["", "", ""]);
-    assert_eq!(shown(&state, ShownClock::One).clock, "12:45");
+    let h24 = shown(&state, ShownClock::One);
+    assert_eq!((h24.time.as_str(), h24.half), ("12:45", None));
     state.clock1.h24 = false;
-    assert_eq!(shown(&state, ShownClock::One).clock, "12:45 PM");
+    let h12 = shown(&state, ShownClock::One);
+    assert_eq!((h12.time.as_str(), h12.half), ("12:45", Some("PM")));
     state.clock1.source = Clock1Source::Local;
-    let midnight = preview(
+    let midnight = at(
         &state,
-        DeviceType::X52Pro,
         ShownClock::One,
         noon(),
         &TimeZone::fixed(tz::offset(11)),
-    )
-    .unwrap();
-    assert_eq!(midnight.clock, "11:45 PM");
-    let morning = preview(
+    );
+    assert_eq!(time(&midnight), "11:45 PM");
+    let morning = at(
         &state,
-        DeviceType::X52Pro,
         ShownClock::One,
         noon(),
         &TimeZone::fixed(tz::offset(-12)),
-    )
-    .unwrap();
-    assert_eq!(morning.clock, "12:45 AM");
-    let noon_hour = preview(
+    );
+    assert_eq!(time(&morning), "12:45 AM");
+    assert_eq!(morning.date, "09.11.26");
+    let noon_hour = at(
         &state,
-        DeviceType::X52Pro,
         ShownClock::One,
         "2026-11-09T12:00:00Z".parse().unwrap(),
         &TimeZone::UTC,
-    )
-    .unwrap();
-    assert_eq!(noon_hour.clock, "12:00 PM");
-    assert_eq!(morning.date, "09.11.26");
+    );
+    assert_eq!(time(&noon_hour), "12:00 PM");
 }
 
 #[test]
@@ -183,15 +191,23 @@ fn clocks_2_and_3_show_clock_1_plus_their_offset() {
     state.clock2.source = ZoneSource::Zone(TimeZone::posix("EST5EDT,M3.2.0,M11.1.0").unwrap());
     // A fixed offset that crosses midnight: 12:45 UTC is 00:15 the next day at UTC+11:30.
     state.clock3.source = ZoneSource::Fixed(FixedOffset::new(690).unwrap());
-    let two = shown(&state, ShownClock::Two);
-    assert_eq!((two.clock.as_str(), two.clock_tag), ("07:45", Some(2)));
+    assert_eq!(shown(&state, ShownClock::Two).time, "07:45");
     let three = shown(&state, ShownClock::Three);
-    assert_eq!((three.clock.as_str(), three.clock_tag), ("00:15", Some(3)));
+    assert_eq!(three.time, "00:15");
     // The date is always clock 1's.
     assert_eq!(three.date, "09.11.26");
     state.clock3.h24 = false;
-    assert_eq!(shown(&state, ShownClock::Three).clock, "12:15 AM");
-    assert_eq!(shown(&state, ShownClock::One).clock_tag, None);
+    assert_eq!(time(&shown(&state, ShownClock::Three)), "12:15 AM");
+}
+
+#[test]
+fn picking_a_clock_flashes_its_number_where_the_date_is() {
+    let three = shown(&state(["", "", ""]), ShownClock::Three);
+    assert_eq!(three.clock_flash(), " 3      ");
+    assert_eq!(
+        three.clock_flash().chars().count(),
+        three.date.chars().count()
+    );
 }
 
 #[test]
@@ -207,20 +223,36 @@ fn the_date_follows_the_format_with_dots() {
     }
 }
 
-#[test]
-fn shift_shows_only_where_the_device_has_it() {
-    let mut state = state(["", "", ""]);
-    state.shift = true;
-    assert!(shown(&state, ShownClock::One).shift);
-    let x52 = preview(
-        &state,
-        DeviceType::X52,
+/// The preview of `state` on `device_type` with the selector at `selector`.
+fn on(state: &DeviceState, device_type: DeviceType, selector: Option<Mode>) -> MfdPreview {
+    preview(
+        state,
+        device_type,
+        selector,
         ShownClock::One,
         noon(),
         &TimeZone::UTC,
     )
-    .unwrap();
-    assert!(!x52.shift);
+    .unwrap()
+}
+
+#[test]
+fn shift_is_lit_only_where_the_device_has_it() {
+    let mut state = state(["", "", ""]);
+    state.shift = true;
+    assert!(shown(&state, ShownClock::One).shift);
+    assert!(!on(&state, DeviceType::X52, None).shift);
+}
+
+#[test]
+fn the_mode_area_lights_the_selector() {
+    let state = state(["", "", ""]);
+    assert_eq!(
+        on(&state, DeviceType::X52Pro, Some(Mode::Two)).mode,
+        Some(Mode::Two)
+    );
+    assert_eq!(shown(&state, ShownClock::One).mode, None);
+    assert_eq!(Mode::ALL.map(mode_number), ["1", "2", "3"]);
 }
 
 #[test]
@@ -246,13 +278,19 @@ fn the_backlight_has_four_steps() {
 }
 
 #[test]
-fn the_label_reads_the_lines_the_clock_and_the_date() {
-    let state = state(["GX52", "Fire", ""]);
+fn the_label_reads_the_indicators_the_lines_the_clock_and_the_date() {
+    let mut state = state(["GX52", "Fire", ""]);
     assert_eq!(
         accessible_label(&shown(&state, ShownClock::One)),
         "Simulated MFD: GX52, Fire, blank; clock 1 12:45, date 09.11.26"
     );
     assert!(accessible_label(&shown(&state, ShownClock::Three)).contains("; clock 3 "));
+    state.shift = true;
+    state.clock1.h24 = false;
+    assert_eq!(
+        accessible_label(&on(&state, DeviceType::X52Pro, Some(Mode::Two))),
+        "Simulated MFD: mode 2, SHIFT on; GX52, Fire, blank; clock 1 12:45 PM, date 09.11.26"
+    );
 }
 
 fn key(profile: &str, set: SettingsSet, line: usize) -> DraftKey {

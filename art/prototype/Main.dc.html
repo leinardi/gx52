@@ -80,19 +80,30 @@ body{margin:0}
 .gx-rowval{min-width:32px;text-align:end;color:var(--dimmed-fg-color)}
 .gx-note{color:var(--dimmed-fg-color)}
 .gx-mfdbox{display:flex;flex-direction:column;align-items:center;gap:12px}
-.gx-mfd{font-family:var(--font-mono);font-size:18px;line-height:1;padding:16px 18px;border-radius:12px;display:flex;flex-direction:column;gap:8px;color:var(--dark-4);background:var(--dark-3);box-shadow:inset 0 0 0 6px var(--dark-4),0 2px 6px rgba(0,0,6,.2);position:relative;overflow:hidden}
-.gx-mfd::before{content:"";position:absolute;inset:6px;border-radius:7px;background:color-mix(in srgb,var(--green-1) 45%,var(--yellow-1));opacity:var(--gx-bl,1);pointer-events:none}
+.gx-mfd{--lcd-ink:color-mix(in srgb,var(--dark-5) 78%,var(--green-5));--lcd-bg:color-mix(in srgb,var(--green-2) 70%,var(--yellow-1));width:368px;box-sizing:border-box;padding:16px 18px 14px;border-radius:22px;display:flex;flex-direction:column;gap:14px;color:var(--lcd-ink);background:var(--dark-4);box-shadow:inset 0 0 0 6px var(--dark-5),0 2px 8px rgba(0,0,6,.25);position:relative;overflow:hidden;font-family:var(--font-mono)}
+.gx-mfd::before{content:"";position:absolute;inset:6px;border-radius:17px;background:var(--lcd-bg);opacity:var(--gx-bl,1);pointer-events:none}
 .gx-mfd > *{position:relative}
-.gx-mfd.bl-0{--gx-bl:0;color:color-mix(in srgb,var(--light-5) 35%,transparent)}
+.gx-mfd.bl-0{--gx-bl:0;--lcd-ink:color-mix(in srgb,var(--light-5) 30%,transparent)}
 .gx-mfd.bl-1{--gx-bl:.35}
 .gx-mfd.bl-2{--gx-bl:.7}
 .gx-mfd.bl-3{--gx-bl:1}
+.gx-mfd .is-ghost{opacity:.1}
+.gx-mfd-top{display:flex;flex-direction:column;align-items:flex-start}
+.gx-mfd-modebox{align-self:stretch;display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid currentColor;border-radius:6px;font-family:var(--font-sans);font-weight:800}
+.gx-mfd-modecol{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-inline-end:auto}
+.gx-mfd-modelbl{font-size:15px;letter-spacing:.02em;line-height:1}
+.gx-mfd-modenum{font-size:32px;line-height:1;width:58px;text-align:center}
+.gx-mfd-shift{padding:3px 10px;border-radius:4px;font-family:var(--font-sans);font-size:12px;font-weight:800;letter-spacing:.03em;line-height:1.2;background:var(--lcd-ink);color:var(--lcd-bg)}
+.gx-mfd.bl-0 .gx-mfd-shift{padding:3px 10px;border-radius:4px;font-family:var(--font-sans);font-size:12px;font-weight:800;letter-spacing:.03em;line-height:1.2;background:var(--lcd-ink);color:var(--lcd-bg)}
+.gx-mfd-text{border:2px solid currentColor;border-radius:6px;padding:10px 8px;display:flex;flex-direction:column;gap:6px;font-size:18px;line-height:1}
 .gx-mfdline{display:flex}
-.gx-mfdcell{display:inline-block;width:1.15ch;text-align:center;white-space:pre;background:color-mix(in srgb,currentColor 6%,transparent);margin-right:1px;border-radius:1px;padding:2px 0}
-.gx-mfdclock{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding-top:4px;border-top:1px solid color-mix(in srgb,currentColor 25%,transparent);font-size:16px}
-.gx-mfdclock small{font-size:10px;opacity:.75;margin-inline-end:6px}
-.gx-mfdshift{position:absolute;top:6px;right:12px;font-size:9px;font-family:var(--font-sans);font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;background:currentColor}
-.gx-mfdshift span{color:color-mix(in srgb,var(--green-1) 45%,var(--yellow-1))}
+.gx-mfdcell{display:inline-block;width:1.15ch;text-align:center;white-space:pre;background:color-mix(in srgb,currentColor 7%,transparent);margin-right:1px;border-radius:1px;padding:2px 0}
+.gx-mfd-bottom{display:flex;align-items:center;gap:12px;padding:0 4px}
+.gx-mfd-clockicon{flex:none}
+.gx-mfd-time{flex:1;text-align:center;font-size:40px;font-weight:700;letter-spacing:.04em;line-height:1}
+.gx-mfd-time small{font-size:13px;font-weight:700;margin-inline-start:6px;vertical-align:top}
+.gx-mfd-date{align-self:flex-end;white-space:pre;margin-top:-8px;font-size:22px;letter-spacing:.06em;line-height:1}
+.gx-mfd-date small{font-size:12px;margin-inline-end:8px;vertical-align:middle}
 .gx-warnlbl{color:var(--warning-color)}
 .gx-errlbl{color:var(--error-color)}
 .gx-guide{box-sizing:border-box;padding:36px 12px;display:flex;flex-direction:column;gap:24px}
@@ -418,11 +429,25 @@ body{margin:0}
                         <sc-if value="{{vMfd}}" hint-placeholder-val="{{ false }}">
                           <div class="gx-mfdbox">
                             <div class="{{mfd.cls}}" role="img" aria-label="{{mfd.aria}}">
-                              <sc-if value="{{mfd.shift}}" hint-placeholder-val="{{ false }}"><span class="gx-mfdshift"><span>SHIFT</span></span></sc-if>
-                              <sc-for list="{{mfd.lines}}" as="ln" hint-placeholder-count="3">
-                                <div class="gx-mfdline"><sc-for list="{{ln}}" as="ch" hint-placeholder-count="16"><span class="gx-mfdcell">{{ch}}</span></sc-for></div>
-                              </sc-for>
-                              <div class="gx-mfdclock"><span><small>{{mfd.clockTag}}</small>{{mfd.time}}</span><span>{{mfd.date}}</span></div>
+                              <div class="gx-mfd-top" aria-hidden="true">
+                                <div class="gx-mfd-modebox">
+                                  <div class="gx-mfd-modecol">
+                                    <span class="gx-mfd-modelbl">MODE</span>
+                                    <span class="{{mfd.shiftCls}}">SHIFT</span>
+                                  </div>
+                                  <sc-for list="{{mfd.modes}}" as="md" hint-placeholder-count="3"><span class="{{md.cls}}">{{md.n}}</span></sc-for>
+                                </div>
+                              </div>
+                              <div class="gx-mfd-text" aria-hidden="true">
+                                <sc-for list="{{mfd.lines}}" as="ln" hint-placeholder-count="3">
+                                  <div class="gx-mfdline"><sc-for list="{{ln}}" as="ch" hint-placeholder-count="16"><span class="gx-mfdcell">{{ch}}</span></sc-for></div>
+                                </sc-for>
+                              </div>
+                              <div class="gx-mfd-bottom" aria-hidden="true">
+                                <svg class="gx-mfd-clockicon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M12 7 L15 16 L23 11" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg>
+                                <span class="gx-mfd-time">{{mfd.time}}<small>{{mfd.ampm}}</small></span>
+                              </div>
+                              <div class="gx-mfd-date" aria-hidden="true">{{mfd.dateShown}}</div>
                             </div>
                             <x-import component-from-global-scope="Adw.ToggleGroup" items="{{clockItems}}" selected="{{mfdClock}}" on-select="{{onMfdClock}}" label="Clock shown on the simulated display"></x-import>
                             <span class="caption dimmed">Clock 1 is shown by default. Start/Stop and Reset on the throttle cycle the clocks on the device.</span>
@@ -691,8 +716,8 @@ var LED_CARDS = [
 var BI_STATES = ['off', 'green', 'amber', 'red'], BI_LABELS = ['Off', 'Green', 'Amber', 'Red'];
 var SG_STATES = ['off', 'on'], SG_LABELS = ['Off', 'On'];
 var STATE_LABEL = { off: 'Off', on: 'On', green: 'Green', red: 'Red', amber: 'Amber' };
-var LINE_SOURCES = ['text', 'profile_name', 'mode', 'last_button', 'empty'];
-var LINE_LABELS = ['Custom text', 'Profile name', 'Mode', 'Last button', 'Empty'];
+var LINE_SOURCES = ['text', 'profile_name', 'last_button', 'empty'];
+var LINE_LABELS = ['Custom text', 'Profile name', 'Last button', 'Empty'];
 var DATE_FORMATS = ['dd-mm-yy', 'mm-dd-yy', 'yy-mm-dd'];
 var DATE_LABELS = ['DD-MM-YY', 'MM-DD-YY', 'YY-MM-DD'];
 var DEV_NAMES = { 'x52-pro': 'X52 Pro', 'x52': 'X52' };
@@ -801,19 +826,19 @@ function seedProfiles() {
   var def = P('x52-pro-default', 'Default', 'single', [MS(128, 128, builtinLeds(), [L('text', 'GX52'), L('profile_name'), L('last_button')])], null, 'yy-mm-dd', { isDefault: true });
   var dcs = P('6f1c2a90-4b7e-4d2a-9e51-0c3a7b1d2e44', 'DCS World', 'per_mode', [
     MS(64, 96, leds('on', 'on', 'green', 'green', 'red', 'red', 'amber', 'amber', 'amber', 'green', 'off'), [L('text', 'GX52'), L('last_button'), L('profile_name')]),
-    MS(96, 112, leds('on', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'amber'), [L('text', 'MASTER ARM'), L('mode'), L('last_button')], { shift: true }),
-    MS(48, 80, leds('off', 'on', 'amber', 'amber', 'green', 'green', 'green', 'off', 'off', 'amber', 'green'), [L('text', 'GEAR / FLAPS'), L('profile_name'), L('mode')], { blink: true })
+    MS(96, 112, leds('on', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'amber'), [L('text', 'MASTER ARM'), L('profile_name'), L('last_button')], { shift: true }),
+    MS(48, 80, leds('off', 'on', 'amber', 'amber', 'green', 'green', 'green', 'off', 'off', 'amber', 'green'), [L('text', 'GEAR / FLAPS'), L('profile_name'), L('last_button')], { blink: true })
   ], [{ source: 'local', h24: true }, { type: 'zone', zone: 'Europe/Rome', offset: 60, h24: true }, { type: 'offset', zone: 'Asia/Kathmandu', offset: 345, h24: false }], 'dd-mm-yy');
   var elite = P('b2e4c8d1-7a3f-4e90-8c21-5d6f7a8b9c0d', 'Elite Dangerous', 'single', [
-    MS(96, 112, leds('on', 'on', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'green'), [L('text', 'o7 CMDR'), L('last_button'), L('mode')])
+    MS(96, 112, leds('on', 'on', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'green'), [L('text', 'o7 CMDR'), L('last_button'), L('profile_name')])
   ], [{ source: 'utc', h24: true }, { type: 'zone', zone: 'America/New_York', offset: -300, h24: true }, { type: 'zone', zone: 'Asia/Tokyo', offset: 540, h24: true }], 'yy-mm-dd');
   var night = P('c9d10e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f', 'Night flying', 'per_mode', [
     MS(16, 8, leds('off', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'off'), [L('text', 'Éjszakai repülő'), L('profile_name'), L('empty')]),
     MS(8, 4, leds('off', 'off', 'off', 'off', 'red', 'red', 'off', 'off', 'off', 'off', 'off'), [L('text', 'DARK'), L('empty'), L('empty')]),
-    MS(24, 16, leds('off', 'off', 'amber', 'amber', 'off', 'off', 'off', 'off', 'off', 'off', 'off'), [L('last_button'), L('mode'), L('profile_name')])
+    MS(24, 16, leds('off', 'off', 'amber', 'amber', 'off', 'off', 'off', 'off', 'off', 'off', 'off'), [L('last_button'), L('empty'), L('profile_name')])
   ], [{ source: 'local', h24: true }, { type: 'offset', zone: 'America/New_York', offset: -240, h24: true }, { type: 'zone', zone: 'Asia/Tokyo', offset: 540, h24: true }], 'dd-mm-yy');
   var xdef = P('x52-default', 'Default', 'single', [MS(128, 128, builtinLeds(), [L('text', 'GX52'), L('profile_name'), L('empty')])], null, 'yy-mm-dd', { isDefault: true });
-  var xpl = P('d3a7b9c1-2e4f-4a6b-8c0d-1e2f3a4b5c6d', 'X-Plane 12', 'single', [MS(80, 100, builtinLeds(), [L('text', 'X-PLANE 12'), L('last_button'), L('mode')])], null, 'dd-mm-yy');
+  var xpl = P('d3a7b9c1-2e4f-4a6b-8c0d-1e2f3a4b5c6d', 'X-Plane 12', 'single', [MS(80, 100, builtinLeds(), [L('text', 'X-PLANE 12'), L('last_button'), L('profile_name')])], null, 'dd-mm-yy');
   return { 'x52-pro': [def, dcs, elite, night], 'x52': [xdef, xpl] };
 }
 function uniqueName(list, base, exceptId) {
@@ -864,7 +889,7 @@ class Component extends DCLogic {
       if (s.page === 'test' && s.moveAxes && s.connected) self.setState({ t: s.t + 0.1 });
     }, 100);
   }
-  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._axes); clearTimeout(this._tt); clearTimeout(this._lp); }
+  componentWillUnmount() { clearTimeout(this._clkFlash); clearInterval(this._clock); clearInterval(this._axes); clearTimeout(this._tt); clearTimeout(this._lp); }
 
   /* ---------- model helpers ---------- */
   typeOf(s) { return s.connected ? s.devType : s.lastType; }
@@ -1129,7 +1154,7 @@ class Component extends DCLogic {
     this.updateMS(function (m) { m.leds[key] = st; });
     this.setState({ ledPopOpen: false });
   }
-  onMfdClock(i) { this.setState({ mfdClock: i }); }
+  onMfdClock(i) { var self = this; clearTimeout(this._clkFlash); this.setState({ mfdClock: i, mfdClockFlash: true }); this._clkFlash = setTimeout(function () { self.setState({ mfdClockFlash: false }); }, 3000); }
   onMfdB(v) { var n = Math.round(v * 128); this.updateMS(function (m) { m.mfdB = n; }); }
   onShift(v) { this.updateMS(function (m) { m.shift = v; }); }
   setLine(idx, patch) { this.updateMS(function (m) { Object.keys(patch).forEach(function (k) { m.lines[idx][k] = patch[k]; }); }); }
@@ -1307,14 +1332,12 @@ class Component extends DCLogic {
 
     /* MFD */
     /* the mode whose settings are on the device: the mode bar's pick on a per-mode profile (until the selector moves), else the selector */
-    var modeText = 'Mode ' + (active && active.kind === 'per_mode' ? s.editMode : s.mode);
     var lineChars = [], lineRows = [];
     var mfdLinesText = [];
     for (var li = 0; li < 3; li++) {
       var ln = m.lines[li] || L('empty'), raw = '';
       if (ln.source === 'text') raw = ln.text;
       else if (ln.source === 'profile_name') raw = active ? active.name : '';
-      else if (ln.source === 'mode') raw = modeText;
       else if (ln.source === 'last_button') raw = lastBtn;
       var cv = convert(raw), shown = cv.chars.slice(0, 16);
       mfdLinesText.push(shown.join('').trim());
@@ -1323,7 +1346,7 @@ class Component extends DCLogic {
       (function (idx, ln) {
         var tc = convert(ln.text), n = Math.min(16, tc.chars.length);
         lineRows.push({
-          title: 'Line ' + (idx + 1), sel: Math.max(0, LINE_SOURCES.indexOf(ln.source)), isText: ln.source === 'text',
+          title: 'Line ' + (idx + 1), sel: LINE_SOURCES.indexOf(ln.source) < 0 ? LINE_SOURCES.indexOf('empty') : LINE_SOURCES.indexOf(ln.source), isText: ln.source === 'text',
           textTitle: 'Line ' + (idx + 1) + ' text', text: ln.text, status: tc.reps.length ? 'warning' : undefined,
           hasReps: tc.reps.length > 0, reps: tc.reps.join(', '), repsTip: 'These characters are not on the MFD and are shown as their replacement',
           count: n + '/16', countCls: 'caption numeric dimmed', countAria: n + ' of 16 characters',
@@ -1337,8 +1360,12 @@ class Component extends DCLogic {
     var bl = m.mfdB === 0 ? 0 : m.mfdB <= 40 ? 1 : m.mfdB <= 90 ? 2 : 3;
     var mfdTime = view ? clockTime(view, mfdClockIdx, now) : '';
     var mfdDateStr = view ? mfdDate(view, now) : '';
-    var mfd = { cls: 'gx-mfd bl-' + bl, lines: lineChars, shift: isPro && m.shift, time: mfdTime, date: mfdDateStr, clockTag: mfdClockIdx > 0 ? String(mfdClockIdx + 1) : '',
-      aria: 'Simulated MFD: ' + mfdLinesText.map(function (t) { return t || 'blank'; }).join(', ') + '; clock ' + (mfdClockIdx + 1) + ' ' + mfdTime + ', date ' + mfdDateStr };
+    var shownMode = active && active.kind === 'per_mode' ? s.editMode : s.mode;
+    var timeParts = mfdTime.split(' ');
+    var mfd = { cls: 'gx-mfd bl-' + bl, lines: lineChars, time: timeParts[0], ampm: timeParts[1] || '', date: mfdDateStr, dateShown: s.mfdClockFlash ? ' ' + (mfdClockIdx + 1) + '      ' : mfdDateStr,
+      modes: [1, 2, 3].map(function (n) { return { n: String(n), cls: 'gx-mfd-modenum' + (s.connected && n === shownMode ? '' : ' is-ghost') }; }),
+      shiftCls: 'gx-mfd-shift' + (isPro && m.shift ? '' : ' is-ghost'),
+      aria: 'Simulated MFD: mode ' + shownMode + (isPro && m.shift ? ', SHIFT on' : '') + '; ' + mfdLinesText.map(function (t) { return t || 'blank'; }).join(', ') + '; clock ' + (mfdClockIdx + 1) + ' ' + mfdTime + ', date ' + mfdDateStr };
 
     /* clocks */
     var clk = { c1desc: '', c1sel: 0, c1h24: true, others: [], dateSel: 0 };

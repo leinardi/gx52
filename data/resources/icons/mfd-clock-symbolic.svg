@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The clock symbol of the MFD's clock area: a dial with two hands. Filled shapes only, so the
+     symbolic recolouring paints it in the display's ink. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  <path fill="#000" fill-rule="evenodd" d="M15 1.25a13.75 13.75 0 1 0 0 27.5a13.75 13.75 0 1 0 0-27.5zm0 1.5a12.25 12.25 0 1 1 0 24.5a12.25 12.25 0 1 1 0-24.5z"/>
+  <path fill="#000" d="M11.29 7.24L14.29 16.24L15.71 15.76L12.71 6.76z"/>
+  <path fill="#000" d="M14.60 15.36L22.60 10.36L23.40 11.64L15.40 16.64z"/>
+  <circle fill="#000" cx="15" cy="16" r="0.75"/>
+</svg>

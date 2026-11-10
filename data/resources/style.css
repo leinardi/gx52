@@ -101,73 +101,104 @@ button.led.blinking {
   animation: led-blink 1s steps(1, end) infinite;
 }
 
-/* The simulated MFD of the MFD view: dark in both styles, as on the device. The backlight mixes
-   the lit colour into the glass by the MFD brightness; at 0 the glass is dark and the text dims. */
+/* The simulated MFD of the MFD view, laid out as the device's display and dark in both styles,
+   as on the device. The backlight mixes the lit glass into the bezel colour by the MFD
+   brightness; at 0 the glass is dark and the ink dims. Unlit segments stay faintly visible. */
 .mfd {
-  font-family: monospace;
-  font-size: 18px;
-  border-radius: 12px;
-  color: var(--dark-4);
-  background-color: var(--dark-3);
-  box-shadow:
-    inset 0 0 0 6px var(--dark-4),
-    0 2px 6px rgb(0 0 6 / 20%);
-}
+  --lcd-ink: color-mix(in srgb, var(--dark-5) 78%, var(--green-5));
+  --lcd-bg: color-mix(in srgb, var(--green-2) 70%, var(--yellow-1));
 
-.mfd-content {
-  padding: 16px 18px;
+  padding: 16px 18px 14px;
+  border-radius: 22px;
+  color: var(--lcd-ink);
+  background-color: var(--dark-4);
+  box-shadow:
+    inset 0 0 0 6px var(--dark-5),
+    0 2px 8px rgb(0 0 6 / 25%);
+  font-family: monospace;
 }
 
 .mfd.backlight-0 {
-  color: color-mix(in srgb, var(--light-5) 35%, transparent);
+  --lcd-ink: color-mix(in srgb, var(--light-5) 30%, transparent);
+
+  color: var(--lcd-ink);
 }
 
 .mfd.backlight-1 {
-  background-color: color-mix(
-    in srgb,
-    color-mix(in srgb, var(--green-1) 45%, var(--yellow-1)) 35%,
-    var(--dark-3)
-  );
+  background-color: color-mix(in srgb, var(--lcd-bg) 35%, var(--dark-4));
 }
 
 .mfd.backlight-2 {
-  background-color: color-mix(
-    in srgb,
-    color-mix(in srgb, var(--green-1) 45%, var(--yellow-1)) 70%,
-    var(--dark-3)
-  );
+  background-color: color-mix(in srgb, var(--lcd-bg) 70%, var(--dark-4));
 }
 
 .mfd.backlight-3 {
-  background-color: color-mix(in srgb, var(--green-1) 45%, var(--yellow-1));
+  background-color: var(--lcd-bg);
+}
+
+.mfd .unlit {
+  opacity: 0.1;
+}
+
+.mfd-mode-box {
+  padding: 8px 12px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  font-family: sans-serif;
+  font-weight: 800;
+}
+
+.mfd-mode-label {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.mfd-mode-number {
+  min-width: 58px;
+  font-size: 32px;
+}
+
+.mfd-shift {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-family: sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--lcd-bg);
+  background-color: var(--lcd-ink);
+}
+
+.mfd-text {
+  padding: 10px 8px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  font-size: 18px;
 }
 
 .mfd-cell {
   padding: 2px 1px;
   border-radius: 1px;
-  background-color: color-mix(in srgb, currentColor 6%, transparent);
+  background-color: color-mix(in srgb, currentColor 7%, transparent);
 }
 
-.mfd-clock {
-  padding-top: 4px;
-  border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-  font-size: 16px;
+.mfd-bottom {
+  padding: 0 4px;
 }
 
-.mfd-clock-tag {
-  font-size: 10px;
-  opacity: 0.75;
-}
-
-/* The SHIFT label: the lit colour on a dark plate, inside the bezel. */
-.mfd-shift {
-  margin: 6px 12px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-family: sans-serif;
-  font-size: 9px;
+.mfd-time {
+  font-size: 40px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  color: color-mix(in srgb, var(--green-1) 45%, var(--yellow-1));
-  background-color: var(--dark-4);
+  letter-spacing: 0.04em;
+}
+
+.mfd-half {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mfd-date {
+  font-size: 22px;
+  letter-spacing: 0.06em;
 }

@@ -29,9 +29,13 @@ use crate::profile::editor::EditorState;
 use crate::profile::mfd::{self, LineSource, ShownClock, TextInfo};
 use crate::profile::{MfdLineSource, ProfileKind};
 use crate::widgets::brightness_at;
+use crate::widgets::mfd_display::DateArea;
 
 /// How long after a minute boundary the display ticks, so the system clock is surely past it.
 const TICK_SLACK: Duration = Duration::from_millis(50);
+
+/// How long the date area shows the number of a clock just picked, as the device does.
+const CLOCK_FLASH: Duration = Duration::from_secs(3);
 
 /// The widgets of one MFD line.
 #[derive(Debug)]
@@ -91,6 +95,8 @@ mod imp {
         pub(super) zone: RefCell<Option<TimeZone>>,
         /// The timer of the next tick, while the editor is mapped.
         pub(super) tick: RefCell<Option<glib::SourceId>>,
+        /// The timer that ends the flash of a picked clock's number in the date area.
+        pub(super) flash: RefCell<Option<glib::SourceId>>,
         /// Set while the editor shows a state itself, so the change is not taken as the user's.
         pub(super) syncing: Cell<bool>,
         /// Set while the editor inserts the part of a typed text that fits.
@@ -268,7 +274,7 @@ impl MfdEditor {
                     .find(|clock| name.as_deref() == Some(clock.number().to_string().as_str()));
                 if let Some(clock) = picked {
                     editor.imp().clock.set(clock);
-                    editor.refresh_display();
+                    editor.flash_clock_number();
                 }
             }
         ));
@@ -351,9 +357,35 @@ impl MfdEditor {
         let Some(app) = crate::widgets::app_of(self) else {
             return;
         };
+        let date_area = if imp.flash.borrow().is_some() {
+            DateArea::ClockNumber
+        } else {
+            DateArea::Date
+        };
         if let Some(preview) = app.mfd_preview(imp.clock.get(), SystemClock.now(), &zone) {
-            imp.display.show(&preview);
+            imp.display.show(&preview, date_area);
         }
+    }
+
+    /// Shows the number of the clock just picked in the date area for a moment, then the date
+    /// again.
+    fn flash_clock_number(&self) {
+        let source = glib::timeout_add_local_once(
+            CLOCK_FLASH,
+            glib::clone!(
+                #[weak(rename_to = editor)]
+                self,
+                move || {
+                    // The timer has fired: it is no longer there to remove.
+                    editor.imp().flash.take();
+                    editor.refresh_display();
+                }
+            ),
+        );
+        if let Some(previous) = self.imp().flash.replace(Some(source)) {
+            previous.remove();
+        }
+        self.refresh_display();
     }
 
     /// Reads the system time zone off the main thread, shows the display and, while the editor is

@@ -17,6 +17,7 @@
     <!-- Icons under <resource-base-path>/icons join the icon theme, so the symbolic icon resolves
          by its base name in every profile and uninstalled under `meson devenv`. -->
     <file compressed="true" preprocess="xml-stripblanks" alias="icons/scalable/actions/com.leinardi.gx52-symbolic.svg">../icons/com.leinardi.gx52-symbolic.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="icons/scalable/actions/mfd-clock-symbolic.svg">icons/mfd-clock-symbolic.svg</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="metainfo.xml">@metainfo-file@</file>
   </gresource>
 </gresources>

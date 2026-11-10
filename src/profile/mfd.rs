@@ -230,24 +230,39 @@ impl Backlight {
 /// What the simulated display shows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct MfdPreview {
+    /// The mode the MODE area lights: the selector's position, which the device shows by itself;
+    /// `None` while it is unknown or no device is connected.
+    pub(crate) mode: Option<Mode>,
+    /// Whether SHIFT is lit.
+    pub(crate) shift: bool,
     /// The three lines, 16 characters each, as the MFD draws them.
     pub(crate) lines: [String; MFD_LINES],
-    /// The time of the clock shown.
-    pub(crate) clock: String,
-    /// The number of the clock shown when it is not clock 1.
-    pub(crate) clock_tag: Option<u8>,
+    /// The time of the clock shown: `13:05`, or `1:05` in 12 h.
+    pub(crate) time: String,
+    /// `AM` or `PM` in 12 h, as the MFD draws it next to the time.
+    pub(crate) half: Option<&'static str>,
     /// The date, with dots.
     pub(crate) date: String,
-    /// Whether SHIFT is shown.
-    pub(crate) shift: bool,
     /// How lit the display is.
     pub(crate) backlight: Backlight,
     /// The clock shown.
-    shown_clock: ShownClock,
+    pub(crate) shown_clock: ShownClock,
+}
+
+impl MfdPreview {
+    /// What the date area shows for a moment after another clock is picked, as the device does
+    /// when Start/Stop cycles the clocks: the clock's number, where the date was.
+    pub(crate) fn clock_flash(&self) -> String {
+        format!(
+            "{:<width$}",
+            format!(" {}", self.shown_clock.number()),
+            width = self.date.chars().count()
+        )
+    }
 }
 
 /// What the MFD of a `device_type` device shows for `state` at `now`, with `local` as the system
-/// time zone and `shown_clock` in the clock area.
+/// time zone, `shown_clock` in the clock area and the mode selector at `selector`.
 ///
 /// Built from the desired state the device gets, so the display shows exactly what is sent: the
 /// converted lines, and the time of clock 2 or 3 as clock 1's plus the offset sent.
@@ -258,6 +273,7 @@ pub(crate) struct MfdPreview {
 pub(crate) fn preview(
     state: &DeviceState,
     device_type: DeviceType,
+    selector: Option<Mode>,
     shown_clock: ShownClock,
     now: Timestamp,
     local: &TimeZone,
@@ -275,45 +291,47 @@ pub(crate) fn preview(
             state.clock3.h24,
         ),
     };
+    let (time, half) = clock_text(clock1, offset, h24);
     let date = clock::date_fields(now, local, clock1_source, state.date_format)?;
     Ok(MfdPreview {
+        mode: selector,
+        shift: device_type.has_shift() && state.shift,
         lines: state
             .mfd_lines
             .map(|line| format!("{:<width$}", line.preview(), width = LINE_BYTES)),
-        clock: clock_text(clock1, offset, h24),
-        clock_tag: (shown_clock != ShownClock::One).then_some(shown_clock.number()),
+        time,
+        half,
         date: format!(
             "{:02}.{:02}.{:02}",
             date.first(),
             date.second(),
             date.third()
         ),
-        shift: device_type.has_shift() && state.shift,
         backlight: Backlight::of(state.mfd_brightness),
         shown_clock,
     })
 }
 
-/// The time `offset` minutes from `clock1`, as the MFD draws it: `13:05` in 24 h, `1:05 PM` in
-/// 12 h.
-fn clock_text(clock1: ClockTime, offset: i16, h24: bool) -> String {
+/// The time `offset` minutes from `clock1`, as the MFD draws it: `13:05` in 24 h, `1:05` and
+/// `PM` in 12 h.
+fn clock_text(clock1: ClockTime, offset: i16, h24: bool) -> (String, Option<&'static str>) {
     let minutes = (i32::from(clock1.hour()) * 60 + i32::from(clock1.minute()) + i32::from(offset))
         .rem_euclid(DAY_MINUTES);
     let (hour, minute) = (minutes / 60, minutes % 60);
     if h24 {
-        format!("{hour:02}:{minute:02}")
+        (format!("{hour:02}:{minute:02}"), None)
     } else {
         let half = if hour < 12 { "AM" } else { "PM" };
         let hour = match hour % 12 {
             0 => 12,
             hour => hour,
         };
-        format!("{hour}:{minute:02} {half}")
+        (format!("{hour}:{minute:02}"), Some(half))
     }
 }
 
-/// The accessible label of the display: "Simulated MFD: GX52, Fire, blank; clock 1 12:45, date
-/// 09.11.26".
+/// The accessible label of the display: "Simulated MFD: mode 2, SHIFT on; GX52, Fire, blank;
+/// clock 1 12:45, date 09.11.26".
 pub(crate) fn accessible_label(preview: &MfdPreview) -> String {
     let lines: Vec<String> = preview
         .lines
@@ -323,13 +341,39 @@ pub(crate) fn accessible_label(preview: &MfdPreview) -> String {
             text => text.to_owned(),
         })
         .collect();
-    // Translators: {lines} lists the three lines of the joystick's display, {number} is the clock
-    // shown (1, 2 or 3), {time} its time and {date} the date.
-    gettext("Simulated MFD: {lines}; clock {number} {time}, date {date}")
+    let time = match preview.half {
+        Some(half) => format!("{} {half}", preview.time),
+        None => preview.time.clone(),
+    };
+    let mut indicators = Vec::new();
+    if let Some(mode) = preview.mode {
+        // Translators: the mode lit on the joystick's display; {number} is 1, 2 or 3.
+        indicators.push(gettext("mode {number}").replace("{number}", &mode_number(mode)));
+    }
+    if preview.shift {
+        indicators.push(gettext("SHIFT on"));
+    }
+    let label = if indicators.is_empty() {
+        // Translators: {lines} lists the three lines of the joystick's display, {number} is the
+        // clock shown (1, 2 or 3), {time} its time and {date} the date.
+        gettext("Simulated MFD: {lines}; clock {number} {time}, date {date}")
+    } else {
+        // Translators: {indicators} lists what the joystick's display lights ("mode 2, SHIFT
+        // on"), {lines} its three lines, {number} the clock shown (1, 2 or 3), {time} its time
+        // and {date} the date.
+        gettext("Simulated MFD: {indicators}; {lines}; clock {number} {time}, date {date}")
+            .replace("{indicators}", &indicators.join(", "))
+    };
+    label
         .replace("{lines}", &lines.join(", "))
         .replace("{number}", &preview.shown_clock.number().to_string())
-        .replace("{time}", &preview.clock)
+        .replace("{time}", &time)
         .replace("{date}", &preview.date)
+}
+
+/// The number of `mode`, as the MODE area draws it.
+pub(crate) fn mode_number(mode: Mode) -> String {
+    (super::mode_index(mode) + 1).to_string()
 }
 
 /// Which set of mode settings of a profile is edited.
