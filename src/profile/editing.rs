@@ -37,10 +37,6 @@ impl EditingMode {
 
     /// Picks `mode` in the bar while the selector is at `active`. Picking the mode the selector
     /// shows anyway drops the pick, so the selector takes over again.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the LED editor of the next commit uses it")
-    )]
     pub(crate) fn pick(&mut self, mode: Mode, active: Option<Mode>) {
         self.picked = (mode != active.unwrap_or(Mode::One)).then_some(mode);
     }

@@ -2,6 +2,9 @@
 # (output: '.' can race the gresource step).
 blueprint_files = [
     'ui/device-footer.blp',
+    'ui/led-button.blp',
+    'ui/led-editor.blp',
+    'ui/mode-bar.blp',
     'ui/profile-row.blp',
     'ui/shortcuts-dialog.blp',
     'ui/window.blp',

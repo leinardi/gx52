@@ -252,10 +252,6 @@ impl ModeSets {
     }
 
     /// The set the device shows in `mode`, to edit.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the LED editor of the next commit uses it")
-    )]
     pub(crate) fn for_mode_mut(&mut self, mode: Mode) -> &mut ModeSettings {
         match self {
             Self::Single(settings) => settings,

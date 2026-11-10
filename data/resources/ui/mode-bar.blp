@@ -1,0 +1,54 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52ModeBar: Box {
+  orientation: vertical;
+  spacing: 6;
+
+  Box {
+    spacing: 12;
+
+    Label {
+      label: _("Editing mode");
+
+      styles [
+        "heading",
+      ]
+    }
+
+    Adw.ToggleGroup toggles {
+      accessibility {
+        label: _("Editing mode");
+      }
+
+      Adw.Toggle {
+        name: "1";
+        label: "1";
+        tooltip: _("Mode 1");
+      }
+
+      Adw.Toggle {
+        name: "2";
+        label: "2";
+        tooltip: _("Mode 2");
+      }
+
+      Adw.Toggle {
+        name: "3";
+        label: "3";
+        tooltip: _("Mode 3");
+      }
+    }
+  }
+
+  Label {
+    label: _("The mode selector on the stick picks the mode.");
+    xalign: 0;
+    wrap: true;
+
+    styles [
+      "caption",
+      "dim-label",
+    ]
+  }
+}

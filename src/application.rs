@@ -620,7 +620,6 @@ impl Application {
 
     /// Marks the active profile in the profile list, with the mode shown, without touching the
     /// list itself.
-    #[expect(dead_code, reason = "the LED editor of the next commit uses it")]
     fn update_markers(&self) {
         let objects: Vec<ProfileObject> = self
             .profile_list()
@@ -649,7 +648,6 @@ impl Application {
     }
 
     /// Shows `mode`'s settings on the device and in the editor until the selector moves.
-    #[expect(dead_code, reason = "the LED editor of the next commit uses it")]
     pub(crate) fn pick_editing_mode(&self, mode: Mode) {
         let imp = self.imp();
         let mut editing = imp.editing_mode.get();

@@ -16,7 +16,22 @@
 //! The widgets of the main window.
 
 mod device_footer;
+mod led_button;
+mod led_editor;
+mod mode_bar;
 mod profile_row;
 
+use gtk::prelude::*;
+
 pub(crate) use self::device_footer::DeviceFooter;
+pub(crate) use self::led_button::LedButton;
+pub(crate) use self::led_editor::LedEditor;
+pub(crate) use self::mode_bar::ModeBar;
 pub(crate) use self::profile_row::{ProfileRow, RowAction};
+use crate::application::Application;
+use crate::window::Window;
+
+/// The application of the window `widget` is in.
+fn app_of(widget: &impl IsA<gtk::Widget>) -> Option<Application> {
+    widget.root().and_downcast::<Window>()?.app()
+}

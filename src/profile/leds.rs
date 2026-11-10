@@ -18,8 +18,6 @@
 //!
 //! Plain Rust: the widgets only apply a [`LedView`], so the rules are tested here.
 
-#![expect(dead_code, reason = "the LED editor of the next commit uses it")]
-
 use gettextrs::gettext;
 use x52::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
 use x52::input::Mode;

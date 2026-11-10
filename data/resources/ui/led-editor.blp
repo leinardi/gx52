@@ -1,0 +1,70 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52LedEditor: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Adw.Clamp {
+      maximum-size: 760;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 24;
+        margin-top: 24;
+        margin-bottom: 36;
+        margin-start: 12;
+        margin-end: 12;
+
+        $GX52ModeBar mode_bar {}
+
+        Adw.WrapBox cards {
+          child-spacing: 12;
+          line-spacing: 12;
+          justify: fill;
+        }
+
+        Adw.PreferencesGroup group {
+          Adw.ActionRow {
+            title: _("Brightness");
+
+            [suffix]
+            Scale brightness_scale {
+              width-request: 200;
+              valign: center;
+              digits: 0;
+              draw-value: false;
+
+              adjustment: Adjustment {
+                lower: 0;
+                upper: 128;
+                step-increment: 1;
+                page-increment: 16;
+              };
+
+              accessibility {
+                label: _("LED brightness");
+              }
+            }
+
+            [suffix]
+            Label brightness_value {
+              width-chars: 3;
+              xalign: 1;
+
+              styles [
+                "numeric",
+                "dim-label",
+              ]
+            }
+          }
+
+          Adw.SwitchRow blink_row {
+            title: _("Blink");
+            subtitle: _("The i and POV 1 LEDs blink");
+          }
+        }
+      };
+    };
+  };
+}

@@ -1,0 +1,45 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52LedButton: Adw.Bin {
+  halign: center;
+
+  child: Box {
+    MenuButton menu_button {
+      // An empty child: without one the button shows a drop-down arrow.
+      child: Box {};
+
+      popover: Popover popover {
+        child: Box {
+          orientation: vertical;
+          spacing: 10;
+          margin-top: 6;
+          margin-bottom: 6;
+          margin-start: 6;
+          margin-end: 6;
+
+          Label title {
+            styles [
+              "heading",
+            ]
+          }
+
+          Adw.ToggleGroup toggles {}
+        };
+      };
+
+      styles [
+        "led",
+      ]
+    }
+
+    // POV 1: fixed, so it opens nothing; focusable so its tooltip and label can be reached.
+    Button fixed_button {
+      visible: false;
+
+      styles [
+        "led",
+      ]
+    }
+  };
+}

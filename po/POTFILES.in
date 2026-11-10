@@ -2,6 +2,8 @@
 data/com.leinardi.gx52.desktop.in.in
 data/com.leinardi.gx52.gschema.xml.in
 data/com.leinardi.gx52.metainfo.xml.in.in
+data/resources/ui/led-editor.blp
+data/resources/ui/mode-bar.blp
 data/resources/ui/profile-row.blp
 data/resources/ui/shortcuts-dialog.blp
 data/resources/ui/window.blp
@@ -14,5 +16,6 @@ src/profile/leds.rs
 src/profile/legacy.rs
 src/profile/mod.rs
 src/profile/schema.rs
+src/widgets/led_button.rs
 src/widgets/profile_row.rs
 src/window.rs

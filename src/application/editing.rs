@@ -16,8 +16,6 @@
 //! The edits of the profile editor: they change the active profile's settings in the mode shown,
 //! go to the device at once and are saved after the debounce (docs/ui.md, "Profile editor").
 
-#![expect(dead_code, reason = "the LED editor of the next commit uses it")]
-
 use adw::subclass::prelude::*;
 use x52::command::Brightness;
 

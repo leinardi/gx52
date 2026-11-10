@@ -302,8 +302,13 @@ overrides ───────────────────────�
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
   - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode
-    bar, shown until the selector moves ([ui.md](ui.md#mode-bar)), live edits not yet saved and,
-    in 1.x, MFD pages and D-Bus requests.
+    bar ([ui.md](ui.md#mode-bar)), live edits not yet saved and, in 1.x, MFD pages and D-Bus
+    requests. The **mode shown** is the picked mode, else the active mode, else mode 1
+    (`src/profile/editing.rs`); the pick is dropped when the selector moves, the active profile
+    changes or becomes single, or the device goes or is selected again. The device, the editor and
+    the profile list's badges all show the mode shown; the sidebar footer keeps the selector's
+    mode. The editor's edits change the active profile's settings of the mode shown, go to the
+    device at once and are saved after the debounce (`src/application/editing.rs`).
 - It is **pushed to the writer** whenever an input changes. The writer decides what to send (only
   changes, or everything on connect).
 - The **UI binds to GObject properties**: a device object (access state, device type, active mode,

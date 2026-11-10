@@ -43,7 +43,7 @@ mod imp {
 
     use crate::config;
     use crate::profile::ProfileKind;
-    use crate::widgets::{DeviceFooter, RowAction};
+    use crate::widgets::{DeviceFooter, LedEditor, RowAction};
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
@@ -68,6 +68,8 @@ mod imp {
         #[template_child]
         pub view_stack: TemplateChild<adw::ViewStack>,
         #[template_child]
+        pub led_editor: TemplateChild<LedEditor>,
+        #[template_child]
         pub failed_page: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub status_page: TemplateChild<adw::StatusPage>,
@@ -89,6 +91,7 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             DeviceFooter::ensure_type();
+            LedEditor::ensure_type();
             klass.bind_template();
             klass.install_action(
                 "win.show-view",
@@ -521,6 +524,11 @@ impl Window {
                 Some(ProfileState::Usable) | None => "editor",
             }
         };
+        if page == "editor"
+            && let Some(state) = app.editor_state()
+        {
+            imp.led_editor.show(&state);
+        }
         imp.content_stack.set_visible_child_name(page);
         imp.x52d_banner
             .set_revealed(status.x52d_running && page == "editor");
@@ -688,7 +696,7 @@ impl Window {
         self.add_action_entries([import, export]);
     }
 
-    fn app(&self) -> Option<Application> {
+    pub(crate) fn app(&self) -> Option<Application> {
         self.application()?.downcast::<Application>().ok()
     }
 
