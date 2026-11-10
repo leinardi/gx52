@@ -292,6 +292,27 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    2026-11-02 pass: keyboard only, the narrowest window, light and dark style. The Orca check
    ("<LED> LED: <state>"), optional in hands-on.md, is required here because the editor is the
    app's main custom widget.
+
+   Results on 2026-11-10:
+
+   - **Editor:** the mode shown is the mode picked in the mode bar, else the selector's, else
+     mode 1; the device, the editor and the row's badges follow it, the footer keeps the
+     selector's. The pick is dropped when the selector moves, the active profile changes or
+     becomes single, or the device goes. The LED catalog, the card layout and what each button
+     shows are plain Rust with unit tests (brightness `0` and back, blink only while lit). Where
+     S7 and the prototype differ, the prototype won and ui.md says so: the LED colours, the
+     brightness `0` description, the blink animation.
+   - **Hands-on, X52 Pro, Devel build on the host:** every check of the plan as expected: each
+     LED and state on the device at once, POV 1 opens nothing; brightness `0` and back, Blink in
+     the editor and on the device; the mode bar, picks and the selector taking over; edits after
+     a restart; keyboard only; 360×294; light and dark style; Orca; the X52 note. Two layout
+     fixes came out of it: the last line of cards (a lone Throttle card when narrow, all three
+     when wide) did not fill the width, and POV 1 logged an Adwaita critical on every refresh.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: choosing the
+     current state closes the popover, an edit that changes nothing or cannot be stored puts the
+     widgets back, the hover ring on lit LEDs, a pick left from another profile ignored while the
+     active one is single. Not changed: the badges stay empty until the selector's mode is known
+     (as before; the device reports it on connect).
 3. **(code) MFD**: the simulated display with live values and the clock switcher, the line sources,
    brightness and shift. Done when: DW, plus text with characters outside the table shows the
    fallback in the display and on the device, and each dynamic source follows the device (profile,
