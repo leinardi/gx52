@@ -19,22 +19,14 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::glib;
-use x52::command::Brightness;
 
 use crate::profile::ProfileKind;
-use crate::profile::leds::{self, Card, EditorState, PLACES};
-use crate::widgets::LedButton;
+use crate::profile::editor::EditorState;
+use crate::profile::leds::{self, Card, PLACES};
+use crate::widgets::{LedButton, brightness_at};
 
 /// The width of a grid column of a card, from the prototype.
 const COLUMN_WIDTH: i32 = 64;
-
-/// The level of the brightness scale at `value`.
-fn brightness_at(value: f64) -> Option<Brightness> {
-    let value = value.round();
-    // The scale is bounded to 0–128: the level whose value it is.
-    let level = (0..=Brightness::MAX).find(|level| f64::from(*level) >= value)?;
-    Brightness::new(level).ok()
-}
 
 mod imp {
     use std::cell::{Cell, RefCell};

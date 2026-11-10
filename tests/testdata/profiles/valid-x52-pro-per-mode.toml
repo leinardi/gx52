@@ -63,7 +63,7 @@ i = "off"
 
 [mode_2.mfd]
 lines = [
-  { source = "mode" },
+  { source = "last_button" },
   { source = "empty" },
   { source = "text", text = "Ready" },
 ]

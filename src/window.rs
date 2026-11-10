@@ -43,7 +43,7 @@ mod imp {
 
     use crate::config;
     use crate::profile::ProfileKind;
-    use crate::widgets::{DeviceFooter, LedEditor, RowAction};
+    use crate::widgets::{DeviceFooter, LedEditor, MfdEditor, RowAction};
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
@@ -70,6 +70,8 @@ mod imp {
         #[template_child]
         pub led_editor: TemplateChild<LedEditor>,
         #[template_child]
+        pub mfd_editor: TemplateChild<MfdEditor>,
+        #[template_child]
         pub failed_page: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub status_page: TemplateChild<adw::StatusPage>,
@@ -92,6 +94,7 @@ mod imp {
         fn class_init(klass: &mut Self::Class) {
             DeviceFooter::ensure_type();
             LedEditor::ensure_type();
+            MfdEditor::ensure_type();
             klass.bind_template();
             klass.install_action(
                 "win.show-view",
@@ -239,6 +242,11 @@ impl Window {
         self.update_row_moves();
         self.select_current();
         self.show_selected();
+    }
+
+    /// Shows the MFD display again, and nothing else: the dynamic lines changed.
+    pub(crate) fn refresh_mfd(&self) {
+        self.imp().mfd_editor.refresh_display();
     }
 
     /// Tells each row whether its profile can move up and down: only among the profiles other
@@ -528,6 +536,7 @@ impl Window {
             && let Some(state) = app.editor_state()
         {
             imp.led_editor.show(&state);
+            imp.mfd_editor.show(&state);
         }
         imp.content_stack.set_visible_child_name(page);
         imp.x52d_banner

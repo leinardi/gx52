@@ -295,10 +295,9 @@ overrides ───────────────────────�
     `push_desired_state`; the active id is resolved in `src/profile/active.rs`, the list order in
     `src/profile/order.rs`). It is logged only when the applied profile or mode changes;
   - the **MFD line sources**, resolved into three lines of text: custom text, the active profile's
-    name, the mode in effect (the active mode, or the mode-bar override below), the name of the most
-    recently pressed button that is still held (from the set of held buttons and POV 1 directions
-    above, the mode selector keys excluded), or empty. Every dynamic value is converted and cut to
-    16 bytes as [profiles.md](profiles.md#mfd-lines) says;
+    name, the name of the most recently pressed button that is still held (from the set of held
+    buttons and POV 1 directions above, the mode selector keys excluded), or empty. Every dynamic
+    value is converted and cut to 16 bytes as [profiles.md](profiles.md#mfd-lines) says;
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
   - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode
@@ -309,6 +308,14 @@ overrides ───────────────────────�
     the profile list's badges all show the mode shown; the sidebar footer keeps the selector's
     mode. The editor's edits change the active profile's settings of the mode shown, go to the
     device at once and are saved after the debounce (`src/application/editing.rs`).
+- The **MFD editor's simulated display** is built from the same desired state
+  (`src/profile/active.rs`, `state_for`, then `src/profile/mfd.rs`, `preview`), so it shows exactly
+  what is sent: the converted lines, the time of the clock shown as clock 1's plus the offset sent,
+  the date with dots. The device gets the connected type's state; the display resolves the shown
+  type, so it is there and follows edits with no device connected. Both take the dynamic MFD values
+  from one place, so online the display never disagrees with the device; a change of the held
+  button updates only the display, never the whole window. The display ticks at each minute
+  boundary while it is mapped, reading the system time zone with `gio::spawn_blocking`.
 - It is **pushed to the writer** whenever an input changes. The writer decides what to send (only
   changes, or everything on connect).
 - The **UI binds to GObject properties**: a device object (access state, device type, active mode,

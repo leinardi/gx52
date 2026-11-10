@@ -21,9 +21,11 @@
 //! profile until the profile comes back.
 
 use x52::device::DeviceType;
+use x52::input::Mode;
+use x52::state::DeviceState;
 
-use super::ProfileId;
 use super::store::ProfileStore;
+use super::{LiveValues, ProfileId};
 
 /// The `GSettings` key of `device_type`'s active profile.
 pub(crate) const fn settings_key(device_type: DeviceType) -> &'static str {
@@ -46,6 +48,24 @@ pub(crate) fn resolve(id: &str, device_type: DeviceType, store: &ProfileStore) -
                 .is_some_and(|loaded| loaded.profile.device_type == device_type)
         })
         .unwrap_or_else(|| ProfileId::default_for(device_type))
+}
+
+/// The desired state of `device_type`'s active profile in `mode`, from the setting's
+/// `active_entry`, with the dynamic MFD lines filled in from `live`; `None` when the profile is
+/// not usable.
+///
+/// Needs no device: the editor's preview resolves the shown type with it while no device is
+/// connected, and the device gets the connected type's state from it.
+pub(crate) fn state_for(
+    store: &ProfileStore,
+    active_entry: &str,
+    device_type: DeviceType,
+    mode: Mode,
+    live: &LiveValues,
+) -> Option<(ProfileId, DeviceState)> {
+    let id = resolve(active_entry, device_type, store);
+    let state = store.loaded(&id)?.profile.to_device_state(mode, live);
+    Some((id, state))
 }
 
 #[cfg(test)]

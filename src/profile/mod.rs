@@ -21,11 +21,13 @@
 
 pub(crate) mod active;
 pub(crate) mod editing;
+pub(crate) mod editor;
 pub(crate) mod exchange;
 pub(crate) mod files;
 pub(crate) mod leds;
 pub(crate) mod legacy;
 pub(crate) mod list;
+pub(crate) mod mfd;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod order;
@@ -53,6 +55,37 @@ use crate::config;
 
 /// The number of MFD lines a profile holds.
 pub(crate) const MFD_LINES: usize = MfdLine::ALL.len();
+
+/// The most characters a custom text line keeps as typed (docs/profiles.md, "MFD lines").
+///
+/// Combining marks take no byte on the MFD, so the 16 converted bytes alone would let a line grow
+/// without bound; this keeps a line, and the file holding it, small.
+pub(crate) const MFD_TEXT_MAX_CHARS: usize = 64;
+
+/// Why the text of a custom text line cannot be used.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub(crate) enum LineTextError {
+    /// More characters as typed than a line keeps.
+    #[error("the text is {0} characters as typed, more than the {MFD_TEXT_MAX_CHARS} of a line")]
+    TooManyCharacters(usize),
+    /// More bytes after conversion than an MFD line holds.
+    #[error(transparent)]
+    TooLong(#[from] x52::charset::TextTooLong),
+}
+
+/// The MFD text of a custom text line: at most [`MFD_TEXT_MAX_CHARS`] characters as typed and 16
+/// bytes after conversion.
+///
+/// # Errors
+///
+/// [`LineTextError`] when the text breaks either limit.
+pub(crate) fn line_text(text: &str) -> Result<MfdText, LineTextError> {
+    let chars = text.chars().count();
+    if chars > MFD_TEXT_MAX_CHARS {
+        return Err(LineTextError::TooManyCharacters(chars));
+    }
+    Ok(MfdText::new(text)?)
+}
 
 /// The id of a profile: the stem of its file name, stable for the profile's whole life.
 ///
@@ -175,8 +208,6 @@ pub(crate) enum MfdLineSource {
     Empty,
     /// The active profile's name.
     ProfileName,
-    /// The mode whose settings are on the device: "Mode 2".
-    Mode,
     /// The most recently pressed button that is still held.
     LastButton,
 }
@@ -291,24 +322,13 @@ pub(crate) const fn mode_index(mode: Mode) -> usize {
 }
 
 /// The values the dynamic MFD lines show, as the app knows them right now.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct LiveValues {
-    /// The mode a `mode` line shows.
-    pub(crate) mode_shown: Mode,
     /// The name of the most recently pressed button still held, if any.
     pub(crate) last_button: Option<String>,
 }
 
-impl Default for LiveValues {
-    fn default() -> Self {
-        Self {
-            mode_shown: Mode::One,
-            last_button: None,
-        }
-    }
-}
-
-/// The text a `mode` line shows for `mode`, translated.
+/// The name of `mode`, translated: "Mode 2".
 pub(crate) fn mode_text(mode: Mode) -> String {
     match mode {
         Mode::One => gettext("Mode 1"),
@@ -374,7 +394,7 @@ impl Profile {
         let builtin = DeviceState::default_for(self.device_type);
         let settings = self.settings_for(mode);
         let mfd_lines = settings.mfd_lines.each_ref().map(|line| match line {
-            MfdLineSource::Text(text) => MfdText::new(text).unwrap_or_else(|error| {
+            MfdLineSource::Text(text) => line_text(text).unwrap_or_else(|error| {
                 tracing::warn!(
                     "Profile {:?}: MFD line {text:?} not shown: {error}",
                     self.name
@@ -383,7 +403,6 @@ impl Profile {
             }),
             MfdLineSource::Empty => MfdText::EMPTY,
             MfdLineSource::ProfileName => MfdText::fit(&self.name),
-            MfdLineSource::Mode => MfdText::fit(&mode_text(live.mode_shown)),
             MfdLineSource::LastButton => live
                 .last_button
                 .as_deref()

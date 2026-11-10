@@ -86,3 +86,36 @@ fn the_settings_keys_follow_profiles_md() {
     assert_eq!(settings_key(DeviceType::X52Pro), "active-profile-x52-pro");
     assert_eq!(settings_key(DeviceType::X52), "active-profile-x52");
 }
+
+#[test]
+fn the_state_follows_edits_with_no_device() {
+    let (_dir, mut store) = store();
+    let live = LiveValues::default();
+    for (id, device_type) in [(PRO, DeviceType::X52Pro), (NON_PRO, DeviceType::X52)] {
+        let id = ProfileId::parse(id).unwrap();
+        let mut profile = store.loaded(&id).unwrap().profile.clone();
+        let settings = profile.settings.for_mode_mut(Mode::One);
+        settings.mfd_brightness = x52::command::Brightness::new(7).unwrap();
+        settings.mfd_lines[0] = crate::profile::MfdLineSource::ProfileName;
+        store.update(&id, profile.clone()).unwrap();
+
+        let (resolved, state) =
+            state_for(&store, id.as_str(), device_type, Mode::One, &live).unwrap();
+        assert_eq!(resolved, id, "{device_type}");
+        assert_eq!(state.mfd_brightness.level(), 7, "{device_type}");
+        assert_eq!(
+            state.mfd_lines[0],
+            x52::charset::MfdText::fit(&profile.name),
+            "{device_type}"
+        );
+    }
+}
+
+#[test]
+fn the_default_profile_has_a_state_without_its_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let (store, _) = ProfileStore::load(dir.path(), DefaultPersistence::MemoryOnly);
+    let live = LiveValues::default();
+    // The default profiles are in memory even with no file.
+    assert!(state_for(&store, "", DeviceType::X52Pro, Mode::One, &live).is_some());
+}

@@ -24,7 +24,6 @@ use std::fmt::{self, Write as _};
 
 use gettextrs::gettext;
 use toml::{Table, Value};
-use x52::charset::MfdText;
 use x52::clock::{Clock1Source, DateFormat, FixedOffset};
 use x52::command::Brightness;
 use x52::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
@@ -455,7 +454,7 @@ impl Reader {
             "text" => {
                 self.unknown_keys(table, key, &["source", "text"]);
                 let text = self.string(table, key, "text")?;
-                if let Err(error) = MfdText::new(text) {
+                if let Err(error) = super::line_text(text) {
                     self.problem(
                         &join(key, "text"),
                         ProblemKind::OutOfRange(error.to_string()),
@@ -466,7 +465,6 @@ impl Reader {
             }
             "empty" => MfdLineSource::Empty,
             "profile_name" => MfdLineSource::ProfileName,
-            "mode" => MfdLineSource::Mode,
             "last_button" => MfdLineSource::LastButton,
             _ => {
                 self.problem(&join(key, "source"), ProblemKind::UnknownValue(quoted(raw)));
@@ -639,7 +637,6 @@ fn line_table(line: &MfdLineSource) -> String {
         }
         MfdLineSource::Empty => "empty",
         MfdLineSource::ProfileName => "profile_name",
-        MfdLineSource::Mode => "mode",
         MfdLineSource::LastButton => "last_button",
     };
     format!("{{ source = {} }}", toml_string(source))

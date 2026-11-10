@@ -19,11 +19,10 @@
 //! Plain Rust: the widgets only apply a [`LedView`], so the rules are tested here.
 
 use gettextrs::gettext;
-use x52::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
-use x52::input::Mode;
+use x52::device::{BiColourLed, LedColour, SingleColourLed};
 use x52::state::Leds;
 
-use super::{ModeSettings, ProfileKind};
+use super::editor::EditorState;
 
 /// An LED the editor shows: the ten that can be set, and POV 1, fixed green.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -309,19 +308,6 @@ pub(crate) fn tooltip(led: EditorLed, choice: LedChoice) -> String {
     }
 }
 
-/// What the LED editor shows: the shown device type's active profile, in the mode shown.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct EditorState {
-    /// The device type of the profile.
-    pub(crate) device_type: DeviceType,
-    /// Whether the profile has a set of settings per mode.
-    pub(crate) kind: ProfileKind,
-    /// The mode shown.
-    pub(crate) mode: Mode,
-    /// The settings of that mode.
-    pub(crate) settings: ModeSettings,
-}
-
 impl EditorState {
     /// Whether the LEDs show as off.
     pub(crate) fn lighting(&self) -> Lighting {
@@ -394,14 +380,18 @@ mod tests {
     use std::collections::HashSet;
 
     use x52::command::Brightness;
+    use x52::device::DeviceType;
+    use x52::input::Mode;
 
     use super::*;
+    use crate::profile::{ModeSettings, ProfileId, ProfileKind};
 
     fn pro_state(level: u8, blink: bool) -> EditorState {
         let mut settings = ModeSettings::builtin(DeviceType::X52Pro);
         settings.led_brightness = Brightness::new(level).expect("a level within 0–128");
         settings.blink = blink;
         EditorState {
+            profile: ProfileId::default_for(DeviceType::X52Pro),
             device_type: DeviceType::X52Pro,
             kind: ProfileKind::Single,
             mode: Mode::One,

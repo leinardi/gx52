@@ -1,0 +1,119 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52MfdDisplay: Adw.Bin {
+  child: Box screen {
+    orientation: vertical;
+    spacing: 14;
+
+    styles [
+      "mfd",
+    ]
+
+    Box {
+      spacing: 6;
+
+      styles [
+        "mfd-mode-box",
+      ]
+
+      Box {
+        orientation: vertical;
+        spacing: 6;
+        hexpand: true;
+        halign: start;
+
+        Label {
+          label: "MODE";
+          xalign: 0;
+
+          styles [
+            "mfd-mode-label",
+          ]
+        }
+
+        Label shift {
+          label: "SHIFT";
+          halign: start;
+
+          styles [
+            "mfd-shift",
+          ]
+        }
+      }
+
+      Label mode_1 {
+        label: "1";
+
+        styles [
+          "mfd-mode-number",
+        ]
+      }
+
+      Label mode_2 {
+        label: "2";
+
+        styles [
+          "mfd-mode-number",
+        ]
+      }
+
+      Label mode_3 {
+        label: "3";
+
+        styles [
+          "mfd-mode-number",
+        ]
+      }
+    }
+
+    Box lines {
+      orientation: vertical;
+      spacing: 6;
+
+      styles [
+        "mfd-text",
+      ]
+    }
+
+    Box {
+      orientation: vertical;
+      spacing: 6;
+      // The time is centred on the whole width, the clock symbol at the start.
+      CenterBox {
+        styles [
+          "mfd-bottom",
+        ]
+
+        start-widget: Image {
+          icon-name: "mfd-clock-symbolic";
+          pixel-size: 30;
+        };
+
+        center-widget: Box {
+          Label time {
+            styles [
+              "mfd-time",
+            ]
+          }
+
+          Label half {
+            valign: start;
+
+            styles [
+              "mfd-half",
+            ]
+          }
+        };
+      }
+
+      Label date {
+        xalign: 1;
+
+        styles [
+          "mfd-date",
+        ]
+      }
+    }
+  };
+}

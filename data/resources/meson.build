@@ -4,6 +4,8 @@ blueprint_files = [
     'ui/device-footer.blp',
     'ui/led-button.blp',
     'ui/led-editor.blp',
+    'ui/mfd-display.blp',
+    'ui/mfd-editor.blp',
     'ui/mode-bar.blp',
     'ui/profile-row.blp',
     'ui/shortcuts-dialog.blp',

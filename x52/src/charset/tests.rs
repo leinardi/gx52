@@ -185,3 +185,33 @@ fn an_odd_length_line_is_padded_with_a_space() {
         .collect();
     assert_eq!(transfers, [(0xd9, 0), (0xd1, 0x2082)]);
 }
+
+#[test]
+fn substitutions_list_each_replaced_character_once_in_order() {
+    assert_eq!(
+        substitutions("Éjszakai repülő € ő ~"),
+        [('ő', 'o'), ('€', '?'), ('~', '?')]
+    );
+    assert_eq!(substitutions("GX52 Fire"), []);
+    assert_eq!(substitutions(""), []);
+}
+
+#[test]
+fn substitutions_follow_composition() {
+    // An e with a combining acute composes to é, which has a glyph.
+    assert_eq!(substitutions("e\u{301}"), []);
+    // An o with a combining double acute composes to ő, which shows as o.
+    assert_eq!(substitutions("o\u{30b}"), [('ő', 'o')]);
+    // A mark left over after composition shows nothing and is not a substitution of its own.
+    assert_eq!(substitutions("q\u{303}"), []);
+}
+
+#[test]
+fn substitutions_match_what_the_mfd_shows() {
+    let text = "Ünïcödé ~ ő €";
+    let mut shown: String = text.nfc().collect();
+    for (character, replacement) in substitutions(text) {
+        shown = shown.replace(character, &replacement.to_string());
+    }
+    assert_eq!(decode(&encode(text)), shown);
+}

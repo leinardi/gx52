@@ -24,6 +24,8 @@ use std::path::PathBuf;
 use adw::{prelude::*, subclass::prelude::*};
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use jiff::Timestamp;
+use jiff::tz::TimeZone;
 use x52::clock::SystemClock;
 use x52::device::DeviceType;
 use x52::input::{HeldInputs, Mode};
@@ -34,6 +36,7 @@ use crate::device::status::DeviceStatus;
 use crate::device::{DeviceEvent, DeviceService, access, names};
 use crate::model::{ProfileObject, splice};
 use crate::profile::legacy::{self, FileWriter};
+use crate::profile::mfd::{self, MfdPreview, ShownClock};
 use crate::profile::startup::{self, ImportOutcome};
 use crate::profile::store::{Entry, LoadReport, ProfileStore};
 use crate::profile::{
@@ -98,6 +101,7 @@ mod imp {
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
     use crate::profile::editing::EditingMode;
+    use crate::profile::mfd::TextDrafts;
     use crate::profile::removals::Removals;
     use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
@@ -154,6 +158,8 @@ mod imp {
         /// Whether the window closed or the session is ending with writes pending, until the
         /// queue is idle or a window opens again: no dialog asks anything meanwhile.
         pub(crate) draining: Cell<bool>,
+        /// The text of the custom text MFD lines switched to another source this session.
+        pub(crate) text_drafts: RefCell<TextDrafts>,
     }
 
     #[glib::object_subclass]
@@ -774,7 +780,8 @@ impl Application {
     }
 
     /// Applies `change` to the held inputs; pushes the state when the last held input changed and
-    /// the device shows it. Never logs: this runs per input event.
+    /// the device shows it, and the editor's display follows. Never logs: this runs per input
+    /// event.
     fn change_held(&self, change: impl FnOnce(&mut HeldInputs)) {
         let imp = self.imp();
         let changed = {
@@ -785,6 +792,60 @@ impl Application {
         };
         if changed && imp.shows_last_button.get() {
             self.push_desired_state();
+            self.update_mfd_previews();
+        }
+    }
+
+    /// The values the dynamic MFD lines show.
+    fn live_values(&self) -> LiveValues {
+        LiveValues {
+            last_button: self.imp().held.borrow().last().map(names::input_name),
+        }
+    }
+
+    /// The desired state of `device_type`'s active profile in `mode`, once the profiles are
+    /// loaded; `None` when the profile is not usable.
+    fn desired_state(
+        &self,
+        device_type: DeviceType,
+        mode: Mode,
+    ) -> Option<(ProfileId, DeviceState)> {
+        let imp = self.imp();
+        let profiles = imp.profiles.borrow();
+        let settings = imp.settings.get()?;
+        active::state_for(
+            profiles.as_ref()?,
+            &settings.string(active::settings_key(device_type)),
+            device_type,
+            mode,
+            &self.live_values(),
+        )
+    }
+
+    /// What the editor's simulated MFD shows at `now`, with `local` as the system time zone and
+    /// `shown_clock` in the clock area: the shown device type's active profile in the mode shown,
+    /// with or without a device, as the device shows it.
+    pub(crate) fn mfd_preview(
+        &self,
+        shown_clock: ShownClock,
+        now: Timestamp,
+        local: &TimeZone,
+    ) -> Option<MfdPreview> {
+        let device_type = self.shown_device_type()?;
+        let (_, state) = self.desired_state(device_type, self.shown_mode())?;
+        // The MODE area shows the selector's position, which the device lights by itself.
+        let selector = self.imp().active_mode.get();
+        mfd::preview(&state, device_type, selector, shown_clock, now, local)
+            .inspect_err(|error| tracing::warn!("Cannot show the MFD clocks: {error}"))
+            .ok()
+    }
+
+    /// Shows the dynamic MFD lines again in every window's display, and nothing else.
+    fn update_mfd_previews(&self) {
+        for window in self.windows() {
+            if let Ok(window) = window.downcast::<Window>() {
+                window.refresh_mfd();
+            }
         }
     }
 
@@ -802,31 +863,16 @@ impl Application {
             return;
         };
         let mode = self.shown_mode();
-        imp.shows_last_button.set(false);
-        let profiles = imp.profiles.borrow();
-        let resolved = match (profiles.as_ref(), imp.settings.get()) {
-            (Some(store), Some(settings)) => {
-                let id = active::resolve(
-                    &settings.string(active::settings_key(device_type)),
-                    device_type,
-                    store,
-                );
-                store.loaded(&id).map(|loaded| {
-                    let live = LiveValues {
-                        mode_shown: mode,
-                        last_button: imp.held.borrow().last().map(names::input_name),
-                    };
-                    let shows_last_button = loaded
-                        .profile
-                        .settings_for(mode)
-                        .mfd_lines
-                        .contains(&MfdLineSource::LastButton);
-                    imp.shows_last_button.set(shows_last_button);
-                    (id, loaded.profile.to_device_state(mode, &live))
-                })
-            }
-            _ => None,
-        };
+        let resolved = self.desired_state(device_type, mode);
+        let shows_last_button = resolved.as_ref().is_some_and(|(id, _)| {
+            self.profile(id).is_some_and(|profile| {
+                profile
+                    .settings_for(mode)
+                    .mfd_lines
+                    .contains(&MfdLineSource::LastButton)
+            })
+        });
+        imp.shows_last_button.set(shows_last_button);
         let state = match resolved {
             Some((id, state)) => {
                 let applied = (id, mode);

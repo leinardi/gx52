@@ -1,0 +1,119 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52MfdEditor: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Adw.Clamp {
+      maximum-size: 760;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 24;
+        margin-top: 24;
+        margin-bottom: 36;
+        margin-start: 12;
+        margin-end: 12;
+
+        $GX52ModeBar mode_bar {}
+
+        Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Adw.Clamp {
+            maximum-size: 368;
+            tightening-threshold: 368;
+
+            child: $GX52MfdDisplay display {};
+          }
+
+          Adw.ToggleGroup clock_toggles {
+            halign: center;
+
+            accessibility {
+              label: _("Clock shown on the simulated display");
+            }
+
+            Adw.Toggle {
+              name: "1";
+              label: "1";
+              tooltip: _("Clock 1");
+            }
+
+            Adw.Toggle {
+              name: "2";
+              label: "2";
+              tooltip: _("Clock 2");
+            }
+
+            Adw.Toggle {
+              name: "3";
+              label: "3";
+              tooltip: _("Clock 3");
+            }
+          }
+
+          Label {
+            label: _(
+              "Clock 1 is shown by default. Start/Stop and Reset on the throttle cycle the clocks on the device."
+            );
+            wrap: true;
+            justify: center;
+
+            styles [
+              "caption",
+              "dim-label",
+            ]
+          }
+        }
+
+        Adw.PreferencesGroup lines_group {
+          title: _("Lines");
+        }
+
+        Adw.PreferencesGroup {
+          Adw.ActionRow {
+            title: _("Brightness");
+
+            [suffix]
+            Scale brightness_scale {
+              width-request: 200;
+              valign: center;
+              digits: 0;
+              draw-value: false;
+
+              adjustment: Adjustment {
+                lower: 0;
+                upper: 128;
+                step-increment: 1;
+                page-increment: 16;
+              };
+
+              accessibility {
+                label: _("MFD brightness");
+              }
+            }
+
+            [suffix]
+            Label brightness_value {
+              width-chars: 3;
+              xalign: 1;
+
+              styles [
+                "numeric",
+                "dim-label",
+              ]
+            }
+          }
+
+          Adw.SwitchRow shift_row {
+            title: _("Shift");
+            subtitle: _("Show SHIFT on the display");
+          }
+        }
+      };
+    };
+  };
+}
