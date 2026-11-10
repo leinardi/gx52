@@ -1,0 +1,1511 @@
+<!doctype html>
+<meta charset="utf-8"><style data-dc-design-system-vars>@layer{:root{--window-bg-color:#fafafb;--window-fg-color:#000006cc;--view-bg-color:#ffffff;--view-fg-color:#000006cc;--headerbar-bg-color:#ffffff;--headerbar-fg-color:#000006cc;--headerbar-border-color:#000006cc;--headerbar-backdrop-color:#fafafb;--headerbar-shade-color:#0000061f;--headerbar-darker-shade-color:#0000061f;--sidebar-bg-color:#ebebed;--sidebar-fg-color:#000006cc;--sidebar-backdrop-color:#f2f2f4;--sidebar-border-color:#00000612;--sidebar-shade-color:#00000612;--secondary-sidebar-bg-color:#f3f3f5;--secondary-sidebar-fg-color:#000006cc;--secondary-sidebar-backdrop-color:#f6f6fa;--secondary-sidebar-border-color:#00000612;--secondary-sidebar-shade-color:#00000612;--card-bg-color:#ffffff;--card-fg-color:#000006cc;--card-shade-color:#00000612;--dialog-bg-color:#fafafb;--dialog-fg-color:#000006cc;--popover-bg-color:#ffffff;--popover-fg-color:#000006cc;--popover-shade-color:#00000612;--overview-bg-color:#f3f3f5;--overview-fg-color:#000006cc;--thumbnail-bg-color:#ffffff;--thumbnail-fg-color:#000006cc;--active-toggle-bg-color:#ffffff;--active-toggle-fg-color:#000006cc;--shade-color:#00000612;--dialog-dimming-color:#00000624;--window-outline-color:#ffffff12;--scrollbar-outline-color:#ffffff;--accent-bg-color:#3584e4;--accent-fg-color:#ffffff;--accent-color:#0461be;--accent-blue:#3584e4;--destructive-bg-color:#e01b24;--destructive-fg-color:#ffffff;--destructive-color:#c30000;--success-bg-color:#2ec27e;--success-fg-color:#ffffff;--success-color:#007c3d;--warning-bg-color:#e5a50a;--warning-fg-color:#000000cc;--warning-color:#905400;--error-bg-color:#e01b24;--error-fg-color:#ffffff;--error-color:#c30000;--border-color:#0000061f;--dimmed-fg-color:#00000670;--button-bg-color:#00000614;--destructive-button-bg-color:#c3000026;--focus-ring-color:#0461be80;--toast-bg-color:#505053;--toast-fg-color:#ffffff;--button-hover-bg-color:#0000061f;--button-active-bg-color:#0000063d;--button-checked-hover-bg-color:#00000647;--button-checked-active-bg-color:#00000652;--flat-hover-bg-color:#0000060e;--flat-active-bg-color:#00000621;--fill-hover-overlay-color:#ffffff1a;--fill-active-overlay-color:#00000633;--fill-checked-overlay-color:#00000626;--destructive-button-hover-bg-color:#c3000033;--destructive-button-active-bg-color:#c3000059;--split-separator-color:#0000063d;--switch-off-bg-color:#0000061f;--trough-hover-bg-color:#00000629;--trough-active-bg-color:#00000633;--knob-bg-color:#ffffff;--error-entry-bg-color:#c300001a;--error-ring-color:#c3000080;--warning-entry-bg-color:#9054001a;--warning-ring-color:#90540080;--success-entry-bg-color:#007c3d1a;--success-ring-color:#007c3d80;--row-hover-bg-color:#00000606;--row-active-bg-color:#00000610;--expander-nested-bg-color:#00000609;--titlebutton-bg-color:#00000614;--banner-bg-color:#00000626;--toast-button-bg-color:#ffffff1a;--blue-1:#99c1f1;--blue-2:#62a0ea;--blue-3:#3584e4;--blue-4:#1c71d8;--blue-5:#1a5fb4;--green-1:#8ff0a4;--green-2:#57e389;--green-3:#33d17a;--green-4:#2ec27e;--green-5:#26a269;--yellow-1:#f9f06b;--yellow-2:#f8e45c;--yellow-3:#f6d32d;--yellow-4:#f5c211;--yellow-5:#e5a50a;--orange-1:#ffbe6f;--orange-2:#ffa348;--orange-3:#ff7800;--orange-4:#e66100;--orange-5:#c64600;--red-1:#f66151;--red-2:#ed333b;--red-3:#e01b24;--red-4:#c01c28;--red-5:#a51d2d;--purple-1:#dc8add;--purple-2:#c061cb;--purple-3:#9141ac;--purple-4:#813d9c;--purple-5:#613583;--brown-1:#cdab8f;--brown-2:#b5835a;--brown-3:#986a44;--brown-4:#865e3c;--brown-5:#63452c;--light-1:#ffffff;--light-2:#f6f5f4;--light-3:#deddda;--light-4:#c0bfbc;--light-5:#9a9996;--dark-1:#77767b;--dark-2:#5e5c64;--dark-3:#3d3846;--dark-4:#241f31;--dark-5:#000000;--shadow-card:0 0 0 1px rgba(0, 0, 6, 0.03), 0 1px 3px 1px rgba(0, 0, 6, 0.07), 0 2px 6px 2px rgba(0, 0, 6, 0.03);--shadow-headerbar:inset 0 -1px 0 0 rgba(0, 0, 6, 0.12), 0 1px 4px 0 rgba(0, 0, 6, 0.06);--shadow-popover:0 0 0 1px rgba(0, 0, 6, 0.05), 0 0 6px 3px rgba(0, 0, 6, 0.07), 0 0 14px 4px rgba(0, 0, 6, 0.04);--shadow-knob:0 2px 4px 0 rgba(0, 0, 6, 0.2);--shadow-slider:0 0 0 1px rgba(0, 0, 6, 0.1), 0 2px 4px 0 rgba(0, 0, 6, 0.2);--shadow-toast:0 1px 3px 1px rgba(0, 0, 6, 0.07), 0 2px 6px 2px rgba(0, 0, 6, 0.03);--shadow-toolbar-top:0 1px 0 0 rgba(0, 0, 6, 0.06), 0 2px 4px 0 rgba(0, 0, 6, 0.06);--shadow-toolbar-bottom:0 -1px 0 0 rgba(0, 0, 6, 0.06), 0 -2px 4px 0 rgba(0, 0, 6, 0.06);--shadow-toolbar-border-top:0 1px 0 0 rgba(0, 0, 6, 0.12);--shadow-toolbar-border-bottom:0 -1px 0 0 rgba(0, 0, 6, 0.12);--shadow-sheet:0 0 14px 2px rgba(0, 0, 6, 0.03), 0 0 5px 2px rgba(0, 0, 6, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);--shadow-bottom-bar:0 0 0 1px rgba(0, 0, 6, 0.0525), 0 2px 8px 2px rgba(0, 0, 6, 0.07), 0 3px 20px 10px rgba(0, 0, 6, 0.05), 0 6px 32px 16px rgba(0, 0, 6, 0.02);--shadow-window:0 0 0 1px rgba(0, 0, 6, 0.08), 0 0 4px 3px rgba(0, 0, 6, 0.09), 0 0 18px 6px rgba(0, 0, 6, 0.08);--space-3:3px;--space-6:6px;--space-12:12px;--space-18:18px;--space-24:24px;--space-36:36px;--radius-button:9px;--radius-entry:9px;--radius-card:12px;--radius-window:15px;--radius-popover:15px;--radius-dialog:15px;--radius-alert:18px;--radius-pill:9999px;--border-opacity:0.15;--dim-opacity:0.55;--disabled-opacity:0.5;--control-height:34px;--pill-height:44px;--headerbar-height:47px;--row-min-height:54px;--sidebar-row-height:36px;--switch-width:46px;--switch-height:26px;--titlebutton-size:24px;--toast-height:46px;--button-padding-x:17px;--image-button-padding-x:9px;--pill-padding-x:32px;--button-content-gap:6px;--split-arrow-width:24px;--toggle-height:28px;--check-size:20px;--knob-size:20px;--scale-trough-height:4px;--row-padding-start:14px;--row-padding-end:14px;--row-title-gap:3px;--button-row-height:44px;--row-spin-button-size:30px;--group-heading-gap:12px;--status-icon-size:128px;--progress-height:8px;--osd-progress-height:2px;--headerbar-inline-height:46px;--sidebar-item-height:42px;--sidebar-width-min:180px;--sidebar-width-max:280px;--sidebar-width-fraction:25%;--breakpoint-split-view:400px;--breakpoint-view-switcher:550px;--view-switcher-button-min-wide:120px;--view-switcher-button-min-narrow:100px;--view-switcher-bar-height:47px;--indicator-dot-size:6px;--indicator-badge-height:13px;--icon-size:16px;--clamp-max-width:600px;--clamp-tightening-threshold:400px;--window-min-desktop:1024px;--window-min-mobile:360px;--font-sans:"Adwaita Sans", "Inter", system-ui, sans-serif;--font-mono:"Adwaita Mono", ui-monospace, monospace;--text-title-1:800 26.55px/1.4 var(--font-sans);--text-title-2:800 19.95px/1.4 var(--font-sans);--text-title-3:700 19.95px/1.4 var(--font-sans);--text-title-4:700 17.31px/1.4 var(--font-sans);--text-ui:400 14.67px/1.4 var(--font-sans);--text-heading:700 14.67px/1.4 var(--font-sans);--text-body:400 14.67px/1.4 var(--font-sans);--text-caption-heading:700 12.03px/1.4 var(--font-sans);--text-caption:400 12.03px/1.4 var(--font-sans);--text-document:400 16px/1.4 var(--font-sans);--text-monospace:400 14.67px/1.4 var(--font-mono);--text-numeric:400 14.67px/1.4 var(--font-sans);}}</style>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GX52 prototype</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/adw/tokens.css">
+<link rel="stylesheet" href="ds/adw/components/bundle.css">
+<script src="ds/adw/components/bundle.js"></script>
+<script src="ds/adw/components/icons/adwaita-51-symbolic-1.js"></script>
+<script src="ds/adw/components/icons/adwaita-51-symbolic-2.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.gx-stage{box-sizing:border-box;width:1600px;height:900px;padding:32px;display:flex;gap:32px;align-items:flex-start;background:var(--overview-bg-color);color:var(--window-fg-color);font-family:var(--font-sans);font-size:14.67px}
+.gx-winwrap{position:relative;flex:none}
+.gx-toastlayer{position:absolute;left:0;right:0;bottom:24px;display:flex;justify-content:center;pointer-events:none;z-index:40}
+.gx-toastlayer > *{pointer-events:auto;max-width:calc(100% - 24px)}
+.gx-hidden{width:1100px;height:760px;border:2px dashed var(--border-color);border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;box-sizing:border-box;text-align:center;padding:24px}
+.gx-plist{display:flex;flex-direction:column;gap:2px;padding:0 6px 4px}
+.gx-sechead{padding:12px 12px 6px;color:var(--dimmed-fg-color)}
+.gx-prow{position:relative;display:flex;align-items:center;gap:2px;min-height:42px;border-radius:9px;padding:3px 3px 3px 0;box-sizing:border-box}
+.gx-prow:hover{background:var(--flat-hover-bg-color)}
+.gx-prow.is-selected{background:var(--button-bg-color)}
+.gx-prow.is-selected:hover{background:var(--button-hover-bg-color)}
+.gx-prow.is-failed .gx-pname{opacity:var(--dim-opacity)}
+.gx-prow.is-drop-before{box-shadow:inset 0 2px 0 0 var(--accent-bg-color)}
+.gx-prow.is-drop-after{box-shadow:inset 0 -2px 0 0 var(--accent-bg-color)}
+.gx-prow.is-dragging{opacity:.45}
+.gx-pmain{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:36px;padding:0 6px 0 4px;border:0;background:none;color:inherit;font:inherit;text-align:start;border-radius:6px;cursor:default}
+.gx-pmain:focus-visible{outline:2px solid var(--focus-ring-color);outline-offset:-2px}
+.gx-pname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gx-drag{width:14px;flex:none;display:flex;justify-content:center;color:var(--dimmed-fg-color);cursor:grab;visibility:hidden}
+.gx-prow:hover .gx-drag,.gx-prow:focus-within .gx-drag{visibility:visible}
+.gx-drag.is-none{cursor:default;visibility:hidden !important}
+.gx-dot{width:7px;height:7px;border-radius:50%;flex:none;background:transparent}
+.gx-dot.is-on{background:var(--accent-bg-color)}
+.gx-badges{display:flex;gap:2px;flex:none}
+.gx-badge{font-size:10px;font-weight:700;min-width:15px;height:16px;line-height:16px;text-align:center;border-radius:5px;background:var(--button-bg-color);color:var(--dimmed-fg-color)}
+.gx-badge.is-current{background:var(--accent-bg-color);color:var(--accent-fg-color)}
+.gx-rename{flex:1;display:flex;flex-direction:column;gap:4px;padding:2px 3px 4px 6px;min-width:0}
+.gx-rename-err{color:var(--error-color)}
+.gx-footer{display:flex;align-items:center;gap:12px;padding:10px 18px;min-height:58px;box-sizing:border-box}
+.gx-footer-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.gx-footer-title{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gx-footer-sub{display:flex;align-items:center;gap:5px;min-width:0}
+.gx-footer-subtext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gx-footer-sub .gx-warnicon{display:inline-flex;flex:none;opacity:1}
+.gx-sdot{width:10px;height:10px;border-radius:50%;flex:none;box-sizing:border-box}
+.gx-sdot.is-green{background:var(--success-bg-color)}
+.gx-sdot.is-red{background:var(--error-bg-color)}
+.gx-sdot.is-grey{border:2px solid var(--dimmed-fg-color)}
+.gx-footer .gx-warnicon{color:var(--warning-color)}
+.gx-page{box-sizing:border-box;padding:24px 12px 36px;display:flex;flex-direction:column;gap:24px}
+.gx-modebar{display:flex;flex-direction:column;gap:6px}
+.gx-modebar-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.gx-cards{display:flex;flex-wrap:wrap;gap:12px}
+.gx-ledcard{flex:1 1 190px;padding:12px 18px 18px;display:flex;flex-direction:column;gap:14px;box-sizing:border-box}
+.gx-ledgrid{display:grid;gap:14px 18px;justify-content:center;grid-template-columns:repeat(2,64px)}
+.gx-ledgrid.is-cols3{grid-template-columns:repeat(3,64px)}
+.gx-ledcell{display:flex;flex-direction:column;align-items:center;gap:6px}
+.gx-ledcell.is-span{grid-column:1 / -1}
+.gx-led{width:36px;height:36px;border-radius:50%;border:0;padding:0;cursor:default;background:var(--button-bg-color);box-shadow:inset 0 0 0 1px var(--border-color);transition:background-color .15s,box-shadow .15s}
+.gx-led:hover{box-shadow:inset 0 0 0 1px var(--border-color),0 0 0 4px var(--flat-hover-bg-color)}
+.gx-led:focus-visible{outline:2px solid var(--focus-ring-color);outline-offset:3px}
+.gx-led.led-green,.gx-led.led-on{background:var(--green-3);box-shadow:inset 0 0 0 1px rgba(0,0,6,.12),0 0 10px 1px color-mix(in srgb,var(--green-3) 55%,transparent)}
+.gx-led.led-red{background:var(--red-2);box-shadow:inset 0 0 0 1px rgba(0,0,6,.12),0 0 10px 1px color-mix(in srgb,var(--red-2) 55%,transparent)}
+.gx-led.led-amber{background:var(--yellow-4);box-shadow:inset 0 0 0 1px rgba(0,0,6,.12),0 0 10px 1px color-mix(in srgb,var(--yellow-4) 55%,transparent)}
+.gx-led.is-fixed{cursor:help}
+.gx-led.is-blink{animation:gxblink 1s steps(1,end) infinite}
+@keyframes gxblink{50%{background:var(--button-bg-color);box-shadow:inset 0 0 0 1px var(--border-color)}}
+@media (prefers-reduced-motion:reduce){.gx-led.is-blink{animation:none}}
+.gx-ledpop{display:flex;flex-direction:column;gap:10px;padding:6px}
+.gx-rowval{min-width:32px;text-align:end;color:var(--dimmed-fg-color)}
+.gx-note{color:var(--dimmed-fg-color)}
+.gx-mfdbox{display:flex;flex-direction:column;align-items:center;gap:12px}
+.gx-mfd{font-family:var(--font-mono);font-size:18px;line-height:1;padding:16px 18px;border-radius:12px;display:flex;flex-direction:column;gap:8px;color:var(--dark-4);background:var(--dark-3);box-shadow:inset 0 0 0 6px var(--dark-4),0 2px 6px rgba(0,0,6,.2);position:relative;overflow:hidden}
+.gx-mfd::before{content:"";position:absolute;inset:6px;border-radius:7px;background:color-mix(in srgb,var(--green-1) 45%,var(--yellow-1));opacity:var(--gx-bl,1);pointer-events:none}
+.gx-mfd > *{position:relative}
+.gx-mfd.bl-0{--gx-bl:0;color:color-mix(in srgb,var(--light-5) 35%,transparent)}
+.gx-mfd.bl-1{--gx-bl:.35}
+.gx-mfd.bl-2{--gx-bl:.7}
+.gx-mfd.bl-3{--gx-bl:1}
+.gx-mfdline{display:flex}
+.gx-mfdcell{display:inline-block;width:1.15ch;text-align:center;white-space:pre;background:color-mix(in srgb,currentColor 6%,transparent);margin-right:1px;border-radius:1px;padding:2px 0}
+.gx-mfdclock{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding-top:4px;border-top:1px solid color-mix(in srgb,currentColor 25%,transparent);font-size:16px}
+.gx-mfdclock small{font-size:10px;opacity:.75;margin-inline-end:6px}
+.gx-mfdshift{position:absolute;top:6px;right:12px;font-size:9px;font-family:var(--font-sans);font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;background:currentColor}
+.gx-mfdshift span{color:color-mix(in srgb,var(--green-1) 45%,var(--yellow-1))}
+.gx-warnlbl{color:var(--warning-color)}
+.gx-errlbl{color:var(--error-color)}
+.gx-guide{box-sizing:border-box;padding:36px 12px;display:flex;flex-direction:column;gap:24px}
+.gx-guide-head{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.gx-guide-head p{margin:0}
+.gx-center{display:flex;justify-content:center}
+.gx-tester{box-sizing:border-box;padding:18px 18px 36px;display:flex;flex-direction:column;gap:18px}
+.gx-tester > p{margin:0}
+.gx-tgroups{display:flex;flex-wrap:wrap;gap:12px}
+.gx-tg{padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+.gx-tg h3{margin:0}
+.gx-tg-axes{flex:2 1 460px}
+.gx-tg-small{flex:1 1 170px}
+.gx-tg-wide{flex:3 1 520px}
+.gx-tg-povs{flex:1 1 240px}
+.gx-axes{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.gx-padcol{display:flex;flex-direction:column;align-items:center;gap:6px}
+.gx-pad{position:relative;width:120px;height:120px;border-radius:9px;background:var(--button-bg-color);overflow:hidden}
+.gx-pad.is-small{width:84px;height:84px}
+.gx-pad::before,.gx-pad::after{content:"";position:absolute;background:var(--border-color)}
+.gx-pad::before{left:50%;top:0;bottom:0;width:1px}
+.gx-pad::after{top:50%;left:0;right:0;height:1px}
+.gx-paddot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--accent-bg-color);box-shadow:0 0 0 2px var(--view-bg-color);transition:left .1s linear,top .1s linear}
+.gx-vbar{position:relative;width:22px;height:120px;border-radius:6px;background:var(--button-bg-color);overflow:hidden}
+.gx-vfill{position:absolute;left:0;right:0;bottom:0;background:var(--accent-bg-color);transition:height .1s linear}
+.gx-hbars{flex:1;min-width:200px;display:flex;flex-direction:column;gap:12px;padding-top:4px}
+.gx-hrow{display:grid;grid-template-columns:86px 1fr 40px;align-items:center;gap:10px}
+.gx-hbar{position:relative;height:8px;border-radius:4px;background:var(--button-bg-color);overflow:hidden}
+.gx-hfill{position:absolute;left:0;top:0;bottom:0;background:var(--accent-bg-color);transition:width .1s linear}
+.gx-hval{text-align:end}
+.gx-inds{display:flex;flex-wrap:wrap;gap:6px}
+.gx-ind{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:9999px;background:var(--button-bg-color);font-size:13px;white-space:nowrap}
+.gx-ind.is-on{background:var(--accent-bg-color);color:var(--accent-fg-color)}
+.gx-indgrid{display:grid;grid-template-columns:repeat(3,auto);gap:6px;justify-content:start}
+.gx-btngroups{display:flex;flex-direction:column;gap:12px}
+.gx-btngroup{display:flex;flex-direction:column;gap:6px}
+.gx-subhead{font-weight:700}
+.gx-ind.has-num{padding-left:4px;gap:7px}
+.gx-num{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;box-sizing:border-box;border-radius:9999px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;background:var(--card-bg-color);color:var(--dimmed-fg-color)}
+.gx-ind.is-on .gx-num{background:var(--accent-fg-color);color:var(--accent-bg-color)}
+.gx-povs{display:flex;gap:18px;flex-wrap:wrap}
+.gx-pov{display:grid;grid-template-columns:repeat(3,18px);gap:3px}
+.gx-povcell{width:18px;height:18px;border-radius:4px;background:var(--button-bg-color)}
+.gx-povcell.is-center{border-radius:50%;transform:scale(.6)}
+.gx-povcell.is-on{background:var(--accent-bg-color)}
+.gx-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.gx-list{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px}
+.gx-dlgbody{box-sizing:border-box;padding:6px 24px 24px;display:flex;flex-direction:column;gap:18px}
+.gx-dlgbody p{margin:0}
+.gx-tzlist{box-sizing:border-box;padding:12px}
+.gx-panel{width:400px;height:836px;flex:none;display:flex;flex-direction:column;border-radius:15px;background:var(--window-bg-color);box-shadow:var(--shadow-window);overflow:hidden}
+.gx-panel-head{padding:16px 18px 12px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--border-color);background:var(--headerbar-bg-color)}
+.gx-panel-tag{align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:9999px;background:var(--warning-bg-color);color:var(--warning-fg-color)}
+.gx-panel-body{flex:1;overflow:auto;padding:18px 14px 24px;display:flex;flex-direction:column;gap:22px}
+.gx-topbar{display:flex;align-items:center;gap:10px;height:36px;padding:0 6px 0 12px;border-radius:9px;background:var(--dark-5);color:var(--light-1);font-size:13px;font-weight:700}
+.gx-topbar-pill{width:34px;height:8px;border-radius:9999px;background:rgba(255,255,255,.85)}
+.gx-topbar-clock{flex:1;text-align:center}
+.gx-topbar-tray{display:flex;align-items:center;gap:6px}
+.gx-trayblock{display:flex;flex-direction:column;gap:10px}
+.gx-trayhead{display:flex;flex-direction:column;gap:3px;padding:0 2px}
+.gx-trayhint{padding:0 2px;color:var(--dimmed-fg-color)}
+</style>
+</helmet>
+<div class="adw-root gx-stage" data-theme="{{theme}}">
+  <div class="gx-winwrap" onKeyDown="{{onKey}}">
+    <sc-if value="{{windowVisible}}" hint-placeholder-val="{{ true }}">
+      <x-import component-from-global-scope="Adw.Window" width="{{winW}}" height="{{winH}}" theme="{{theme}}" label="GX52">
+
+        <sc-if value="{{showFull}}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="Adw.ToolbarView" top="{{fullTop}}">
+            <sc-if value="{{fullStatus}}" hint-placeholder-val="{{ true }}">
+              <x-import component-from-global-scope="Adw.StatusPage" icon="input-gaming" title="Connect your X52 or X52 Pro" description="{{fullDesc}}" vexpand="{{yes}}">
+                <sc-if value="{{fullCanFix}}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="Adw.Button" label="How to Fix" shape="pill" variant="suggested" halign="center" on-click="{{openFullGuide}}"></x-import>
+                </sc-if>
+              </x-import>
+            </sc-if>
+            <sc-if value="{{fullGuide}}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="Adw.Clamp" max-width="600">
+                <div class="gx-guide">
+                  <div class="gx-guide-head">
+                    <x-import component-from-global-scope="Adw.Icon" name="dialog-password" size="64"></x-import>
+                    <h2 class="title-1" style="margin: 0">Allow Access to the Device</h2>
+                    <p class="body">GX52 found your {{devName}} but cannot open it. Install this udev rule so it can set the LEDs, the MFD text and the clocks.</p>
+                  </div>
+                  <x-import component-from-global-scope="Adw.PreferencesGroup" title="Rule File" description="Save this line as /etc/udev/rules.d/70-gx52.rules">
+                    <x-import component-from-global-scope="Adw.ActionRow" title="{{udevRule}}" class-name="monospace">
+                      <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" icon="edit-copy" variant="flat" tooltip="Copy Rule" valign="center" on-click="{{copyUdevRule}}"></x-import></x-import>
+                    </x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="Adw.PreferencesGroup" title="Load the Rule" description="No need to unplug: the device can be opened as soon as the rule is loaded.">
+                    <x-import component-from-global-scope="Adw.ActionRow" title="{{udevCmd}}" class-name="monospace">
+                      <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" icon="edit-copy" variant="flat" tooltip="Copy Command" valign="center" on-click="{{copyUdevCmd}}"></x-import></x-import>
+                    </x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="Adw.PreferencesGroup" title="Without Access">
+                    <x-import component-from-global-scope="Adw.ActionRow" icon="object-select" title="Test input keeps working" subtitle="Buttons, axes and the mode selector are read without access"></x-import>
+                    <x-import component-from-global-scope="Adw.ActionRow" icon="action-unavailable" title="LEDs, MFD and clocks are unavailable" subtitle="They need the rule above"></x-import>
+                  </x-import>
+                  <div class="gx-center"><x-import component-from-global-scope="Adw.Button" label="Try Again" shape="pill" on-click="{{tryAgain}}"></x-import></div>
+                </div>
+              </x-import>
+            </sc-if>
+          </x-import>
+        </sc-if>
+
+        <sc-if value="{{showSplit}}" hint-placeholder-val="{{ true }}">
+          <x-import component-from-global-scope="Adw.NavigationSplitView" collapsed="{{narrow}}" show-content="{{showContent}}" on-show-content-change="{{onShowContentChange}}">
+            <x-import component-from-global-scope="Adw.Slot" name="sidebar">
+              <x-import component-from-global-scope="Adw.NavigationPage" title="GX52" tag="profiles">
+                <x-import component-from-global-scope="Adw.ToolbarView" top="{{sidebarTop}}">
+                  <nav aria-label="Profiles">
+                    <div class="caption-heading gx-sechead">Profiles</div>
+                    <div class="gx-plist">
+                      <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+                        <div class="{{r.cls}}" draggable="{{r.draggable}}" onDragStart="{{r.onDragStart}}" onDragOver="{{r.onDragOver}}" onDrop="{{r.onDrop}}" onDragEnd="{{endDrag}}" onContextMenu="{{r.onContextMenu}}" onPointerDown="{{r.onPointerDown}}" onPointerUp="{{cancelLongPress}}" onPointerLeave="{{cancelLongPress}}">
+                          <sc-if value="{{r.renaming}}" hint-placeholder-val="{{ false }}">
+                            <div class="gx-rename">
+                              <x-import component-from-global-scope="Adw.Entry" value="{{renameValue}}" label="Profile name" status="{{renameStatus}}" always-editable="{{yes}}" input-ref="{{renameRef}}" on-change="{{onRenameChange}}" on-activate="{{commitRename}}" on-key-down="{{onRenameKey}}"></x-import>
+                              <sc-if value="{{renameHasError}}" hint-placeholder-val="{{ false }}"><span class="caption gx-rename-err" role="alert">{{renameError}}</span></sc-if>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{r.notRenaming}}" hint-placeholder-val="{{ true }}">
+                            <span class="{{r.dragCls}}" aria-hidden="true"><svg width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.3"></circle><circle cx="6" cy="2" r="1.3"></circle><circle cx="2" cy="7" r="1.3"></circle><circle cx="6" cy="7" r="1.3"></circle><circle cx="2" cy="12" r="1.3"></circle><circle cx="6" cy="12" r="1.3"></circle></g></svg></span>
+                            <button class="gx-pmain" aria-current="{{r.ariaCurrent}}" aria-label="{{r.aria}}" title="{{r.tip}}" onClick="{{r.select}}">
+                              <span class="{{r.dotCls}}" aria-hidden="true"></span>
+                              <span class="gx-pname">{{r.name}}</span>
+                              <sc-if value="{{r.perMode}}" hint-placeholder-val="{{ false }}">
+                                <span class="gx-badges" aria-hidden="true"><sc-for list="{{r.badges}}" as="b" hint-placeholder-count="3"><span class="{{b.cls}}">{{b.n}}</span></sc-for></span>
+                              </sc-if>
+                              <sc-if value="{{r.failed}}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="Adw.Icon" name="dialog-warning"></x-import></sc-if>
+                            </button>
+                            <x-import component-from-global-scope="Adw.MenuButton" icon="view-more" variant="flat" tooltip="{{r.menuTip}}" menu="{{r.menu}}" actions="{{r.actions}}" open="{{r.menuOpen}}" on-open-change="{{r.onMenuOpenChange}}" popup-halign="end"></x-import>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div class="gx-plist" style="padding-top: 10px">
+                      <div class="{{testRowCls}}">
+                        <button class="gx-pmain" style="padding-inline-start: 12px" aria-current="{{testAriaCurrent}}" onClick="{{openTest}}">
+                          <x-import component-from-global-scope="Adw.Icon" name="input-gaming"></x-import>
+                          <span class="gx-pname">Test input</span>
+                          <x-import component-from-global-scope="Adw.Icon" name="go-next"></x-import>
+                        </button>
+                      </div>
+                    </div>
+                  </nav>
+                  <x-import component-from-global-scope="Adw.Slot" name="bottom">
+                    <div class="gx-footer" role="status" aria-label="{{status.aria}}">
+                      <span class="{{status.dotCls}}" aria-hidden="true"></span>
+                      <div class="gx-footer-text" aria-hidden="true">
+                        <span class="gx-footer-title">{{status.title}}</span>
+                        <span class="gx-footer-sub caption dimmed"><sc-if value="{{status.warn}}" hint-placeholder-val="{{ false }}"><span class="gx-warnicon"><x-import component-from-global-scope="Adw.Icon" name="dialog-warning"></x-import></span></sc-if><span class="gx-footer-subtext">{{status.sub}}</span></span>
+                      </div>
+                    </div>
+                  </x-import>
+                </x-import>
+              </x-import>
+            </x-import>
+
+            <x-import component-from-global-scope="Adw.Slot" name="content">
+              <x-import component-from-global-scope="Adw.NavigationPage" title="{{contentTitle}}" tag="content">
+
+                <sc-if value="{{cPerm}}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="Adw.ToolbarView" top="{{plainTop}}">
+                    <x-import component-from-global-scope="Adw.Clamp" max-width="600">
+                      <div class="gx-guide">
+                        <div class="gx-guide-head">
+                          <x-import component-from-global-scope="Adw.Icon" name="dialog-password" size="64"></x-import>
+                          <h2 class="title-1" style="margin: 0">Allow Access to the Device</h2>
+                          <p class="body">GX52 found your {{devName}} but cannot open it. Install this udev rule so it can set the LEDs, the MFD text and the clocks.</p>
+                        </div>
+                        <x-import component-from-global-scope="Adw.PreferencesGroup" title="Rule File" description="Save this line as /etc/udev/rules.d/70-gx52.rules">
+                          <x-import component-from-global-scope="Adw.ActionRow" title="{{udevRule}}" class-name="monospace">
+                            <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" icon="edit-copy" variant="flat" tooltip="Copy Rule" valign="center" on-click="{{copyUdevRule}}"></x-import></x-import>
+                          </x-import>
+                        </x-import>
+                        <x-import component-from-global-scope="Adw.PreferencesGroup" title="Load the Rule" description="No need to unplug: the device can be opened as soon as the rule is loaded.">
+                          <x-import component-from-global-scope="Adw.ActionRow" title="{{udevCmd}}" class-name="monospace">
+                            <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" icon="edit-copy" variant="flat" tooltip="Copy Command" valign="center" on-click="{{copyUdevCmd}}"></x-import></x-import>
+                          </x-import>
+                        </x-import>
+                        <x-import component-from-global-scope="Adw.PreferencesGroup" title="Without Access">
+                          <x-import component-from-global-scope="Adw.ActionRow" icon="object-select" title="Test input keeps working" subtitle="Buttons, axes and the mode selector are read without access"></x-import>
+                          <x-import component-from-global-scope="Adw.ActionRow" icon="action-unavailable" title="LEDs, MFD and clocks are unavailable" subtitle="They need the rule above"></x-import>
+                        </x-import>
+                        <div class="gx-center"><x-import component-from-global-scope="Adw.Button" label="Try Again" shape="pill" on-click="{{tryAgain}}"></x-import></div>
+                      </div>
+                    </x-import>
+                  </x-import>
+                </sc-if>
+
+                <sc-if value="{{cFailed}}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="Adw.ToolbarView" top="{{plainTop}}">
+                    <x-import component-from-global-scope="Adw.StatusPage" icon="{{failed.icon}}" title="{{failed.title}}" description="{{failed.desc}}" vexpand="{{yes}}">
+                      <x-import component-from-global-scope="Adw.Box" spacing="12" halign="center">
+                        <x-import component-from-global-scope="Adw.Button" label="Show File" shape="pill" on-click="{{showFile}}"></x-import>
+                        <x-import component-from-global-scope="Adw.Button" label="Remove" shape="pill" variant="destructive" on-click="{{removeViewed}}"></x-import>
+                      </x-import>
+                    </x-import>
+                  </x-import>
+                </sc-if>
+
+                <sc-if value="{{cTest}}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="Adw.ToolbarView" top="{{plainTop}}">
+                    <sc-if value="{{testNoDevice}}" hint-placeholder-val="{{ false }}">
+                      <x-import component-from-global-scope="Adw.StatusPage" icon="input-gaming" title="Connect your X52 or X52 Pro" description="The live view of every input appears here once the joystick is plugged in." vexpand="{{yes}}"></x-import>
+                    </sc-if>
+                    <sc-if value="{{testHasDevice}}" hint-placeholder-val="{{ true }}">
+                      <div class="gx-tester">
+                        <p class="dimmed">Live view of the device. Input is read without grabbing it, so games keep receiving it.</p>
+                        <sc-if value="{{testUnverified}}" hint-placeholder-val="{{ false }}"><p class="caption gx-warnlbl">The X52 input map has not been verified on a device yet. Names may not match the controls.</p></sc-if>
+                        <div class="gx-tgroups">
+                          <section class="card gx-tg gx-tg-axes" aria-label="{{ax.aria}}">
+                            <h3 class="heading">Axes</h3>
+                            <div class="gx-axes">
+                              <div class="gx-padcol">
+                                <div class="gx-pad" aria-hidden="true"><span class="gx-paddot" style="{{ax.xyDot}}"></span></div>
+                                <span class="caption dimmed">X / Y</span>
+                              </div>
+                              <div class="gx-padcol">
+                                <div class="gx-vbar" aria-hidden="true"><span class="gx-vfill" style="{{ax.zFill}}"></span></div>
+                                <span class="caption dimmed">Z</span>
+                              </div>
+                              <div class="gx-hbars" aria-hidden="true">
+                                <sc-for list="{{ax.bars}}" as="b" hint-placeholder-count="4">
+                                  <div class="gx-hrow"><span class="caption">{{b.label}}</span><span class="gx-hbar"><span class="gx-hfill" style="{{b.fill}}"></span></span><span class="caption numeric gx-hval">{{b.value}}</span></div>
+                                </sc-for>
+                              </div>
+                            </div>
+                            <span class="caption numeric dimmed" aria-hidden="true">{{ax.raw}}</span>
+                          </section>
+                          <section class="card gx-tg gx-tg-small" aria-label="{{ax.miniAria}}">
+                            <h3 class="heading">Ministick</h3>
+                            <div class="gx-padcol">
+                              <div class="gx-pad is-small" aria-hidden="true"><span class="gx-paddot" style="{{ax.miniDot}}"></span></div>
+                              <span class="caption dimmed" aria-hidden="true">Mouse X / Y · {{ax.miniRaw}}</span>
+                            </div>
+                          </section>
+                          <section class="card gx-tg gx-tg-small" aria-label="{{togglesAria}}">
+                            <h3 class="heading">Toggles</h3>
+                            <div class="gx-indgrid" aria-hidden="true"><sc-for list="{{toggles}}" as="t" hint-placeholder-count="6"><span class="{{t.cls}}" title="{{t.tip}}"><span class="gx-num">{{t.num}}</span>{{t.label}}</span></sc-for></div>
+                            <h3 class="heading">Mode</h3>
+                            <div class="gx-inds" aria-hidden="true"><sc-for list="{{modeInds}}" as="m" hint-placeholder-count="3"><span class="{{m.cls}}" title="{{m.tip}}">{{m.label}}</span></sc-for></div>
+                          </section>
+                          <section class="card gx-tg gx-tg-wide" aria-label="{{buttonsAria}}">
+                            <h3 class="heading">Buttons</h3>
+                            <div class="gx-btngroups" aria-hidden="true">
+                              <sc-for list="{{btnGroups}}" as="g" hint-placeholder-count="3">
+                                <div class="gx-btngroup">
+                                  <span class="gx-subhead caption dimmed">{{g.title}}</span>
+                                  <div class="gx-inds"><sc-for list="{{g.items}}" as="b" hint-placeholder-count="7"><span class="{{b.cls}}" title="{{b.tip}}"><span class="gx-num">{{b.num}}</span>{{b.label}}</span></sc-for></div>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </section>
+                          <section class="card gx-tg gx-tg-povs" aria-label="{{povsAria}}">
+                            <h3 class="heading">POVs</h3>
+                            <div class="gx-povs" aria-hidden="true">
+                              <sc-for list="{{povs}}" as="p" hint-placeholder-count="3">
+                                <div class="gx-padcol"><div class="gx-pov"><sc-for list="{{p.cells}}" as="c" hint-placeholder-count="9"><span class="{{c}}"></span></sc-for></div><span class="caption dimmed">{{p.label}}</span></div>
+                              </sc-for>
+                            </div>
+                          </section>
+                        </div>
+                        <p class="gx-sr" aria-live="polite">{{testSr}}</p>
+                      </div>
+                    </sc-if>
+                  </x-import>
+                </sc-if>
+
+                <sc-if value="{{cEditor}}" hint-placeholder-val="{{ true }}">
+                  <x-import component-from-global-scope="Adw.ToolbarView" top="{{editorTop}}" bottom="{{editorBottom}}">
+                    <x-import component-from-global-scope="Adw.Clamp" max-width="{{clampW}}">
+                      <div class="gx-page">
+                        <sc-if value="{{showModeBar}}" hint-placeholder-val="{{ false }}">
+                          <div class="gx-modebar">
+                            <div class="gx-modebar-row">
+                              <span class="heading">Editing mode</span>
+                              <x-import component-from-global-scope="Adw.ToggleGroup" items="{{modeItems}}" selected="{{editModeIdx}}" on-select="{{onEditMode}}" label="Editing mode"></x-import>
+                            </div>
+                            <span class="caption dimmed">The mode selector on the stick picks the mode.</span>
+                          </div>
+                        </sc-if>
+
+                        <sc-if value="{{vLeds}}" hint-placeholder-val="{{ true }}">
+                          <sc-if value="{{isPro}}" hint-placeholder-val="{{ true }}">
+                            <div class="gx-cards">
+                              <sc-for list="{{ledCards}}" as="card" hint-placeholder-count="3">
+                                <section class="card gx-ledcard" aria-label="{{card.title}}">
+                                  <span class="heading">{{card.title}}</span>
+                                  <div class="{{card.gridCls}}">
+                                    <sc-for list="{{card.cells}}" as="c" hint-placeholder-count="4">
+                                      <div class="{{c.cellCls}}">
+                                        <button id="{{c.id}}" class="{{c.cls}}" aria-label="{{c.aria}}" title="{{c.tip}}" aria-haspopup="{{c.haspopup}}" aria-disabled="{{c.ariaDisabled}}" onClick="{{c.open}}"></button>
+                                        <span class="caption">{{c.name}}</span>
+                                      </div>
+                                    </sc-for>
+                                  </div>
+                                </section>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+                          <x-import component-from-global-scope="Adw.PreferencesGroup" description="{{ledGroupDesc}}">
+                            <x-import component-from-global-scope="Adw.ActionRow" title="Brightness">
+                              <x-import component-from-global-scope="Adw.Slot" name="suffix">
+                                <x-import component-from-global-scope="Adw.Scale" value="{{ledBFrac}}" on-change="{{onLedB}}" label="LED brightness" width-request="200" valign="center"></x-import>
+                                <span class="numeric gx-rowval">{{ledB}}</span>
+                              </x-import>
+                            </x-import>
+                            <sc-if value="{{isPro}}" hint-placeholder-val="{{ true }}">
+                              <x-import component-from-global-scope="Adw.SwitchRow" title="Blink" subtitle="The i and POV 1 LEDs blink" active="{{blink}}" on-toggle="{{onBlink}}"></x-import>
+                            </sc-if>
+                          </x-import>
+                          <x-import component-from-global-scope="Adw.Popover" open="{{ledPopOpen}}" anchor="{{ledPopAnchor}}" on-close="{{closeLedPop}}" label="{{ledPopLabel}}">
+                            <div class="gx-ledpop">
+                              <span class="heading">{{ledPopTitle}}</span>
+                              <x-import component-from-global-scope="Adw.ToggleGroup" items="{{ledPopItems}}" selected="{{ledPopSelected}}" on-select="{{onLedPick}}" label="{{ledPopLabel}}"></x-import>
+                            </div>
+                          </x-import>
+                        </sc-if>
+
+                        <sc-if value="{{vMfd}}" hint-placeholder-val="{{ false }}">
+                          <div class="gx-mfdbox">
+                            <div class="{{mfd.cls}}" role="img" aria-label="{{mfd.aria}}">
+                              <sc-if value="{{mfd.shift}}" hint-placeholder-val="{{ false }}"><span class="gx-mfdshift"><span>SHIFT</span></span></sc-if>
+                              <sc-for list="{{mfd.lines}}" as="ln" hint-placeholder-count="3">
+                                <div class="gx-mfdline"><sc-for list="{{ln}}" as="ch" hint-placeholder-count="16"><span class="gx-mfdcell">{{ch}}</span></sc-for></div>
+                              </sc-for>
+                              <div class="gx-mfdclock"><span><small>{{mfd.clockTag}}</small>{{mfd.time}}</span><span>{{mfd.date}}</span></div>
+                            </div>
+                            <x-import component-from-global-scope="Adw.ToggleGroup" items="{{clockItems}}" selected="{{mfdClock}}" on-select="{{onMfdClock}}" label="Clock shown on the simulated display"></x-import>
+                            <span class="caption dimmed">Clock 1 is shown by default. Start/Stop and Reset on the throttle cycle the clocks on the device.</span>
+                          </div>
+                          <x-import component-from-global-scope="Adw.PreferencesGroup" title="Lines">
+                            <sc-for list="{{lineRows}}" as="lr" hint-placeholder-count="3">
+                              <x-import component-from-global-scope="Adw.ComboRow" title="{{lr.title}}" items="{{lineSourceItems}}" selected="{{lr.sel}}" on-select="{{lr.onSelect}}"></x-import>
+                              <sc-if value="{{lr.isText}}" hint-placeholder-val="{{ false }}">
+                                <x-import component-from-global-scope="Adw.EntryRow" title="{{lr.textTitle}}" value="{{lr.text}}" status="{{lr.status}}" on-change="{{lr.onText}}">
+                                  <x-import component-from-global-scope="Adw.Slot" name="suffix">
+                                    <sc-if value="{{lr.hasReps}}" hint-placeholder-val="{{ false }}"><span class="caption gx-warnlbl" title="{{lr.repsTip}}">{{lr.reps}}</span></sc-if>
+                                    <span class="{{lr.countCls}}" aria-label="{{lr.countAria}}">{{lr.count}}</span>
+                                  </x-import>
+                                </x-import>
+                              </sc-if>
+                            </sc-for>
+                          </x-import>
+                          <x-import component-from-global-scope="Adw.PreferencesGroup">
+                            <x-import component-from-global-scope="Adw.ActionRow" title="Brightness">
+                              <x-import component-from-global-scope="Adw.Slot" name="suffix">
+                                <x-import component-from-global-scope="Adw.Scale" value="{{mfdBFrac}}" on-change="{{onMfdB}}" label="MFD brightness" width-request="200" valign="center"></x-import>
+                                <span class="numeric gx-rowval">{{mfdB}}</span>
+                              </x-import>
+                            </x-import>
+                            <sc-if value="{{isPro}}" hint-placeholder-val="{{ true }}">
+                              <x-import component-from-global-scope="Adw.SwitchRow" title="Shift" subtitle="Show SHIFT on the display" active="{{shift}}" on-toggle="{{onShift}}"></x-import>
+                            </sc-if>
+                          </x-import>
+                        </sc-if>
+
+                        <sc-if value="{{vClocks}}" hint-placeholder-val="{{ false }}">
+                          <x-import component-from-global-scope="Adw.PreferencesGroup" title="Clock 1" description="{{clk.c1desc}}">
+                            <x-import component-from-global-scope="Adw.ActionRow" title="Source">
+                              <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.ToggleGroup" items="{{c1Items}}" selected="{{clk.c1sel}}" on-select="{{onC1Source}}" label="Clock 1 source" valign="center"></x-import></x-import>
+                            </x-import>
+                            <x-import component-from-global-scope="Adw.SwitchRow" title="24-Hour Format" active="{{clk.c1h24}}" on-toggle="{{onC1H24}}"></x-import>
+                          </x-import>
+                          <sc-for list="{{clk.others}}" as="c" hint-placeholder-count="2">
+                            <x-import component-from-global-scope="Adw.PreferencesGroup" title="{{c.title}}" description="{{c.desc}}">
+                              <x-import component-from-global-scope="Adw.ActionRow" title="Source">
+                                <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.ToggleGroup" items="{{c2Items}}" selected="{{c.sel}}" on-select="{{c.onSource}}" label="{{c.srcLabel}}" valign="center"></x-import></x-import>
+                              </x-import>
+                              <sc-if value="{{c.isZone}}" hint-placeholder-val="{{ true }}">
+                                <x-import component-from-global-scope="Adw.ActionRow" title="Time Zone" subtitle="{{c.zoneLabel}}" navigation="{{yes}}" on-activate="{{c.openTz}}"></x-import>
+                              </sc-if>
+                              <sc-if value="{{c.isOffset}}" hint-placeholder-val="{{ false }}">
+                                <x-import component-from-global-scope="Adw.SpinRow" title="Offset From UTC" subtitle="Fixed offset, no daylight saving time" value="{{c.offset}}" min="-720" max="840" step="15" digits="0" format="{{fmtOffset}}" on-change="{{c.onOffset}}"></x-import>
+                              </sc-if>
+                              <x-import component-from-global-scope="Adw.SwitchRow" title="24-Hour Format" active="{{c.h24}}" on-toggle="{{c.onH24}}"></x-import>
+                            </x-import>
+                          </sc-for>
+                          <x-import component-from-global-scope="Adw.PreferencesGroup" title="Date">
+                            <x-import component-from-global-scope="Adw.ComboRow" title="Date Format" items="{{dateItems}}" selected="{{clk.dateSel}}" on-select="{{onDateFormat}}"></x-import>
+                          </x-import>
+                        </sc-if>
+                      </div>
+                    </x-import>
+                  </x-import>
+                </sc-if>
+
+              </x-import>
+            </x-import>
+          </x-import>
+        </sc-if>
+
+        <x-import component-from-global-scope="Adw.AlertDialog" open="{{alertOpen}}" heading="{{alert.heading}}" body="{{alert.body}}" responses="{{alert.responses}}" default-response="{{alert.def}}" close-response="{{alert.close}}" on-response="{{onAlertResponse}}">
+          <sc-if value="{{alert.hasList}}" hint-placeholder-val="{{ false }}">
+            <ul class="gx-list body"><sc-for list="{{alert.list}}" as="it" hint-placeholder-count="2"><li>{{it}}</li></sc-for></ul>
+          </sc-if>
+        </x-import>
+
+        <x-import component-from-global-scope="Adw.Dialog" open="{{detailsOpen}}" title="{{details.title}}" content-width="460" on-close="{{closeDetails}}">
+          <x-import component-from-global-scope="Adw.ToolbarView" top="{{dlgTop}}">
+            <div class="gx-dlgbody">
+              <p class="body dimmed">{{details.intro}}</p>
+              <x-import component-from-global-scope="Adw.BoxedList">
+                <sc-for list="{{details.items}}" as="it" hint-placeholder-count="2">
+                  <x-import component-from-global-scope="Adw.ActionRow" icon="dialog-warning" title="{{it}}"></x-import>
+                </sc-for>
+              </x-import>
+            </div>
+          </x-import>
+        </x-import>
+
+        <x-import component-from-global-scope="Adw.Dialog" open="{{x52dOpen}}" title="x52d Is Running" content-width="460" on-close="{{closeX52d}}">
+          <x-import component-from-global-scope="Adw.ToolbarView" top="{{dlgTop}}">
+            <div class="gx-dlgbody">
+              <p class="body">The x52d daemon of libx52 drives the same LEDs, MFD and clocks as GX52. While it runs, each may overwrite what the other sends.</p>
+              <p class="body">GX52 does not stop x52d. To let GX52 control the device, stop the daemon:</p>
+              <x-import component-from-global-scope="Adw.BoxedList">
+                <x-import component-from-global-scope="Adw.ActionRow" title="sudo systemctl disable --now x52d" class-name="monospace">
+                  <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" icon="edit-copy" variant="flat" tooltip="Copy Command" valign="center" on-click="{{copyX52dCmd}}"></x-import></x-import>
+                </x-import>
+              </x-import>
+            </div>
+          </x-import>
+        </x-import>
+
+        <x-import component-from-global-scope="Adw.Dialog" open="{{tzOpen}}" title="Select Time Zone" content-width="420" content-height="520" on-close="{{closeTz}}">
+          <x-import component-from-global-scope="Adw.ToolbarView" top="{{tzTop}}">
+            <div class="gx-tzlist">
+              <sc-if value="{{tzEmpty}}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="Adw.StatusPage" icon="edit-find" title="No Results Found" description="Try a different search" compact="{{yes}}"></x-import>
+              </sc-if>
+              <sc-if value="{{tzHasResults}}" hint-placeholder-val="{{ true }}">
+                <x-import component-from-global-scope="Adw.BoxedList">
+                  <sc-for list="{{tzRows}}" as="z" hint-placeholder-count="8">
+                    <x-import component-from-global-scope="Adw.ActionRow" title="{{z.title}}" subtitle="{{z.subtitle}}" activatable="{{yes}}" on-activate="{{z.pick}}" suffix="{{z.suffix}}"></x-import>
+                  </sc-for>
+                </x-import>
+              </sc-if>
+            </div>
+          </x-import>
+        </x-import>
+
+        <x-import component-from-global-scope="Adw.PreferencesDialog" open="{{prefsOpen}}" on-close="{{closePrefs}}" subpages="{{prefsSubpages}}">
+          <x-import component-from-global-scope="Adw.PreferencesPage" name="general" title="General" icon="preferences-system">
+            <x-import component-from-global-scope="Adw.PreferencesGroup" title="Background" suffix="{{prefsBridge}}">
+              <x-import component-from-global-scope="Adw.SwitchRow" title="Run in Background" subtitle="Keep GX52 running and applying profiles when the window is closed" active="{{prefs.runBg}}" on-toggle="{{onRunBg}}"></x-import>
+              <x-import component-from-global-scope="Adw.SwitchRow" title="Start on Login" subtitle="Start hidden when you log in. Needs Run in Background" active="{{prefs.startLogin}}" disabled="{{startLoginDisabled}}" on-toggle="{{onStartLogin}}"></x-import>
+            </x-import>
+            <x-import component-from-global-scope="Adw.PreferencesGroup" title="Virtual Mouse" description="Move the pointer with the ministick. Games still receive the ministick.">
+              <x-import component-from-global-scope="Adw.SwitchRow" title="Use the Ministick as a Mouse" active="{{prefs.mouse}}" on-toggle="{{onMouse}}"></x-import>
+              <sc-if value="{{uinputWarn}}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="Adw.ActionRow" icon="dialog-warning" title="Virtual mouse unavailable" subtitle="GX52 cannot write to /dev/uinput">
+                  <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" label="How to Fix" valign="center" on-click="{{openUinputHelp}}"></x-import></x-import>
+                </x-import>
+              </sc-if>
+              <x-import component-from-global-scope="Adw.SpinRow" title="Speed" subtitle="Pixels per step, 100 times a second" value="{{prefs.speed}}" min="0.1" max="3" step="0.1" digits="1" disabled="{{mouseOff}}" on-change="{{onSpeed}}"></x-import>
+              <x-import component-from-global-scope="Adw.SpinRow" title="Curve" subtitle="Higher values move slowly near the centre" value="{{prefs.curve}}" min="1" max="3" step="0.1" digits="1" disabled="{{mouseOff}}" on-change="{{onCurve}}"></x-import>
+              <x-import component-from-global-scope="Adw.SpinRow" title="Deadzone" subtitle="Steps around the centre treated as centred" value="{{prefs.deadzone}}" min="0" max="4" step="1" disabled="{{mouseOff}}" on-change="{{onDeadzone}}"></x-import>
+              <x-import component-from-global-scope="Adw.SwitchRow" title="Invert Wheel" active="{{prefs.invert}}" disabled="{{mouseOff}}" on-toggle="{{onInvert}}"></x-import>
+            </x-import>
+          </x-import>
+        </x-import>
+
+        <x-import component-from-global-scope="Adw.ShortcutsDialog" open="{{shortcutsOpen}}" on-close="{{closeShortcuts}}">
+          <x-import component-from-global-scope="Adw.ShortcutsSection" title="Profiles">
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="New Single Profile" accelerator="{{acc.newp}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Import Profile" accelerator="{{acc.imp}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Export the Selected Profile" accelerator="{{acc.exp}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Rename the Selected Profile" accelerator="F2"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Remove the Selected Profile" accelerator="Delete"></x-import>
+          </x-import>
+          <x-import component-from-global-scope="Adw.ShortcutsSection" title="Editor">
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="LEDs View" accelerator="{{acc.v1}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="MFD View" accelerator="{{acc.v2}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Clocks View" accelerator="{{acc.v3}}"></x-import>
+          </x-import>
+          <x-import component-from-global-scope="Adw.ShortcutsSection" title="General">
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Preferences" accelerator="{{acc.prefs}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Keyboard Shortcuts" accelerator="{{acc.keys}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Close Window" accelerator="{{acc.close}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Quit" accelerator="{{acc.quit}}"></x-import>
+          </x-import>
+        </x-import>
+
+        <x-import component-from-global-scope="Adw.AboutDialog" open="{{aboutOpen}}" on-close="{{closeAbout}}" application-icon="{{appIcon}}" application-name="GX52" developer-name="Roberto Leinardi" version="1.0.0" release-notes-version="1.0.0" release-notes="{{releaseNotes}}" comments="Configure the LEDs, the MFD and the clocks of your Logitech X52 and X52 Pro" website="https://github.com/leinardi/gx52" issue-url="https://github.com/leinardi/gx52/issues" developers="{{developers}}" copyright="© 2019–2026 Roberto Leinardi" license-type="GPL-3.0-or-later"></x-import>
+
+      </x-import>
+      <div class="gx-toastlayer">
+        <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="Adw.Toast" title="{{toast.title}}" action-label="{{toast.actionLabel}}" on-action="{{onToastAction}}" on-dismiss="{{dismissToast}}"></x-import>
+        </sc-if>
+      </div>
+    </sc-if>
+    <sc-if value="{{windowHidden}}" hint-placeholder-val="{{ false }}">
+      <div class="gx-hidden" style="{{hiddenStyle}}">
+        <x-import component-from-global-scope="Adw.Icon" name="gx52" size="48"></x-import>
+        <span class="title-3">{{hiddenTitle}}</span>
+        <span class="body dimmed">{{hiddenDesc}}</span>
+        <x-import component-from-global-scope="Adw.Button" label="{{hiddenAction}}" shape="pill" on-click="{{showWindow}}"></x-import>
+      </div>
+    </sc-if>
+  </div>
+
+  <aside class="gx-panel" aria-label="Prototype controls">
+    <div class="gx-panel-head">
+      <span class="gx-panel-tag">Prototype</span>
+      <span class="title-4">Prototype controls</span>
+      <span class="caption dimmed">Simulates the device and the system. Not part of GX52.</span>
+    </div>
+    <div class="gx-panel-body">
+      <section class="gx-trayblock" aria-label="Top bar">
+        <div class="gx-trayhead">
+          <span class="heading">Top Bar</span>
+          <span class="caption dimmed">The tray icon, while GX52 runs in the background</span>
+        </div>
+        <div class="gx-topbar" data-theme="dark">
+          <span class="gx-topbar-pill" aria-hidden="true"></span>
+          <span class="gx-topbar-clock">{{topClock}}</span>
+          <div class="gx-topbar-tray">
+            <sc-if value="{{trayVisible}}" hint-placeholder-val="{{ true }}">
+              <x-import component-from-global-scope="Adw.MenuButton" icon="gx52" variant="flat" tooltip="GX52" menu="{{trayMenu}}" actions="{{trayActions}}" popup-halign="end"></x-import>
+            </sc-if>
+            <x-import component-from-global-scope="Adw.Icon" name="network-wireless-signal-excellent"></x-import>
+            <x-import component-from-global-scope="Adw.Icon" name="audio-volume-high"></x-import>
+          </div>
+        </div>
+        <span class="caption gx-trayhint">{{trayNote}}</span>
+      </section>
+
+      <x-import component-from-global-scope="Adw.PreferencesGroup" title="Device">
+        <x-import component-from-global-scope="Adw.ActionRow" title="Connected">
+          <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.ToggleGroup" items="{{devItems}}" selected="{{devSel}}" on-select="{{onDevice}}" label="Connected device" valign="center"></x-import></x-import>
+        </x-import>
+        <x-import component-from-global-scope="Adw.SwitchRow" title="USB Permission" subtitle="Off: the device is found but cannot be opened" active="{{permission}}" on-toggle="{{onPermission}}"></x-import>
+        <x-import component-from-global-scope="Adw.SwitchRow" title="x52d Running" active="{{x52d}}" on-toggle="{{onX52d}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Forget the Last Device" on-activate="{{forgetDevice}}"></x-import>
+      </x-import>
+
+      <x-import component-from-global-scope="Adw.PreferencesGroup" title="Stick">
+        <x-import component-from-global-scope="Adw.ActionRow" title="Mode Selector">
+          <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.ToggleGroup" items="{{modeItems}}" selected="{{modeIdx}}" on-select="{{onStickMode}}" label="Mode selector position" valign="center"></x-import></x-import>
+        </x-import>
+        <x-import component-from-global-scope="Adw.ComboRow" title="Button" items="{{holdItems}}" selected="{{holdIdx}}" on-select="{{onHoldPick}}" enable-search="{{yes}}"></x-import>
+        <x-import component-from-global-scope="Adw.SwitchRow" title="Hold Button" subtitle="Drives “Last button” and the input tester" active="{{holding}}" on-toggle="{{onHolding}}"></x-import>
+        <x-import component-from-global-scope="Adw.SwitchRow" title="Move Axes" active="{{moveAxes}}" on-toggle="{{onMoveAxes}}"></x-import>
+      </x-import>
+
+      <x-import component-from-global-scope="Adw.PreferencesGroup" title="Import From GX52 0.7">
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Import 4 Profiles" on-activate="{{import07Ok}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Import With Problems" on-activate="{{import07Problems}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="GX52 0.7 Still Running" on-activate="{{import07Deferred}}"></x-import>
+      </x-import>
+
+      <x-import component-from-global-scope="Adw.PreferencesGroup" title="Profile Files">
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Add a Damaged Profile" on-activate="{{addDamaged}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Add a Newer-Schema Profile" on-activate="{{addNewer}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Import a File With Problems" on-activate="{{startImport}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Import a File for the Other Model" on-activate="{{importWrongType}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Import a File From a Newer GX52" on-activate="{{importNewer}}"></x-import>
+      </x-import>
+
+      <x-import component-from-global-scope="Adw.PreferencesGroup" title="System">
+        <x-import component-from-global-scope="Adw.SwitchRow" title="/dev/uinput Writable" subtitle="Off: the virtual mouse shows its warning" active="{{uinputOk}}" on-toggle="{{onUinput}}"></x-import>
+        <x-import component-from-global-scope="Adw.SwitchRow" title="Tray Host Available" subtitle="Off: plain GNOME, Background Apps only" active="{{trayHost}}" on-toggle="{{onTrayHost}}"></x-import>
+      </x-import>
+
+      <x-import component-from-global-scope="Adw.PreferencesGroup" title="Appearance">
+        <x-import component-from-global-scope="Adw.ActionRow" title="Style">
+          <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.ToggleGroup" items="{{themeItems}}" selected="{{themeIdx}}" on-select="{{onTheme}}" label="Style" valign="center"></x-import></x-import>
+        </x-import>
+        <x-import component-from-global-scope="Adw.SwitchRow" title="Narrow Window" subtitle="360 × 720 px: the sidebar collapses" active="{{narrow}}" on-toggle="{{onNarrow}}"></x-import>
+      </x-import>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+var GX_ICON = './assets/f25ff0d33f66407b973b1edd948d5640.svg';
+var GX_SYMBOLIC = './assets/bee7ca0dcea96e7e2e9b3d8f0d163127.svg';
+try { if (window.Adw && window.Adw.registerIcons) window.Adw.registerIcons({ 'gx52-symbolic': GX_SYMBOLIC }); } catch (e) {}
+
+var LED_DEFS = {
+  fire: { name: 'Fire', bi: false }, a: { name: 'A', bi: true }, b: { name: 'B', bi: true },
+  d: { name: 'D', bi: true }, e: { name: 'E', bi: true }, t1_t2: { name: 'T1/T2', bi: true },
+  t3_t4: { name: 'T3/T4', bi: true }, t5_t6: { name: 'T5/T6', bi: true }, pov_2: { name: 'POV 2', bi: true },
+  i: { name: 'i', bi: true }, throttle: { name: 'Throttle', bi: false }, pov_1: { name: 'POV 1', fixed: true }
+};
+var LED_CARDS = [
+  { title: 'Stick', cols: 2, cells: ['pov_2', 'fire', 'a', 'b', 'pov_1'] },
+  { title: 'Stick base', cols: 3, cells: ['t1_t2', 't3_t4', 't5_t6'] },
+  { title: 'Throttle', cols: 2, cells: ['d', 'e', 'i', 'throttle'] }
+];
+var BI_STATES = ['off', 'green', 'amber', 'red'], BI_LABELS = ['Off', 'Green', 'Amber', 'Red'];
+var SG_STATES = ['off', 'on'], SG_LABELS = ['Off', 'On'];
+var STATE_LABEL = { off: 'Off', on: 'On', green: 'Green', red: 'Red', amber: 'Amber' };
+var LINE_SOURCES = ['text', 'profile_name', 'mode', 'last_button', 'empty'];
+var LINE_LABELS = ['Custom text', 'Profile name', 'Mode', 'Last button', 'Empty'];
+var DATE_FORMATS = ['dd-mm-yy', 'mm-dd-yy', 'yy-mm-dd'];
+var DATE_LABELS = ['DD-MM-YY', 'MM-DD-YY', 'YY-MM-DD'];
+var DEV_NAMES = { 'x52-pro': 'X52 Pro', 'x52': 'X52' };
+
+var BUTTONS = [
+  [288, 'Trigger, first stage', 'Trigger'], [289, 'Fire', 'Fire'], [290, 'A', 'A'], [291, 'B', 'B'], [292, 'C', 'C'],
+  [293, 'Pinkie switch', 'Pinkie'], [294, 'D', 'D'], [295, 'E', 'E'], [296, 'T1', 'T1'], [297, 'T2', 'T2'],
+  [298, 'T3', 'T3'], [299, 'T4', 'T4'], [300, 'T5', 'T5'], [301, 'T6', 'T6'], [302, 'Trigger, second stage', 'Trigger 2'],
+  [303, 'Mouse button', 'Mouse'], [704, 'Scroll wheel down', 'Wheel down'], [705, 'Scroll wheel up', 'Wheel up'],
+  [706, 'Scroll wheel press', 'Wheel press'], [707, 'POV 2 up', 'POV 2 up'], [708, 'POV 2 right', 'POV 2 right'],
+  [709, 'POV 2 down', 'POV 2 down'], [710, 'POV 2 left', 'POV 2 left'], [711, 'Throttle hat up', 'Hat up'],
+  [712, 'Throttle hat right', 'Hat right'], [713, 'Throttle hat down', 'Hat down'], [714, 'Throttle hat left', 'Hat left'],
+  [715, 'Mode 1', 'Mode 1'], [716, 'Mode 2', 'Mode 2'], [717, 'Mode 3', 'Mode 3'], [718, 'i', 'i'],
+  [719, 'Function', 'Function'], [720, 'Start/Stop', 'Start/Stop'], [721, 'Reset', 'Reset'],
+  [722, 'Function wheel up', 'Page Up'], [723, 'Function wheel down', 'Page Down'], [724, 'Select wheel up', 'Up'],
+  [725, 'Select wheel down', 'Down'], [726, 'Select', 'Select']
+];
+var BTN_GROUPS = [
+  { title: 'Stick', codes: [288, 302, 289, 290, 291, 292, 293] },
+  { title: 'Throttle', codes: [294, 295, 718, 303, 705, 704, 706] },
+  { title: 'MFD', codes: [719, 720, 721, 722, 723, 724, 725, 726] }
+];
+var HOLD_OPTIONS = (function () {
+  var o = [];
+  BUTTONS.forEach(function (b) { if (b[0] < 715 || b[0] > 717) o.push({ code: b[0], name: b[1] }); });
+  ['up', 'right', 'down', 'left'].forEach(function (d) { o.push({ code: 'pov1-' + d, name: 'POV 1 ' + d }); });
+  return o;
+})();
+function btnInfo(code) { for (var i = 0; i < BUTTONS.length; i++) if (BUTTONS[i][0] === code) return { num: i + 1, name: BUTTONS[i][1], short: BUTTONS[i][2] }; return null; }
+
+var GLYPHS = (function () {
+  var s = {}; function add(t) { Array.from(t).forEach(function (c) { s[c] = 1; }); }
+  add('←┌┐└┘·®©™†§¶ΓΔΘΛΞΠΣΥΦΨΩα');
+  for (var c = 0x20; c < 0x7e; c++) { if (c !== 0x5c) s[String.fromCharCode(c)] = 1; }
+  add('¥→ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜñÑªº¿áíóú¢£₧ƒ¡ÃãÕõØø˙¨°´½¼×÷≤≥«»≠√¯');
+  for (var u = 0xff61; u <= 0xff9f; u++) s[String.fromCharCode(u)] = 1;
+  return s;
+})();
+function convert(str) {
+  var out = [], reps = [];
+  Array.from(str || '').forEach(function (ch) {
+    if (GLYPHS[ch]) { out.push(ch); return; }
+    var base = ch.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    var r = (Array.from(base).length === 1 && GLYPHS[base]) ? base : '?';
+    out.push(r);
+    var label = ch + ' → ' + r;
+    if (reps.indexOf(label) < 0) reps.push(label);
+  });
+  return { chars: out, reps: reps };
+}
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function fmtOffset(min) { var a = Math.abs(Math.round(min)); return 'UTC' + (min < 0 ? '−' : '+') + pad(Math.floor(a / 60)) + ':' + pad(a % 60); }
+function zoneOffset(zone, d) {
+  try {
+    var f = new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+    var p = {}; f.formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+    var asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, (+p.hour) % 24, +p.minute);
+    var base = Math.floor(d.getTime() / 60000) * 60000;
+    return Math.round((asUTC - base) / 60000);
+  } catch (e) { return 0; }
+}
+function clockOffset(p, k, d) {
+  var c = p.clocks[k];
+  if (k === 0) return c.source === 'utc' ? 0 : -d.getTimezoneOffset();
+  return c.type === 'zone' ? zoneOffset(c.zone, d) : c.offset;
+}
+function clockTime(p, k, d) {
+  var t = new Date(d.getTime() + clockOffset(p, k, d) * 60000), h = t.getUTCHours(), m = t.getUTCMinutes();
+  if (p.clocks[k].h24) return pad(h) + ':' + pad(m);
+  return (h % 12 || 12) + ':' + pad(m) + (h < 12 ? ' AM' : ' PM');
+}
+function dateParts(fmt, t) {
+  var dd = pad(t.getUTCDate()), mm = pad(t.getUTCMonth() + 1), yy = pad(t.getUTCFullYear() % 100);
+  return fmt === 'dd-mm-yy' ? [dd, mm, yy] : fmt === 'mm-dd-yy' ? [mm, dd, yy] : [yy, mm, dd];
+}
+function mfdDate(p, d) { var t = new Date(d.getTime() + clockOffset(p, 0, d) * 60000); return dateParts(p.dateFormat, t).join('.'); }
+
+var ZONES = [
+  ['Rome', 'Italy', 'Europe/Rome'], ['Berlin', 'Germany', 'Europe/Berlin'], ['London', 'United Kingdom', 'Europe/London'],
+  ['Lisbon', 'Portugal', 'Europe/Lisbon'], ['Reykjavík', 'Iceland', 'Atlantic/Reykjavik'], ['New York', 'United States', 'America/New_York'],
+  ['Chicago', 'United States', 'America/Chicago'], ['Denver', 'United States', 'America/Denver'], ['Los Angeles', 'United States', 'America/Los_Angeles'],
+  ['Anchorage', 'United States', 'America/Anchorage'], ['Honolulu', 'United States', 'Pacific/Honolulu'], ['São Paulo', 'Brazil', 'America/Sao_Paulo'],
+  ['Santiago', 'Chile', 'America/Santiago'], ['Cairo', 'Egypt', 'Africa/Cairo'], ['Moscow', 'Russia', 'Europe/Moscow'],
+  ['Dubai', 'United Arab Emirates', 'Asia/Dubai'], ['Kolkata', 'India', 'Asia/Kolkata'], ['Kathmandu', 'Nepal', 'Asia/Kathmandu'],
+  ['Bangkok', 'Thailand', 'Asia/Bangkok'], ['Shanghai', 'China', 'Asia/Shanghai'], ['Tokyo', 'Japan', 'Asia/Tokyo'],
+  ['Seoul', 'South Korea', 'Asia/Seoul'], ['Sydney', 'Australia', 'Australia/Sydney'], ['Auckland', 'New Zealand', 'Pacific/Auckland'],
+  ['Kiritimati', 'Kiribati', 'Pacific/Kiritimati'], ['Coordinated Universal Time', 'UTC', 'Etc/UTC']
+];
+function zoneCity(z) { for (var i = 0; i < ZONES.length; i++) if (ZONES[i][2] === z) return ZONES[i][0]; return z.split('/').pop().replace(/_/g, ' '); }
+
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function leds(fire, thr, a, b, d, e, t1, t3, t5, pov2, i) { return { fire: fire, throttle: thr, a: a, b: b, d: d, e: e, t1_t2: t1, t3_t4: t3, t5_t6: t5, pov_2: pov2, i: i }; }
+function L(source, text) { return { source: source, text: text || '' }; }
+function MS(ledB, mfdB, l, lines, opts) { var m = { ledB: ledB, mfdB: mfdB, shift: false, blink: false, leds: l, lines: lines }; if (opts) Object.keys(opts).forEach(function (k) { m[k] = opts[k]; }); return m; }
+function builtinLeds() { return leds('on', 'on', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green'); }
+function builtinMS() { return MS(128, 128, builtinLeds(), [L('empty'), L('empty'), L('empty')]); }
+function builtinClocks() { return [{ source: 'local', h24: true }, { type: 'offset', zone: 'America/New_York', offset: -240, h24: true }, { type: 'offset', zone: 'Asia/Shanghai', offset: 480, h24: true }]; }
+function P(id, name, kind, modes, clocks, dateFormat, extra) {
+  var p = { id: id, name: name, kind: kind, isDefault: false, status: 'ok', modes: modes, clocks: clocks || builtinClocks(), dateFormat: dateFormat || 'yy-mm-dd' };
+  if (extra) Object.keys(extra).forEach(function (k) { p[k] = extra[k]; });
+  return p;
+}
+var _n = 1;
+function uid() { _n += 1; return 'f' + Math.random().toString(16).slice(2, 10) + '-' + _n; }
+function seedProfiles() {
+  var def = P('x52-pro-default', 'Default', 'single', [MS(128, 128, builtinLeds(), [L('text', 'GX52'), L('profile_name'), L('last_button')])], null, 'yy-mm-dd', { isDefault: true });
+  var dcs = P('6f1c2a90-4b7e-4d2a-9e51-0c3a7b1d2e44', 'DCS World', 'per_mode', [
+    MS(64, 96, leds('on', 'on', 'green', 'green', 'red', 'red', 'amber', 'amber', 'amber', 'green', 'off'), [L('text', 'GX52'), L('last_button'), L('profile_name')]),
+    MS(96, 112, leds('on', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'amber'), [L('text', 'MASTER ARM'), L('mode'), L('last_button')], { shift: true }),
+    MS(48, 80, leds('off', 'on', 'amber', 'amber', 'green', 'green', 'green', 'off', 'off', 'amber', 'green'), [L('text', 'GEAR / FLAPS'), L('profile_name'), L('mode')], { blink: true })
+  ], [{ source: 'local', h24: true }, { type: 'zone', zone: 'Europe/Rome', offset: 60, h24: true }, { type: 'offset', zone: 'Asia/Kathmandu', offset: 345, h24: false }], 'dd-mm-yy');
+  var elite = P('b2e4c8d1-7a3f-4e90-8c21-5d6f7a8b9c0d', 'Elite Dangerous', 'single', [
+    MS(96, 112, leds('on', 'on', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'green'), [L('text', 'o7 CMDR'), L('last_button'), L('mode')])
+  ], [{ source: 'utc', h24: true }, { type: 'zone', zone: 'America/New_York', offset: -300, h24: true }, { type: 'zone', zone: 'Asia/Tokyo', offset: 540, h24: true }], 'yy-mm-dd');
+  var night = P('c9d10e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f', 'Night flying', 'per_mode', [
+    MS(16, 8, leds('off', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'off'), [L('text', 'Éjszakai repülő'), L('profile_name'), L('empty')]),
+    MS(8, 4, leds('off', 'off', 'off', 'off', 'red', 'red', 'off', 'off', 'off', 'off', 'off'), [L('text', 'DARK'), L('empty'), L('empty')]),
+    MS(24, 16, leds('off', 'off', 'amber', 'amber', 'off', 'off', 'off', 'off', 'off', 'off', 'off'), [L('last_button'), L('mode'), L('profile_name')])
+  ], [{ source: 'local', h24: true }, { type: 'offset', zone: 'America/New_York', offset: -240, h24: true }, { type: 'zone', zone: 'Asia/Tokyo', offset: 540, h24: true }], 'dd-mm-yy');
+  var xdef = P('x52-default', 'Default', 'single', [MS(128, 128, builtinLeds(), [L('text', 'GX52'), L('profile_name'), L('empty')])], null, 'yy-mm-dd', { isDefault: true });
+  var xpl = P('d3a7b9c1-2e4f-4a6b-8c0d-1e2f3a4b5c6d', 'X-Plane 12', 'single', [MS(80, 100, builtinLeds(), [L('text', 'X-PLANE 12'), L('last_button'), L('mode')])], null, 'dd-mm-yy');
+  return { 'x52-pro': [def, dcs, elite, night], 'x52': [xdef, xpl] };
+}
+function uniqueName(list, base, exceptId) {
+  function taken(n) { return list.some(function (p) { return p.id !== exceptId && p.name === n; }); }
+  if (!taken(base)) return base;
+  for (var i = 2; i < 999; i++) { var n = base + ' (' + i + ')'; if (!taken(n)) return n; }
+  return base;
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var self = this;
+    this.state = {
+      theme: 'light', narrow: false, showContent: true,
+      connected: true, devType: 'x52-pro', lastType: 'x52-pro', permission: true, x52d: false,
+      mode: 2, editMode: 2, holdIdx: 1, holding: false, moveAxes: true, t: 0, now: Date.now(),
+      profiles: seedProfiles(), active: { 'x52-pro': '6f1c2a90-4b7e-4d2a-9e51-0c3a7b1d2e44', 'x52': 'x52-default' }, viewId: null,
+      page: 'profile', view: 'leds',
+      renaming: null, renameValue: '',
+      menuOpen: null, ledPop: null, ledPopOpen: false, mfdClock: 0,
+      alert: { heading: '', body: '', responses: [{ id: 'close', label: 'Close' }], def: 'close', close: 'close', hasList: false, list: [] }, alertKind: null, alertOpen: false,
+      prefsOpen: false, shortcutsOpen: false, aboutOpen: false, tzOpen: false, tzClock: 1, tzQuery: '',
+      detailsOpen: false, details: { title: '', intro: '', items: [] }, x52dOpen: false, fullGuide: false,
+      toast: null, removed: null,
+      prefs: { runBg: true, startLogin: false, mouse: false, speed: 0.6, curve: 1.6, deadzone: 1, invert: false },
+      uinputOk: false, trayHost: true, windowShown: true, running: true,
+      dragId: null, dropId: null, dropAfter: false
+    };
+    ['onKey', 'onShowContentChange', 'endDrag', 'cancelLongPress', 'onRenameChange', 'commitRename', 'onRenameKey', 'renameRef',
+     'openTest', 'openFullGuide', 'tryAgain', 'copyUdevRule', 'copyUdevCmd', 'copyX52dCmd', 'showFile', 'removeViewed',
+     'onEditMode', 'onLedB', 'onBlink', 'closeLedPop', 'onLedPick', 'onMfdClock', 'onMfdB', 'onShift', 'onC1Source', 'onC1H24', 'onDateFormat',
+     'onAlertResponse', 'closeDetails', 'closeX52d', 'closeTz', 'closePrefs', 'closeShortcuts', 'closeAbout',
+     'onRunBg', 'onStartLogin', 'onMouse', 'onSpeed', 'onCurve', 'onDeadzone', 'onInvert', 'openUinputHelp',
+     'onToastAction', 'dismissToast', 'showWindow', 'onDevice', 'onPermission', 'onX52d', 'forgetDevice', 'onStickMode', 'onHoldPick', 'onHolding', 'onMoveAxes',
+     'import07Ok', 'import07Problems', 'import07Deferred', 'addDamaged', 'addNewer', 'startImport', 'importWrongType', 'importNewer', 'onUinput', 'onTrayHost', 'onTheme', 'onNarrow',
+     'onTzQuery'].forEach(function (n) { self[n] = self[n].bind(self); });
+    this._PrefsBridge = function GxPrefsBridge() { self._pd = window.Adw.usePreferencesDialog(); return null; };
+    this._lastFocused = null;
+  }
+
+  componentDidMount() {
+    var self = this;
+    try { window.Adw.registerIcons({ 'gx52-symbolic': GX_SYMBOLIC }); } catch (e) {}
+    this._clock = setInterval(function () { self.setState({ now: Date.now() }); }, 1000);
+    this._axes = setInterval(function () {
+      var s = self.state;
+      if (s.page === 'test' && s.moveAxes && s.connected) self.setState({ t: s.t + 0.1 });
+    }, 100);
+  }
+  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._axes); clearTimeout(this._tt); clearTimeout(this._lp); }
+
+  /* ---------- model helpers ---------- */
+  typeOf(s) { return s.connected ? s.devType : s.lastType; }
+  info(s) {
+    var ty = this.typeOf(s), list = (ty && s.profiles[ty]) || [];
+    var active = null;
+    for (var i = 0; i < list.length; i++) if (list[i].id === s.active[ty] && list[i].status === 'ok') active = list[i];
+    if (!active) active = list[0] || null;
+    var view = active;
+    if (s.viewId) for (var j = 0; j < list.length; j++) if (list[j].id === s.viewId) view = list[j];
+    var msIdx = view && view.kind === 'per_mode' ? s.editMode - 1 : 0;
+    return { ty: ty, list: list, active: active, view: view, msIdx: msIdx };
+  }
+  setList(ty, fn, extra) {
+    this.setState(function (s) {
+      var list = s.profiles[ty].slice(); var r = fn(list, s) || {};
+      var profiles = Object.assign({}, s.profiles); profiles[ty] = list;
+      return Object.assign({ profiles: profiles }, r, extra || {});
+    });
+  }
+  updateProfile(id, fn) {
+    var self = this;
+    this.setState(function (s) {
+      var ty = self.typeOf(s), profiles = Object.assign({}, s.profiles);
+      profiles[ty] = s.profiles[ty].map(function (p) { if (p.id !== id) return p; var c = clone(p); fn(c, s); return c; });
+      return { profiles: profiles };
+    });
+  }
+  updateMS(fn) {
+    var self = this;
+    this.setState(function (s) {
+      var inf = self.info(s); if (!inf.view) return null;
+      var profiles = Object.assign({}, s.profiles);
+      profiles[inf.ty] = s.profiles[inf.ty].map(function (p) { if (p.id !== inf.view.id) return p; var c = clone(p); fn(c.modes[inf.msIdx], c); return c; });
+      return { profiles: profiles };
+    });
+  }
+  find(id) { var inf = this.info(this.state); for (var i = 0; i < inf.list.length; i++) if (inf.list[i].id === id) return inf.list[i]; return null; }
+
+  /* ---------- toasts ---------- */
+  showToast(t) {
+    var self = this; clearTimeout(this._tt);
+    this.setState({ toast: { title: t.title, actionLabel: t.actionLabel, action: t.action, n: Date.now() } });
+    this._tt = setTimeout(function () { self.dismissToast(); }, t.timeout || 5000);
+  }
+  dismissToast() { clearTimeout(this._tt); this.setState({ toast: null, removed: null }); }
+  onToastAction() { var t = this.state.toast; clearTimeout(this._tt); this.setState({ toast: null }); if (t && t.action) t.action(); }
+  copy(text) { try { navigator.clipboard.writeText(text); } catch (e) {} this.showToast({ title: 'Copied to clipboard' }); }
+  copyUdevRule() { this.copy(UDEV_RULE); }
+  copyUdevCmd() { this.copy(UDEV_CMD); }
+  copyX52dCmd() { this.copy('sudo systemctl disable --now x52d'); }
+
+  /* ---------- alerts ---------- */
+  openAlert(kind, data) {
+    var a;
+    if (kind === 'remove') a = { heading: 'Remove “' + data.name + '”?', body: data.failed ? 'The profile file is deleted from your profiles folder.' : 'The profile and all its settings are removed.', responses: [{ id: 'cancel', label: 'Cancel' }, { id: 'remove', label: 'Remove', appearance: 'destructive' }], def: 'cancel', close: 'cancel' };
+    if (kind === 'single') a = { heading: 'Use Single Settings?', body: 'Mode 1’s settings will be used in every mode. The settings of modes 2 and 3 will be removed.', responses: [{ id: 'cancel', label: 'Cancel' }, { id: 'single', label: 'Use Single Settings', appearance: 'destructive' }], def: 'cancel', close: 'cancel' };
+    if (kind === 'import') a = { heading: 'Import “Falcon BMS”?', body: 'Some values in “Falcon BMS.toml” are not valid. They will be replaced with the default values:', list: ['LED brightness 200 is above 128: set to 128', 'MFD line 2 is longer than 16 characters: set to empty', 'Clock 3 zone “Mars/Olympus_Mons” is unknown: set to UTC+08:00'], responses: [{ id: 'cancel', label: 'Cancel' }, { id: 'import', label: 'Import', appearance: 'suggested' }], def: 'import', close: 'cancel' };
+    if (kind === 'wrongType') a = { heading: 'Can’t Import This Profile', body: '“Hornet.toml” is a profile for the ' + data.other + ', not for the ' + data.here + '. Profiles apply to one model only.', responses: [{ id: 'close', label: 'Close' }], def: 'close', close: 'close' };
+    if (kind === 'newerFile') a = { heading: 'Can’t Import This Profile', body: '“Space Shuttle.toml” was made by GX52 1.1, a newer version than this one (1.0.0). Update GX52 to import it.', responses: [{ id: 'close', label: 'Close' }], def: 'close', close: 'close' };
+    a.hasList = !!(a.list && a.list.length); a.list = a.list || [];
+    this.setState({ alert: a, alertKind: kind, alertData: data || null, alertOpen: true });
+  }
+  onAlertResponse(id) {
+    var kind = this.state.alertKind, data = this.state.alertData;
+    this.setState({ alertOpen: false, alertKind: null });
+    if (kind === 'remove' && id === 'remove') this.doRemove(data.id);
+    if (kind === 'single' && id === 'single') this.updateProfile(data.id, function (c) { c.kind = 'single'; c.modes = [c.modes[0]]; });
+    if (kind === 'import' && id === 'import') this.doImportFile();
+  }
+
+  /* ---------- profile actions ---------- */
+  selectProfile(id) {
+    if (this.state.renaming && this.state.renaming !== id) this.finishRename(true);
+    var p = this.find(id); if (!p) return;
+    var inf = this.info(this.state);
+    if (p.status !== 'ok') { this.setState({ viewId: id, page: 'profile', showContent: true, ledPopOpen: false }); return; }
+    var active = Object.assign({}, this.state.active); active[inf.ty] = id;
+    this.setState({ active: active, viewId: null, page: 'profile', showContent: true, ledPopOpen: false, editMode: this.state.mode });
+  }
+  newProfile(kind) {
+    var self = this, s = this.state, ty = this.typeOf(s); if (!ty) return;
+    var name = uniqueName(s.profiles[ty], 'New profile');
+    var p = P(uid(), name, kind, kind === 'per_mode' ? [builtinMS(), builtinMS(), builtinMS()] : [builtinMS()]);
+    this._lastFocused = null;
+    this.setList(ty, function (list) { list.push(p); }, { renaming: p.id, renameValue: name, viewId: null, page: 'profile', showContent: false, editMode: s.mode });
+    this.setState(function (st) { var a = Object.assign({}, st.active); a[ty] = p.id; return { active: a }; });
+  }
+  startRename(id) {
+    var p = this.find(id); if (!p || p.status !== 'ok') return;
+    this._lastFocused = null;
+    this.setState({ renaming: id, renameValue: p.name, showContent: false, menuOpen: null });
+  }
+  renameErr(s) {
+    var v = (s.renameValue || '').trim(); if (!s.renaming) return '';
+    if (!v) return 'Enter a name';
+    if (v.length > 64) return 'Use at most 64 characters';
+    var inf = this.info(s);
+    if (inf.list.some(function (p) { return p.id !== s.renaming && p.name === v; })) return 'A profile named “' + v + '” already exists';
+    return '';
+  }
+  finishRename(commit) {
+    var s = this.state; if (!s.renaming) return;
+    if (commit && !this.renameErr(s)) { var v = s.renameValue.trim(); this.updateProfile(s.renaming, function (c) { c.name = v; }); }
+    this.setState({ renaming: null });
+  }
+  onRenameChange(v) { this.setState({ renameValue: v }); }
+  commitRename() { if (this.renameErr(this.state)) return; this.finishRename(true); }
+  onRenameKey(e) { if (e && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.finishRename(false); } }
+  renameRef(el) {
+    var self = this;
+    if (el && this.state.renaming && this._lastFocused !== this.state.renaming) {
+      this._lastFocused = this.state.renaming;
+      setTimeout(function () { try { el.focus(); el.select(); } catch (e) {} }, 40);
+    }
+  }
+  duplicate(id) {
+    var s = this.state, ty = this.typeOf(s);
+    this.setList(ty, function (list) {
+      var idx = list.findIndex(function (p) { return p.id === id; }); var src = list[idx];
+      var c = clone(src), base = src.name, n = 2;
+      c.id = uid(); c.isDefault = false;
+      while (list.some(function (p) { return p.name === base + ' (' + n + ')'; })) n++;
+      c.name = base + ' (' + n + ')';
+      list.splice(idx + 1, 0, c);
+    });
+  }
+  move(id, delta) {
+    var ty = this.typeOf(this.state);
+    this.setList(ty, function (list) {
+      var i = list.findIndex(function (p) { return p.id === id; }), j = i + delta;
+      if (i < 1 || j < 1 || j >= list.length) return;
+      var t = list[i]; list[i] = list[j]; list[j] = t;
+    });
+  }
+  toggleKind(id) {
+    var p = this.find(id); if (!p) return;
+    if (p.kind === 'single') this.updateProfile(id, function (c) { c.kind = 'per_mode'; c.modes = [clone(c.modes[0]), clone(c.modes[0]), clone(c.modes[0])]; });
+    else this.openAlert('single', { id: id });
+  }
+  askRemove(id) { var p = this.find(id); if (!p || p.isDefault) return; this.openAlert('remove', { id: id, name: p.name, failed: p.status !== 'ok' }); }
+  doRemove(id) {
+    var self = this, s = this.state, ty = this.typeOf(s), list = s.profiles[ty];
+    var idx = list.findIndex(function (p) { return p.id === id; }); if (idx < 1) return;
+    var p = list[idx], wasActive = s.active[ty] === id;
+    var profiles = Object.assign({}, s.profiles); profiles[ty] = list.filter(function (x) { return x.id !== id; });
+    var active = Object.assign({}, s.active); if (wasActive) active[ty] = profiles[ty][0].id;
+    this.setState({ profiles: profiles, active: active, viewId: s.viewId === id ? null : s.viewId });
+    this.showToast({ title: '“' + p.name + '” removed', actionLabel: 'Undo', action: function () { self.undoRemove({ ty: ty, p: p, idx: idx, wasActive: wasActive }); } });
+  }
+  undoRemove(r) {
+    this.setState(function (s) {
+      var profiles = Object.assign({}, s.profiles), list = profiles[r.ty].slice();
+      list.splice(Math.min(r.idx, list.length), 0, r.p); profiles[r.ty] = list;
+      var active = Object.assign({}, s.active); if (r.wasActive) active[r.ty] = r.p.id;
+      return { profiles: profiles, active: active };
+    });
+  }
+  exportProfile(id) { var p = this.find(id); if (p && p.status === 'ok') this.showToast({ title: 'Exported “' + p.name + '”' }); }
+  selectedId() { var inf = this.info(this.state); return inf.view ? inf.view.id : null; }
+  reorder(dragId, targetId, after) {
+    if (!dragId || dragId === targetId) return;
+    var ty = this.typeOf(this.state);
+    this.setList(ty, function (list) {
+      var from = list.findIndex(function (p) { return p.id === dragId; }); if (from < 1) return;
+      var item = list.splice(from, 1)[0];
+      var to = list.findIndex(function (p) { return p.id === targetId; });
+      to = to < 0 ? list.length : (after ? to + 1 : to);
+      if (to < 1) to = 1;
+      list.splice(to, 0, item);
+    }, { dragId: null, dropId: null });
+  }
+  endDrag() { this.setState({ dragId: null, dropId: null }); }
+  cancelLongPress() { clearTimeout(this._lp); }
+
+  /* ---------- import and files ---------- */
+  addProfiles(ty, specs) {
+    var ids = [];
+    this.setList(ty, function (list) {
+      specs.forEach(function (sp) {
+        var p = P(uid(), uniqueName(list, sp.name), 'single', [MS(sp.ledB || 128, sp.mfdB || 128, sp.leds || builtinLeds(), [L('empty'), L('empty'), L('empty')])], null, sp.date || 'yy-mm-dd', sp.extra);
+        list.push(p); ids.push(p.id);
+      });
+    });
+    return ids;
+  }
+  import07(problems) {
+    var names = problems ? ['Falcon BMS', 'IL-2 Sturmovik', 'Star Citizen'] : ['Falcon BMS', 'IL-2 Sturmovik', 'MSFS 2024', 'Star Citizen'];
+    this.addProfiles('x52-pro', names.map(function (n, i) { return { name: n, ledB: [128, 96, 64, 112][i], mfdB: [128, 64, 96, 128][i] }; }));
+    var self = this;
+    var items = ['“Star Citizen”: LED brightness 40 is out of range (0–32) and was set to 128', '“IL-2 Sturmovik”: clock 3 offset −900 is out of range and was set to UTC+08:00', 'Row 6, “Old test”, was not imported: a profile file with its id already exists'];
+    this.showToast({ title: 'Imported ' + names.length + ' profiles from GX52 0.7', actionLabel: problems ? 'Details' : undefined, timeout: problems ? 8000 : 5000,
+      action: problems ? function () { self.setState({ details: { title: 'GX52 0.7 Import', intro: 'Some values were replaced with defaults and one profile was not imported.', items: items }, detailsOpen: true }); } : undefined });
+  }
+  import07Ok() { this.import07(false); }
+  import07Problems() { this.import07(true); }
+  import07Deferred() { this.showToast({ title: 'Close GX52 0.7 to import its profiles', timeout: 7000 }); }
+  addFailed(kind) {
+    var ty = this.typeOf(this.state); if (!ty) return;
+    var self = this;
+    var spec = kind === 'damaged'
+      ? { name: '3f9e2c71-5d8a-4b6e-9f10-2a3b4c5d6e7f.toml', extra: { status: 'damaged', file: '3f9e2c71-5d8a-4b6e-9f10-2a3b4c5d6e7f.toml', reason: 'not valid TOML: line 12, “=” expected' } }
+      : { name: 'Space Shuttle', extra: { status: 'newer', file: '8a7b6c5d-4e3f-4a1b-9c0d-e1f2a3b4c5d6.toml', schema: 2 } };
+    this.addProfiles(ty, [spec]);
+    var details = kind === 'damaged'
+      ? { title: 'Profile Problems', intro: 'These profile files could not be read. They are kept as they are.', items: [spec.extra.file + ': ' + spec.extra.reason] }
+      : { title: 'Profile Problems', intro: 'These profiles were made by a newer GX52. They are read-only and never rewritten.', items: ['“Space Shuttle” uses profile format 2; this GX52 reads format 1'] };
+    this.showToast({ title: kind === 'damaged' ? '1 profile file could not be read' : '1 profile was made by a newer GX52', actionLabel: 'Details', timeout: 8000, action: function () { self.setState({ details: details, detailsOpen: true }); } });
+  }
+  addDamaged() { this.addFailed('damaged'); }
+  addNewer() { this.addFailed('newer'); }
+  startImport() { if (this.typeOf(this.state)) this.openAlert('import'); }
+  doImportFile() {
+    var ty = this.typeOf(this.state); if (!ty) return;
+    this.addProfiles(ty, [{ name: 'Falcon BMS', ledB: 128, mfdB: 96, date: 'dd-mm-yy' }]);
+    this.showToast({ title: 'Imported “Falcon BMS”' });
+  }
+  importWrongType() {
+    var ty = this.typeOf(this.state); if (!ty) return;
+    var other = ty === 'x52-pro' ? 'x52' : 'x52-pro';
+    this.openAlert('wrongType', { other: DEV_NAMES[other], here: DEV_NAMES[ty] });
+  }
+  importNewer() { if (this.typeOf(this.state)) this.openAlert('newerFile'); }
+  showFile() { this.showToast({ title: 'Opened the profiles folder' }); }
+  removeViewed() { if (this.state.viewId) this.askRemove(this.state.viewId); }
+
+  /* ---------- window and navigation ---------- */
+  onShowContentChange(v) { this.setState({ showContent: v }); }
+  openTest() { if (this.state.renaming) this.finishRename(true); this.setState({ page: 'test', viewId: null, showContent: true, ledPopOpen: false }); }
+  openFullGuide() { this.setState({ fullGuide: true }); }
+  tryAgain() { if (!(this.state.connected && this.state.permission)) this.showToast({ title: 'Still no access to the device' }); }
+  showWindow() { this.setState({ windowShown: true, running: true }); }
+  closeWindow() { if (this.state.prefs.runBg) this.setState({ windowShown: false }); else this.setState({ running: false, windowShown: false }); }
+  quit() { this.setState({ running: false, windowShown: false, prefsOpen: false }); }
+  onKey(e) {
+    var tag = (e.target && e.target.tagName) || '', typing = tag === 'INPUT' || tag === 'TEXTAREA';
+    var ctrl = e.ctrlKey || e.metaKey, k = e.key, s = this.state, inf = this.info(s), sel = this.selectedId();
+    var done = true;
+    if (ctrl && !e.shiftKey && (k === 'n' || k === 'N')) this.newProfile('single');
+    else if (ctrl && (k === 'o' || k === 'O')) this.startImport();
+    else if (ctrl && e.shiftKey && (k === 'e' || k === 'E')) { if (sel) this.exportProfile(sel); }
+    else if (ctrl && (k === '1' || k === '2' || k === '3')) this.setState({ view: ['leds', 'mfd', 'clocks'][+k - 1] });
+    else if (ctrl && k === ',') this.setState({ prefsOpen: true });
+    else if (ctrl && (k === '?' || (e.shiftKey && k === '/'))) this.setState({ shortcutsOpen: true });
+    else if (ctrl && (k === 'w' || k === 'W')) this.closeWindow();
+    else if (ctrl && (k === 'q' || k === 'Q')) this.quit();
+    else if (!typing && k === 'F2' && sel && s.page === 'profile') this.startRename(sel);
+    else if (!typing && k === 'Delete' && sel && s.page === 'profile') this.askRemove(sel);
+    else done = false;
+    if (done) { e.preventDefault(); e.stopPropagation(); }
+  }
+
+  /* ---------- editor ---------- */
+  onEditMode(i) { this.setState({ editMode: i + 1, ledPopOpen: false }); }
+  onLedB(v) { var n = Math.round(v * 128); this.updateMS(function (m) { m.ledB = n; }); }
+  onBlink(v) { this.updateMS(function (m) { m.blink = v; }); }
+  openLed(key) { this.setState({ ledPop: key, ledPopOpen: true }); }
+  closeLedPop() { this.setState({ ledPopOpen: false }); }
+  onLedPick(i) {
+    var key = this.state.ledPop; if (!key) return;
+    var st = LED_DEFS[key].bi ? BI_STATES[i] : SG_STATES[i];
+    this.updateMS(function (m) { m.leds[key] = st; });
+    this.setState({ ledPopOpen: false });
+  }
+  onMfdClock(i) { this.setState({ mfdClock: i }); }
+  onMfdB(v) { var n = Math.round(v * 128); this.updateMS(function (m) { m.mfdB = n; }); }
+  onShift(v) { this.updateMS(function (m) { m.shift = v; }); }
+  setLine(idx, patch) { this.updateMS(function (m) { Object.keys(patch).forEach(function (k) { m.lines[idx][k] = patch[k]; }); }); }
+  setClock(k, patch) { var inf = this.info(this.state); if (!inf.view) return; this.updateProfile(inf.view.id, function (c) { Object.keys(patch).forEach(function (x) { c.clocks[k][x] = patch[x]; }); }); }
+  onC1Source(i) { this.setClock(0, { source: i === 0 ? 'local' : 'utc' }); }
+  onC1H24(v) { this.setClock(0, { h24: v }); }
+  onDateFormat(i) { var inf = this.info(this.state); if (inf.view) this.updateProfile(inf.view.id, function (c) { c.dateFormat = DATE_FORMATS[i]; }); }
+  openTz(k) { this.setState({ tzOpen: true, tzClock: k, tzQuery: '' }); }
+  closeTz() { this.setState({ tzOpen: false }); }
+  onTzQuery(v) { this.setState({ tzQuery: v }); }
+  pickZone(z) { var k = this.state.tzClock; var off = zoneOffset(z, new Date()); this.setClock(k, { type: 'zone', zone: z, offset: Math.max(-720, Math.min(840, Math.round(off / 15) * 15)) }); this.setState({ tzOpen: false }); }
+
+  /* ---------- dialogs ---------- */
+  closeDetails() { this.setState({ detailsOpen: false }); }
+  closeX52d() { this.setState({ x52dOpen: false }); }
+  closePrefs() { this.setState({ prefsOpen: false }); }
+  closeShortcuts() { this.setState({ shortcutsOpen: false }); }
+  closeAbout() { this.setState({ aboutOpen: false }); }
+  setPref(k, v) { this.setState(function (s) { var p = Object.assign({}, s.prefs); p[k] = v; if (k === 'runBg' && !v) p.startLogin = false; return { prefs: p }; }); }
+  onRunBg(v) { this.setPref('runBg', v); }
+  onStartLogin(v) { this.setPref('startLogin', v); }
+  onMouse(v) { this.setPref('mouse', v); }
+  onSpeed(v) { this.setPref('speed', v); }
+  onCurve(v) { this.setPref('curve', v); }
+  onDeadzone(v) { this.setPref('deadzone', v); }
+  onInvert(v) { this.setPref('invert', v); }
+  openUinputHelp() { if (this._pd && this._pd.pushSubpage) this._pd.pushSubpage('uinput'); }
+
+  /* ---------- prototype controls ---------- */
+  onDevice(i) {
+    var connected = i !== 0, devType = i === 2 ? 'x52' : 'x52-pro';
+    this.setState(function (s) {
+      var r = { connected: connected, devType: connected ? devType : s.devType, viewId: null, renaming: null, ledPopOpen: false, menuOpen: null };
+      if (connected && s.permission) { r.lastType = devType; r.fullGuide = false; }
+      return r;
+    });
+  }
+  onPermission(v) { this.setState(function (s) { var r = { permission: v }; if (v && s.connected) { r.lastType = s.devType; r.fullGuide = false; } return r; }); }
+  onX52d(v) { this.setState({ x52d: v }); }
+  forgetDevice() { this.setState({ lastType: null, connected: false, fullGuide: false, page: 'profile', viewId: null }); }
+  onStickMode(i) { this.setState({ mode: i + 1, editMode: i + 1 }); }
+  onHoldPick(i) { this.setState({ holdIdx: i }); }
+  onHolding(v) { this.setState({ holding: v }); }
+  onMoveAxes(v) { this.setState({ moveAxes: v }); }
+  onUinput(v) { this.setState({ uinputOk: v }); }
+  onTrayHost(v) { this.setState({ trayHost: v }); }
+  onTheme(i) { this.setState({ theme: i === 1 ? 'dark' : 'light' }); }
+  onNarrow(v) { this.setState({ narrow: v, showContent: !v }); }
+
+  /* ---------- render ---------- */
+  renderVals() {
+    var self = this, s = this.state, inf = this.info(s), ty = inf.ty, list = inf.list, now = new Date(s.now);
+    var connectedReady = s.connected && s.permission;
+    var devName = DEV_NAMES[s.connected ? s.devType : (s.lastType || 'x52-pro')];
+    var isPro = ty === 'x52-pro';
+    var active = inf.active, view = inf.view;
+
+    /* held buttons */
+    var holdOpt = HOLD_OPTIONS[s.holdIdx] || HOLD_OPTIONS[0];
+    var held = {};
+    if (s.connected && s.holding) { held[holdOpt.code] = 1; if (holdOpt.code === 302) held[288] = 1; }
+    if (s.connected) held[714 + s.mode] = 1;
+    var lastBtn = (s.connected && s.holding) ? holdOpt.name : '';
+
+    /* status */
+    var status;
+    if (!s.connected) status = { dotCls: 'gx-sdot is-grey', title: 'Not connected', sub: 'Waiting for an X52 or X52 Pro', warn: false };
+    else if (!s.permission) status = { dotCls: 'gx-sdot is-red', title: devName, sub: 'No permission', warn: false };
+    else if (s.x52d) status = { dotCls: 'gx-sdot is-green', title: devName, sub: 'x52d is running', warn: true };
+    else status = { dotCls: 'gx-sdot is-green', title: devName, sub: active && active.kind === 'per_mode' ? 'Connected · Mode ' + s.mode : 'Connected', warn: false };
+    status.aria = 'Device: ' + status.title + ', ' + status.sub;
+
+    /* main menu and + menu */
+    var mainMenu = { type: 'MenuButton', icon: 'open-menu', tooltip: 'Main Menu', primary: true,
+      menu: [{ section: [{ label: 'Import Profile…', action: 'win.import', accel: '<Control>o' }] },
+             { section: [{ label: 'Preferences', action: 'app.preferences', accel: '<Control>comma' }, { label: 'Keyboard Shortcuts', action: 'win.shortcuts', accel: '<Control>question' }, { label: 'About GX52', action: 'app.about' }] }],
+      actions: { 'win.import': { enabled: !!ty, activate: function () { self.startImport(); } }, 'app.preferences': { activate: function () { self.setState({ prefsOpen: true }); } },
+                 'win.shortcuts': { activate: function () { self.setState({ shortcutsOpen: true }); } }, 'app.about': { activate: function () { self.setState({ aboutOpen: true }); } } } };
+    var plusMenu = { type: 'MenuButton', icon: 'list-add', tooltip: 'New Profile',
+      menu: [{ section: [{ label: 'New Single Profile', action: 'win.new-single', accel: '<Control>n' }, { label: 'New Per-Mode Profile', action: 'win.new-per-mode' }] }],
+      actions: { 'win.new-single': { activate: function () { self.newProfile('single'); } }, 'win.new-per-mode': { activate: function () { self.newProfile('per_mode'); } } } };
+
+    /* rows */
+    var renameError = this.renameErr(s);
+    var onProfilePage = s.page === 'profile';
+    var rows = list.map(function (p, idx) {
+      var isActive = active && p.id === active.id, isView = view && p.id === view.id;
+      var selected = onProfilePage && ((s.viewId && p.id === s.viewId) || (!s.viewId && isActive));
+      var failed = p.status !== 'ok';
+      var cls = 'gx-prow' + (selected ? ' is-selected' : '') + (failed ? ' is-failed' : '') + (s.dragId === p.id ? ' is-dragging' : '');
+      if (s.dropId === p.id && s.dragId && s.dragId !== p.id) cls += s.dropAfter ? ' is-drop-after' : ' is-drop-before';
+      var menu, actions = {};
+      if (failed) {
+        menu = [{ section: [{ label: 'Show File', action: 'row.show' }] }, { section: [{ label: 'Remove', action: 'row.remove', accel: 'Delete' }] }];
+        actions['row.show'] = { activate: function () { self.showFile(); } };
+      } else {
+        menu = [{ section: [{ label: 'Rename', action: 'row.rename', accel: 'F2' }, { label: 'Duplicate', action: 'row.duplicate' }, { label: 'Export…', action: 'row.export', accel: '<Shift><Control>e' }] },
+                { section: [{ label: p.kind === 'single' ? 'Use Per-Mode Settings' : 'Use Single Settings', action: 'row.kind' }] }];
+        if (!p.isDefault) menu.push({ section: [{ label: 'Move Up', action: 'row.up' }, { label: 'Move Down', action: 'row.down' }] });
+        if (!p.isDefault) menu.push({ section: [{ label: 'Remove', action: 'row.remove', accel: 'Delete' }] });
+        actions['row.rename'] = { activate: function () { self.startRename(p.id); } };
+        actions['row.duplicate'] = { activate: function () { self.duplicate(p.id); } };
+        actions['row.export'] = { activate: function () { self.exportProfile(p.id); } };
+        actions['row.kind'] = { activate: function () { self.toggleKind(p.id); } };
+        actions['row.up'] = { enabled: idx > 1, activate: function () { self.move(p.id, -1); } };
+        actions['row.down'] = { enabled: idx < list.length - 1, activate: function () { self.move(p.id, 1); } };
+      }
+      if (!p.isDefault) actions['row.remove'] = { activate: function () { self.askRemove(p.id); } };
+      var badges = [1, 2, 3].map(function (n) { return { n: String(n), cls: 'gx-badge' + (isActive && s.connected && s.mode === n ? ' is-current' : '') }; });
+      var aria = p.name + (p.kind === 'per_mode' ? ', per-mode' : '') + (isActive ? ', active' : '') + (failed ? (p.status === 'newer' ? ', made by a newer GX52' : ', failed to load') : '');
+      return {
+        id: p.id, name: p.name, cls: cls, perMode: p.kind === 'per_mode' && !failed, badges: badges, failed: failed,
+        renaming: s.renaming === p.id, notRenaming: s.renaming !== p.id,
+        dotCls: 'gx-dot' + (isActive && !onProfilePage ? ' is-on' : '') + (isActive && s.viewId ? ' is-on' : ''),
+        dragCls: 'gx-drag' + (p.isDefault ? ' is-none' : ''), draggable: !p.isDefault && s.renaming !== p.id,
+        ariaCurrent: isActive ? 'true' : 'false', aria: aria, tip: failed ? (p.status === 'newer' ? 'Made by a newer GX52' : 'This profile file is damaged') : p.name,
+        menu: menu, actions: actions, menuTip: 'Menu for “' + p.name + '”', menuOpen: s.menuOpen === p.id,
+        onMenuOpenChange: function (o) { self.setState({ menuOpen: o ? p.id : null }); },
+        select: function () { self.selectProfile(p.id); },
+        onContextMenu: function (e) { e.preventDefault(); self.setState({ menuOpen: p.id }); },
+        onPointerDown: function (e) { if (e.pointerType === 'touch') { clearTimeout(self._lp); self._lp = setTimeout(function () { self.setState({ menuOpen: p.id }); }, 500); } },
+        onDragStart: function (e) { if (p.isDefault) { e.preventDefault(); return; } try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', p.id); } catch (x) {} self.setState({ dragId: p.id }); },
+        onDragOver: function (e) {
+          if (!self.state.dragId) return; e.preventDefault();
+          var r = e.currentTarget.getBoundingClientRect(), after = p.isDefault ? true : (e.clientY > r.top + r.height / 2);
+          if (self.state.dropId !== p.id || self.state.dropAfter !== after) self.setState({ dropId: p.id, dropAfter: after });
+        },
+        onDrop: function (e) { e.preventDefault(); self.reorder(self.state.dragId, p.id, self.state.dropAfter); }
+      };
+    });
+
+    /* content variant */
+    var cTest = !!(ty && s.page === 'test');
+    var cPerm = !cTest && s.connected && !s.permission && !!ty;
+    var cFailed = !cTest && !cPerm && !!(view && view.status !== 'ok');
+    var cEditor = !cTest && !cPerm && !cFailed && !!view;
+    var contentTitle = cTest ? 'Test Input' : cPerm ? 'Device Access' : (view ? view.name : 'GX52');
+    var failed = { icon: 'dialog-warning', title: '', desc: '' };
+    if (cFailed) {
+      if (view.status === 'newer') failed = { icon: 'dialog-information', title: 'Made by a Newer GX52', desc: '“' + view.name + '” was saved by a newer version of GX52. It is shown read-only: it can’t be edited, sent to the device or made active, and it is never rewritten.' };
+      else failed = { icon: 'dialog-warning', title: 'This Profile File Is Damaged', desc: 'GX52 could not read “' + view.file + '”: ' + view.reason + '. The file is kept as it is.' };
+    }
+
+    /* view switcher */
+    var vpages = [{ name: 'leds', title: 'LEDs', icon: 'display-brightness' }, { name: 'mfd', title: 'MFD', icon: 'video-display' }, { name: 'clocks', title: 'Clocks', icon: 'preferences-system-time' }];
+    var onView = function (n) { self.setState({ view: n, ledPopOpen: false }); };
+    var hdr = { type: 'HeaderBar' };
+    if (!s.narrow) hdr.titleWidget = { type: 'ViewSwitcher', policy: 'wide', pages: vpages, selected: s.view, onSelect: onView, label: 'Editor views' };
+    else hdr.title = view ? view.name : 'GX52';
+    var editorTop = [hdr];
+    if (s.x52d && s.connected) editorTop.push({ type: 'Banner', title: 'x52d is running and may overwrite these settings', buttonLabel: 'Learn More', onButtonClick: function () { self.setState({ x52dOpen: true }); } });
+    var editorBottom = s.narrow ? [{ type: 'ViewSwitcherBar', reveal: true, pages: vpages, selected: s.view, onSelect: onView, label: 'Editor views' }] : [];
+
+    /* editor data */
+    var m = view && view.modes ? (view.modes[inf.msIdx] || view.modes[0]) : builtinMS();
+    var bright0 = m.ledB === 0;
+    var ledCards = LED_CARDS.map(function (card) {
+      return {
+        title: card.title, gridCls: 'gx-ledgrid' + (card.cols === 3 ? ' is-cols3' : ''),
+        cells: card.cells.map(function (key) {
+          var d = LED_DEFS[key];
+          if (d.fixed) {
+            return { id: 'led-' + key, name: d.name, cellCls: 'gx-ledcell is-span', cls: 'gx-led is-fixed ' + (bright0 ? 'led-off' : 'led-green') + (m.blink && !bright0 ? ' is-blink' : ''),
+              aria: 'POV 1 LED: Green, fixed' + (bright0 ? ', brightness 0' : ''), tip: 'POV 1 is always green. It can’t be changed and follows the brightness and blink settings.', haspopup: 'false', ariaDisabled: 'true', open: function () {} };
+          }
+          var st = m.leds[key] || 'off';
+          return { id: 'led-' + key, name: d.name, cellCls: 'gx-ledcell', cls: 'gx-led ' + (bright0 ? 'led-off' : 'led-' + st) + (key === 'i' && m.blink && !bright0 && st !== 'off' ? ' is-blink' : ''),
+            aria: d.name + ' LED: ' + STATE_LABEL[st] + (bright0 ? ', brightness 0' : ''), tip: d.name + ' LED: ' + STATE_LABEL[st], haspopup: 'dialog', ariaDisabled: 'false',
+            open: function () { self.openLed(key); } };
+        })
+      };
+    });
+    var popKey = s.ledPop && LED_DEFS[s.ledPop] && !LED_DEFS[s.ledPop].fixed ? s.ledPop : 'a';
+    var popDef = LED_DEFS[popKey], popState = m.leds[popKey] || 'off';
+
+    /* MFD */
+    /* the mode whose settings are on the device: the mode bar's pick on a per-mode profile (until the selector moves), else the selector */
+    var modeText = 'Mode ' + (active && active.kind === 'per_mode' ? s.editMode : s.mode);
+    var lineChars = [], lineRows = [];
+    var mfdLinesText = [];
+    for (var li = 0; li < 3; li++) {
+      var ln = m.lines[li] || L('empty'), raw = '';
+      if (ln.source === 'text') raw = ln.text;
+      else if (ln.source === 'profile_name') raw = active ? active.name : '';
+      else if (ln.source === 'mode') raw = modeText;
+      else if (ln.source === 'last_button') raw = lastBtn;
+      var cv = convert(raw), shown = cv.chars.slice(0, 16);
+      mfdLinesText.push(shown.join('').trim());
+      var cells = []; for (var ci = 0; ci < 16; ci++) cells.push(shown[ci] || ' ');
+      lineChars.push(cells);
+      (function (idx, ln) {
+        var tc = convert(ln.text), n = Math.min(16, tc.chars.length);
+        lineRows.push({
+          title: 'Line ' + (idx + 1), sel: Math.max(0, LINE_SOURCES.indexOf(ln.source)), isText: ln.source === 'text',
+          textTitle: 'Line ' + (idx + 1) + ' text', text: ln.text, status: tc.reps.length ? 'warning' : undefined,
+          hasReps: tc.reps.length > 0, reps: tc.reps.join(', '), repsTip: 'These characters are not on the MFD and are shown as their replacement',
+          count: n + '/16', countCls: 'caption numeric dimmed', countAria: n + ' of 16 characters',
+          onSelect: function (i) { self.setLine(idx, { source: LINE_SOURCES[i] }); },
+          /* each character converts to one MFD byte, so stop accepting input at 16 */
+          onText: function (v) { self.setLine(idx, { text: Array.from(v || '').slice(0, 16).join('') }); }
+        });
+      })(li, ln);
+    }
+    var mfdClockIdx = s.mfdClock;
+    var bl = m.mfdB === 0 ? 0 : m.mfdB <= 40 ? 1 : m.mfdB <= 90 ? 2 : 3;
+    var mfdTime = view ? clockTime(view, mfdClockIdx, now) : '';
+    var mfdDateStr = view ? mfdDate(view, now) : '';
+    var mfd = { cls: 'gx-mfd bl-' + bl, lines: lineChars, shift: isPro && m.shift, time: mfdTime, date: mfdDateStr, clockTag: mfdClockIdx > 0 ? String(mfdClockIdx + 1) : '',
+      aria: 'Simulated MFD: ' + mfdLinesText.map(function (t) { return t || 'blank'; }).join(', ') + '; clock ' + (mfdClockIdx + 1) + ' ' + mfdTime + ', date ' + mfdDateStr };
+
+    /* clocks */
+    var clk = { c1desc: '', c1sel: 0, c1h24: true, others: [], dateSel: 0 };
+    if (view && view.clocks) {
+      var dd = mfdDate(view, now);
+      clk.c1desc = 'Shows ' + clockTime(view, 0, now) + ' · ' + dd + (view.clocks[0].source === 'local' ? ' · system time zone' : ' · UTC');
+      clk.c1sel = view.clocks[0].source === 'utc' ? 1 : 0; clk.c1h24 = !!view.clocks[0].h24;
+      clk.dateSel = Math.max(0, DATE_FORMATS.indexOf(view.dateFormat));
+      clk.others = [1, 2].map(function (k) {
+        var c = view.clocks[k], off = clockOffset(view, k, now);
+        return {
+          title: 'Clock ' + (k + 1), desc: 'Shows ' + clockTime(view, k, now) + ' · ' + fmtOffset(off) + (c.type === 'offset' ? ' all year' : ''),
+          sel: c.type === 'zone' ? 0 : 1, isZone: c.type === 'zone', isOffset: c.type !== 'zone', srcLabel: 'Clock ' + (k + 1) + ' source',
+          zoneLabel: zoneCity(c.zone) + ' · ' + clockTime(view, k, now), offset: c.offset, h24: !!c.h24,
+          onSource: function (i) { self.setClock(k, { type: i === 0 ? 'zone' : 'offset' }); },
+          openTz: function () { self.openTz(k); },
+          onOffset: function (v) { self.setClock(k, { offset: Math.round(v / 15) * 15 }); },
+          onH24: function (v) { self.setClock(k, { h24: v }); }
+        };
+      });
+    }
+    var dEx = dateParts('dd-mm-yy', new Date(now.getTime() - now.getTimezoneOffset() * 60000));
+    var dateItems = DATE_FORMATS.map(function (f, i) { var t = new Date(now.getTime() - now.getTimezoneOffset() * 60000); return DATE_LABELS[i] + ' · ' + dateParts(f, t).join('.'); });
+
+    /* time zone dialog */
+    var q = (s.tzQuery || '').trim().toLowerCase();
+    var curZone = view && view.clocks && view.clocks[s.tzClock] ? view.clocks[s.tzClock].zone : '';
+    var tzRows = ZONES.filter(function (z) { return !q || (z[0] + ' ' + z[1] + ' ' + z[2]).toLowerCase().indexOf(q) >= 0; }).map(function (z) {
+      var off = zoneOffset(z[2], now), t = new Date(now.getTime() + off * 60000);
+      return { title: z[0] + ' · ' + pad(t.getUTCHours()) + ':' + pad(t.getUTCMinutes()), subtitle: z[1] + ' · ' + fmtOffset(off),
+        suffix: z[2] === curZone ? [{ type: 'Icon', name: 'object-select', label: 'Current time zone' }] : [], pick: function () { self.pickZone(z[2]); } };
+    });
+    var tzTop = [{ type: 'HeaderBar', titleWidget: { type: 'SearchEntry', value: s.tzQuery, onChange: this.onTzQuery, placeholder: 'Search cities and time zones', label: 'Search cities and time zones', alwaysEditable: true } }];
+
+    /* input tester */
+    var t = s.t, mv = s.moveAxes;
+    function wav(c, a, f, ph, lo, hi) { var v = mv ? c + a * Math.sin(t * f + ph) : c; return Math.max(lo, Math.min(hi, Math.round(v))); }
+    var X = wav(511, 330, 0.9, 0, 0, 1023), Y = wav(511, 250, 0.7, 1, 0, 1023), RZ = wav(511, 160, 0.5, 2, 0, 1023);
+    var Z = wav(128, 100, 0.23, 0, 0, 255), RX = wav(128, 60, 0.4, 0.5, 0, 255), RY = wav(128, 90, 0.31, 2, 0, 255), SL = wav(128, 115, 0.17, 1, 0, 255);
+    var MX = wav(8, 5, 1.3, 0, 0, 15), MY = wav(8, 4, 1.1, 1, 0, 15);
+    var ax = {
+      xyDot: { left: (X / 1023 * 100) + '%', top: (Y / 1023 * 100) + '%' }, zFill: { height: (Z / 255 * 100) + '%' },
+      bars: [{ label: 'X Rotation', value: RX, fill: { width: (RX / 255 * 100) + '%' } }, { label: 'Y Rotation', value: RY, fill: { width: (RY / 255 * 100) + '%' } },
+             { label: 'Z Rotation', value: RZ, fill: { width: (RZ / 1023 * 100) + '%' } }, { label: 'Slider', value: SL, fill: { width: (SL / 255 * 100) + '%' } }],
+      raw: 'X ' + X + ' · Y ' + Y + ' · Z ' + Z,
+      miniDot: { left: (MX / 15 * 100) + '%', top: (MY / 15 * 100) + '%' }, miniRaw: MX + ', ' + MY,
+      aria: 'Axes: X ' + X + ', Y ' + Y + ', Z ' + Z + ', X rotation ' + RX + ', Y rotation ' + RY + ', Z rotation ' + RZ + ', slider ' + SL,
+      miniAria: 'Ministick: X ' + MX + ', Y ' + MY
+    };
+    function ind(code, label) { var b = btnInfo(code); return { cls: 'gx-ind' + (held[code] ? ' is-on' : ''), label: label || (b.short + ' · ' + b.num), tip: b.name + ' · button ' + b.num + ' · evdev code ' + code }; }
+    var toggles = [296, 298, 300, 297, 299, 301].map(function (c) { var b = btnInfo(c); return { cls: 'gx-ind has-num' + (held[c] ? ' is-on' : ''), num: String(b.num), label: b.short, tip: 'Button ' + b.num + ' · ' + b.name + ' · evdev code ' + c }; });
+    var modeInds = [715, 716, 717].map(function (c, i) { return ind(c, String(i + 1)); });
+    var btnGroups = BTN_GROUPS.map(function (g) {
+      return { title: g.title, items: g.codes.map(function (c) { var b = btnInfo(c); return { cls: 'gx-ind has-num' + (held[c] ? ' is-on' : ''), num: String(b.num), label: b.short, tip: 'Button ' + b.num + ' · ' + b.name + ' · evdev code ' + c }; }) };
+    });
+    function povCells(up, right, down, left) {
+      var on = [0, up, 0, left, 0, right, 0, down, 0];
+      return on.map(function (o, i) { return 'gx-povcell' + (i === 4 ? ' is-center' : '') + (o ? ' is-on' : ''); });
+    }
+    var povs = [
+      { label: 'POV 1', cells: povCells(held['pov1-up'], held['pov1-right'], held['pov1-down'], held['pov1-left']) },
+      { label: 'POV 2', cells: povCells(held[707], held[708], held[709], held[710]) },
+      { label: 'Throttle hat', cells: povCells(held[711], held[712], held[713], held[714]) }
+    ];
+    var pressed = Object.keys(held).map(function (k) { var b = btnInfo(+k); return b ? b.name : (String(k).indexOf('pov1') === 0 ? 'POV 1 ' + k.split('-')[1] : null); }).filter(function (x) { return x && x.indexOf('Mode') !== 0; });
+    var testSr = 'Buttons pressed: ' + (pressed.length ? pressed.join(', ') : 'none') + '. Mode ' + s.mode + '.';
+
+    /* tray */
+    var trayVisible = s.running && s.prefs.runBg && s.trayHost;
+    var trayStatus = s.connected ? (devName + (active && active.kind === 'per_mode' ? ' · Mode ' + s.mode : '') + (active ? ' · ' + active.name : '')) : 'Not connected';
+    var trayProfiles = list.filter(function (p) { return p.status === 'ok'; }).map(function (p) { return { label: p.name, action: 'tray.profile', target: p.id }; });
+    var trayMenu = [
+      { section: [{ label: trayStatus, disabled: true }] },
+      { section: [{ label: s.windowShown ? 'Hide GX52' : 'Show GX52', action: 'tray.toggle' }] },
+      { section: [{ label: 'Profile', submenu: [{ section: trayProfiles }] }] },
+      { section: [{ label: 'Preferences', action: 'tray.prefs' }, { label: 'About GX52', action: 'tray.about' }] },
+      { section: [{ label: 'Quit', action: 'tray.quit' }] }
+    ];
+    var trayActions = {
+      'tray.toggle': { activate: function () { self.setState({ windowShown: !self.state.windowShown }); } },
+      'tray.profile': { state: active ? active.id : '', activate: function (target) { var a = Object.assign({}, self.state.active); a[ty] = target; self.setState({ active: a, viewId: null }); } },
+      'tray.prefs': { activate: function () { self.setState({ windowShown: true, prefsOpen: true }); } },
+      'tray.about': { activate: function () { self.setState({ windowShown: true, aboutOpen: true }); } },
+      'tray.quit': { activate: function () { self.quit(); } }
+    };
+    var trayNote = !s.running ? 'GX52 is not running.' : !s.prefs.runBg ? 'Run in Background is off: no tray icon.' : !s.trayHost ? 'No tray host: GNOME lists GX52 under Background Apps.' : 'Click the GX52 icon for the tray menu.';
+
+    /* uinput subpage */
+    var subpages = [];
+    try {
+      subpages = [window.Adw.fromSpec({ type: 'NavigationPage', tag: 'uinput', title: 'Virtual Mouse Access', children: { type: 'ToolbarView', scroll: false, top: [{ type: 'HeaderBar' }], children: { type: 'PreferencesPage', description: 'The virtual mouse needs write access to /dev/uinput. Add this line to the same rule file as the device rule, /etc/udev/rules.d/70-gx52.rules:', children: [
+        { type: 'PreferencesGroup', title: 'Rule Line', children: [{ type: 'ActionRow', title: UINPUT_RULE, className: 'monospace', suffix: [{ type: 'Button', icon: 'edit-copy', variant: 'flat', tooltip: 'Copy Rule Line', valign: 'center', onClick: function () { self.copy(UINPUT_RULE); } }] }] },
+        { type: 'PreferencesGroup', title: 'Load the Rule', description: 'No need to log out or replug anything.', children: [{ type: 'ActionRow', title: UDEV_CMD, className: 'monospace', suffix: [{ type: 'Button', icon: 'edit-copy', variant: 'flat', tooltip: 'Copy Command', valign: 'center', onClick: function () { self.copy(UDEV_CMD); } }] }] },
+        { type: 'PreferencesGroup', title: 'Security', children: [{ type: 'ActionRow', icon: 'dialog-warning', title: 'Write access to uinput lets any program you run inject keyboard and mouse input' }] }
+      ] } } })];
+    } catch (e) { subpages = []; }
+
+    var hidden = !s.windowShown || !s.running;
+    var winW = s.narrow ? 360 : 1100, winH = s.narrow ? 720 : 760;
+
+    return {
+      yes: true, theme: s.theme, themeIdx: s.theme === 'dark' ? 1 : 0, narrow: s.narrow, showContent: s.narrow ? s.showContent : true,
+      winW: winW, winH: winH, windowVisible: !hidden, windowHidden: hidden,
+      hiddenStyle: { width: winW + 'px', height: winH + 'px' },
+      hiddenTitle: s.running ? 'GX52 is running in the background' : 'GX52 is not running',
+      hiddenDesc: s.running ? 'The window is closed and the active profile stays on the device.' : 'Launch it again to see the window.',
+      hiddenAction: s.running ? 'Show GX52' : 'Launch GX52',
+      devName: devName, isPro: isPro, status: status,
+      showFull: !ty, showSplit: !!ty, fullStatus: !ty && !s.fullGuide, fullGuide: !ty && s.fullGuide,
+      fullCanFix: s.connected && !s.permission, fullDesc: s.connected && !s.permission ? 'A device is connected, but GX52 is not allowed to open it.' : 'GX52 shows your profiles once the joystick is plugged in.',
+      fullTop: [{ type: 'HeaderBar', title: 'GX52', start: s.fullGuide && !ty ? [{ type: 'Button', icon: 'go-previous', tooltip: 'Back', onClick: function () { self.setState({ fullGuide: false }); } }, mainMenu] : [mainMenu] }],
+      sidebarTop: [{ type: 'HeaderBar', start: [mainMenu], end: [plusMenu], windowControls: s.narrow ? ['close'] : [] }],
+      plainTop: [{ type: 'HeaderBar' }], dlgTop: [{ type: 'HeaderBar' }],
+      rows: rows, renameValue: s.renameValue, renameStatus: renameError ? 'error' : undefined, renameError: renameError, renameHasError: !!renameError && !!s.renaming,
+      testRowCls: 'gx-prow' + (s.page === 'test' ? ' is-selected' : ''), testAriaCurrent: s.page === 'test' ? 'page' : 'false',
+      contentTitle: contentTitle, cPerm: cPerm, cFailed: cFailed, cTest: cTest, cEditor: cEditor, failed: failed,
+      udevRule: UDEV_RULE, udevCmd: UDEV_CMD,
+      testNoDevice: !s.connected, testHasDevice: s.connected, testUnverified: s.connected && s.devType === 'x52',
+      ax: ax, toggles: toggles, modeInds: modeInds, btnGroups: btnGroups, povs: povs, testSr: testSr,
+      togglesAria: 'Toggles and mode: ' + testSr, buttonsAria: 'Buttons. ' + testSr, povsAria: 'POVs. ' + testSr,
+      editorTop: editorTop, editorBottom: editorBottom, clampW: s.view === 'clocks' ? 600 : 760,
+      showModeBar: !!(view && view.kind === 'per_mode') && s.view !== 'clocks',
+      modeItems: [{ label: '1' }, { label: '2' }, { label: '3' }], editModeIdx: s.editMode - 1, modeIdx: s.mode - 1,
+      vLeds: s.view === 'leds', vMfd: s.view === 'mfd', vClocks: s.view === 'clocks',
+      ledCards: ledCards, ledB: m.ledB, ledBFrac: m.ledB / 128, blink: !!m.blink, mfdB: m.mfdB, mfdBFrac: m.mfdB / 128, shift: !!m.shift,
+      ledGroupDesc: isPro ? (bright0 ? 'Brightness is 0: every LED is off. The states are kept.' : undefined) : 'This model has no LEDs that can be set one by one.',
+      ledPopOpen: s.ledPopOpen && s.view === 'leds' && cEditor, ledPopAnchor: '#led-' + popKey, ledPopTitle: popDef.name + ' LED', ledPopLabel: popDef.name + ' LED state',
+      ledPopItems: (popDef.bi ? BI_LABELS : SG_LABELS).map(function (l) { return { label: l }; }),
+      ledPopSelected: Math.max(0, (popDef.bi ? BI_STATES : SG_STATES).indexOf(popState)),
+      mfd: mfd, mfdClock: s.mfdClock, clockItems: [{ label: '1', tooltip: 'Clock 1' }, { label: '2', tooltip: 'Clock 2' }, { label: '3', tooltip: 'Clock 3' }],
+      lineRows: lineRows, lineSourceItems: LINE_LABELS,
+      clk: clk, c1Items: [{ label: 'Local Time' }, { label: 'UTC' }], c2Items: [{ label: 'Time Zone' }, { label: 'Fixed Offset' }], dateItems: dateItems, fmtOffset: fmtOffset,
+      alert: s.alert, alertOpen: s.alertOpen,
+      details: s.details, detailsOpen: s.detailsOpen, x52dOpen: s.x52dOpen,
+      tzOpen: s.tzOpen, tzTop: tzTop, tzRows: tzRows, tzEmpty: tzRows.length === 0, tzHasResults: tzRows.length > 0,
+      prefsOpen: s.prefsOpen, prefs: s.prefs, startLoginDisabled: !s.prefs.runBg, mouseOff: !s.prefs.mouse, uinputWarn: s.prefs.mouse && !s.uinputOk,
+      prefsSubpages: subpages, prefsBridge: window.React ? window.React.createElement(this._PrefsBridge) : null,
+      shortcutsOpen: s.shortcutsOpen, aboutOpen: s.aboutOpen, appIcon: GX_ICON,
+      acc: { newp: '<Control>n', imp: '<Control>o', exp: '<Shift><Control>e', v1: '<Control>1', v2: '<Control>2', v3: '<Control>3', prefs: '<Control>comma', keys: '<Control>question', close: '<Control>w', quit: '<Control>q' },
+      releaseNotes: '<p>GX52 is rewritten for GNOME, in Rust with GTK 4 and libadwaita.</p><ul><li>Single and per-mode profiles: the mode selector on the stick can switch LEDs, MFD and brightness</li><li>A live simulated MFD and an input tester</li><li>Clocks in any time zone, with daylight saving time</li><li>Use the ministick as a mouse</li><li>Profiles from GX52 0.7 are imported automatically</li></ul>',
+      developers: ['Roberto Leinardi https://github.com/leinardi'],
+      hasToast: !!s.toast, toast: s.toast || { title: '' },
+      topClock: now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + '  ' + pad(now.getHours()) + ':' + pad(now.getMinutes()),
+      trayVisible: trayVisible, trayMenu: trayMenu, trayActions: trayActions, trayNote: trayNote,
+      devItems: [{ label: 'None' }, { label: 'X52 Pro' }, { label: 'X52' }], devSel: s.connected ? (s.devType === 'x52' ? 2 : 1) : 0,
+      permission: s.permission, x52d: s.x52d, holdItems: HOLD_OPTIONS.map(function (o) { return o.name; }), holdIdx: s.holdIdx, holding: s.holding, moveAxes: s.moveAxes,
+      uinputOk: s.uinputOk, trayHost: s.trayHost, themeItems: [{ label: 'Light' }, { label: 'Dark' }],
+      onKey: this.onKey, onShowContentChange: this.onShowContentChange, endDrag: this.endDrag, cancelLongPress: this.cancelLongPress,
+      onRenameChange: this.onRenameChange, commitRename: this.commitRename, onRenameKey: this.onRenameKey, renameRef: this.renameRef,
+      openTest: this.openTest, openFullGuide: this.openFullGuide, tryAgain: this.tryAgain, copyUdevRule: this.copyUdevRule, copyUdevCmd: this.copyUdevCmd, copyX52dCmd: this.copyX52dCmd,
+      showFile: this.showFile, removeViewed: this.removeViewed, onEditMode: this.onEditMode, onLedB: this.onLedB, onBlink: this.onBlink,
+      closeLedPop: this.closeLedPop, onLedPick: this.onLedPick, onMfdClock: this.onMfdClock, onMfdB: this.onMfdB, onShift: this.onShift,
+      onC1Source: this.onC1Source, onC1H24: this.onC1H24, onDateFormat: this.onDateFormat,
+      onAlertResponse: this.onAlertResponse, closeDetails: this.closeDetails, closeX52d: this.closeX52d, closeTz: this.closeTz, closePrefs: this.closePrefs,
+      closeShortcuts: this.closeShortcuts, closeAbout: this.closeAbout, onRunBg: this.onRunBg, onStartLogin: this.onStartLogin, onMouse: this.onMouse,
+      onSpeed: this.onSpeed, onCurve: this.onCurve, onDeadzone: this.onDeadzone, onInvert: this.onInvert, openUinputHelp: this.openUinputHelp,
+      onToastAction: this.onToastAction, dismissToast: this.dismissToast, showWindow: this.showWindow,
+      onDevice: this.onDevice, onPermission: this.onPermission, onX52d: this.onX52d, forgetDevice: this.forgetDevice, onStickMode: this.onStickMode,
+      onHoldPick: this.onHoldPick, onHolding: this.onHolding, onMoveAxes: this.onMoveAxes, import07Ok: this.import07Ok, import07Problems: this.import07Problems,
+      import07Deferred: this.import07Deferred, addDamaged: this.addDamaged, addNewer: this.addNewer, startImport: this.startImport, importWrongType: this.importWrongType, importNewer: this.importNewer,
+      onUinput: this.onUinput, onTrayHost: this.onTrayHost, onTheme: this.onTheme, onNarrow: this.onNarrow
+    };
+  }
+}
+var UDEV_RULE = 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="06a3", ATTR{idProduct}=="0762|0255|075c", TAG+="uaccess"';
+var UINPUT_RULE = 'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"';
+var UDEV_CMD = 'sudo udevadm control --reload && sudo udevadm trigger';
+</script>
+</body>
+</html>
