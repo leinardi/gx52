@@ -170,6 +170,15 @@ fn clock_1_shows_24_h_and_12_h() {
     )
     .unwrap();
     assert_eq!(morning.clock, "12:45 AM");
+    let noon_hour = preview(
+        &state,
+        DeviceType::X52Pro,
+        ShownClock::One,
+        "2026-11-09T12:00:00Z".parse().unwrap(),
+        &TimeZone::UTC,
+    )
+    .unwrap();
+    assert_eq!(noon_hour.clock, "12:00 PM");
     assert_eq!(morning.date, "09.11.26");
 }
 

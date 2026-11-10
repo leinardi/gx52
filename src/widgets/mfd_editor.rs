@@ -120,6 +120,8 @@ mod imp {
             let obj = self.obj();
             obj.build_line_rows();
             obj.setup_rows();
+            // The zone is read once now, so the display is complete the first time it is shown.
+            obj.tick();
         }
     }
 
@@ -162,8 +164,12 @@ impl MfdEditor {
                     // Translators: {number} is the number of an MFD line, 1 to 3.
                     .title(gettext("Line {number} text").replace("{number}", &number))
                     .build();
+                // Up to 16 replaced characters: cut, so the row fits the narrowest window. The
+                // label's text, which screen readers read, keeps the whole list.
                 let substitutions = gtk::Label::builder()
                     .valign(gtk::Align::Center)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .max_width_chars(12)
                     .tooltip_text(gettext(
                         "These characters are not on the MFD and are shown as their replacement",
                     ))
@@ -353,8 +359,8 @@ impl MfdEditor {
         }
     }
 
-    /// Reads the system time zone off the main thread, shows the display and schedules the next
-    /// tick at the next minute boundary.
+    /// Reads the system time zone off the main thread, shows the display and, while the editor is
+    /// mapped, schedules the next tick at the next minute boundary.
     fn tick(&self) {
         glib::spawn_future_local(glib::clone!(
             #[weak(rename_to = editor)]
@@ -365,12 +371,11 @@ impl MfdEditor {
                     tracing::error!("The task reading the system time zone panicked");
                     return;
                 };
-                if !editor.is_mapped() {
-                    return;
-                }
                 editor.imp().zone.replace(Some(zone.clone()));
                 editor.refresh_display();
-                editor.schedule_tick(&zone);
+                if editor.is_mapped() {
+                    editor.schedule_tick(&zone);
+                }
             }
         ));
     }
