@@ -318,6 +318,31 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    brightness and shift. Done when: DW, plus text with characters outside the table shows the
    fallback in the display and on the device, and each dynamic source follows the device (profile,
    mode, a held button).
+
+   Results on 2026-11-10:
+
+   - **Editor:** the display is built from the desired state the device gets, so it shows exactly
+     what is sent, and it resolves the shown device type, so it works and follows edits with no
+     device connected. The preview, the input budget and the text kept when a line leaves Custom
+     text are plain Rust with unit tests. Where ui.md and the prototype differed, the prototype won
+     and ui.md says so; the prototype itself changed during the task: the "Mode" line source was
+     dropped (the MFD shows the mode in its own MODE area; docs/profiles.md retires it), and the
+     display was redrawn as the device's (MODE area with SHIFT, framed lines, centred time, the
+     clock's number in the date area for 3 s after a pick). One departure from the prototype: the
+     lit mode is the selector's position, which the device shows by itself, not a mode-bar pick.
+   - **Hands-on, X52 Pro, Devel build on the host:** every check of the plan as expected: each
+     source on each line on the display and the device, "Éjszakai repülő" with "ő → o" and `o` on
+     the device, typing, pasting and replacing a selection on a full line keeping the text and the
+     cursor, drafts only in their profile, set and line, edits offline, the profile name, the
+     selector and a held button followed, the clock switcher, the minute tick, the date format,
+     brightness 0 and back, Shift, per-mode lines after a restart, keyboard only, 360×294, light
+     and dark style, Orca.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: the list of
+     replaced characters widening the row past a narrow window, the display empty until the first
+     time zone read. Fixed after the maintainer's review: combining marks letting a line grow
+     without bound (a custom text line now keeps at most 64 characters as typed, which keeps every
+     profile within the 64 KiB file limit), the display mirrored in a right-to-left language,
+     placeholders typed into a line replaced in the accessible label.
 4. **(code) Clocks**: clock 1 local or UTC, clocks 2/3 time zone (search dialog) or fixed offset,
    12/24 h, date format, the live time per clock. Done when: DW, plus a zone with DST and a fixed
    offset both show correctly on the device.
