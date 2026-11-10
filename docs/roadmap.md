@@ -251,6 +251,31 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    confirmation and Undo, import and export, the device status footer, the problem states and
    toasts of [ui.md](ui.md). Done when: DW, plus every profiles.md user-visible outcome is
    reachable, and the window works at 360×294.
+
+   Results on 2026-11-10:
+
+   - **Persistence:** the store hands out save, add and delete jobs that run off the main
+     thread; a write queue keeps one save or delete at a time per profile and debounces saves by
+     500 ms; name reservations keep the names of pending creates, imports and removed profiles
+     taken. The races (a delete after a slow save, Undo, a failed delete, a close during a
+     create) are unit-tested on the queue and the reservations. The application holds itself
+     until the queue is idle and inhibits logout while it drains.
+   - **Window:** split view with the profile list (default first, user order, per-mode badges,
+     greyed-out newer and damaged files, the damaged ones under the type their TOML names or
+     every type), the device footer, the "never connected" page, the no-permission page with Try
+     Again (until task 6), the x52d banner and dialog, placeholders for the LEDs, MFD and Clocks
+     views. The rows got two changes from the prototype review: a drag handle that shows on
+     hover, and no check mark on the selected active row.
+   - **Hands-on, X52 Pro, Devel build on the host:** new single and per-mode profiles with inline
+     naming (empty and duplicate names refused with the reason), rename, duplicate, move up and
+     down, drag, kind change both ways, remove with Undo (the active one falls back to the default
+     on the device and comes back), the narrow layout; one import with problems through the
+     dialog (the other import cases are covered by the unit tests); a damaged file of unknown
+     type, a damaged X52 Pro file and a newer-schema file listed and shown with Show File and
+     Remove; a broken default file replaced after the confirmation with its
+     `.rejected-<timestamp>` copy; a rename and a new profile each followed at once by Ctrl+W
+     were on disk after the exit; unplugged footer, the "never connected" page and its switch to
+     the list on replug; the x52d banner with a fake socket. No GTK criticals in any run.
 2. **(code) LED editor**: the schematic layout of
    [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
    of states, grid positions as data), the mode bar of a per-mode profile (it overrides
