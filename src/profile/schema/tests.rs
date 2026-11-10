@@ -108,7 +108,11 @@ fn the_per_mode_example_reads_one_set_per_mode() {
     );
     assert_eq!(
         profile.settings_for(Mode::Two).mfd_lines,
-        [MfdLineSource::Mode, MfdLineSource::Empty, text("Ready")]
+        [
+            MfdLineSource::LastButton,
+            MfdLineSource::Empty,
+            text("Ready")
+        ]
     );
     assert_eq!(
         profile.settings_for(Mode::Three).mfd_lines,
@@ -143,7 +147,7 @@ fn written_profiles_read_back_unchanged() {
     let mut per_mode = odd.clone();
     let mut mode_3 = settings.clone();
     mode_3.mfd_lines = [
-        MfdLineSource::Mode,
+        MfdLineSource::Empty,
         MfdLineSource::LastButton,
         MfdLineSource::ProfileName,
     ];
@@ -381,14 +385,18 @@ fn an_unknown_line_source_gives_an_empty_line() {
         [
             problem(
                 "settings.mfd.lines[1].source",
-                ProblemKind::UnknownValue("\"clock\"".to_owned())
+                ProblemKind::UnknownValue("\"mode\"".to_owned())
             ),
             problem("settings.mfd.lines[2].text", ProblemKind::UnknownKey),
         ]
     );
     assert_eq!(
         profile.settings_for(Mode::One).mfd_lines,
-        [text("GX52"), MfdLineSource::Empty, MfdLineSource::Mode]
+        [
+            text("GX52"),
+            MfdLineSource::Empty,
+            MfdLineSource::LastButton
+        ]
     );
 }
 

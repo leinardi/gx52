@@ -466,7 +466,6 @@ impl Reader {
             }
             "empty" => MfdLineSource::Empty,
             "profile_name" => MfdLineSource::ProfileName,
-            "mode" => MfdLineSource::Mode,
             "last_button" => MfdLineSource::LastButton,
             _ => {
                 self.problem(&join(key, "source"), ProblemKind::UnknownValue(quoted(raw)));
@@ -639,7 +638,6 @@ fn line_table(line: &MfdLineSource) -> String {
         }
         MfdLineSource::Empty => "empty",
         MfdLineSource::ProfileName => "profile_name",
-        MfdLineSource::Mode => "mode",
         MfdLineSource::LastButton => "last_button",
     };
     format!("{{ source = {} }}", toml_string(source))

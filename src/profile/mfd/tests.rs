@@ -100,13 +100,7 @@ fn text_info_counts_converted_bytes_and_lists_substitutions() {
 fn sources_round_trip_in_combo_order() {
     assert_eq!(
         LineSource::ALL.map(LineSource::label),
-        [
-            "Custom text",
-            "Profile name",
-            "Mode",
-            "Last button",
-            "Empty"
-        ]
+        ["Custom text", "Profile name", "Last button", "Empty"]
     );
     for source in LineSource::ALL {
         let line = source.to_line(|| "GX52".to_owned());

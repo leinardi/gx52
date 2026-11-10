@@ -38,6 +38,6 @@ i = "off"
 [settings.mfd]
 lines = [
   { source = "text", text = "GX52" },
-  { source = "clock" },
-  { source = "mode", text = "x" },
+  { source = "mode" },
+  { source = "last_button", text = "x" },
 ]

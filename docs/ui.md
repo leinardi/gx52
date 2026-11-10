@@ -220,7 +220,6 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
   | --- | --- |
   | Custom text | The text typed in an `adw::EntryRow` below it (shown only for this source); a counter "n/16" counts converted bytes, the entry stops accepting input at 16 (a paste is cut to the room left, and the text already there is never cut), and the row lists the characters that will be replaced ("ő → o") |
   | Profile name | The active profile's name |
-  | Mode | The mode whose settings are on the device, "Mode 2": the selector position, or the mode picked in the [mode bar](#mode-bar) until the selector moves; with a Single profile active, the selector position |
   | Last button | The name of the button being held, POV 1 directions included; the mode selector positions never count. The line clears on release |
   | Empty | Nothing |
 

@@ -207,20 +207,18 @@ fn dynamic_lines_show_the_live_values_cut_to_a_line() {
     let mut profile = Profile::builtin(DeviceType::X52Pro, "A name of twenty chars".to_owned());
     profile.settings.for_mode_mut(Mode::One).mfd_lines = [
         MfdLineSource::ProfileName,
-        MfdLineSource::Mode,
+        MfdLineSource::Empty,
         MfdLineSource::LastButton,
     ];
     let live = LiveValues {
-        mode_shown: Mode::Two,
         last_button: Some("Trigger, first stage".to_owned()),
     };
     let lines = profile.to_device_state(Mode::One, &live).mfd_lines;
     assert_eq!(
         lines.map(|line| line.preview()),
-        ["A name of twenty", "Mode 2", "Trigger, first s"].map(str::to_owned)
+        ["A name of twenty", "", "Trigger, first s"].map(str::to_owned)
     );
     let idle = profile.to_device_state(Mode::One, &LiveValues::default());
-    assert_eq!(idle.mfd_lines[1].preview(), "Mode 1");
     assert_eq!(idle.mfd_lines[2], MfdText::EMPTY, "nothing held");
 }
 

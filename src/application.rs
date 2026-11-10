@@ -796,10 +796,9 @@ impl Application {
         }
     }
 
-    /// The values the dynamic MFD lines show in `mode`.
-    fn live_values(&self, mode: Mode) -> LiveValues {
+    /// The values the dynamic MFD lines show.
+    fn live_values(&self) -> LiveValues {
         LiveValues {
-            mode_shown: mode,
             last_button: self.imp().held.borrow().last().map(names::input_name),
         }
     }
@@ -819,7 +818,7 @@ impl Application {
             &settings.string(active::settings_key(device_type)),
             device_type,
             mode,
-            &self.live_values(mode),
+            &self.live_values(),
         )
     }
 

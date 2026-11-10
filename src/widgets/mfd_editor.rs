@@ -317,10 +317,7 @@ impl MfdEditor {
             row.source.set_selected(position);
             let text = match line {
                 MfdLineSource::Text(text) => text.as_str(),
-                MfdLineSource::Empty
-                | MfdLineSource::ProfileName
-                | MfdLineSource::Mode
-                | MfdLineSource::LastButton => "",
+                MfdLineSource::Empty | MfdLineSource::ProfileName | MfdLineSource::LastButton => "",
             };
             // Only a different text is set: setting it again would move the cursor.
             if row.text.text() != text {

@@ -295,10 +295,9 @@ overrides ───────────────────────�
     `push_desired_state`; the active id is resolved in `src/profile/active.rs`, the list order in
     `src/profile/order.rs`). It is logged only when the applied profile or mode changes;
   - the **MFD line sources**, resolved into three lines of text: custom text, the active profile's
-    name, the mode in effect (the active mode, or the mode-bar override below), the name of the most
-    recently pressed button that is still held (from the set of held buttons and POV 1 directions
-    above, the mode selector keys excluded), or empty. Every dynamic value is converted and cut to
-    16 bytes as [profiles.md](profiles.md#mfd-lines) says;
+    name, the name of the most recently pressed button that is still held (from the set of held
+    buttons and POV 1 directions above, the mode selector keys excluded), or empty. Every dynamic
+    value is converted and cut to 16 bytes as [profiles.md](profiles.md#mfd-lines) says;
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
   - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode

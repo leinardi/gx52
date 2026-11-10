@@ -78,8 +78,6 @@ pub(crate) enum LineSource {
     CustomText,
     /// The active profile's name.
     ProfileName,
-    /// The mode whose settings are on the device.
-    Mode,
     /// The button being held.
     LastButton,
     /// Nothing.
@@ -88,10 +86,9 @@ pub(crate) enum LineSource {
 
 impl LineSource {
     /// Every source, in the order the combo row lists them.
-    pub(crate) const ALL: [Self; 5] = [
+    pub(crate) const ALL: [Self; 4] = [
         Self::CustomText,
         Self::ProfileName,
-        Self::Mode,
         Self::LastButton,
         Self::Empty,
     ];
@@ -101,7 +98,6 @@ impl LineSource {
         match self {
             Self::CustomText => gettext("Custom text"),
             Self::ProfileName => gettext("Profile name"),
-            Self::Mode => gettext("Mode"),
             Self::LastButton => gettext("Last button"),
             Self::Empty => gettext("Empty"),
         }
@@ -113,7 +109,6 @@ impl LineSource {
             MfdLineSource::Text(_) => Self::CustomText,
             MfdLineSource::Empty => Self::Empty,
             MfdLineSource::ProfileName => Self::ProfileName,
-            MfdLineSource::Mode => Self::Mode,
             MfdLineSource::LastButton => Self::LastButton,
         }
     }
@@ -123,7 +118,6 @@ impl LineSource {
         match self {
             Self::CustomText => MfdLineSource::Text(text()),
             Self::ProfileName => MfdLineSource::ProfileName,
-            Self::Mode => MfdLineSource::Mode,
             Self::LastButton => MfdLineSource::LastButton,
             Self::Empty => MfdLineSource::Empty,
         }

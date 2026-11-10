@@ -177,8 +177,6 @@ pub(crate) enum MfdLineSource {
     Empty,
     /// The active profile's name.
     ProfileName,
-    /// The mode whose settings are on the device: "Mode 2".
-    Mode,
     /// The most recently pressed button that is still held.
     LastButton,
 }
@@ -293,24 +291,13 @@ pub(crate) const fn mode_index(mode: Mode) -> usize {
 }
 
 /// The values the dynamic MFD lines show, as the app knows them right now.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct LiveValues {
-    /// The mode a `mode` line shows.
-    pub(crate) mode_shown: Mode,
     /// The name of the most recently pressed button still held, if any.
     pub(crate) last_button: Option<String>,
 }
 
-impl Default for LiveValues {
-    fn default() -> Self {
-        Self {
-            mode_shown: Mode::One,
-            last_button: None,
-        }
-    }
-}
-
-/// The text a `mode` line shows for `mode`, translated.
+/// The name of `mode`, translated: "Mode 2".
 pub(crate) fn mode_text(mode: Mode) -> String {
     match mode {
         Mode::One => gettext("Mode 1"),
@@ -385,7 +372,6 @@ impl Profile {
             }),
             MfdLineSource::Empty => MfdText::EMPTY,
             MfdLineSource::ProfileName => MfdText::fit(&self.name),
-            MfdLineSource::Mode => MfdText::fit(&mode_text(live.mode_shown)),
             MfdLineSource::LastButton => live
                 .last_button
                 .as_deref()
