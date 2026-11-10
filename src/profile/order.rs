@@ -137,6 +137,36 @@ pub(crate) fn moved(
     order
 }
 
+/// The setting to store after a removed `id` came back (the removal was undone, or deleting its
+/// file failed): right after `previous`, the profile that was before it when it was removed
+/// (`None`: it was first), or at `index` when `previous` is gone too. The order may have changed
+/// meanwhile, and may not list `id` any more.
+///
+/// The result is complete, as for [`appended`].
+pub(crate) fn restored(
+    entries: &[impl AsRef<str>],
+    device_type: DeviceType,
+    store: &ProfileStore,
+    id: &ProfileId,
+    previous: Option<&ProfileId>,
+    index: usize,
+) -> Vec<ProfileId> {
+    let mut order = without(entries, device_type, store, id);
+    let listed = ordered(entries, device_type, store).contains(id);
+    if !listed || *id == ProfileId::default_for(device_type) {
+        return order;
+    }
+    let position = match previous {
+        None => 0,
+        Some(previous) => order
+            .iter()
+            .position(|listed| listed == previous)
+            .map_or(index.min(order.len()), |found| found + 1),
+    };
+    order.insert(position, id.clone());
+    order
+}
+
 /// The effective order without the default profile and without `id`.
 fn without(
     entries: &[impl AsRef<str>],

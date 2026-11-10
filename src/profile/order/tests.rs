@@ -224,3 +224,62 @@ fn the_default_and_unlisted_profiles_never_move() {
         assert_eq!(ids(&order), ["bbb", "aaa"], "{unmovable}");
     }
 }
+
+#[test]
+fn a_restored_profile_goes_back_after_its_neighbour() {
+    let (_dir, store) = store(&[("aaa", "A"), ("bbb", "B"), ("ccc", "C"), ("ddd", "D")]);
+    // B was removed, then D was created: the order written meanwhile no longer lists B.
+    let entries = ["aaa", "ccc", "ddd"];
+    let order = restored(
+        &entries,
+        DeviceType::X52Pro,
+        &store,
+        &id("bbb"),
+        Some(&id("aaa")),
+        1,
+    );
+    assert_complete(&order);
+    assert_eq!(ids(&order), ["aaa", "bbb", "ccc", "ddd"]);
+
+    let order = restored(&entries, DeviceType::X52Pro, &store, &id("bbb"), None, 1);
+    assert_eq!(ids(&order), ["bbb", "aaa", "ccc", "ddd"], "it was first");
+}
+
+#[test]
+fn a_restored_profile_whose_neighbour_is_gone_keeps_its_index() {
+    let (_dir, store) = store(&[("bbb", "B"), ("ccc", "C"), ("ddd", "D")]);
+    // A was before B, and A's own removal went through meanwhile.
+    let entries = ["ccc", "ddd"];
+    let order = restored(
+        &entries,
+        DeviceType::X52Pro,
+        &store,
+        &id("bbb"),
+        Some(&id("aaa")),
+        1,
+    );
+    assert_complete(&order);
+    assert_eq!(ids(&order), ["ccc", "bbb", "ddd"]);
+    let order = restored(
+        &entries,
+        DeviceType::X52Pro,
+        &store,
+        &id("bbb"),
+        Some(&id("aaa")),
+        9,
+    );
+    assert_eq!(
+        ids(&order),
+        ["ccc", "ddd", "bbb"],
+        "an index past the end puts it last"
+    );
+}
+
+#[test]
+fn the_default_and_unusable_profiles_are_never_restored_into_the_order() {
+    let (_dir, store) = store(&[("aaa", "A")]);
+    for other in [DEFAULT, "newer", "broken", "gone"] {
+        let order = restored(&["aaa"], DeviceType::X52Pro, &store, &id(other), None, 0);
+        assert_eq!(ids(&order), ["aaa"], "{other}");
+    }
+}

@@ -191,7 +191,9 @@ offsets from clock 1 move because clock 1 moved.
 - **Removing** takes the profile out of the list at once, with a toast that offers Undo; its file
   is deleted when the toast goes away or the window closes, after any write of it still running.
   Its name stays taken until then. A file that is deleted by hand is not a problem; a delete that
-  fails puts the profile back.
+  fails puts the profile back. Undo and a failed delete both put it where it was: right after
+  the profile that was before it, or at its old place when that one is gone too, whatever was
+  created, moved or removed meanwhile.
 - **Atomic writes:** the new content is written to a temporary file in the same directory and
   renamed over the old one (`gio::File::replace_contents_future`, which does that), off the main
   thread. A crash leaves either the old file or the new one, never half of each. A **new** file

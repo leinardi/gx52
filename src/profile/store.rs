@@ -476,13 +476,6 @@ impl ProfileStore {
     }
 
     /// The profile `id`, usable, read-only or damaged.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the profile list of M5 shows read-only and damaged profiles"
-        )
-    )]
     pub(crate) fn entry(&self, id: &ProfileId) -> Option<&Entry> {
         self.entries.get(id)
     }

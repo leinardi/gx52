@@ -319,7 +319,8 @@ impl ProfileRow {
         let Some(item) = imp.item.get() else {
             return;
         };
-        imp.active_icon.set_visible(!editing && imp.marked.get());
+        imp.active_icon
+            .set_visible(!editing && item.active() && imp.marked.get());
         imp.drag_handle.set_visible(!editing);
         imp.badges.set_visible(!editing && item.per_mode());
         imp.menu_button.set_visible(!editing);

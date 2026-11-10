@@ -46,6 +46,10 @@ pub(crate) struct Removal {
     reservation: Option<Reservation>,
     /// Whether it was its type's active profile.
     was_active: bool,
+    /// Where it was in the list: after this profile (`None`: first), at this index among the
+    /// profiles other than the default; it goes back there, whatever changed meanwhile.
+    previous: Option<ProfileId>,
+    index: usize,
     /// The name or file name, for the toasts.
     title: String,
 }
@@ -383,6 +387,24 @@ impl Application {
         if let Some(store) = imp.profiles.borrow_mut().as_mut() {
             store.restore(id.clone(), removal.entry);
         }
+        if let Some(device_type) = device_type {
+            let order = {
+                let profiles = imp.profiles.borrow();
+                profiles.as_ref().map(|store| {
+                    order::restored(
+                        &self.order_entries(device_type),
+                        device_type,
+                        store,
+                        id,
+                        removal.previous.as_ref(),
+                        removal.index,
+                    )
+                })
+            };
+            if let Some(order) = order {
+                self.store_order(device_type, &order);
+            }
+        }
         if let Some(reservation) = removal.reservation {
             imp.reservations.borrow_mut().release(reservation);
         }
@@ -402,6 +424,19 @@ impl Application {
     /// the Undo toast goes away.
     pub(crate) fn remove_profile(&self, id: &ProfileId) {
         let imp = self.imp();
+        let device_type = {
+            let profiles = imp.profiles.borrow();
+            profiles
+                .as_ref()
+                .and_then(|store| store.entry(id))
+                .and_then(Entry::device_type)
+        };
+        let positions =
+            device_type.map_or_else(Vec::new, |device_type| self.positions(device_type));
+        let index = positions.iter().position(|listed| listed == id);
+        let previous = index
+            .and_then(|index| index.checked_sub(1))
+            .and_then(|before| positions.get(before).cloned());
         let taken = imp
             .profiles
             .borrow_mut()
@@ -439,6 +474,8 @@ impl Application {
                 reservation,
                 was_active,
                 title: title.clone(),
+                previous,
+                index: index.unwrap_or(usize::MAX),
             },
         );
         self.run_commands(commands);
@@ -761,9 +798,12 @@ impl Application {
 
     /// The non-default profiles of the shown type, in the list's order.
     fn order_positions(&self) -> Vec<ProfileId> {
-        let Some(device_type) = self.shown_device_type() else {
-            return Vec::new();
-        };
+        self.shown_device_type()
+            .map_or_else(Vec::new, |device_type| self.positions(device_type))
+    }
+
+    /// The non-default profiles of `device_type`, in the list's order.
+    fn positions(&self, device_type: DeviceType) -> Vec<ProfileId> {
         let profiles = self.imp().profiles.borrow();
         let Some(store) = profiles.as_ref() else {
             return Vec::new();
