@@ -85,6 +85,23 @@ pub fn byte_for(glyph: char) -> Option<u8> {
     BYTES.get(&glyph).copied()
 }
 
+/// The bytes of an MFD line.
+pub const LINE_BYTES: usize = MfdBytes::MAX_LEN;
+
+/// The characters of `text` that [`encode`] converts, each once: the composed (NFC) text without
+/// the combining marks left over, which belong to the character before them.
+fn characters(text: &str) -> impl Iterator<Item = char> {
+    text.nfc()
+        .filter(|character| canonical_combining_class(*character) == 0)
+}
+
+/// What the MFD shows for `character`: its glyph's byte, or the byte of its base letter, or `?`.
+fn convert(character: char) -> u8 {
+    byte_for(character)
+        .or_else(|| character.nfd().next().and_then(byte_for))
+        .unwrap_or(FALLBACK)
+}
+
 /// The MFD bytes of `text`.
 ///
 /// The text is first composed (NFC), so a letter typed with a combining accent finds its glyph.
@@ -94,14 +111,22 @@ pub fn byte_for(glyph: char) -> Option<u8> {
 /// blank byte: the only blank is the space, `0x20`.
 #[must_use]
 pub fn encode(text: &str) -> Vec<u8> {
-    text.nfc()
-        .filter(|character| canonical_combining_class(*character) == 0)
-        .map(|character| {
-            byte_for(character)
-                .or_else(|| character.nfd().next().and_then(byte_for))
-                .unwrap_or(FALLBACK)
-        })
-        .collect()
+    characters(text).map(convert).collect()
+}
+
+/// Every character of `text` the MFD has no glyph for, with what it shows instead (`ő` and `o`,
+/// `€` and `?`): each character once, in the order of its first appearance in the composed text.
+#[must_use]
+pub fn substitutions(text: &str) -> Vec<(char, char)> {
+    let mut found: Vec<(char, char)> = Vec::new();
+    for character in characters(text) {
+        if byte_for(character).is_some() || found.iter().any(|(seen, _)| *seen == character) {
+            continue;
+        }
+        let shown = TABLE[usize::from(convert(character))].unwrap_or(' ');
+        found.push((character, shown));
+    }
+    found
 }
 
 /// The text the MFD shows for `bytes`, a blank byte shown as a space: the preview of a line.

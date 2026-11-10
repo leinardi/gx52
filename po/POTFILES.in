@@ -14,6 +14,7 @@ src/device/status.rs
 src/profile/exchange.rs
 src/profile/leds.rs
 src/profile/legacy.rs
+src/profile/mfd.rs
 src/profile/mod.rs
 src/profile/schema.rs
 src/widgets/led_button.rs

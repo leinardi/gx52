@@ -22,7 +22,8 @@ use gtk::glib;
 use x52::command::Brightness;
 
 use crate::profile::ProfileKind;
-use crate::profile::leds::{self, Card, EditorState, PLACES};
+use crate::profile::editor::EditorState;
+use crate::profile::leds::{self, Card, PLACES};
 use crate::widgets::LedButton;
 
 /// The width of a grid column of a card, from the prototype.

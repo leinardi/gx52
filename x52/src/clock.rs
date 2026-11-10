@@ -236,6 +236,25 @@ fn clock1_zone(local: &TimeZone, source: Clock1Source) -> TimeZone {
     }
 }
 
+/// The time of day clock 1 shows at `now`: the time in clock 1's zone.
+///
+/// # Errors
+///
+/// [`ClockError::Value`] if the time of day could not be carried by a command, which a valid time
+/// zone never produces.
+pub fn clock1_time(
+    now: Timestamp,
+    local: &TimeZone,
+    source: Clock1Source,
+) -> Result<ClockTime, ClockError> {
+    let time = clock1_zone(local, source).to_datetime(now);
+    let hour = u8::try_from(time.hour())
+        .map_err(|_| RangeError::out_of_range("hour", time.hour(), 0, 23))?;
+    let minute = u8::try_from(time.minute())
+        .map_err(|_| RangeError::out_of_range("minute", time.minute(), 0, 59))?;
+    Ok(ClockTime::new(hour, minute)?)
+}
+
 /// The clock 1 command for `now`: the time of day in clock 1's zone.
 ///
 /// # Errors
@@ -248,21 +267,34 @@ pub fn clock1_command(
     source: Clock1Source,
     h24: bool,
 ) -> Result<Command, ClockError> {
-    let time = clock1_zone(local, source).to_datetime(now);
-    let hour = u8::try_from(time.hour())
-        .map_err(|_| RangeError::out_of_range("hour", time.hour(), 0, 23))?;
-    let minute = u8::try_from(time.minute())
-        .map_err(|_| RangeError::out_of_range("minute", time.minute(), 0, 59))?;
     Ok(Command::Clock1 {
-        time: ClockTime::new(hour, minute)?,
+        time: clock1_time(now, local, source)?,
         h24,
     })
 }
 
-/// The command that makes clock 2 or 3 show `source` at `now`: the zone's offset minus clock 1's,
+/// The offset that makes clock 2 or 3 show `source` at `now`: the zone's offset minus clock 1's,
 /// normalised into `-720`–`+720` minutes by whole days (docs/protocol.md, "USB vendor commands").
 ///
 /// An offset with seconds (some zones before 1900) is rounded down to the minute.
+///
+/// # Errors
+///
+/// [`ClockError::Value`] if the normalised offset could not be carried by a command, which the
+/// normalisation rules out.
+pub fn clock_offset(
+    now: Timestamp,
+    local: &TimeZone,
+    clock1_source: Clock1Source,
+    source: &ZoneSource,
+) -> Result<ClockOffset, ClockError> {
+    let clock1_seconds = clock1_zone(local, clock1_source).to_offset(now).seconds();
+    let minutes = (source.offset_seconds(now) - clock1_seconds).div_euclid(60);
+    Ok(ClockOffset::new(normalise(minutes)?)?)
+}
+
+/// The command that makes clock 2 or 3 show `source` at `now`, with the offset of
+/// [`clock_offset`].
 ///
 /// # Errors
 ///
@@ -276,11 +308,9 @@ pub fn offset_command(
     source: &ZoneSource,
     h24: bool,
 ) -> Result<Command, ClockError> {
-    let clock1_seconds = clock1_zone(local, clock1_source).to_offset(now).seconds();
-    let minutes = (source.offset_seconds(now) - clock1_seconds).div_euclid(60);
     Ok(Command::ClockOffset {
         clock,
-        offset: ClockOffset::new(normalise(minutes)?)?,
+        offset: clock_offset(now, local, clock1_source, source)?,
         h24,
     })
 }
@@ -302,18 +332,18 @@ fn normalise(minutes: i32) -> Result<i16, ClockError> {
     })
 }
 
-/// The date command for `now`: clock 1's date in `format`, the year as two digits.
+/// The date fields for `now`: clock 1's date in `format`, the year as two digits.
 ///
 /// # Errors
 ///
-/// [`ClockError::Value`] if a field could not be carried by the command, which a valid date never
+/// [`ClockError::Value`] if a field could not be carried by a command, which a valid date never
 /// produces.
-pub fn date_command(
+pub fn date_fields(
     now: Timestamp,
     local: &TimeZone,
     clock1_source: Clock1Source,
     format: DateFormat,
-) -> Result<Command, ClockError> {
+) -> Result<DateFields, ClockError> {
     let date = clock1_zone(local, clock1_source).to_datetime(now).date();
     let field = |name: &'static str, value: i16, min: i16, max: i16| {
         u8::try_from(value).map_err(|_| RangeError::out_of_range(name, value, min, max))
@@ -326,7 +356,27 @@ pub fn date_command(
         DateFormat::MmDdYy => (month, day, year),
         DateFormat::YyMmDd => (year, month, day),
     };
-    Ok(Command::Date(DateFields::new(first, second, third)?))
+    Ok(DateFields::new(first, second, third)?)
+}
+
+/// The date command for `now`, with the fields of [`date_fields`].
+///
+/// # Errors
+///
+/// [`ClockError::Value`] if a field could not be carried by the command, which a valid date never
+/// produces.
+pub fn date_command(
+    now: Timestamp,
+    local: &TimeZone,
+    clock1_source: Clock1Source,
+    format: DateFormat,
+) -> Result<Command, ClockError> {
+    Ok(Command::Date(date_fields(
+        now,
+        local,
+        clock1_source,
+        format,
+    )?))
 }
 
 /// When the clocks have to be sent again after `now`: the next minute boundary, or the next

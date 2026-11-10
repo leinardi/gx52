@@ -17,21 +17,46 @@
 //! go to the device at once and are saved after the debounce (docs/ui.md, "Profile editor").
 
 use adw::subclass::prelude::*;
+use x52::charset::MfdText;
 use x52::command::Brightness;
 
 use super::Application;
-use crate::profile::ModeSettings;
-use crate::profile::leds::{self, EditorLed, EditorState, LedChoice};
+use crate::profile::editor::EditorState;
+use crate::profile::leds::{self, EditorLed, LedChoice};
+use crate::profile::mfd::{DraftKey, LineSource, SettingsSet};
+use crate::profile::{MFD_LINES, MfdLineSource, ModeSettings, ProfileId};
+
+/// The profile and the set of mode settings an edit changes.
+#[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
+struct EditTarget {
+    /// The profile.
+    profile: ProfileId,
+    /// The set of mode settings.
+    set: SettingsSet,
+}
+
+#[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
+impl EditTarget {
+    /// The draft key of `line` in this set.
+    fn draft(&self, line: usize) -> DraftKey {
+        DraftKey {
+            profile: self.profile.clone(),
+            set: self.set,
+            line,
+        }
+    }
+}
 
 impl Application {
-    /// What the LED editor shows: the shown device type's active profile in the mode shown, once
-    /// the profiles are loaded.
+    /// What the profile editor shows: the shown device type's active profile in the mode shown,
+    /// once the profiles are loaded.
     pub(crate) fn editor_state(&self) -> Option<EditorState> {
         let device_type = self.shown_device_type()?;
         let id = self.active_profile_id(device_type)?;
         let profile = self.profile(&id)?;
         let mode = self.shown_mode();
         Some(EditorState {
+            profile: id,
             device_type,
             kind: profile.kind(),
             mode,
@@ -58,9 +83,63 @@ impl Application {
         self.edit_shown_settings(|settings| settings.blink = blink);
     }
 
+    /// Makes MFD line `line` (from `0`) show `source` in the mode shown. A custom text line
+    /// switched to another source keeps its text for the session, and gets it back when it
+    /// switches to custom text again in the same profile, set and line.
+    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
+    pub(crate) fn set_mfd_source(&self, line: usize, source: LineSource) {
+        if line >= MFD_LINES {
+            return;
+        }
+        self.edit_shown(|target, settings| {
+            let current = &mut settings.mfd_lines[line];
+            if LineSource::of(current) == source {
+                return;
+            }
+            let mut drafts = self.imp().text_drafts.borrow_mut();
+            if let MfdLineSource::Text(text) = std::mem::take(current) {
+                drafts.leave(target.draft(line), text);
+            }
+            *current = source.to_line(|| drafts.resume(&target.draft(line)));
+        });
+    }
+
+    /// Sets the text of custom text line `line` (from `0`) in the mode shown; text that does not
+    /// fit the line is refused, and the editor shows the line's text again.
+    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
+    pub(crate) fn set_mfd_text(&self, line: usize, text: String) {
+        if let Err(error) = MfdText::new(&text) {
+            tracing::debug!("MFD line {line} text {text:?} refused: {error}");
+            self.update_windows();
+            return;
+        }
+        self.edit_shown_settings(|settings| {
+            if let Some(current @ MfdLineSource::Text(_)) = settings.mfd_lines.get_mut(line) {
+                *current = MfdLineSource::Text(text);
+            }
+        });
+    }
+
+    /// Sets the MFD brightness of the mode shown.
+    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
+    pub(crate) fn set_mfd_brightness(&self, brightness: Brightness) {
+        self.edit_shown_settings(|settings| settings.mfd_brightness = brightness);
+    }
+
+    /// Turns the SHIFT label on or off in the mode shown.
+    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
+    pub(crate) fn set_shift(&self, shift: bool) {
+        self.edit_shown_settings(|settings| settings.shift = shift);
+    }
+
     /// Applies `edit` to the settings of the mode shown of the shown device type's active profile;
     /// a change goes to the device and the windows at once and is saved after the debounce.
     fn edit_shown_settings(&self, edit: impl FnOnce(&mut ModeSettings)) {
+        self.edit_shown(|_, settings| edit(settings));
+    }
+
+    /// [`Self::edit_shown_settings`], with the profile and the set the edit changes.
+    fn edit_shown(&self, edit: impl FnOnce(&EditTarget, &mut ModeSettings)) {
         let Some(device_type) = self.shown_device_type() else {
             return;
         };
@@ -74,9 +153,13 @@ impl Application {
                 return;
             };
             if let Some(mut profile) = store.loaded(&id).map(|loaded| loaded.profile.clone()) {
+                let target = EditTarget {
+                    profile: id.clone(),
+                    set: SettingsSet::of(profile.kind(), mode),
+                };
                 let settings = profile.settings.for_mode_mut(mode);
                 let before = settings.clone();
-                edit(settings);
+                edit(&target, settings);
                 *settings != before
                     && store
                         .update(&id, profile)
@@ -93,8 +176,8 @@ impl Application {
             self.profile_edited(&id);
             self.push_desired_state();
         }
-        // The list shows no LED: only the editor follows, and shows the profile's values again
-        // after an edit that changed nothing.
+        // The list shows none of the edited values: only the editor follows, and shows the
+        // profile's values again after an edit that changed nothing.
         self.update_windows();
     }
 }

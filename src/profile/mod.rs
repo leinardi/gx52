@@ -21,11 +21,13 @@
 
 pub(crate) mod active;
 pub(crate) mod editing;
+pub(crate) mod editor;
 pub(crate) mod exchange;
 pub(crate) mod files;
 pub(crate) mod leds;
 pub(crate) mod legacy;
 pub(crate) mod list;
+pub(crate) mod mfd;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod order;
