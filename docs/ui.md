@@ -115,8 +115,9 @@ Import Profile… (Ctrl+O), Preferences (Ctrl+,), Keyboard Shortcuts (Ctrl+?), A
 - a file without problems is added at once, with the toast "Imported “Falcon BMS”";
 - a file with per-field problems opens an `adw::AlertDialog` "Import “Falcon BMS”?" that lists
   each value and what it is replaced with, with **Cancel** and **Import** (suggested);
-- a file for the other model, or made by a newer GX52, opens an `adw::AlertDialog` "Can’t Import
-  This Profile" that names the model or the version, with **Close**.
+- a file for the other model, or made by a newer GX52, is refused with a toast that says why
+  ("This is a profile for the X52", "The profile was made by a newer version of GX52"); nothing
+  is written.
 
 ## Profile kinds
 
