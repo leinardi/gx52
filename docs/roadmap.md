@@ -216,9 +216,16 @@ Results on 2026-11-10:
   logged only when they change.
 - **Mode sets and dynamic lines:** the reader sends the held buttons and POV 1 directions
   (`HeldInputs`, a snapshot at every open), and the "last button" line shows the newest one still
-  held, cut to 16 bytes; the "mode" line shows the active mode. Covered by tests; the hands-on
-  check of task 2 on the X52 Pro (sets per selector position, fallback of an unknown active id, the
-  dynamic lines) is still to run.
+  held; the "mode" line shows the active mode.
+- **Hands-on, X52 Pro, Devel build on the host:** a per-mode profile switched LEDs, brightness and
+  MFD lines with the selector (1 → 2 → 3 → 1, and 3 → 1 in one turn without showing mode 2's
+  set); a single profile changed only its "mode" line with the selector. An unknown active id and
+  the id of an X52 profile both fell back to `x52-pro-default`. The "last button" line showed the
+  newest held button, fell back to the one held before when it was released, and stayed empty
+  while the selector moved. The first run showed that some names were longer than a line ("Trigger,
+  first stage" came out as "Trigger, first s"), so the MFD names were shortened to fit
+  ("Trigger stage 1", "Scroll press", "Thr. hat left") and checked again on the device. The log had
+  one line per profile or mode change and none per button press.
 
 ## M4: UI design session
 
