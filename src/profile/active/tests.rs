@@ -40,38 +40,26 @@ fn store() -> (TempDir, ProfileStore) {
     (dir, store)
 }
 
-fn pro(entries: &[&str], mode: Mode, store: &ProfileStore) -> String {
-    resolve(entries, DeviceType::X52Pro, mode, store).to_string()
-}
-
 #[test]
-fn each_mode_uses_its_entry() {
+fn a_loaded_profile_of_the_type_is_used() {
     let (_dir, store) = store();
-    let entries = [PRO, "x52-pro-default", PRO];
-    assert_eq!(pro(&entries, Mode::One, &store), PRO);
-    assert_eq!(pro(&entries, Mode::Two, &store), "x52-pro-default");
-    assert_eq!(pro(&entries, Mode::Three, &store), PRO);
+    assert_eq!(resolve(PRO, DeviceType::X52Pro, &store).as_str(), PRO);
+    assert_eq!(resolve(NON_PRO, DeviceType::X52, &store).as_str(), NON_PRO);
 }
 
 #[test]
-fn the_default_mapping_uses_the_default_profile() {
+fn the_default_settings_use_the_default_profile() {
     let (_dir, store) = store();
     for device_type in DeviceType::ALL {
-        let default = ProfileId::default_for(device_type).to_string();
-        let entries = [default.as_str(); 3];
-        for mode in Mode::ALL {
-            assert_eq!(
-                resolve(&entries, device_type, mode, &store).to_string(),
-                default
-            );
-        }
+        let default = ProfileId::default_for(device_type);
+        assert_eq!(resolve(default.as_str(), device_type, &store), default);
     }
 }
 
 #[test]
-fn entries_without_a_usable_profile_of_the_type_fall_back_to_the_default() {
+fn ids_without_a_usable_profile_of_the_type_fall_back_to_the_default() {
     let (_dir, store) = store();
-    for (entry, why) in [
+    for (id, why) in [
         (NON_PRO, "a profile of the other type"),
         ("x52-default", "the other type's default"),
         (NEWER, "a read-only profile"),
@@ -81,45 +69,20 @@ fn entries_without_a_usable_profile_of_the_type_fall_back_to_the_default() {
         ("", "empty"),
     ] {
         assert_eq!(
-            pro(&[entry, PRO, PRO], Mode::One, &store),
+            resolve(id, DeviceType::X52Pro, &store).as_str(),
             "x52-pro-default",
             "{why}"
         );
-        assert_eq!(
-            pro(&[entry, PRO, PRO], Mode::Two, &store),
-            PRO,
-            "{why}: other entries"
-        );
     }
-}
-
-#[test]
-fn a_mapping_without_three_entries_falls_back_for_every_mode() {
-    let (_dir, store) = store();
-    for entries in [
-        &[][..],
-        &[PRO][..],
-        &[PRO, PRO][..],
-        &[PRO, PRO, PRO, PRO][..],
-    ] {
-        for mode in Mode::ALL {
-            assert_eq!(pro(entries, mode, &store), "x52-pro-default", "{entries:?}");
-        }
-    }
-}
-
-#[test]
-fn the_x52_mapping_resolves_x52_profiles() {
-    let (_dir, store) = store();
-    let entries = [NON_PRO, PRO, "x52-default"];
-    let x52 = |mode| resolve(&entries, DeviceType::X52, mode, &store).to_string();
-    assert_eq!(x52(Mode::One), NON_PRO);
-    assert_eq!(x52(Mode::Two), "x52-default");
-    assert_eq!(x52(Mode::Three), "x52-default");
+    assert_eq!(
+        resolve(PRO, DeviceType::X52, &store).as_str(),
+        "x52-default",
+        "an X52 Pro profile on the X52"
+    );
 }
 
 #[test]
 fn the_settings_keys_follow_profiles_md() {
-    assert_eq!(settings_key(DeviceType::X52Pro), "mode-profiles-x52-pro");
-    assert_eq!(settings_key(DeviceType::X52), "mode-profiles-x52");
+    assert_eq!(settings_key(DeviceType::X52Pro), "active-profile-x52-pro");
+    assert_eq!(settings_key(DeviceType::X52), "active-profile-x52");
 }

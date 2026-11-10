@@ -13,25 +13,35 @@
       <default>false</default>
       <summary>Window maximized state</summary>
     </key>
-    <key name="mode-profiles-x52-pro" type="as">
-      <default>['x52-pro-default', 'x52-pro-default', 'x52-pro-default']</default>
-      <summary>X52 Pro profiles of the modes</summary>
-      <description>The ids of the profiles that modes 1, 2 and 3 of the mode selector use on an X52 Pro. An id that names no X52 Pro profile uses the default profile.</description>
+    <key name="active-profile-x52-pro" type="s">
+      <default>'x52-pro-default'</default>
+      <summary>Active X52 Pro profile</summary>
+      <description>The id of the profile an X52 Pro shows. An id that names no X52 Pro profile uses the default profile.</description>
     </key>
-    <key name="mode-profiles-x52" type="as">
-      <default>['x52-default', 'x52-default', 'x52-default']</default>
-      <summary>X52 profiles of the modes</summary>
-      <description>The ids of the profiles that modes 1, 2 and 3 of the mode selector use on an X52. An id that names no X52 profile uses the default profile.</description>
+    <key name="active-profile-x52" type="s">
+      <default>'x52-default'</default>
+      <summary>Active X52 profile</summary>
+      <description>The id of the profile an X52 shows. An id that names no X52 profile uses the default profile.</description>
+    </key>
+    <key name="profile-order-x52-pro" type="as">
+      <default>[]</default>
+      <summary>Order of the X52 Pro profiles</summary>
+      <description>The ids of the X52 Pro profiles other than the default, in the order the profile list shows them. The default profile is always first; profiles not listed follow in name order.</description>
+    </key>
+    <key name="profile-order-x52" type="as">
+      <default>[]</default>
+      <summary>Order of the X52 profiles</summary>
+      <description>The ids of the X52 profiles other than the default, in the order the profile list shows them. The default profile is always first; profiles not listed follow in name order.</description>
     </key>
     <key name="autostart" type="b">
       <default>false</default>
       <summary>Start when logging in</summary>
       <description>Start GX52 in the background when logging in.</description>
     </key>
-    <key name="show-tray" type="b">
+    <key name="run-in-background" type="b">
       <default>true</default>
-      <summary>Show the tray icon</summary>
-      <description>Show GX52 in the system tray, where the desktop has one.</description>
+      <summary>Run in the background</summary>
+      <description>Keep GX52 running when its window is closed, so the joystick keeps its profile and clocks.</description>
     </key>
     <key name="legacy-import-done" type="b">
       <default>false</default>

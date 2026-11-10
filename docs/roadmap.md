@@ -208,6 +208,12 @@ Results on 2026-11-10:
   case: an unknown `kind`, a missing mode table, the other kind's tables, an unknown line source,
   a text line over 16 converted bytes and one without `text`. Dynamic lines are cut to 16 bytes
   (`MfdText::fit`).
+- **Active profile and profile order:** `active-profile-*`, `profile-order-*` and
+  `run-in-background` replace `mode-profiles-*` and `show-tray`. The active id resolves as
+  [profiles.md](profiles.md#active-profile) says, falling back to the type's default for an unknown,
+  unloaded or other-type id; the order functions return the complete effective order to store, a
+  new profile last and a duplicate right after its original. The applied profile and mode are
+  logged only when they change.
 
 ## M4: UI design session
 

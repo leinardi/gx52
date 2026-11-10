@@ -283,9 +283,9 @@ overrides ───────────────────────�
     single profile has one set and ignores it. Until the reader reports a mode, mode 1 is used. The
     last reported mode is kept while the evdev node is reopened and dropped when the device goes.
     The state is pushed again on a new selection, a mode change, a change of the active profile
-    and once the store has loaded (`src/application.rs`, `push_desired_state`; the mode-mapping
-    version of M3 is reworked in the
-    [M3 follow-up](roadmap.md#m3-follow-up-single-and-per-mode-profiles));
+    and once the store has loaded or a profile was imported (`src/application.rs`,
+    `push_desired_state`; the active id is resolved in `src/profile/active.rs`, the list order in
+    `src/profile/order.rs`). It is logged only when the applied profile or mode changes;
   - the **MFD line sources**, resolved into three lines of text: custom text, the active profile's
     name, the mode in effect (the active mode, or the mode-bar override below), the name of the most
     recently pressed button that is still held (from the set of held buttons and POV 1 directions

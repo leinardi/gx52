@@ -451,7 +451,7 @@ impl ProfileStore {
     /// The profile `id`, usable or read-only.
     #[cfg_attr(
         not(test),
-        expect(dead_code, reason = "the mode mapping looks the mapped profiles up")
+        expect(dead_code, reason = "the profile list of M5 shows read-only profiles")
     )]
     pub(crate) fn entry(&self, id: &ProfileId) -> Option<&Entry> {
         self.entries.get(id)
@@ -630,8 +630,8 @@ impl ProfileStore {
         }
     }
 
-    /// Removes `id` and deletes its file. The caller resets the mode-mapping entries that named
-    /// it, after the user confirmed the removal.
+    /// Removes `id` and deletes its file. The caller sets the active profile back to the default
+    /// when it was `id`, after the user confirmed the removal.
     ///
     /// # Errors
     ///
