@@ -19,6 +19,7 @@ use std::io;
 use std::path::PathBuf;
 
 use tempfile::TempDir;
+use x52::input::Mode;
 
 use super::*;
 use crate::profile::files::Created;
@@ -177,7 +178,11 @@ fn a_clean_start_imports_every_row_and_the_settings() {
         .unwrap();
     assert_eq!(pro_default.origin, Origin::File);
     assert_eq!(
-        pro_default.profile.led_brightness.level(),
+        pro_default
+            .profile
+            .settings_for(Mode::One)
+            .led_brightness
+            .level(),
         28,
         "the legacy values"
     );

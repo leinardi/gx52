@@ -39,6 +39,7 @@ use x52::charset::MfdText;
 use x52::clock::{ClockError, FixedOffset, ZoneSource};
 use x52::command::{Brightness, MfdLine};
 use x52::device::DeviceType;
+use x52::input::Mode;
 use x52::state::{Clock1Settings, DeviceState, Leds, ZoneClockSettings};
 
 use crate::config;
@@ -157,16 +158,28 @@ pub(crate) struct ZoneClock {
     pub(crate) h24: bool,
 }
 
-/// One profile: everything the device shows, for one device type.
+/// What one MFD line shows (docs/profiles.md, "MFD lines").
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub(crate) enum MfdLineSource {
+    /// Text as typed; it fits a line after conversion.
+    Text(String),
+    /// Nothing.
+    #[default]
+    Empty,
+    /// The active profile's name.
+    ProfileName,
+    /// The mode whose settings are on the device: "Mode 2".
+    Mode,
+    /// The most recently pressed button that is still held.
+    LastButton,
+}
+
+/// What a profile may set differently in each mode: everything but the clocks and the date.
 ///
 /// Fields a device type lacks (the LEDs, shift and blink of the X52) are kept at their built-in
 /// values and never written to that type's file.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Profile {
-    /// The device type the profile is for.
-    pub(crate) device_type: DeviceType,
-    /// The name shown in the UI: 1–64 characters, trimmed, unique within the device type.
-    pub(crate) name: String,
+pub(crate) struct ModeSettings {
     /// The LED brightness.
     pub(crate) led_brightness: Brightness,
     /// The MFD backlight.
@@ -175,18 +188,157 @@ pub(crate) struct Profile {
     pub(crate) shift: bool,
     /// The i and POV 1 LEDs blink; X52 Pro only.
     pub(crate) blink: bool,
-    /// The field order of the date.
-    pub(crate) date_format: x52::clock::DateFormat,
     /// The LEDs; X52 Pro only.
     pub(crate) leds: Leds,
-    /// The MFD lines as typed; each fits a line after conversion.
-    pub(crate) mfd_lines: [String; MFD_LINES],
+    /// What each MFD line shows.
+    pub(crate) mfd_lines: [MfdLineSource; MFD_LINES],
+}
+
+impl ModeSettings {
+    /// The built-in mode settings of `device_type` (docs/profiles.md, "Defaults").
+    pub(crate) fn builtin(device_type: DeviceType) -> Self {
+        let state = DeviceState::default_for(device_type);
+        Self {
+            led_brightness: state.led_brightness,
+            mfd_brightness: state.mfd_brightness,
+            shift: state.shift,
+            blink: state.blink,
+            leds: state.leds,
+            mfd_lines: Default::default(),
+        }
+    }
+}
+
+/// Whether a profile has one set of mode settings or one per mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum ProfileKind {
+    /// One set; the mode selector changes nothing.
+    Single,
+    /// One set per position of the mode selector.
+    PerMode,
+}
+
+/// The mode settings of a profile, one set or three.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ModeSets {
+    /// One set for every mode.
+    Single(ModeSettings),
+    /// The sets of modes 1, 2 and 3, in that order.
+    PerMode(Box<[ModeSettings; 3]>),
+}
+
+impl ModeSets {
+    /// The kind these sets make.
+    pub(crate) const fn kind(&self) -> ProfileKind {
+        match self {
+            Self::Single(_) => ProfileKind::Single,
+            Self::PerMode(_) => ProfileKind::PerMode,
+        }
+    }
+
+    /// The set the device shows in `mode`.
+    pub(crate) fn for_mode(&self, mode: Mode) -> &ModeSettings {
+        match self {
+            Self::Single(settings) => settings,
+            Self::PerMode(sets) => &sets[mode_index(mode)],
+        }
+    }
+
+    /// The set the device shows in `mode`, to edit.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "the profile editor of M5 edits the sets")
+    )]
+    pub(crate) fn for_mode_mut(&mut self, mode: Mode) -> &mut ModeSettings {
+        match self {
+            Self::Single(settings) => settings,
+            Self::PerMode(sets) => &mut sets[mode_index(mode)],
+        }
+    }
+
+    /// Per-mode sets: a single set is copied into all three modes.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "the profile editor of M5 changes the kind")
+    )]
+    pub(crate) fn into_per_mode(self) -> Self {
+        match self {
+            Self::Single(settings) => {
+                Self::PerMode(Box::new([settings.clone(), settings.clone(), settings]))
+            }
+            per_mode @ Self::PerMode(_) => per_mode,
+        }
+    }
+
+    /// A single set: per-mode sets keep mode 1 and drop modes 2 and 3.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "the profile editor of M5 changes the kind")
+    )]
+    pub(crate) fn into_single(self) -> Self {
+        match self {
+            single @ Self::Single(_) => single,
+            Self::PerMode(sets) => {
+                let [first, _, _] = *sets;
+                Self::Single(first)
+            }
+        }
+    }
+}
+
+/// The index of `mode` in a per-mode array.
+pub(crate) const fn mode_index(mode: Mode) -> usize {
+    match mode {
+        Mode::One => 0,
+        Mode::Two => 1,
+        Mode::Three => 2,
+    }
+}
+
+/// The values the dynamic MFD lines show, as the app knows them right now.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct LiveValues {
+    /// The mode a `mode` line shows.
+    pub(crate) mode_shown: Mode,
+    /// The name of the most recently pressed button still held, if any.
+    pub(crate) last_button: Option<String>,
+}
+
+impl Default for LiveValues {
+    fn default() -> Self {
+        Self {
+            mode_shown: Mode::One,
+            last_button: None,
+        }
+    }
+}
+
+/// The text a `mode` line shows for `mode`, translated.
+pub(crate) fn mode_text(mode: Mode) -> String {
+    match mode {
+        Mode::One => gettext("Mode 1"),
+        Mode::Two => gettext("Mode 2"),
+        Mode::Three => gettext("Mode 3"),
+    }
+}
+
+/// One profile: everything the device shows, for one device type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Profile {
+    /// The device type the profile is for.
+    pub(crate) device_type: DeviceType,
+    /// The name shown in the UI: 1–64 characters, trimmed, unique within the device type.
+    pub(crate) name: String,
+    /// The field order of the date.
+    pub(crate) date_format: x52::clock::DateFormat,
     /// Clock 1.
     pub(crate) clock1: Clock1Settings,
     /// Clock 2.
     pub(crate) clock2: ZoneClock,
     /// Clock 3.
     pub(crate) clock3: ZoneClock,
+    /// The mode settings, one set or one per mode.
+    pub(crate) settings: ModeSets,
 }
 
 impl Profile {
@@ -196,43 +348,57 @@ impl Profile {
         Self::builtin(device_type, gettext("Default"))
     }
 
-    /// The built-in values for `device_type` under `name`: the value a field falls back to when
-    /// a file has a problem with it.
+    /// The built-in values for `device_type` under `name`, as a single profile: the value a
+    /// field falls back to when a file has a problem with it.
     pub(crate) fn builtin(device_type: DeviceType, name: String) -> Self {
         let state = DeviceState::default_for(device_type);
         Self {
             device_type,
             name,
-            led_brightness: state.led_brightness,
-            mfd_brightness: state.mfd_brightness,
-            shift: state.shift,
-            blink: state.blink,
             date_format: state.date_format,
-            leds: state.leds,
-            mfd_lines: Default::default(),
             clock1: state.clock1,
             clock2: ZoneClock::from_settings(&state.clock2),
             clock3: ZoneClock::from_settings(&state.clock3),
+            settings: ModeSets::Single(ModeSettings::builtin(device_type)),
         }
     }
 
-    /// The desired device state this profile stands for.
-    pub(crate) fn to_device_state(&self) -> DeviceState {
+    /// Whether the profile has one set of mode settings or three.
+    pub(crate) const fn kind(&self) -> ProfileKind {
+        self.settings.kind()
+    }
+
+    /// The mode settings the device shows in `mode`.
+    pub(crate) fn settings_for(&self, mode: Mode) -> &ModeSettings {
+        self.settings.for_mode(mode)
+    }
+
+    /// The desired device state of this profile in `mode`, with the dynamic MFD lines filled in
+    /// from `live`.
+    pub(crate) fn to_device_state(&self, mode: Mode, live: &LiveValues) -> DeviceState {
         let builtin = DeviceState::default_for(self.device_type);
-        let mfd_lines = self.mfd_lines.each_ref().map(|line| {
-            MfdText::new(line).unwrap_or_else(|error| {
+        let settings = self.settings_for(mode);
+        let mfd_lines = settings.mfd_lines.each_ref().map(|line| match line {
+            MfdLineSource::Text(text) => MfdText::new(text).unwrap_or_else(|error| {
                 tracing::warn!(
-                    "Profile {:?}: MFD line {line:?} not shown: {error}",
+                    "Profile {:?}: MFD line {text:?} not shown: {error}",
                     self.name
                 );
                 MfdText::EMPTY
-            })
+            }),
+            MfdLineSource::Empty => MfdText::EMPTY,
+            MfdLineSource::ProfileName => MfdText::fit(&self.name),
+            MfdLineSource::Mode => MfdText::fit(&mode_text(live.mode_shown)),
+            MfdLineSource::LastButton => live
+                .last_button
+                .as_deref()
+                .map_or(MfdText::EMPTY, MfdText::fit),
         });
         DeviceState {
-            mfd_brightness: self.mfd_brightness,
-            led_brightness: self.led_brightness,
+            mfd_brightness: settings.mfd_brightness,
+            led_brightness: settings.led_brightness,
             leds: if self.device_type.has_leds() {
-                self.leds
+                settings.leds
             } else {
                 builtin.leds
             },
@@ -241,8 +407,8 @@ impl Profile {
             clock2: self.clock2.to_settings(),
             clock3: self.clock3.to_settings(),
             date_format: self.date_format,
-            shift: self.device_type.has_shift() && self.shift,
-            blink: self.device_type.has_blink() && self.blink,
+            shift: self.device_type.has_shift() && settings.shift,
+            blink: self.device_type.has_blink() && settings.blink,
         }
     }
 }

@@ -1,13 +1,8 @@
 schema_version = 1
 device_type = "x52"
 name = "Plain"
-
-led_brightness = 128
-mfd_brightness = 0
+kind = "single"
 date_format = "yy-mm-dd"
-
-[mfd]
-lines = ["", "", ""]
 
 [clock_1]
 source = "utc"
@@ -20,3 +15,14 @@ use_24h = true
 [clock_3]
 source = { fixed_offset_minutes = 480 }
 use_24h = true
+
+[settings]
+led_brightness = 128
+mfd_brightness = 0
+
+[settings.mfd]
+lines = [
+  { source = "empty" },
+  { source = "empty" },
+  { source = "empty" },
+]

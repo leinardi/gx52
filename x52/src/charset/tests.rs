@@ -149,6 +149,26 @@ fn the_length_limit_counts_converted_bytes() {
 }
 
 #[test]
+fn fit_keeps_text_that_fits_and_cuts_the_rest_to_16_bytes() {
+    assert_eq!(MfdText::fit("Fire"), MfdText::new("Fire").unwrap());
+    assert_eq!(MfdText::fit(""), MfdText::EMPTY);
+    let exact = "ABCDEFGHIJKLMNOP";
+    assert_eq!(MfdText::fit(exact), MfdText::new(exact).unwrap());
+    let cut = MfdText::fit("Trigger, first stage");
+    assert_eq!(cut.as_bytes().len(), 16);
+    assert_eq!(cut.preview(), "Trigger, first s");
+    // Characters are replaced before the cut, and each counts as one byte.
+    assert_eq!(
+        MfdText::fit("ő~ÄÖÜäöüéèêëàâçñ").preview(),
+        "o?ÄÖÜäöüéèêëàâçñ"
+    );
+    assert_eq!(
+        MfdText::fit(&"é".repeat(20)),
+        MfdText::new(&"é".repeat(16)).unwrap()
+    );
+}
+
+#[test]
 fn the_preview_is_what_the_mfd_shows() {
     let text = MfdText::new("Ünïcödé ~ ő").unwrap();
     assert_eq!(text.preview(), "Ünïcödé ? o");

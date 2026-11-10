@@ -19,11 +19,13 @@
 use std::fs::{self, File};
 
 use rusqlite::params_from_iter;
+use x52::input::Mode;
 
 use super::*;
 use crate::profile::migrate::Schema;
 use crate::profile::schema::Parsed;
 use crate::profile::store::DefaultPersistence;
+use crate::profile::{MfdLineSource, ProfileKind};
 
 /// The two database schemas of spike S8.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -269,30 +271,74 @@ fn both_schemas_are_read_by_column_name() {
 fn the_values_are_converted_as_profiles_md_says() {
     let (_dir, database) = database(flatpak_database);
     let pro = &rows(&database, LegacyTable::X52Pro)[0].profile;
-    assert_eq!(pro.led_brightness.level(), 28, "7 × 4");
-    assert_eq!(pro.mfd_brightness.level(), 24, "6 × 4");
-    assert!(pro.leds.is_on(SingleColourLed::Fire));
-    assert!(!pro.leds.is_on(SingleColourLed::Throttle));
-    assert_eq!(pro.leds.colour(BiColourLed::ButtonA), LedColour::Green);
-    assert_eq!(pro.leds.colour(BiColourLed::ButtonB), LedColour::Red);
-    assert_eq!(pro.leds.colour(BiColourLed::ButtonD), LedColour::Amber);
-    assert_eq!(pro.leds.colour(BiColourLed::ButtonE), LedColour::Off);
+    assert_eq!(
+        pro.settings_for(Mode::One).led_brightness.level(),
+        28,
+        "7 × 4"
+    );
+    assert_eq!(
+        pro.settings_for(Mode::One).mfd_brightness.level(),
+        24,
+        "6 × 4"
+    );
+    assert!(
+        pro.settings_for(Mode::One)
+            .leds
+            .is_on(SingleColourLed::Fire)
+    );
+    assert!(
+        !pro.settings_for(Mode::One)
+            .leds
+            .is_on(SingleColourLed::Throttle)
+    );
+    assert_eq!(
+        pro.settings_for(Mode::One)
+            .leds
+            .colour(BiColourLed::ButtonA),
+        LedColour::Green
+    );
+    assert_eq!(
+        pro.settings_for(Mode::One)
+            .leds
+            .colour(BiColourLed::ButtonB),
+        LedColour::Red
+    );
+    assert_eq!(
+        pro.settings_for(Mode::One)
+            .leds
+            .colour(BiColourLed::ButtonD),
+        LedColour::Amber
+    );
+    assert_eq!(
+        pro.settings_for(Mode::One)
+            .leds
+            .colour(BiColourLed::ButtonE),
+        LedColour::Off
+    );
     assert_eq!(
         pro.clock2.source,
         ZoneSpec::Fixed(FixedOffset::new(-240).unwrap())
     );
     assert!(!pro.clock3.h24);
     assert_eq!(pro.date_format, DateFormat::YyMmDd);
-    assert!(!pro.shift);
-    assert!(!pro.blink);
-    assert_eq!(pro.mfd_lines, [String::new(), String::new(), String::new()]);
+    assert!(!pro.settings_for(Mode::One).shift);
+    assert!(!pro.settings_for(Mode::One).blink);
+    assert_eq!(pro.kind(), ProfileKind::Single);
+    assert_eq!(
+        pro.settings_for(Mode::One).mfd_lines,
+        [const { MfdLineSource::Empty }; 3]
+    );
 
     let off = &rows(&database, LegacyTable::X52Pro)[1].profile;
-    assert_eq!(off.led_brightness.level(), 0);
+    assert_eq!(off.settings_for(Mode::One).led_brightness.level(), 0);
     assert_eq!(off.date_format, DateFormat::DdMmYy);
 
     let x52 = &rows(&database, LegacyTable::X52)[0].profile;
-    assert_eq!(x52.led_brightness.level(), 128, "32 × 4");
+    assert_eq!(
+        x52.settings_for(Mode::One).led_brightness.level(),
+        128,
+        "32 × 4"
+    );
     assert_eq!(x52.clock1.source, Clock1Source::Utc);
     assert_eq!(
         x52.clock2.source,
@@ -309,7 +355,12 @@ fn the_values_are_converted_as_profiles_md_says() {
 fn x52_rows_never_take_the_led_columns() {
     let (_dir, database) = database(flatpak_database);
     let x52 = &rows(&database, LegacyTable::X52)[0].profile;
-    assert_eq!(x52.leds, Profile::builtin_default(DeviceType::X52).leds);
+    assert_eq!(
+        x52.settings_for(Mode::One).leds,
+        Profile::builtin_default(DeviceType::X52)
+            .settings_for(Mode::One)
+            .leds
+    );
 }
 
 #[test]
@@ -319,7 +370,7 @@ fn the_settings_are_read() {
         flatpak.settings,
         LegacySettings {
             launch_on_login: Some(true),
-            show_app_indicator: Some(false),
+            run_in_background: Some(false),
         }
     );
     let (_dir, source) = database(source_database);
@@ -370,13 +421,19 @@ fn bad_values_get_the_type_default_and_the_row_is_imported() {
         ]
     );
     assert_eq!(bad.profile.name, "Imported profile");
-    assert_eq!(bad.profile.led_brightness, builtin.led_brightness);
+    assert_eq!(
+        bad.profile.settings_for(Mode::One).led_brightness,
+        builtin.settings_for(Mode::One).led_brightness
+    );
     assert_eq!(bad.profile.clock1.source, builtin.clock1.source);
     assert_eq!(bad.profile.clock2, builtin.clock2);
     assert_eq!(bad.profile.clock3.source, builtin.clock3.source);
     assert_eq!(bad.profile.date_format, builtin.date_format);
     assert_eq!(
-        bad.profile.leds.colour(BiColourLed::ButtonA),
+        bad.profile
+            .settings_for(Mode::One)
+            .leds
+            .colour(BiColourLed::ButtonA),
         LedColour::Green
     );
 

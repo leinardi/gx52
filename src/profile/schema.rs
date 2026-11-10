@@ -16,7 +16,7 @@
 //! The TOML schema of a profile file (docs/profiles.md, "TOML schema (version 1)").
 //!
 //! Reading takes two steps, so one bad field does not lose the whole profile: the text is parsed
-//! into a [`Table`], `schema_version` and `device_type` are read first, then every field is
+//! into a [`Table`], `schema_version`, `device_type` and `kind` are read first, then every field is
 //! converted on its own. A field with a problem gets its built-in value and the problem is listed.
 //! Writing produces the layout of docs/profiles.md, with every key the device type has.
 
@@ -28,10 +28,14 @@ use x52::charset::MfdText;
 use x52::clock::{Clock1Source, DateFormat, FixedOffset};
 use x52::command::Brightness;
 use x52::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
+use x52::state::Leds;
 
 use super::migrate::{Schema, Version};
 use super::name::{self, NameProblem};
-use super::{IanaZone, MFD_LINES, Profile, ZoneClock, ZoneSpec, device_type_from_id};
+use super::{
+    IanaZone, MFD_LINES, MfdLineSource, ModeSets, ModeSettings, Profile, ProfileKind, ZoneClock,
+    ZoneSpec, device_type_from_id,
+};
 
 /// Why a document is not a profile at all.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -82,7 +86,8 @@ pub(crate) enum Parsed {
 /// One field of a document that could not be used as it is.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct FieldProblem {
-    /// The key, with its table: `led_brightness`, `leds.a`, `clock_2.source`, `mfd.lines[1]`.
+    /// The key, with its table: `kind`, `mode_2.leds.a`, `clock_2.source`,
+    /// `settings.mfd.lines[1].text`.
     pub(crate) key: String,
     /// What is wrong with it.
     pub(crate) kind: ProblemKind,
@@ -165,20 +170,35 @@ impl FieldProblem {
 }
 
 /// The keys of the top-level table, in the order they are written.
-const TOP_LEVEL_KEYS: [&str; 13] = [
+const TOP_LEVEL_KEYS: [&str; 12] = [
     "schema_version",
     "device_type",
     "name",
+    "kind",
+    "date_format",
+    "clock_1",
+    "clock_2",
+    "clock_3",
+    SINGLE_TABLE,
+    MODE_TABLES[0],
+    MODE_TABLES[1],
+    MODE_TABLES[2],
+];
+
+/// The table of a single profile's mode settings.
+const SINGLE_TABLE: &str = "settings";
+
+/// The tables of a per-mode profile's mode settings, mode 1 to 3.
+const MODE_TABLES: [&str; 3] = ["mode_1", "mode_2", "mode_3"];
+
+/// The keys of a table of mode settings.
+const SET_KEYS: [&str; 6] = [
     "led_brightness",
     "mfd_brightness",
     "shift",
     "blink",
-    "date_format",
     "leds",
     "mfd",
-    "clock_1",
-    "clock_2",
-    "clock_3",
 ];
 
 /// Parses `bytes` as a profile of `schema`, migrating an older version in memory.
@@ -246,38 +266,13 @@ impl Reader {
                 Err(problem) => self.problem("name", ProblemKind::Name(problem)),
             }
         }
-        for (key, field) in [
-            ("led_brightness", &mut profile.led_brightness),
-            ("mfd_brightness", &mut profile.mfd_brightness),
-        ] {
-            if let Some(level) = self.brightness(document, key) {
-                *field = level;
-            }
-        }
-        for (key, supported, field) in [
-            ("shift", device_type.has_shift(), &mut profile.shift),
-            ("blink", device_type.has_blink(), &mut profile.blink),
-        ] {
-            if supported {
-                if let Some(value) = self.boolean(document, "", key) {
-                    *field = value;
-                }
-            } else if document.contains_key(key) {
-                self.problem(key, ProblemKind::NotForDeviceType);
-            }
-        }
+        let kind = self.kind(document);
         if let Some(raw) = self.string(document, "", "date_format") {
             match date_format_from(raw) {
                 Some(format) => profile.date_format = format,
                 None => self.problem("date_format", ProblemKind::UnknownValue(quoted(raw))),
             }
         }
-        if device_type.has_leds() {
-            self.leds(document, &mut profile);
-        } else if document.contains_key("leds") {
-            self.problem("leds", ProblemKind::NotForDeviceType);
-        }
-        self.mfd(document, &mut profile);
         self.clock1(document, &mut profile);
         for (key, clock) in [
             ("clock_2", &mut profile.clock2),
@@ -285,50 +280,124 @@ impl Reader {
         ] {
             self.zone_clock(document, key, clock);
         }
+        profile.settings = match kind {
+            ProfileKind::Single => {
+                let settings = self.mode_settings(document, SINGLE_TABLE, device_type);
+                self.other_kind_tables(document, &MODE_TABLES);
+                ModeSets::Single(settings)
+            }
+            ProfileKind::PerMode => {
+                let sets = MODE_TABLES.map(|key| self.mode_settings(document, key, device_type));
+                self.other_kind_tables(document, &[SINGLE_TABLE]);
+                ModeSets::PerMode(Box::new(sets))
+            }
+        };
         profile
     }
 
-    fn brightness(&mut self, table: &Table, key: &str) -> Option<Brightness> {
-        let level = self.integer(table, "", key)?;
+    /// The `kind`; a single profile when it is missing or unknown.
+    fn kind(&mut self, document: &Table) -> ProfileKind {
+        let Some(raw) = self.string(document, "", "kind") else {
+            return ProfileKind::Single;
+        };
+        kind_from(raw).unwrap_or_else(|| {
+            self.problem("kind", ProblemKind::UnknownValue(quoted(raw)));
+            ProfileKind::Single
+        })
+    }
+
+    /// Reports the mode tables of the other kind, which are ignored.
+    fn other_kind_tables(&mut self, document: &Table, keys: &[&str]) {
+        for key in keys {
+            if document.contains_key(*key) {
+                self.problem(key, ProblemKind::UnknownKey);
+            }
+        }
+    }
+
+    /// The mode settings in the table `key`; the built-in ones when it is missing.
+    fn mode_settings(
+        &mut self,
+        document: &Table,
+        key: &str,
+        device_type: DeviceType,
+    ) -> ModeSettings {
+        let mut settings = ModeSettings::builtin(device_type);
+        let Some(table) = self.table(document, "", key) else {
+            return settings;
+        };
+        self.unknown_keys(table, key, &SET_KEYS);
+        for (name, field) in [
+            ("led_brightness", &mut settings.led_brightness),
+            ("mfd_brightness", &mut settings.mfd_brightness),
+        ] {
+            if let Some(level) = self.brightness(table, key, name) {
+                *field = level;
+            }
+        }
+        for (name, supported, field) in [
+            ("shift", device_type.has_shift(), &mut settings.shift),
+            ("blink", device_type.has_blink(), &mut settings.blink),
+        ] {
+            if supported {
+                if let Some(value) = self.boolean(table, key, name) {
+                    *field = value;
+                }
+            } else if table.contains_key(name) {
+                self.problem(&join(key, name), ProblemKind::NotForDeviceType);
+            }
+        }
+        if device_type.has_leds() {
+            self.leds(table, key, &mut settings.leds);
+        } else if table.contains_key("leds") {
+            self.problem(&join(key, "leds"), ProblemKind::NotForDeviceType);
+        }
+        self.mfd(table, key, &mut settings.mfd_lines);
+        settings
+    }
+
+    fn brightness(&mut self, table: &Table, prefix: &str, key: &str) -> Option<Brightness> {
+        let level = self.integer(table, prefix, key)?;
         let checked = u8::try_from(level)
             .ok()
             .and_then(|level| Brightness::new(level).ok());
         if checked.is_none() {
             self.problem(
-                key,
+                &join(prefix, key),
                 ProblemKind::OutOfRange(format!("{level} is not in 0–{}", Brightness::MAX)),
             );
         }
         checked
     }
 
-    fn leds(&mut self, document: &Table, profile: &mut Profile) {
-        let Some(leds) = self.table(document, "", "leds") else {
+    fn leds(&mut self, set: &Table, prefix: &str, leds: &mut Leds) {
+        let Some(table) = self.table(set, prefix, "leds") else {
             return;
         };
+        let prefix = join(prefix, "leds");
         let known: Vec<&str> = SingleColourLed::ALL
             .iter()
             .map(|led| led.key())
             .chain(BiColourLed::ALL.iter().map(|led| led.key()))
             .collect();
-        self.unknown_keys(leds, "leds", &known);
+        self.unknown_keys(table, &prefix, &known);
         for led in SingleColourLed::ALL {
-            if let Some(raw) = self.string(leds, "leds", led.key()) {
+            if let Some(raw) = self.string(table, &prefix, led.key()) {
                 match switch_from(raw) {
-                    Some(on) => profile.leds.set_on(led, on),
+                    Some(on) => leds.set_on(led, on),
                     None => self.problem(
-                        &join("leds", led.key()),
+                        &join(&prefix, led.key()),
                         ProblemKind::UnknownValue(quoted(raw)),
                     ),
                 }
             }
         }
         for led in BiColourLed::ALL {
-            if let Some(raw) = self.string(leds, "leds", led.key()) {
+            if let Some(raw) = self.string(table, &prefix, led.key()) {
                 match colour_from(raw) {
-                    Some(colour) => profile.leds.set_colour(led, colour),
+                    Some(colour) => leds.set_colour(led, colour),
                     None => self.problem(
-                        &join("leds", led.key()),
+                        &join(&prefix, led.key()),
                         ProblemKind::UnknownValue(quoted(raw)),
                     ),
                 }
@@ -336,39 +405,68 @@ impl Reader {
         }
     }
 
-    fn mfd(&mut self, document: &Table, profile: &mut Profile) {
-        let Some(mfd) = self.table(document, "", "mfd") else {
+    fn mfd(&mut self, set: &Table, prefix: &str, lines: &mut [MfdLineSource; MFD_LINES]) {
+        let Some(mfd) = self.table(set, prefix, "mfd") else {
             return;
         };
-        self.unknown_keys(mfd, "mfd", &["lines"]);
-        let Some(value) = self.value(mfd, "mfd", "lines") else {
+        let prefix = join(prefix, "mfd");
+        self.unknown_keys(mfd, &prefix, &["lines"]);
+        let Some(value) = self.value(mfd, &prefix, "lines") else {
             return;
         };
-        let Some(lines) = value.as_array().filter(|lines| lines.len() == MFD_LINES) else {
+        let Some(read) = value.as_array().filter(|read| read.len() == MFD_LINES) else {
             self.problem(
-                "mfd.lines",
+                &join(&prefix, "lines"),
                 ProblemKind::WrongType {
-                    expected: "an array of 3 strings",
+                    expected: "an array of 3 tables",
                 },
             );
             return;
         };
-        for (index, (line, field)) in lines.iter().zip(&mut profile.mfd_lines).enumerate() {
-            let key = format!("mfd.lines[{index}]");
-            let Some(text) = line.as_str() else {
+        for (index, (line, field)) in read.iter().zip(lines).enumerate() {
+            let key = format!("{prefix}.lines[{index}]");
+            let Some(table) = line.as_table() else {
                 self.problem(
                     &key,
                     ProblemKind::WrongType {
-                        expected: "a string",
+                        expected: "a table",
                     },
                 );
                 continue;
             };
-            match MfdText::new(text) {
-                Ok(_) => text.clone_into(field),
-                Err(error) => self.problem(&key, ProblemKind::OutOfRange(error.to_string())),
+            if let Some(source) = self.line(table, &key) {
+                *field = source;
             }
         }
+    }
+
+    /// One MFD line, `{ source = ... }`; `None` when it cannot be used.
+    fn line(&mut self, table: &Table, key: &str) -> Option<MfdLineSource> {
+        let raw = self.string(table, key, "source")?;
+        let source = match raw {
+            "text" => {
+                self.unknown_keys(table, key, &["source", "text"]);
+                let text = self.string(table, key, "text")?;
+                if let Err(error) = MfdText::new(text) {
+                    self.problem(
+                        &join(key, "text"),
+                        ProblemKind::OutOfRange(error.to_string()),
+                    );
+                    return None;
+                }
+                return Some(MfdLineSource::Text(text.to_owned()));
+            }
+            "empty" => MfdLineSource::Empty,
+            "profile_name" => MfdLineSource::ProfileName,
+            "mode" => MfdLineSource::Mode,
+            "last_button" => MfdLineSource::LastButton,
+            _ => {
+                self.problem(&join(key, "source"), ProblemKind::UnknownValue(quoted(raw)));
+                return None;
+            }
+        };
+        self.unknown_keys(table, key, &["source"]);
+        Some(source)
     }
 
     fn clock1(&mut self, document: &Table, profile: &mut Profile) {
@@ -511,6 +609,34 @@ pub(crate) const fn date_format_text(format: DateFormat) -> &'static str {
     }
 }
 
+/// The text of a profile kind in a profile.
+const fn kind_text(kind: ProfileKind) -> &'static str {
+    match kind {
+        ProfileKind::Single => "single",
+        ProfileKind::PerMode => "per_mode",
+    }
+}
+
+fn kind_from(raw: &str) -> Option<ProfileKind> {
+    [ProfileKind::Single, ProfileKind::PerMode]
+        .into_iter()
+        .find(|kind| kind_text(*kind) == raw)
+}
+
+/// The TOML inline table of an MFD line.
+fn line_table(line: &MfdLineSource) -> String {
+    let source = match line {
+        MfdLineSource::Text(text) => {
+            return format!("{{ source = \"text\", text = {} }}", toml_string(text));
+        }
+        MfdLineSource::Empty => "empty",
+        MfdLineSource::ProfileName => "profile_name",
+        MfdLineSource::Mode => "mode",
+        MfdLineSource::LastButton => "last_button",
+    };
+    format!("{{ source = {} }}", toml_string(source))
+}
+
 fn date_format_from(raw: &str) -> Option<DateFormat> {
     [DateFormat::DdMmYy, DateFormat::MmDdYy, DateFormat::YyMmDd]
         .into_iter()
@@ -567,37 +693,12 @@ fn write_into(out: &mut String, profile: &Profile, device_type: DeviceType) -> f
     writeln!(out, "schema_version = {}", Schema::CURRENT.supported())?;
     writeln!(out, "device_type = {}", toml_string(device_type.id()))?;
     writeln!(out, "name = {}", toml_string(&profile.name))?;
-    writeln!(out)?;
-    writeln!(out, "led_brightness = {}", profile.led_brightness.level())?;
-    writeln!(out, "mfd_brightness = {}", profile.mfd_brightness.level())?;
-    if device_type.has_shift() {
-        writeln!(out, "shift = {}", profile.shift)?;
-    }
-    if device_type.has_blink() {
-        writeln!(out, "blink = {}", profile.blink)?;
-    }
+    writeln!(out, "kind = {}", toml_string(kind_text(profile.kind())))?;
     writeln!(
         out,
         "date_format = {}",
         toml_string(date_format_text(profile.date_format))
     )?;
-    if device_type.has_leds() {
-        writeln!(out, "\n[leds]")?;
-        for led in SingleColourLed::ALL {
-            let state = switch_text(profile.leds.is_on(led));
-            writeln!(out, "{} = {}", led.key(), toml_string(state))?;
-        }
-        for led in BiColourLed::ALL {
-            let colour = colour_text(profile.leds.colour(led));
-            writeln!(out, "{} = {}", led.key(), toml_string(colour))?;
-        }
-    }
-    let lines: Vec<String> = profile
-        .mfd_lines
-        .iter()
-        .map(|line| toml_string(line))
-        .collect();
-    writeln!(out, "\n[mfd]\nlines = [{}]", lines.join(", "))?;
     let clock1 = match profile.clock1.source {
         Clock1Source::Local => "local",
         Clock1Source::Utc => "utc",
@@ -613,7 +714,49 @@ fn write_into(out: &mut String, profile: &Profile, device_type: DeviceType) -> f
         };
         writeln!(out, "\n[{key}]\nsource = {source}\nuse_24h = {}", clock.h24)?;
     }
+    match &profile.settings {
+        ModeSets::Single(settings) => write_set(out, SINGLE_TABLE, settings, device_type)?,
+        ModeSets::PerMode(sets) => {
+            for (key, settings) in MODE_TABLES.iter().zip(sets.iter()) {
+                write_set(out, key, settings, device_type)?;
+            }
+        }
+    }
     Ok(())
+}
+
+/// The table `key` of one set of mode settings, with its `leds` and `mfd` tables.
+fn write_set(
+    out: &mut String,
+    key: &str,
+    settings: &ModeSettings,
+    device_type: DeviceType,
+) -> fmt::Result {
+    writeln!(out, "\n[{key}]")?;
+    writeln!(out, "led_brightness = {}", settings.led_brightness.level())?;
+    writeln!(out, "mfd_brightness = {}", settings.mfd_brightness.level())?;
+    if device_type.has_shift() {
+        writeln!(out, "shift = {}", settings.shift)?;
+    }
+    if device_type.has_blink() {
+        writeln!(out, "blink = {}", settings.blink)?;
+    }
+    if device_type.has_leds() {
+        writeln!(out, "\n[{key}.leds]")?;
+        for led in SingleColourLed::ALL {
+            let state = switch_text(settings.leds.is_on(led));
+            writeln!(out, "{} = {}", led.key(), toml_string(state))?;
+        }
+        for led in BiColourLed::ALL {
+            let colour = colour_text(settings.leds.colour(led));
+            writeln!(out, "{} = {}", led.key(), toml_string(colour))?;
+        }
+    }
+    writeln!(out, "\n[{key}.mfd]\nlines = [")?;
+    for line in &settings.mfd_lines {
+        writeln!(out, "  {},", line_table(line))?;
+    }
+    writeln!(out, "]")
 }
 
 #[cfg(test)]

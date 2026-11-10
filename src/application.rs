@@ -34,7 +34,7 @@ use crate::device::{DeviceEvent, DeviceService, access};
 use crate::profile::legacy::{self, FileWriter};
 use crate::profile::startup::{self, ImportOutcome};
 use crate::profile::store::{Entry, LoadReport, ProfileStore};
-use crate::profile::{self, Profile, ProfileId, mapping};
+use crate::profile::{self, LiveValues, Profile, ProfileId, mapping};
 use crate::window::{self, Window};
 
 /// The settings key that records the one-time GX52 0.7 import as done.
@@ -287,7 +287,7 @@ impl Application {
             {
                 for (key, value) in [
                     ("autostart", legacy.launch_on_login),
-                    ("show-tray", legacy.show_app_indicator),
+                    ("show-tray", legacy.run_in_background),
                 ] {
                     if let Some(value) = value
                         && let Err(error) = settings.set_boolean(key, value)
@@ -530,9 +530,13 @@ impl Application {
                     .collect();
                 let id = mapping::resolve(&entries, device_type, mode, store);
                 tracing::info!("Mode {mode:?} on the {device_type}: profile {id}");
-                store
-                    .loaded(&id)
-                    .map(|loaded| loaded.profile.to_device_state())
+                store.loaded(&id).map(|loaded| {
+                    let live = LiveValues {
+                        mode_shown: mode,
+                        last_button: None,
+                    };
+                    loaded.profile.to_device_state(mode, &live)
+                })
             }
             _ => None,
         };

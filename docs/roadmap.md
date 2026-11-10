@@ -200,6 +200,15 @@ M5, so the UI is built on the new model.
    profile switches sets with the selector, a single profile ignores it, and an unknown or
    wrong-type active id falls back to the type's default.
 
+Results on 2026-11-10:
+
+- **Schema and store:** single and per-mode profiles read and write the layout of
+  [profiles.md](profiles.md#toml-schema-version-1), and both kinds round-trip (write, parse, equal,
+  no problems), the legacy import, export and store tests included. A fixture per new validation
+  case: an unknown `kind`, a missing mode table, the other kind's tables, an unknown line source,
+  a text line over 16 converted bytes and one without `text`. Dynamic lines are cut to 16 bytes
+  (`MfdText::fit`).
+
 ## M4: UI design session
 
 Before any UI work. A dedicated session that writes `docs/ui.md` (postponed from stage C because the

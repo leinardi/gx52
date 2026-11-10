@@ -16,12 +16,13 @@
 use std::fs;
 
 use x52::device::{BiColourLed, LedColour};
+use x52::input::Mode;
 
 use super::*;
 use crate::profile::files::{PROFILE_LIMIT, ReadError, read_limited};
 use crate::profile::store::{DefaultPersistence, ProfileStore};
 use crate::profile::tests::fixture;
-use crate::profile::{IanaZone, ZoneSpec};
+use crate::profile::{IanaZone, MfdLineSource, ModeSets, ModeSettings, ZoneSpec};
 
 fn store(dir: &Path) -> ProfileStore {
     ProfileStore::load(dir, DefaultPersistence::Write).0
@@ -38,8 +39,12 @@ fn listing(dir: &Path) -> Vec<String> {
 
 fn custom_profile() -> Profile {
     let mut profile = Profile::builtin(DeviceType::X52Pro, "Night flying".to_owned());
-    profile.leds.set_colour(BiColourLed::T1T2, LedColour::Amber);
-    profile.mfd_lines[1] = "Ready".to_owned();
+    let mut mode_2 = ModeSettings::builtin(DeviceType::X52Pro);
+    mode_2.leds.set_colour(BiColourLed::T1T2, LedColour::Amber);
+    mode_2.mfd_lines[1] = MfdLineSource::Text("Ready".to_owned());
+    mode_2.mfd_lines[2] = MfdLineSource::LastButton;
+    let mode_1 = ModeSettings::builtin(DeviceType::X52Pro);
+    profile.settings = ModeSets::PerMode(Box::new([mode_1.clone(), mode_2, mode_1]));
     profile.clock2.source = ZoneSpec::Iana(IanaZone::new("Asia/Kathmandu").unwrap());
     profile
 }
@@ -146,7 +151,14 @@ fn an_oversized_file_is_not_parsed() {
 fn field_problems_are_fixed_and_listed_before_confirming() {
     let preview = prepare_import(&fixture("out-of-range.toml"), DeviceType::X52Pro, &[]).unwrap();
     assert_eq!(preview.problems.len(), 5);
-    assert_eq!(preview.profile.led_brightness.level(), 128);
+    assert_eq!(
+        preview
+            .profile
+            .settings_for(Mode::One)
+            .led_brightness
+            .level(),
+        128
+    );
 }
 
 #[test]

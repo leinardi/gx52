@@ -43,7 +43,7 @@ use super::files::{self, Created, PROFILE_LIMIT};
 use super::name;
 use super::schema::{self, FieldProblem, ProblemKind};
 use super::store::{BuiltinReason, Origin, ProfileStore};
-use super::{Profile, ProfileId, ZoneSpec};
+use super::{ModeSets, ModeSettings, Profile, ProfileId, ZoneSpec};
 
 /// The largest database that is opened; the two S8 databases are 32 KiB each.
 pub(crate) const DATABASE_LIMIT: u64 = 16 * 1024 * 1024;
@@ -136,8 +136,9 @@ impl DatabaseError {
 pub(crate) struct LegacySettings {
     /// `settings_launch_on_login`: start GX52 when logging in.
     pub(crate) launch_on_login: Option<bool>,
-    /// `settings_show_app_indicator`: show the tray icon.
-    pub(crate) show_app_indicator: Option<bool>,
+    /// `settings_show_app_indicator`: GX52 0.7's tray icon, which kept the app running with the
+    /// window closed; imported as `run-in-background`.
+    pub(crate) run_in_background: Option<bool>,
 }
 
 /// One profile row of the database, converted.
@@ -350,7 +351,7 @@ fn read_settings(connection: &Connection) -> rusqlite::Result<LegacySettings> {
         let value = flag(&owned(row.get_ref(1)?));
         match key.as_str() {
             "settings_launch_on_login" => settings.launch_on_login = value,
-            "settings_show_app_indicator" => settings.show_app_indicator = value,
+            "settings_show_app_indicator" => settings.run_in_background = value,
             _ => {}
         }
     }
@@ -433,9 +434,11 @@ impl Converter {
             self.problem("name", ProblemKind::Name(name::NameProblem::TooLong(count)));
         }
         let mut profile = Profile::builtin(device_type, name);
+        // GX52 0.7 had no modes: every row is a single profile, its MFD lines empty.
+        let mut settings = ModeSettings::builtin(device_type);
         for (column, field) in [
-            ("led_brightness", &mut profile.led_brightness),
-            ("mfd_brightness", &mut profile.mfd_brightness),
+            ("led_brightness", &mut settings.led_brightness),
+            ("mfd_brightness", &mut settings.mfd_brightness),
         ] {
             if let Some(level) = self.mapped(columns, column, legacy_brightness) {
                 *field = level;
@@ -472,16 +475,17 @@ impl Converter {
             for led in SingleColourLed::ALL {
                 let column = format!("led_{}", led.key());
                 if let Some(on) = self.mapped(columns, &column, bool_digit) {
-                    profile.leds.set_on(led, on);
+                    settings.leds.set_on(led, on);
                 }
             }
             for led in BiColourLed::ALL {
                 let column = format!("led_{}", led.key());
                 if let Some(colour) = self.mapped(columns, &column, legacy_colour) {
-                    profile.leds.set_colour(led, colour);
+                    settings.leds.set_colour(led, colour);
                 }
             }
         }
+        profile.settings = ModeSets::Single(settings);
         profile
     }
 
@@ -655,7 +659,7 @@ impl Plan {
         let mut out = format!("version = {PLAN_VERSION}\ncompleted = {}\n", self.completed);
         for (key, value) in [
             ("launch_on_login", self.settings.launch_on_login),
-            ("show_app_indicator", self.settings.show_app_indicator),
+            ("run_in_background", self.settings.run_in_background),
         ] {
             if let Some(value) = value {
                 let _ = writeln!(out, "{key} = {value}");
@@ -690,7 +694,7 @@ impl Plan {
         let setting = |key| document.get(key).and_then(Value::as_bool);
         let settings = LegacySettings {
             launch_on_login: setting("launch_on_login"),
-            show_app_indicator: setting("show_app_indicator"),
+            run_in_background: setting("run_in_background"),
         };
         let entries = match document.get("entry") {
             None => Vec::new(),
