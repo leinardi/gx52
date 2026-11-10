@@ -236,3 +236,17 @@ fn unknown_zones_cannot_be_named() {
     assert!(IanaZone::new("Mars/Olympus_Mons").is_err());
     assert_eq!(IanaZone::new("Europe/Rome").unwrap().name(), "Europe/Rome");
 }
+
+#[test]
+fn line_text_keeps_both_limits() {
+    let at_limit = format!("e{}", "\u{301}".repeat(MFD_TEXT_MAX_CHARS - 1));
+    assert!(line_text(&at_limit).is_ok());
+    assert_eq!(
+        line_text(&format!("{at_limit}\u{301}")),
+        Err(LineTextError::TooManyCharacters(MFD_TEXT_MAX_CHARS + 1))
+    );
+    assert!(matches!(
+        line_text("ABCDEFGHIJKLMNOPQ"),
+        Err(LineTextError::TooLong(_))
+    ));
+}

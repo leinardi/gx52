@@ -85,6 +85,25 @@ fn a_character_that_composes_with_the_text_after_it_is_accepted() {
 }
 
 #[test]
+fn combining_marks_stop_at_the_character_limit() {
+    // Marks take no byte on the MFD: only the character limit stops them.
+    let marks = "\u{301}".repeat(4096);
+    let accepted = accepted_insert("e", &marks, "");
+    assert_eq!(accepted.chars().count(), MFD_TEXT_MAX_CHARS - 1);
+    assert!(crate::profile::line_text(&format!("e{accepted}")).is_ok());
+    // A line already at the limit takes nothing more, wherever the insertion point is.
+    let full = format!("e{}", "\u{301}".repeat(MFD_TEXT_MAX_CHARS - 1));
+    assert_eq!(accepted_insert(&full, "\u{301}", ""), "");
+    assert_eq!(accepted_insert("", "x", &full), "");
+}
+
+#[test]
+fn a_huge_paste_is_cut_without_converting_it_whole() {
+    let paste = "A".repeat(1 << 20);
+    assert_eq!(accepted_insert("", &paste, ""), "A".repeat(16));
+}
+
+#[test]
 fn text_info_counts_converted_bytes_and_lists_substitutions() {
     let info = TextInfo::of("Éjszakai repülő €");
     assert_eq!(info.count, 17);
@@ -351,4 +370,21 @@ fn each_backlight_step_has_its_own_class() {
 fn the_clocks_are_numbered_from_1() {
     assert_eq!(ShownClock::ALL.map(ShownClock::number), [1, 2, 3]);
     assert_eq!(ShownClock::default(), ShownClock::One);
+}
+
+#[test]
+fn placeholders_typed_into_a_line_stay_as_typed_in_the_label() {
+    let state = state(["{date} {time}", "{number}", "{lines}"]);
+    assert_eq!(
+        accessible_label(&shown(&state, ShownClock::One)),
+        "Simulated MFD: {date} {time}, {number}, {lines}; clock 1 12:45, date 09.11.26"
+    );
+}
+
+#[test]
+fn fill_replaces_known_placeholders_once_and_keeps_the_rest() {
+    assert_eq!(
+        fill("{a} and {b}, {c} {", &[("a", "{b}"), ("b", "2")]),
+        "{b} and 2, {c} {"
+    );
 }

@@ -17,14 +17,13 @@
 //! go to the device at once and are saved after the debounce (docs/ui.md, "Profile editor").
 
 use adw::subclass::prelude::*;
-use x52::charset::MfdText;
 use x52::command::Brightness;
 
 use super::Application;
 use crate::profile::editor::EditorState;
 use crate::profile::leds::{self, EditorLed, LedChoice};
 use crate::profile::mfd::{DraftKey, LineSource, SettingsSet};
-use crate::profile::{MFD_LINES, MfdLineSource, ModeSettings, ProfileId};
+use crate::profile::{self, MFD_LINES, MfdLineSource, ModeSettings, ProfileId};
 
 /// The profile and the set of mode settings an edit changes.
 struct EditTarget {
@@ -104,7 +103,7 @@ impl Application {
     /// Sets the text of custom text line `line` (from `0`) in the mode shown; text that does not
     /// fit the line is refused, and the editor shows the line's text again.
     pub(crate) fn set_mfd_text(&self, line: usize, text: String) {
-        if let Err(error) = MfdText::new(&text) {
+        if let Err(error) = profile::line_text(&text) {
             tracing::debug!("MFD line {line} text {text:?} refused: {error}");
             self.update_windows();
             return;

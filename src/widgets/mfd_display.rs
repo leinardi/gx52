@@ -38,6 +38,18 @@ pub(crate) enum DateArea {
     ClockNumber,
 }
 
+/// Lays `widget` and everything in it out left to right, as the device's glass is in every
+/// language. GTK takes a widget's direction from the default, not from its parent, so each one is
+/// set.
+fn left_to_right(widget: &gtk::Widget) {
+    widget.set_direction(gtk::TextDirection::Ltr);
+    let mut child = widget.first_child();
+    while let Some(current) = child {
+        left_to_right(&current);
+        child = current.next_sibling();
+    }
+}
+
 /// Draws `widget` lit or unlit.
 fn light(widget: &impl IsA<gtk::Widget>, lit: bool) {
     if lit {
@@ -100,6 +112,7 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             self.obj().build_cells();
+            super::left_to_right(self.screen.upcast_ref());
             // The label reads the whole display: its parts are not read one by one.
             self.screen
                 .update_state(&[gtk::accessible::State::Hidden(true)]);

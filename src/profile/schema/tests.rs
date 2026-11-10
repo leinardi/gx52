@@ -416,6 +416,61 @@ fn text_lines_are_checked_on_the_converted_bytes() {
 }
 
 #[test]
+fn text_lines_are_checked_on_the_characters_as_typed() {
+    // One letter and 64 combining marks: one byte on the MFD, but 65 characters as typed.
+    let marks = format!("e{}", "\u{301}".repeat(64));
+    let file = String::from_utf8(fixture("valid-x52-pro.toml"))
+        .unwrap()
+        .replace("text = \"GX52\"", &format!("text = \"{marks}\""));
+    let Ok(Parsed::Readable {
+        profile, problems, ..
+    }) = parse(file.as_bytes(), Schema::CURRENT)
+    else {
+        panic!("{file}");
+    };
+    assert_eq!(keys(&problems), ["settings.mfd.lines[0].text"]);
+    assert!(matches!(problems[0].kind, ProblemKind::OutOfRange(_)));
+    assert_eq!(
+        profile.settings_for(Mode::One).mfd_lines[0],
+        MfdLineSource::Empty
+    );
+}
+
+#[test]
+fn the_largest_profile_stays_within_the_file_limit() {
+    // Every character of the name and of all nine lines the widest UTF-8 can make: a four-byte
+    // combining mark after one letter still fits a line's 16 bytes.
+    let widest_line = format!(
+        "e{}",
+        "\u{1d167}".repeat(crate::profile::MFD_TEXT_MAX_CHARS - 1)
+    );
+    assert!(crate::profile::line_text(&widest_line).is_ok());
+    let mut profile = Profile::builtin(
+        DeviceType::X52Pro,
+        "\u{1d11e}".repeat(crate::profile::name::MAX_CHARS),
+    );
+    let mut settings = ModeSettings::builtin(DeviceType::X52Pro);
+    settings.mfd_lines = [text(&widest_line), text(&widest_line), text(&widest_line)];
+    profile.settings = ModeSets::PerMode(Box::new([settings.clone(), settings.clone(), settings]));
+    let written = write(&profile);
+    assert!(
+        written.len() < usize::try_from(crate::profile::files::PROFILE_LIMIT).unwrap(),
+        "{} bytes",
+        written.len()
+    );
+    let Ok(Parsed::Readable {
+        profile: read,
+        problems,
+        ..
+    }) = parse(written.as_bytes(), Schema::CURRENT)
+    else {
+        panic!("{written}");
+    };
+    assert_eq!(problems, []);
+    assert_eq!(*read, profile);
+}
+
+#[test]
 fn a_text_line_without_text_gives_an_empty_line() {
     let (profile, problems) = readable("line-text-missing.toml");
     assert_eq!(

@@ -56,6 +56,37 @@ use crate::config;
 /// The number of MFD lines a profile holds.
 pub(crate) const MFD_LINES: usize = MfdLine::ALL.len();
 
+/// The most characters a custom text line keeps as typed (docs/profiles.md, "MFD lines").
+///
+/// Combining marks take no byte on the MFD, so the 16 converted bytes alone would let a line grow
+/// without bound; this keeps a line, and the file holding it, small.
+pub(crate) const MFD_TEXT_MAX_CHARS: usize = 64;
+
+/// Why the text of a custom text line cannot be used.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub(crate) enum LineTextError {
+    /// More characters as typed than a line keeps.
+    #[error("the text is {0} characters as typed, more than the {MFD_TEXT_MAX_CHARS} of a line")]
+    TooManyCharacters(usize),
+    /// More bytes after conversion than an MFD line holds.
+    #[error(transparent)]
+    TooLong(#[from] x52::charset::TextTooLong),
+}
+
+/// The MFD text of a custom text line: at most [`MFD_TEXT_MAX_CHARS`] characters as typed and 16
+/// bytes after conversion.
+///
+/// # Errors
+///
+/// [`LineTextError`] when the text breaks either limit.
+pub(crate) fn line_text(text: &str) -> Result<MfdText, LineTextError> {
+    let chars = text.chars().count();
+    if chars > MFD_TEXT_MAX_CHARS {
+        return Err(LineTextError::TooManyCharacters(chars));
+    }
+    Ok(MfdText::new(text)?)
+}
+
 /// The id of a profile: the stem of its file name, stable for the profile's whole life.
 ///
 /// Only lowercase ASCII letters, digits and `-`. The two default profiles have the reserved ids
@@ -363,7 +394,7 @@ impl Profile {
         let builtin = DeviceState::default_for(self.device_type);
         let settings = self.settings_for(mode);
         let mfd_lines = settings.mfd_lines.each_ref().map(|line| match line {
-            MfdLineSource::Text(text) => MfdText::new(text).unwrap_or_else(|error| {
+            MfdLineSource::Text(text) => line_text(text).unwrap_or_else(|error| {
                 tracing::warn!(
                     "Profile {:?}: MFD line {text:?} not shown: {error}",
                     self.name

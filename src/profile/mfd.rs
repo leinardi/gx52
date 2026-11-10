@@ -30,18 +30,14 @@ use x52::device::DeviceType;
 use x52::input::Mode;
 use x52::state::DeviceState;
 
-use super::{MFD_LINES, MfdLineSource, ProfileId, ProfileKind};
+use super::{MFD_LINES, MFD_TEXT_MAX_CHARS, MfdLineSource, ProfileId, ProfileKind};
 
 /// Minutes in a day.
 const DAY_MINUTES: i32 = 1440;
 
-/// How far past the converted text a prefix of an insertion is still tried: composition with the
-/// text around the insertion point (a Hangul syllable built from three jamo) saves at most this
-/// many bytes, so a longer prefix can never fit.
-const COMPOSITION_SLACK: usize = 2;
-
 /// The longest prefix of `inserted`, in whole characters, that keeps the line within the 16 bytes
-/// of the MFD when typed between `before` and `after`.
+/// of the MFD and the [`MFD_TEXT_MAX_CHARS`] characters of a line when typed between `before` and
+/// `after`.
 ///
 /// `before` and `after` are the text on each side of the insertion point once any selection is
 /// gone (GTK deletes a selection before it inserts its replacement). The text already in the line
@@ -52,20 +48,20 @@ pub(crate) fn accepted_insert<'text>(
     inserted: &'text str,
     after: &str,
 ) -> &'text str {
+    // Only prefixes within the character limit are tried, so a paste of any length (or of
+    // combining marks, which take no byte) costs at most that many conversions of a short line.
+    let room = MFD_TEXT_MAX_CHARS.saturating_sub(before.chars().count() + after.chars().count());
     let ends = inserted
         .char_indices()
         .map(|(index, _)| index)
         .skip(1)
-        .chain(std::iter::once(inserted.len()));
+        .chain(std::iter::once(inserted.len()))
+        .take(room);
     let mut accepted = 0;
     for end in ends {
         let prefix = &inserted[..end];
         if charset::encode(&format!("{before}{prefix}{after}")).len() <= LINE_BYTES {
             accepted = end;
-        } else if charset::encode(&format!("{before}{prefix}")).len()
-            > LINE_BYTES + COMPOSITION_SLACK
-        {
-            break;
         }
     }
     &inserted[..accepted]
@@ -353,7 +349,7 @@ pub(crate) fn accessible_label(preview: &MfdPreview) -> String {
     if preview.shift {
         indicators.push(gettext("SHIFT on"));
     }
-    let label = if indicators.is_empty() {
+    let template = if indicators.is_empty() {
         // Translators: {lines} lists the three lines of the joystick's display, {number} is the
         // clock shown (1, 2 or 3), {time} its time and {date} the date.
         gettext("Simulated MFD: {lines}; clock {number} {time}, date {date}")
@@ -362,13 +358,42 @@ pub(crate) fn accessible_label(preview: &MfdPreview) -> String {
         // on"), {lines} its three lines, {number} the clock shown (1, 2 or 3), {time} its time
         // and {date} the date.
         gettext("Simulated MFD: {indicators}; {lines}; clock {number} {time}, date {date}")
-            .replace("{indicators}", &indicators.join(", "))
     };
-    label
-        .replace("{lines}", &lines.join(", "))
-        .replace("{number}", &preview.shown_clock.number().to_string())
-        .replace("{time}", &time)
-        .replace("{date}", &preview.date)
+    fill(
+        &template,
+        &[
+            ("indicators", &indicators.join(", ")),
+            ("lines", &lines.join(", ")),
+            ("number", &preview.shown_clock.number().to_string()),
+            ("time", &time),
+            ("date", &preview.date),
+        ],
+    )
+}
+
+/// `template` with each `{key}` of `values` replaced by its value, in one pass: a value is never
+/// searched for placeholders, so text the user typed into a line stays as it is.
+fn fill(template: &str, values: &[(&str, &str)]) -> String {
+    let mut filled = String::with_capacity(template.len());
+    let mut rest = template;
+    while let Some(start) = rest.find('{') {
+        filled.push_str(&rest[..start]);
+        let placeholder = &rest[start + 1..];
+        let found = values.iter().find(|(key, _)| {
+            placeholder
+                .strip_prefix(key)
+                .is_some_and(|after| after.starts_with('}'))
+        });
+        if let Some((key, value)) = found {
+            filled.push_str(value);
+            rest = &placeholder[key.len() + 1..];
+        } else {
+            filled.push('{');
+            rest = placeholder;
+        }
+    }
+    filled.push_str(rest);
+    filled
 }
 
 /// The number of `mode`, as the MODE area draws it.

@@ -123,7 +123,7 @@ Each of the three lines has a **source** (decided in the M4 UI session, [ui.md](
 
 | `source` | Extra keys | The line shows |
 | --- | --- | --- |
-| `"text"` | `text`: at most 16 bytes **after** conversion through the [MFD character set](protocol.md#mfd-character-set) | The text. Characters without a glyph are stored as typed and converted (with the protocol.md fallback) when sent; the length is checked on the converted bytes. The editor's entry stops accepting input at 16 converted bytes, so it never saves a line the store would reject |
+| `"text"` | `text`: at most 16 bytes **after** conversion through the [MFD character set](protocol.md#mfd-character-set), and at most 64 characters as typed | The text. Characters without a glyph are stored as typed and converted (with the protocol.md fallback) when sent; the length is checked on the converted bytes. Combining marks take no byte on the MFD, so the 64-character limit is what keeps a line (and the file) small. The editor's entry stops accepting input at either limit, so it never saves a line the store would reject; a file with a longer text reports it out of range and the line shows nothing |
 | `"empty"` |  | Nothing |
 | `"profile_name"` |  | The active profile's name |
 | `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), shortened to fit a line: "Trigger stage 1", "Scroll press", "Thr. hat left"; translated), POV 1 directions included; the mode selector positions (keys 715–717, always one held) never count. Empty when none is held |
