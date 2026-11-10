@@ -177,9 +177,12 @@ impl LedButton {
     /// popover, the state.
     pub(crate) fn show(&self, view: &LedView) {
         let imp = self.imp();
-        imp.syncing.set(true);
-        imp.toggles.set_active_name(Some(view.choice.id()));
-        imp.syncing.set(false);
+        // POV 1 has no states to choose from.
+        if imp.toggles.n_toggles() > 0 {
+            imp.syncing.set(true);
+            imp.toggles.set_active_name(Some(view.choice.id()));
+            imp.syncing.set(false);
+        }
         let shown: &gtk::Widget = if imp.menu_button.is_visible() {
             imp.menu_button.upcast_ref()
         } else {
