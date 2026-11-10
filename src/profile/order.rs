@@ -136,6 +136,30 @@ pub(crate) fn inserted_after(
     order
 }
 
+/// The setting to store after `id` was moved to `index` of the non-default profiles (`0` is right
+/// after the default profile); an index past the end moves it last. The default profile never
+/// moves: for it the effective order is returned unchanged.
+///
+/// The result is complete, as for [`appended`].
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the profile list of M5 reorders profiles")
+)]
+pub(crate) fn moved(
+    entries: &[impl AsRef<str>],
+    device_type: DeviceType,
+    store: &ProfileStore,
+    id: &ProfileId,
+    index: usize,
+) -> Vec<ProfileId> {
+    let mut order = without(entries, device_type, store, id);
+    let listed = ordered(entries, device_type, store).contains(id);
+    if listed && *id != ProfileId::default_for(device_type) {
+        order.insert(index.min(order.len()), id.clone());
+    }
+    order
+}
+
 /// The effective order without the default profile and without `id`.
 fn without(
     entries: &[impl AsRef<str>],

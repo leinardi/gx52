@@ -18,18 +18,19 @@
 //! An import takes two steps: [`prepare_import`] validates the file without touching the store or
 //! the disk, so the user can see the problems and cancel; [`write_import`] writes the confirmed
 //! profile under a new id, and the caller adds it to the store with
-//! [`ProfileStore::insert`](super::store::ProfileStore::insert). Both steps block (parsing reads
+//! [`ProfileStore::added`]. Both steps block (parsing reads
 //! the time zone database), so the app runs them through `gio::spawn_blocking`.
 
-use std::io;
 use std::path::Path;
 
 use gettextrs::gettext;
 use x52::device::DeviceType;
 
-use super::files::{self, Created};
 use super::migrate::Schema;
 use super::schema::{self, FieldProblem, ParseError, Parsed};
+#[cfg(doc)]
+use super::store::ProfileStore;
+use super::store::{AddJob, StoreError};
 use super::{Profile, ProfileId, name};
 
 /// The contents of an exported profile: the schema without the id, which belongs to the store.
@@ -37,7 +38,7 @@ pub(crate) fn export(profile: &Profile) -> String {
     schema::write(profile)
 }
 
-/// A file read for import and waiting for the user's confirmation.
+/// A file read for import, checked and waiting to be written.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ImportPreview {
     /// The profile as it will be imported: problems fixed to the type defaults, the name made
@@ -47,6 +48,21 @@ pub(crate) struct ImportPreview {
     pub(crate) problems: Vec<FieldProblem>,
     /// The name in the file, when the imported name differs from it.
     pub(crate) renamed_from: Option<String>,
+}
+
+impl ImportPreview {
+    /// Whether the user has to confirm the import first: the file had problems, or the profile
+    /// gets another name than the file's. A clean file under its own name is imported at once.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "the import of M5 skips the dialog for a clean file"
+        )
+    )]
+    pub(crate) fn needs_confirmation(&self) -> bool {
+        !self.problems.is_empty() || self.renamed_from.is_some()
+    }
 }
 
 /// Why a file cannot be imported.
@@ -147,20 +163,16 @@ pub(crate) fn revalidate_name(preview: &mut ImportPreview, taken: &[String]) -> 
 }
 
 /// Writes the confirmed import into `profiles_dir` under a new random id, never a default one,
-/// and returns the id; the caller then adds it to the store.
+/// and returns the id; the caller then adds it to the store. Blocks: run it off the main thread.
 ///
 /// # Errors
 ///
-/// The I/O error of the write; nothing is left behind.
-pub(crate) fn write_import(preview: &ImportPreview, profiles_dir: &Path) -> io::Result<ProfileId> {
-    let contents = schema::write(&preview.profile);
-    loop {
-        let id = ProfileId::random();
-        match files::create_new(&profiles_dir.join(id.file_name()), contents.as_bytes())? {
-            Created::Written => return Ok(id),
-            Created::AlreadyExists => {}
-        }
-    }
+/// [`StoreError::Io`] when the file cannot be written; nothing is left behind.
+pub(crate) fn write_import(
+    preview: &ImportPreview,
+    profiles_dir: &Path,
+) -> Result<ProfileId, StoreError> {
+    AddJob::new(profiles_dir, &preview.profile).run()
 }
 
 #[cfg(test)]

@@ -73,6 +73,20 @@ fn file_name(text: &str) -> String {
     format!("{text}.toml")
 }
 
+/// Runs a save the way the app does: the job, then its commit.
+fn save(store: &mut ProfileStore, id: &ProfileId) -> Result<Saved, StoreError> {
+    let saved = store.save_job(id)?.run()?;
+    store.saved(id);
+    Ok(saved)
+}
+
+/// Adds `profile` the way the app does: the job, then its commit.
+fn add(store: &mut ProfileStore, profile: Profile) -> Result<ProfileId, StoreError> {
+    let id = store.add_job(&profile).run()?;
+    store.added(id.clone(), profile);
+    Ok(id)
+}
+
 fn failed_names(report: &LoadReport) -> Vec<&str> {
     report
         .failed
@@ -95,7 +109,11 @@ fn files_that_are_not_profiles_are_not_loaded_and_kept() {
     for name in fixtures {
         let dir = dir_with([(&file_name(ID), &fixture(name))]);
         let (store, report) = load_untouched(&dir, Schema::CURRENT);
-        assert!(store.entry(&id(ID)).is_none(), "{name}");
+        assert!(store.loaded(&id(ID)).is_none(), "{name}");
+        assert!(
+            matches!(store.entry(&id(ID)), Some(Entry::Damaged(_))),
+            "{name}"
+        );
         assert_eq!(failed_names(&report), [file_name(ID)], "{name}");
         assert!(
             matches!(report.failed[0].failure, FileFailure::Parse(_)),
@@ -110,7 +128,13 @@ fn a_file_over_the_size_limit_is_not_parsed() {
     contents.resize(usize::try_from(PROFILE_LIMIT).unwrap() + 1, b'\n');
     let dir = dir_with([(&file_name(ID), &contents)]);
     let (store, report) = load_untouched(&dir, Schema::CURRENT);
-    assert!(store.entry(&id(ID)).is_none());
+    assert!(matches!(
+        store.entry(&id(ID)),
+        Some(Entry::Damaged(Damaged {
+            device_type: None,
+            ..
+        }))
+    ));
     assert!(matches!(
         report.failed[0].failure,
         FileFailure::Read(ReadError::TooLarge { .. })
@@ -210,7 +234,10 @@ fn a_newer_schema_is_listed_read_only() {
     assert!(store.loaded(&id(ID)).is_none());
     assert!(report.failed.is_empty());
     let before = snapshot(dir.path());
-    assert!(matches!(store.save(&id(ID)), Err(StoreError::ReadOnly(_))));
+    assert!(matches!(
+        save(&mut store, &id(ID)),
+        Err(StoreError::ReadOnly(_))
+    ));
     assert_eq!(snapshot(dir.path()), before);
 }
 
@@ -225,14 +252,14 @@ fn an_older_schema_is_migrated_and_backed_up_on_save() {
         Origin::Migrated { from: 1 }
     );
 
-    store.save(&id(ID)).unwrap();
+    save(&mut store, &id(ID)).unwrap();
     let backup = dir.path().join(format!("{ID}.toml.schema-1.bak"));
     assert_eq!(fs::read(backup).unwrap(), original);
     assert_eq!(store.loaded(&id(ID)).unwrap().origin, Origin::File);
 
     // A second backup of the same version never overwrites the first.
     store.loaded_mut(&id(ID)).unwrap().origin = Origin::Migrated { from: 1 };
-    store.save(&id(ID)).unwrap();
+    save(&mut store, &id(ID)).unwrap();
     assert!(
         dir.path()
             .join(format!("{ID}.toml.schema-1.bak-2"))
@@ -248,7 +275,7 @@ fn an_older_schema_is_migrated_and_backed_up_on_save() {
 fn saving_writes_the_corrected_values() {
     let dir = dir_with([(&file_name(ID), &fixture("out-of-range.toml"))]);
     let (mut store, _) = load_untouched(&dir, Schema::CURRENT);
-    store.save(&id(ID)).unwrap();
+    save(&mut store, &id(ID)).unwrap();
     assert!(store.loaded(&id(ID)).unwrap().problems.is_empty());
     let (reloaded, report) = load_untouched(&dir, Schema::CURRENT);
     assert!(report.failed.is_empty());
@@ -298,7 +325,7 @@ fn missing_defaults_stay_in_memory_until_allowed() {
     let loaded = store.loaded(&pro_default()).unwrap();
     assert_eq!(loaded.origin, Origin::Builtin(BuiltinReason::Missing));
     // Saving creates the file.
-    store.save(&pro_default()).unwrap();
+    save(&mut store, &pro_default()).unwrap();
     assert!(store.path(&pro_default()).exists());
 }
 
@@ -327,7 +354,7 @@ fn a_bad_default_file_is_kept_and_replaced_only_after_confirmation() {
         let before = snapshot(dir.path());
         assert!(
             matches!(
-                store.save(&pro_default()),
+                save(&mut store, &pro_default()),
                 Err(StoreError::NeedsConfirmation(_))
             ),
             "{name}"
@@ -336,9 +363,13 @@ fn a_bad_default_file_is_kept_and_replaced_only_after_confirmation() {
 
         let now: Timestamp = "2026-11-08T09:10:11Z".parse().unwrap();
         let backup = store
-            .save_replacing_bad_default(&pro_default(), now)
+            .replace_bad_default_job(&pro_default(), now)
             .unwrap()
+            .run()
+            .unwrap()
+            .backup
             .unwrap();
+        store.saved(&pro_default());
         assert_eq!(fs::read(&backup).unwrap(), bad, "{name}");
         assert!(backup.ends_with("x52-pro-default.toml.rejected-20261108T091011Z"));
         let (reloaded, report) = load_untouched(&dir, Schema::CURRENT);
@@ -389,7 +420,7 @@ fn added_profiles_get_a_random_id_and_a_file() {
     let dir = tempfile::tempdir().unwrap();
     let (mut store, _) = ProfileStore::load(dir.path(), DefaultPersistence::Write);
     let profile = Profile::builtin(DeviceType::X52, "Added".to_owned());
-    let added = store.add(profile.clone()).unwrap();
+    let added = add(&mut store, profile.clone()).unwrap();
     assert_eq!(added.default_type(), None);
     let (reloaded, _) = ProfileStore::load(dir.path(), DefaultPersistence::Write);
     assert_eq!(reloaded.loaded(&added).unwrap().profile, profile);
@@ -400,19 +431,89 @@ fn defaults_cannot_be_removed_or_change_type() {
     let dir = tempfile::tempdir().unwrap();
     let (mut store, _) = ProfileStore::load(dir.path(), DefaultPersistence::Write);
     assert!(matches!(
-        store.remove(&pro_default()),
+        store.take(&pro_default()),
         Err(StoreError::DefaultNotRemovable(_))
     ));
     assert!(matches!(
         store.update(&pro_default(), Profile::builtin_default(DeviceType::X52)),
         Err(StoreError::TypeChange(_))
     ));
-    let added = store
-        .add(Profile::builtin(DeviceType::X52, "Gone".to_owned()))
-        .unwrap();
-    store.remove(&added).unwrap();
-    assert!(!store.path(&added).exists());
+    let added = add(
+        &mut store,
+        Profile::builtin(DeviceType::X52, "Gone".to_owned()),
+    )
+    .unwrap();
+    let entry = store.take(&added).unwrap();
     assert!(store.entry(&added).is_none());
+    assert!(
+        store.path(&added).exists(),
+        "the file stays until the delete"
+    );
+    store.restore(added.clone(), entry.clone());
+    assert_eq!(store.entry(&added), Some(&entry), "an undo puts it back");
+    store.take(&added).unwrap();
+    store.delete_job(&added).run().unwrap();
+    assert!(!store.path(&added).exists());
+    // A file that is already gone counts as deleted.
+    store.delete_job(&added).run().unwrap();
+}
+
+#[test]
+fn a_save_job_writes_the_values_it_was_made_from() {
+    let dir = dir_with([(&file_name(ID), &fixture("valid-x52-pro.toml"))]);
+    let (mut store, _) = load_untouched(&dir, Schema::CURRENT);
+    let mut profile = store.loaded(&id(ID)).unwrap().profile.clone();
+    profile.name = "Before".to_owned();
+    store.update(&id(ID), profile.clone()).unwrap();
+    let job = store.save_job(&id(ID)).unwrap();
+    profile.name = "After".to_owned();
+    store.update(&id(ID), profile).unwrap();
+    job.run().unwrap();
+    let (reloaded, _) = load_untouched(&dir, Schema::CURRENT);
+    assert_eq!(reloaded.loaded(&id(ID)).unwrap().profile.name, "Before");
+}
+
+#[test]
+fn a_missing_file_that_appears_is_never_replaced() {
+    let dir = tempfile::tempdir().unwrap();
+    let (store, _) = ProfileStore::load(dir.path(), DefaultPersistence::MemoryOnly);
+    let job = store.save_job(&pro_default()).unwrap();
+    fs::write(store.path(&pro_default()), "appeared").unwrap();
+    assert!(matches!(job.run(), Err(StoreError::FileAppeared(_))));
+    assert_eq!(fs::read(store.path(&pro_default())).unwrap(), b"appeared");
+}
+
+#[test]
+fn a_damaged_file_is_listed_under_the_type_it_names() {
+    for (fixture_name, expected) in [
+        ("missing-schema-version.toml", Some(DeviceType::X52Pro)),
+        ("malformed.txt", None),
+    ] {
+        let dir = dir_with([(&file_name(ID), &fixture(fixture_name))]);
+        let (mut store, report) = load_untouched(&dir, Schema::CURRENT);
+        assert_eq!(failed_names(&report), [file_name(ID)], "{fixture_name}");
+        let entry = store.entry(&id(ID)).unwrap();
+        assert!(
+            matches!(entry, Entry::Damaged(damaged) if damaged.device_type == expected),
+            "{fixture_name}: {entry:?}"
+        );
+        assert!(entry.for_type(DeviceType::X52Pro), "{fixture_name}");
+        assert_eq!(
+            entry.for_type(DeviceType::X52),
+            expected.is_none(),
+            "{fixture_name}"
+        );
+        assert_eq!(entry.name(), None);
+        assert!(store.loaded(&id(ID)).is_none());
+        assert!(matches!(
+            save(&mut store, &id(ID)),
+            Err(StoreError::ReadOnly(_))
+        ));
+        // Only an explicit removal deletes it.
+        store.take(&id(ID)).unwrap();
+        store.delete_job(&id(ID)).run().unwrap();
+        assert!(!dir.path().join(file_name(ID)).exists());
+    }
 }
 
 /// Replaces the `name` line of a fixture.

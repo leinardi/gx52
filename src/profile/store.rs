@@ -79,6 +79,17 @@ pub(crate) struct Newer {
     pub(crate) version: i64,
 }
 
+/// A file that is not a profile, under a profile id: listed so it can be shown and removed, never
+/// edited, applied or written.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Damaged {
+    /// The device type the file names, read leniently; `None` when it cannot be read, and the
+    /// file is then listed for every device type.
+    pub(crate) device_type: Option<DeviceType>,
+    /// Why the file could not be loaded, for the log.
+    pub(crate) failure: String,
+}
+
 /// One profile of the store.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Entry {
@@ -86,15 +97,28 @@ pub(crate) enum Entry {
     Loaded(Loaded),
     /// A read-only file of a newer schema.
     Newer(Newer),
+    /// A file that could not be read as a profile.
+    Damaged(Damaged),
 }
 
 impl Entry {
-    /// The device type the profile is for.
-    pub(crate) fn device_type(&self) -> DeviceType {
+    /// The device type the profile is for, when it is known.
+    pub(crate) fn device_type(&self) -> Option<DeviceType> {
         match self {
-            Self::Loaded(loaded) => loaded.profile.device_type,
-            Self::Newer(newer) => newer.device_type,
+            Self::Loaded(loaded) => Some(loaded.profile.device_type),
+            Self::Newer(newer) => Some(newer.device_type),
+            Self::Damaged(damaged) => damaged.device_type,
         }
+    }
+
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "the profile list of M5 lists entries by type")
+    )]
+    /// Whether the entry is listed with `device_type`'s profiles: a damaged file of an unknown
+    /// type is listed with every type.
+    pub(crate) fn for_type(&self, device_type: DeviceType) -> bool {
+        self.device_type().is_none_or(|own| own == device_type)
     }
 
     /// The name, when there is one.
@@ -102,6 +126,7 @@ impl Entry {
         match self {
             Self::Loaded(loaded) => Some(&loaded.profile.name),
             Self::Newer(newer) => newer.name.as_deref(),
+            Self::Damaged(_) => None,
         }
     }
 }
@@ -193,6 +218,8 @@ impl LoadReport {
                     "Profile {id} is read-only: made by a newer GX52 (schema version {})",
                     newer.version
                 ),
+                // Logged with the failed files above.
+                Entry::Damaged(_) => {}
             }
         }
     }
@@ -212,7 +239,7 @@ impl LoadReport {
     not(test),
     expect(
         dead_code,
-        reason = "returned by the editing operations the M5 editor calls"
+        reason = "the profile list of M5 runs the jobs that return it"
     )
 )]
 #[derive(Debug, thiserror::Error)]
@@ -220,8 +247,8 @@ pub(crate) enum StoreError {
     /// No profile has that id.
     #[error("no profile {0}")]
     Unknown(ProfileId),
-    /// The profile was made by a newer GX52.
-    #[error("profile {0} was made by a newer GX52 and is read-only")]
+    /// The profile was made by a newer GX52, or its file is damaged.
+    #[error("profile {0} is read-only")]
     ReadOnly(ProfileId),
     /// The default profile's file is bad; replacing it needs the user's confirmation.
     #[error("the file of profile {0} could not be read; replacing it needs confirmation")]
@@ -302,7 +329,12 @@ impl ProfileStore {
         bad_defaults: &mut BTreeSet<ProfileId>,
     ) {
         let file_name = id.file_name();
-        let parsed = files::read_limited(path, PROFILE_LIMIT)
+        let bytes = files::read_limited(path, PROFILE_LIMIT);
+        let sniffed = bytes
+            .as_ref()
+            .ok()
+            .and_then(|bytes| schema::sniff_device_type(bytes));
+        let parsed = bytes
             .map_err(FileFailure::from)
             .and_then(|bytes| schema::parse(&bytes, schema).map_err(FileFailure::from));
         let reserved = id.default_type();
@@ -349,6 +381,14 @@ impl ProfileStore {
             Err(failure) => {
                 if reserved.is_some() {
                     bad_defaults.insert(id);
+                } else {
+                    self.entries.insert(
+                        id,
+                        Entry::Damaged(Damaged {
+                            device_type: sniffed,
+                            failure: failure.to_string(),
+                        }),
+                    );
                 }
                 report.failed.push(FailedFile { file_name, failure });
             }
@@ -415,8 +455,9 @@ impl ProfileStore {
             let Some(entry) = self.entries.get_mut(&id) else {
                 continue;
             };
-            let device_type = entry.device_type();
-            let Some(current) = entry.name().map(str::to_owned) else {
+            let (Some(device_type), Some(current)) =
+                (entry.device_type(), entry.name().map(str::to_owned))
+            else {
                 continue;
             };
             let unique = name::unique(&current, |candidate| {
@@ -432,6 +473,8 @@ impl ProfileStore {
                         });
                     }
                     Entry::Newer(newer) => newer.name = Some(unique.clone()),
+                    // Has no name, so never reaches here.
+                    Entry::Damaged(_) => {}
                 }
             }
             seen.insert((device_type, unique));
@@ -448,10 +491,13 @@ impl ProfileStore {
         self.entries.iter()
     }
 
-    /// The profile `id`, usable or read-only.
+    /// The profile `id`, usable, read-only or damaged.
     #[cfg_attr(
         not(test),
-        expect(dead_code, reason = "the profile list of M5 shows read-only profiles")
+        expect(
+            dead_code,
+            reason = "the profile list of M5 shows read-only and damaged profiles"
+        )
     )]
     pub(crate) fn entry(&self, id: &ProfileId) -> Option<&Entry> {
         self.entries.get(id)
@@ -461,7 +507,7 @@ impl ProfileStore {
     pub(crate) fn loaded(&self, id: &ProfileId) -> Option<&Loaded> {
         match self.entries.get(id)? {
             Entry::Loaded(loaded) => Some(loaded),
-            Entry::Newer(_) => None,
+            Entry::Newer(_) | Entry::Damaged(_) => None,
         }
     }
 
@@ -469,13 +515,13 @@ impl ProfileStore {
     pub(crate) fn names(&self, device_type: DeviceType) -> Vec<String> {
         self.entries
             .values()
-            .filter(|entry| entry.device_type() == device_type)
+            .filter(|entry| entry.device_type() == Some(device_type))
             .filter_map(|entry| entry.name().map(str::to_owned))
             .collect()
     }
 
-    /// Adds a profile whose file was just written under `id` (by an import); writes nothing.
-    pub(crate) fn insert(&mut self, id: ProfileId, profile: Profile) {
+    /// Adds a profile whose file was just written under `id` (by an [`AddJob`]); writes nothing.
+    pub(crate) fn added(&mut self, id: ProfileId, profile: Profile) {
         self.entries.insert(
             id,
             Entry::Loaded(Loaded {
@@ -489,10 +535,7 @@ impl ProfileStore {
     /// Whether a profile of `device_type` other than `except` is named `name`.
     #[cfg_attr(
         not(test),
-        expect(
-            dead_code,
-            reason = "the legacy import and the file import name their profiles"
-        )
+        expect(dead_code, reason = "the profile list of M5 checks new names")
     )]
     pub(crate) fn name_taken(
         &self,
@@ -501,7 +544,9 @@ impl ProfileStore {
         except: Option<&ProfileId>,
     ) -> bool {
         self.entries.iter().any(|(id, entry)| {
-            Some(id) != except && entry.device_type() == device_type && entry.name() == Some(name)
+            Some(id) != except
+                && entry.device_type() == Some(device_type)
+                && entry.name() == Some(name)
         })
     }
 
@@ -511,165 +556,289 @@ impl ProfileStore {
     }
 }
 
-/// Editing, saving and removing: wired to the profile editor in M5 (docs/roadmap.md).
+/// How a [`SaveJob`] writes its file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SaveKind {
+    /// Atomically over the existing file.
+    Replace,
+    /// As a new file, never over one that appeared meanwhile.
+    CreateNew,
+    /// Over a file of an older schema, after copying it to `<id>.toml.schema-<from>.bak`.
+    BackupThenReplace {
+        /// The file's schema version.
+        from: i64,
+    },
+    /// Over a bad default file the user agreed to replace, after copying it to
+    /// `<id>.toml.rejected-<timestamp>`.
+    ReplaceBadDefault {
+        /// When the user agreed, for the backup's name.
+        now: Timestamp,
+    },
+}
+
+/// The file work of a save, made on the main thread by [`ProfileStore::save_job`] and run off it
+/// with [`SaveJob::run`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "a save job writes nothing until it is run"]
+pub(crate) struct SaveJob {
+    id: ProfileId,
+    path: PathBuf,
+    contents: String,
+    kind: SaveKind,
+}
+
+/// What a finished [`SaveJob`] did.
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the profile list of M5 runs save jobs")
+)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Saved {
+    /// The backup made of the replaced file, if any.
+    pub(crate) backup: Option<PathBuf>,
+}
+
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the profile list of M5 runs save jobs")
+)]
+impl SaveJob {
+    /// Writes the file. Blocks: run it in `gio::spawn_blocking`.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError::FileAppeared`] when a missing file appeared meanwhile, and
+    /// [`StoreError::Io`] when the backup or the write fails (nothing is written without its
+    /// backup).
+    pub(crate) fn run(self) -> Result<Saved, StoreError> {
+        let id = &self.id;
+        let contents = self.contents.as_bytes();
+        let backup = match self.kind {
+            SaveKind::Replace => None,
+            SaveKind::CreateNew => {
+                return match files::create_new(&self.path, contents).map_err(io_error(id))? {
+                    Created::Written => Ok(Saved { backup: None }),
+                    Created::AlreadyExists => Err(StoreError::FileAppeared(id.clone())),
+                };
+            }
+            SaveKind::BackupThenReplace { from } => {
+                Some(files::backup(&self.path, &files::schema_suffix(from)).map_err(io_error(id))?)
+            }
+            SaveKind::ReplaceBadDefault { now } => {
+                match files::backup(&self.path, &files::rejected_suffix(now)) {
+                    Ok(backup) => Some(backup),
+                    Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+                    Err(error) => return Err(io_error(id)(error)),
+                }
+            }
+        };
+        files::replace(&self.path, contents).map_err(io_error(id))?;
+        Ok(Saved { backup })
+    }
+}
+
+/// The file work of adding a profile: a new file under a new random id. Made on the main thread
+/// by [`ProfileStore::add_job`] and run off it with [`AddJob::run`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "an add job writes nothing until it is run"]
+pub(crate) struct AddJob {
+    dir: PathBuf,
+    contents: String,
+}
+
+impl AddJob {
+    /// The job that writes `profile` into `dir`.
+    pub(crate) fn new(dir: &Path, profile: &Profile) -> Self {
+        Self {
+            dir: dir.to_owned(),
+            contents: schema::write(profile),
+        }
+    }
+
+    /// Writes the file under a new random id, never a default one, and returns the id; the
+    /// caller then adds the profile with [`ProfileStore::added`]. Blocks: run it in
+    /// `gio::spawn_blocking`.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError::Io`] when the file cannot be written; nothing is left behind.
+    pub(crate) fn run(self) -> Result<ProfileId, StoreError> {
+        loop {
+            let id = ProfileId::random();
+            let path = self.dir.join(id.file_name());
+            match files::create_new(&path, self.contents.as_bytes()).map_err(io_error(&id))? {
+                Created::Written => return Ok(id),
+                Created::AlreadyExists => {}
+            }
+        }
+    }
+}
+
+/// The file work of removing a profile: deleting its file. Run off the main thread with
+/// [`DeleteJob::run`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "a delete job deletes nothing until it is run"]
+pub(crate) struct DeleteJob {
+    id: ProfileId,
+    path: PathBuf,
+}
+
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the profile list of M5 deletes removed profiles")
+)]
+impl DeleteJob {
+    /// Deletes the file; a file that is already gone counts as deleted. Blocks: run it in
+    /// `gio::spawn_blocking`.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError::Io`] when the file cannot be deleted.
+    pub(crate) fn run(self) -> Result<(), StoreError> {
+        match fs::remove_file(&self.path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(io_error(&self.id)(error)),
+        }
+    }
+}
+
+/// Editing, saving and removing: the store changes in memory on the main thread, and the file
+/// work is a job run off it (docs/architecture.md, "Persistence").
 #[cfg_attr(
     not(test),
     expect(
         dead_code,
-        reason = "the profile editor of M5 saves and removes profiles; the tests cover it now"
+        reason = "the profile list of M5 saves, adds and removes profiles; the tests cover it now"
     )
 )]
 impl ProfileStore {
-    /// Replaces the in-memory values of `id`; nothing is written until [`Self::save`].
+    /// Replaces the in-memory values of `id`; nothing is written until a [`SaveJob`] runs.
     ///
     /// # Errors
     ///
     /// [`StoreError::Unknown`], [`StoreError::ReadOnly`], or [`StoreError::TypeChange`] when
     /// `profile` is for another device type.
     pub(crate) fn update(&mut self, id: &ProfileId, profile: Profile) -> Result<(), StoreError> {
-        match self.entries.get_mut(id) {
-            None => Err(StoreError::Unknown(id.clone())),
-            Some(Entry::Newer(_)) => Err(StoreError::ReadOnly(id.clone())),
-            Some(Entry::Loaded(loaded)) if loaded.profile.device_type != profile.device_type => {
-                Err(StoreError::TypeChange(id.clone()))
-            }
-            Some(Entry::Loaded(loaded)) => {
-                loaded.profile = profile;
-                Ok(())
-            }
+        let loaded = self.loaded_mut(id)?;
+        if loaded.profile.device_type != profile.device_type {
+            return Err(StoreError::TypeChange(id.clone()));
         }
+        loaded.profile = profile;
+        Ok(())
     }
 
-    /// Writes `id`'s file from its in-memory values.
-    ///
-    /// A file of an older schema is first copied to `<id>.toml.schema-<version>.bak`.
+    /// The job that writes `id`'s file from its in-memory values. A file of an older schema is
+    /// first copied to `<id>.toml.schema-<version>.bak`.
     ///
     /// # Errors
     ///
     /// [`StoreError::NeedsConfirmation`] for a default profile whose file is bad (see
-    /// [`Self::save_replacing_bad_default`]), [`StoreError::ReadOnly`] for a newer file,
-    /// [`StoreError::FileAppeared`] when a missing file appeared meanwhile, and
-    /// [`StoreError::Io`].
-    pub(crate) fn save(&mut self, id: &ProfileId) -> Result<(), StoreError> {
-        let path = self.path(id);
-        let loaded = self.loaded_mut(id)?;
-        let contents = schema::write(&loaded.profile);
-        match loaded.origin {
+    /// [`Self::replace_bad_default_job`]), [`StoreError::ReadOnly`] for a newer or damaged file,
+    /// and [`StoreError::Unknown`].
+    pub(crate) fn save_job(&self, id: &ProfileId) -> Result<SaveJob, StoreError> {
+        let loaded = self.loaded_or_error(id)?;
+        let kind = match loaded.origin {
             Origin::Builtin(BuiltinReason::BadFile) => {
                 return Err(StoreError::NeedsConfirmation(id.clone()));
             }
-            Origin::Builtin(BuiltinReason::Missing) => {
-                match files::create_new(&path, contents.as_bytes()).map_err(io_error(id))? {
-                    Created::Written => {}
-                    Created::AlreadyExists => return Err(StoreError::FileAppeared(id.clone())),
-                }
-            }
-            Origin::Migrated { from } => {
-                files::backup(&path, &files::schema_suffix(from)).map_err(io_error(id))?;
-                files::replace(&path, contents.as_bytes()).map_err(io_error(id))?;
-            }
-            Origin::File => files::replace(&path, contents.as_bytes()).map_err(io_error(id))?,
-        }
-        loaded.origin = Origin::File;
-        loaded.problems.clear();
-        Ok(())
+            Origin::Builtin(BuiltinReason::Missing) => SaveKind::CreateNew,
+            Origin::Migrated { from } => SaveKind::BackupThenReplace { from },
+            Origin::File => SaveKind::Replace,
+        };
+        Ok(self.job(id, &loaded.profile, kind))
     }
 
-    /// Writes a default profile over its bad file, after the user confirmed it: the bad file is
-    /// first copied to `<id>.toml.rejected-<timestamp>`. Returns the backup's path, if there was
-    /// still a file to back up.
+    /// The job that writes a default profile over its bad file, after the user confirmed it: the
+    /// bad file is first copied to `<id>.toml.rejected-<timestamp>`. Any other profile gets its
+    /// usual [`Self::save_job`].
     ///
     /// # Errors
     ///
-    /// [`StoreError::Io`] when the backup or the write fails (nothing is written without the
-    /// backup), [`StoreError::Unknown`] and [`StoreError::ReadOnly`].
-    pub(crate) fn save_replacing_bad_default(
-        &mut self,
+    /// [`StoreError::Unknown`] and [`StoreError::ReadOnly`].
+    pub(crate) fn replace_bad_default_job(
+        &self,
         id: &ProfileId,
         now: Timestamp,
-    ) -> Result<Option<PathBuf>, StoreError> {
-        let path = self.path(id);
-        let loaded = self.loaded_mut(id)?;
+    ) -> Result<SaveJob, StoreError> {
+        let loaded = self.loaded_or_error(id)?;
         if loaded.origin != Origin::Builtin(BuiltinReason::BadFile) {
-            return self.save(id).map(|()| None);
+            return self.save_job(id);
         }
-        let backup = match files::backup(&path, &files::rejected_suffix(now)) {
-            Ok(backup) => Some(backup),
-            Err(error) if error.kind() == io::ErrorKind::NotFound => None,
-            Err(error) => return Err(io_error(id)(error)),
-        };
-        files::replace(&path, schema::write(&loaded.profile).as_bytes()).map_err(io_error(id))?;
-        loaded.origin = Origin::File;
-        loaded.problems.clear();
-        Ok(backup)
+        Ok(self.job(id, &loaded.profile, SaveKind::ReplaceBadDefault { now }))
     }
 
-    /// Adds `profile` under a new random id and writes its file. Returns the id.
-    ///
-    /// # Errors
-    ///
-    /// [`StoreError::Io`] when the file cannot be written; the store is then unchanged.
-    pub(crate) fn add(&mut self, profile: Profile) -> Result<ProfileId, StoreError> {
-        let contents = schema::write(&profile);
-        loop {
-            let id = ProfileId::random();
-            match files::create_new(&self.path(&id), contents.as_bytes()).map_err(io_error(&id))? {
-                Created::Written => {
-                    self.entries.insert(
-                        id.clone(),
-                        Entry::Loaded(Loaded {
-                            profile,
-                            problems: Vec::new(),
-                            origin: Origin::File,
-                        }),
-                    );
-                    return Ok(id);
-                }
-                Created::AlreadyExists => {}
-            }
+    /// Records that a [`SaveJob`] of `id` finished: its file now holds the values the job was
+    /// made from, so it is a plain file without problems. Does nothing when `id` is gone.
+    pub(crate) fn saved(&mut self, id: &ProfileId) {
+        if let Ok(loaded) = self.loaded_mut(id) {
+            loaded.origin = Origin::File;
+            loaded.problems.clear();
         }
     }
 
-    /// Removes `id` and deletes its file. The caller sets the active profile back to the default
-    /// when it was `id`, after the user confirmed the removal.
+    /// The job that writes `profile` as a new profile of this store's directory.
+    pub(crate) fn add_job(&self, profile: &Profile) -> AddJob {
+        AddJob::new(&self.dir, profile)
+    }
+
+    /// Takes `id` out of the store, for a removal the user can still undo; its file stays until
+    /// a [`DeleteJob`] runs. The caller sets the active profile back to the default when it was
+    /// `id`.
     ///
     /// # Errors
     ///
-    /// [`StoreError::DefaultNotRemovable`], [`StoreError::Unknown`], or [`StoreError::Io`] when
-    /// the file cannot be deleted (the profile then stays).
-    pub(crate) fn remove(&mut self, id: &ProfileId) -> Result<(), StoreError> {
+    /// [`StoreError::DefaultNotRemovable`] and [`StoreError::Unknown`].
+    pub(crate) fn take(&mut self, id: &ProfileId) -> Result<Entry, StoreError> {
         if id.default_type().is_some() {
             return Err(StoreError::DefaultNotRemovable(id.clone()));
         }
-        if !self.entries.contains_key(id) {
-            return Err(StoreError::Unknown(id.clone()));
+        self.entries
+            .remove(id)
+            .ok_or_else(|| StoreError::Unknown(id.clone()))
+    }
+
+    /// Puts back an entry [`Self::take`] took: the removal was undone, or deleting its file
+    /// failed.
+    pub(crate) fn restore(&mut self, id: ProfileId, entry: Entry) {
+        self.entries.insert(id, entry);
+    }
+
+    /// The job that deletes the file of `id`, which [`Self::take`] took out of the store.
+    pub(crate) fn delete_job(&self, id: &ProfileId) -> DeleteJob {
+        DeleteJob {
+            id: id.clone(),
+            path: self.path(id),
         }
-        match fs::remove_file(self.path(id)) {
-            Ok(()) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(error) => return Err(io_error(id)(error)),
+    }
+
+    fn job(&self, id: &ProfileId, profile: &Profile, kind: SaveKind) -> SaveJob {
+        SaveJob {
+            id: id.clone(),
+            path: self.path(id),
+            contents: schema::write(profile),
+            kind,
         }
-        self.entries.remove(id);
-        Ok(())
+    }
+
+    fn loaded_or_error(&self, id: &ProfileId) -> Result<&Loaded, StoreError> {
+        match self.entries.get(id) {
+            None => Err(StoreError::Unknown(id.clone())),
+            Some(Entry::Newer(_) | Entry::Damaged(_)) => Err(StoreError::ReadOnly(id.clone())),
+            Some(Entry::Loaded(loaded)) => Ok(loaded),
+        }
     }
 
     fn loaded_mut(&mut self, id: &ProfileId) -> Result<&mut Loaded, StoreError> {
         match self.entries.get_mut(id) {
             None => Err(StoreError::Unknown(id.clone())),
-            Some(Entry::Newer(_)) => Err(StoreError::ReadOnly(id.clone())),
+            Some(Entry::Newer(_) | Entry::Damaged(_)) => Err(StoreError::ReadOnly(id.clone())),
             Some(Entry::Loaded(loaded)) => Ok(loaded),
         }
     }
 }
 
 /// Wraps an I/O error about `id`'s file.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "used by the editing operations the M5 editor calls"
-    )
-)]
 fn io_error(id: &ProfileId) -> impl Fn(io::Error) -> StoreError + '_ {
     move |source| StoreError::Io {
         context: format!("profile {id}"),

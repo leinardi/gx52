@@ -609,7 +609,7 @@ pub(crate) struct Plan {
 pub(crate) fn plan(database: &LegacyDatabase, store: &ProfileStore) -> Plan {
     let mut taken: Vec<(DeviceType, String)> = store
         .entries()
-        .filter_map(|(_, entry)| Some((entry.device_type(), entry.name()?.to_owned())))
+        .filter_map(|(_, entry)| Some((entry.device_type()?, entry.name()?.to_owned())))
         .collect();
     let mut entries = Vec::new();
     for row in &database.rows {

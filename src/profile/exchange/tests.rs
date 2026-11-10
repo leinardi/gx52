@@ -72,10 +72,14 @@ fn an_exported_profile_imports_back_unchanged() {
     assert_eq!(preview.problems, []);
     assert_eq!(preview.renamed_from, None);
     assert_eq!(preview.profile, profile);
+    assert!(
+        !preview.needs_confirmation(),
+        "a clean file is imported at once"
+    );
 
     let id = write_import(&preview, target.path()).unwrap();
     assert_eq!(id.default_type(), None);
-    store.insert(id.clone(), preview.profile.clone());
+    store.added(id.clone(), preview.profile.clone());
     let (reloaded, _) = ProfileStore::load(target.path(), DefaultPersistence::Write);
     assert_eq!(reloaded.loaded(&id).unwrap().profile, profile);
     assert_eq!(store.loaded(&id).unwrap().profile, profile);
@@ -151,6 +155,7 @@ fn an_oversized_file_is_not_parsed() {
 fn field_problems_are_fixed_and_listed_before_confirming() {
     let preview = prepare_import(&fixture("out-of-range.toml"), DeviceType::X52Pro, &[]).unwrap();
     assert_eq!(preview.problems.len(), 5);
+    assert!(preview.needs_confirmation());
     assert_eq!(
         preview
             .profile
@@ -170,6 +175,7 @@ fn a_clashing_name_gets_a_suffix_within_the_limit() {
     let preview = prepare_import(export(&profile).as_bytes(), DeviceType::X52Pro, &taken).unwrap();
     assert_eq!(preview.profile.name, format!("{} (2)", "z".repeat(60)));
     assert_eq!(preview.renamed_from, Some(long));
+    assert!(preview.needs_confirmation());
     assert_eq!(
         name::normalise(&preview.profile.name),
         Ok(preview.profile.name.clone())

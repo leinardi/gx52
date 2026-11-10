@@ -195,3 +195,32 @@ fn the_settings_keys_follow_profiles_md() {
     assert_eq!(settings_key(DeviceType::X52Pro), "profile-order-x52-pro");
     assert_eq!(settings_key(DeviceType::X52), "profile-order-x52");
 }
+
+#[test]
+fn a_moved_profile_takes_its_new_place() {
+    let (_dir, store) = store(&[("aaa", "A"), ("bbb", "B"), ("ccc", "C")]);
+    let entries = ["aaa", "bbb", "ccc"];
+    for (index, expected) in [
+        (0, ["ccc", "aaa", "bbb"]),
+        (1, ["aaa", "ccc", "bbb"]),
+        (2, ["aaa", "bbb", "ccc"]),
+        (9, ["aaa", "bbb", "ccc"]),
+    ] {
+        let order = moved(&entries, DeviceType::X52Pro, &store, &id("ccc"), index);
+        assert_complete(&order);
+        assert_eq!(ids(&order), expected, "to {index}");
+    }
+    let order = moved(&entries, DeviceType::X52Pro, &store, &id("aaa"), 2);
+    assert_eq!(ids(&order), ["bbb", "ccc", "aaa"]);
+}
+
+#[test]
+fn the_default_and_unlisted_profiles_never_move() {
+    let (_dir, store) = store(&[("aaa", "A"), ("bbb", "B")]);
+    let entries = ["bbb", "aaa"];
+    for unmovable in [DEFAULT, "x52", "newer", "broken", "gone"] {
+        let order = moved(&entries, DeviceType::X52Pro, &store, &id(unmovable), 0);
+        assert_complete(&order);
+        assert_eq!(ids(&order), ["bbb", "aaa"], "{unmovable}");
+    }
+}

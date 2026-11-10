@@ -344,6 +344,23 @@ settings, defaulting to the S9 values.
   backups that never overwrite a backup). The application loads the store once at start-up in
   `gio::spawn_blocking`, keeps it on the main thread, logs the load report and shows its one toast.
   The GObject wrappers the UI binds to come with the profile editor in M5.
+  - **Edits change the store in memory; file work is a job.** `store.rs` hands out `SaveJob`,
+    `AddJob` and `DeleteJob` values (the path, the contents and how to write them) that run in
+    `gio::spawn_blocking`; the main thread then commits the result (`saved`, `added`). A removal
+    takes the entry out of the store at once (`take`) and deletes its file later; an undo or a
+    failed delete puts it back (`restore`). A file that is not a profile is a `Damaged` entry,
+    listed under the device type its TOML names (read leniently) or under every type, never
+    written, and deleted only by an explicit removal.
+  - **One write at a time per profile** (`writes.rs`). The write queue debounces saves (500 ms
+    after the last edit) and keeps one lane per profile, so a save and a delete of the same
+    profile never overlap and a save never lands after the delete. It also counts the creates (new,
+    duplicated, imported profiles) until their profile is in the store. It only decides: it returns
+    commands (arm or cancel a timer, start a job) that the application carries out, so every order
+    of events is unit-tested.
+  - **Names claimed before the store has them** (`reservations.rs`): the name of a create or an
+    import while its file is written, and the name of a removed profile until its file is deleted
+    or it is restored. Every name check (new, duplicate, rename, import) looks at the store and the
+    reservations together, so two profiles of a type never share a name.
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
   and `gx52.db` exists; a private copy of a consistent snapshot is read; the flag is set even when
   the database is unreadable, so start-up never fails because of it, but not while GX52 0.7 keeps

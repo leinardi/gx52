@@ -26,9 +26,19 @@ pub(crate) mod legacy;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod order;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the profile list of M5 reserves names")
+)]
+pub(crate) mod reservations;
 pub(crate) mod schema;
 pub(crate) mod startup;
 pub(crate) mod store;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the profile list of M5 queues saves and deletes")
+)]
+pub(crate) mod writes;
 
 use std::fmt;
 use std::path::{Path, PathBuf};

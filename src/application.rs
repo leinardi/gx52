@@ -377,7 +377,7 @@ impl Application {
             .collect();
         files.extend(store.entries().filter_map(|(id, entry)| match entry {
             Entry::Loaded(loaded) if !loaded.problems.is_empty() => Some(id.file_name()),
-            Entry::Loaded(_) | Entry::Newer(_) => None,
+            Entry::Loaded(_) | Entry::Newer(_) | Entry::Damaged(_) => None,
         }));
         self.imp().profiles.replace(Some(store));
         self.push_desired_state();
@@ -428,7 +428,7 @@ impl Application {
 
     pub(crate) fn add_imported_profile(&self, id: ProfileId, profile: Profile) {
         if let Some(store) = self.imp().profiles.borrow_mut().as_mut() {
-            store.insert(id, profile);
+            store.added(id, profile);
         }
         // The active id may name the profile that just came in.
         self.push_desired_state();
