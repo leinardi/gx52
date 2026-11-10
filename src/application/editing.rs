@@ -68,27 +68,33 @@ impl Application {
             return;
         };
         let mode = self.shown_mode();
-        {
+        let edited = {
             let mut profiles = self.imp().profiles.borrow_mut();
             let Some(store) = profiles.as_mut() else {
                 return;
             };
-            let Some(mut profile) = store.loaded(&id).map(|loaded| loaded.profile.clone()) else {
-                return tracing::debug!("Profile {id} cannot be edited: it is not usable");
-            };
-            let settings = profile.settings.for_mode_mut(mode);
-            let before = settings.clone();
-            edit(settings);
-            if *settings == before {
-                return;
+            if let Some(mut profile) = store.loaded(&id).map(|loaded| loaded.profile.clone()) {
+                let settings = profile.settings.for_mode_mut(mode);
+                let before = settings.clone();
+                edit(settings);
+                *settings != before
+                    && store
+                        .update(&id, profile)
+                        .inspect_err(|error| {
+                            tracing::warn!("Cannot edit profile {id}: {error}");
+                        })
+                        .is_ok()
+            } else {
+                tracing::debug!("Profile {id} cannot be edited: it is not usable");
+                false
             }
-            if let Err(error) = store.update(&id, profile) {
-                return tracing::warn!("Cannot edit profile {id}: {error}");
-            }
+        };
+        if edited {
+            self.profile_edited(&id);
+            self.push_desired_state();
         }
-        self.profile_edited(&id);
-        self.push_desired_state();
-        // The list shows no LED: only the editor follows.
+        // The list shows no LED: only the editor follows, and shows the profile's values again
+        // after an edit that changed nothing.
         self.update_windows();
     }
 }

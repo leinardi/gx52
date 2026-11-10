@@ -92,6 +92,43 @@ mod imp {
                     }
                 }
             ));
+            self.close_on_choice();
+        }
+    }
+
+    impl LedButton {
+        /// Closes the popover when a state is chosen, the current one included, which changes
+        /// nothing and so notifies nothing. The popover closes once the click or key is handled.
+        fn close_on_choice(&self) {
+            let close = glib::clone!(
+                #[weak(rename_to = popover)]
+                self.popover,
+                move || {
+                    glib::idle_add_local_once(move || popover.popdown());
+                }
+            );
+            let click = gtk::GestureClick::new();
+            click.set_propagation_phase(gtk::PropagationPhase::Capture);
+            let on_click = close.clone();
+            click.connect_released(move |_, _, _, _| {
+                on_click();
+            });
+            self.toggles.add_controller(click);
+            let keys = gtk::EventControllerKey::new();
+            keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+            keys.connect_key_released(move |_, key, _, _| {
+                if matches!(
+                    key,
+                    gtk::gdk::Key::Return
+                        | gtk::gdk::Key::KP_Enter
+                        | gtk::gdk::Key::ISO_Enter
+                        | gtk::gdk::Key::space
+                        | gtk::gdk::Key::KP_Space
+                ) {
+                    close();
+                }
+            });
+            self.toggles.add_controller(keys);
         }
     }
 
