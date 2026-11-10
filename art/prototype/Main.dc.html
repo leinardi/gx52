@@ -443,8 +443,8 @@ body{margin:0}
                                   <div class="gx-mfdline"><sc-for list="{{ln}}" as="ch" hint-placeholder-count="16"><span class="gx-mfdcell">{{ch}}</span></sc-for></div>
                                 </sc-for>
                               </div>
-                              <div class="gx-mfd-bottom" aria-hidden="true">
-                                <svg class="gx-mfd-clockicon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M12 7 L15 16 L23 11" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg>
+                              <div class="gx-mfd-bottom" aria-hidden="true" style="position: relative; display: flex; justify-content: center; align-items: center">
+                                <svg class="gx-mfd-clockicon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" style="position: absolute; left: 0px; top: 50%; transform: translateY(-50%)"><circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M12 7 L15 16 L23 11" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg>
                                 <span class="gx-mfd-time">{{mfd.time}}<small>{{mfd.ampm}}</small></span>
                               </div>
                               <div class="gx-mfd-date" aria-hidden="true">{{mfd.dateShown}}</div>

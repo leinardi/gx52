@@ -79,23 +79,18 @@ template $GX52MfdDisplay: Adw.Bin {
     Box {
       orientation: vertical;
       spacing: 6;
-
-      Box {
-        spacing: 12;
-
+      // The time is centred on the whole width, the clock symbol at the start.
+      CenterBox {
         styles [
           "mfd-bottom",
         ]
 
-        Image {
+        start-widget: Image {
           icon-name: "mfd-clock-symbolic";
           pixel-size: 30;
-        }
+        };
 
-        Box {
-          hexpand: true;
-          halign: center;
-
+        center-widget: Box {
           Label time {
             styles [
               "mfd-time",
@@ -109,7 +104,7 @@ template $GX52MfdDisplay: Adw.Bin {
               "mfd-half",
             ]
           }
-        }
+        };
       }
 
       Label date {
