@@ -8,6 +8,8 @@
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/device-footer.ui">device-footer.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/led-button.ui">led-button.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/led-editor.ui">led-editor.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/mfd-display.ui">mfd-display.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/mfd-editor.ui">mfd-editor.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/mode-bar.ui">mode-bar.ui</file>
     <!-- Root alias: AdwApplication wires app.shortcuts / Ctrl+? to it automatically. -->
     <file compressed="true" preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">shortcuts-dialog.ui</file>

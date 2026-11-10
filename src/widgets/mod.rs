@@ -18,14 +18,19 @@
 mod device_footer;
 mod led_button;
 mod led_editor;
+mod mfd_display;
+mod mfd_editor;
 mod mode_bar;
 mod profile_row;
 
 use gtk::prelude::*;
+use x52::command::Brightness;
 
 pub(crate) use self::device_footer::DeviceFooter;
 pub(crate) use self::led_button::LedButton;
 pub(crate) use self::led_editor::LedEditor;
+pub(crate) use self::mfd_display::MfdDisplay;
+pub(crate) use self::mfd_editor::MfdEditor;
 pub(crate) use self::mode_bar::ModeBar;
 pub(crate) use self::profile_row::{ProfileRow, RowAction};
 use crate::application::Application;
@@ -34,4 +39,12 @@ use crate::window::Window;
 /// The application of the window `widget` is in.
 fn app_of(widget: &impl IsA<gtk::Widget>) -> Option<Application> {
     widget.root().and_downcast::<Window>()?.app()
+}
+
+/// The level of a brightness scale at `value`.
+fn brightness_at(value: f64) -> Option<Brightness> {
+    let value = value.round();
+    // The scales are bounded to 0–128: the level whose value it is.
+    let level = (0..=Brightness::MAX).find(|level| f64::from(*level) >= value)?;
+    Brightness::new(level).ok()
 }

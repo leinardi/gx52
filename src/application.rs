@@ -159,7 +159,6 @@ mod imp {
         /// queue is idle or a window opens again: no dialog asks anything meanwhile.
         pub(crate) draining: Cell<bool>,
         /// The text of the custom text MFD lines switched to another source this session.
-        #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
         pub(crate) text_drafts: RefCell<TextDrafts>,
     }
 
@@ -781,7 +780,7 @@ impl Application {
     }
 
     /// Applies `change` to the held inputs; pushes the state when the last held input changed and
-    /// the device shows it. Never logs: this runs per input
+    /// the device shows it, and the editor's display follows. Never logs: this runs per input
     /// event.
     fn change_held(&self, change: impl FnOnce(&mut HeldInputs)) {
         let imp = self.imp();
@@ -793,6 +792,7 @@ impl Application {
         };
         if changed && imp.shows_last_button.get() {
             self.push_desired_state();
+            self.update_mfd_previews();
         }
     }
 
@@ -826,7 +826,6 @@ impl Application {
     /// What the editor's simulated MFD shows at `now`, with `local` as the system time zone and
     /// `shown_clock` in the clock area: the shown device type's active profile in the mode shown,
     /// with or without a device, as the device shows it.
-    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
     pub(crate) fn mfd_preview(
         &self,
         shown_clock: ShownClock,
@@ -838,6 +837,15 @@ impl Application {
         mfd::preview(&state, device_type, shown_clock, now, local)
             .inspect_err(|error| tracing::warn!("Cannot show the MFD clocks: {error}"))
             .ok()
+    }
+
+    /// Shows the dynamic MFD lines again in every window's display, and nothing else.
+    fn update_mfd_previews(&self) {
+        for window in self.windows() {
+            if let Ok(window) = window.downcast::<Window>() {
+                window.refresh_mfd();
+            }
+        }
     }
 
     /// Sends the device its type's active profile, in the set of the mode shown (mode 1 until the

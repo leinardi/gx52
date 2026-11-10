@@ -309,6 +309,14 @@ overrides ───────────────────────�
     the profile list's badges all show the mode shown; the sidebar footer keeps the selector's
     mode. The editor's edits change the active profile's settings of the mode shown, go to the
     device at once and are saved after the debounce (`src/application/editing.rs`).
+- The **MFD editor's simulated display** is built from the same desired state
+  (`src/profile/active.rs`, `state_for`, then `src/profile/mfd.rs`, `preview`), so it shows exactly
+  what is sent: the converted lines, the time of the clock shown as clock 1's plus the offset sent,
+  the date with dots. The device gets the connected type's state; the display resolves the shown
+  type, so it is there and follows edits with no device connected. Both take the dynamic MFD values
+  from one place, so online the display never disagrees with the device; a change of the held
+  button updates only the display, never the whole window. The display ticks at each minute
+  boundary while it is mapped, reading the system time zone with `gio::spawn_blocking`.
 - It is **pushed to the writer** whenever an input changes. The writer decides what to send (only
   changes, or everything on connect).
 - The **UI binds to GObject properties**: a device object (access state, device type, active mode,

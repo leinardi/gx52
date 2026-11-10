@@ -1,0 +1,68 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52MfdDisplay: Adw.Bin {
+  halign: center;
+
+  child: Overlay screen {
+    overflow: hidden;
+
+    styles [
+      "mfd",
+    ]
+
+    child: Box {
+      orientation: vertical;
+      spacing: 8;
+
+      styles [
+        "mfd-content",
+      ]
+
+      Box lines {
+        orientation: vertical;
+        spacing: 8;
+      }
+
+      Box {
+        spacing: 16;
+
+        styles [
+          "mfd-clock",
+        ]
+
+        Box {
+          spacing: 6;
+          hexpand: true;
+
+          Label clock_tag {
+            valign: baseline_fill;
+
+            styles [
+              "mfd-clock-tag",
+            ]
+          }
+
+          Label clock {
+            valign: baseline_fill;
+          }
+        }
+
+        Label date {
+          valign: baseline_fill;
+        }
+      }
+    };
+
+    [overlay]
+    Label shift {
+      label: "SHIFT";
+      halign: end;
+      valign: start;
+
+      styles [
+        "mfd-shift",
+      ]
+    }
+  };
+}

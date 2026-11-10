@@ -201,23 +201,32 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
 
 - **Simulated display:** a small custom widget drawn like the MFD: three 16-character lines and
   the clock and date area. It shows **live values**: the line sources resolved now (the active
-  profile, the current mode, the button being held), the converted characters (a character the MFD
-  cannot show appears as its fallback, [protocol.md](protocol.md#mfd-character-set)), and the
-  time ticking. The date uses dots, as the device draws it ("09.11.26",
+  profile, the current mode, the button being held: the display follows a held button and clears
+  on release), the converted characters (a character the MFD cannot show appears as its fallback,
+  [protocol.md](protocol.md#mfd-character-set)), and the time ticking at each minute. It is built
+  from the state the device gets, and works with no device connected: edits to the last type's
+  profiles change it ([Problem states](#problem-states)). The time is `HH:MM` in 24 h and `h:MM AM`
+  or `h:MM PM` in 12 h; the date uses dots, as the device draws it ("09.11.26",
   [protocol.md](protocol.md#usb-vendor-commands)). The clock area shows **clock 1**; a small
-  "1 | 2 | 3" toggle under it shows the other clocks, with the note "Clock 1 is shown by default.
-  Start/Stop and Reset on the throttle cycle the clocks on the device." The app cannot read which
-  clock the MFD shows, so it never guesses.
-- **Line rows**, one per line, each an `adw::ComboRow` for the source:
+  "1 | 2 | 3" toggle under it shows the other clocks, tagged with a small "2" or "3", with the note
+  "Clock 1 is shown by default. Start/Stop and Reset on the throttle cycle the clocks on the
+  device." The app cannot read which clock the MFD shows, so it never guesses. The display is
+  dark in both styles, as on the device, and lit by the MFD brightness in four steps (0, up to 40,
+  up to 90, above); at 0 the text dims. Assistive technologies read it as one image: "Simulated
+  MFD: GX52, Fire, blank; clock 1 12:45, date 09.11.26".
+- **Line rows**, one per line, each an `adw::ComboRow` for the source, listed in this order:
 
   | Source | Shows |
   | --- | --- |
-  | Custom text | The text typed in an `adw::EntryRow` below it (shown only for this source); a counter "n/16" counts converted bytes, the entry stops accepting input at 16, and the row lists the characters that will be replaced ("ő → o") |
+  | Custom text | The text typed in an `adw::EntryRow` below it (shown only for this source); a counter "n/16" counts converted bytes, the entry stops accepting input at 16 (a paste is cut to the room left, and the text already there is never cut), and the row lists the characters that will be replaced ("ő → o") |
   | Profile name | The active profile's name |
   | Mode | The mode whose settings are on the device, "Mode 2": the selector position, or the mode picked in the [mode bar](#mode-bar) until the selector moves; with a Single profile active, the selector position |
   | Last button | The name of the button being held, POV 1 directions included; the mode selector positions never count. The line clears on release |
   | Empty | Nothing |
 
+  A line switched from Custom text to another source keeps its text for the session: switching it
+  back to Custom text in the same profile, mode settings and line brings the text back; anywhere
+  else Custom text starts empty.
 - **Below:** Brightness (0–128) and Shift (`adw::SwitchRow`, "Show SHIFT on the display"; X52 Pro
   only).
 

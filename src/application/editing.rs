@@ -27,7 +27,6 @@ use crate::profile::mfd::{DraftKey, LineSource, SettingsSet};
 use crate::profile::{MFD_LINES, MfdLineSource, ModeSettings, ProfileId};
 
 /// The profile and the set of mode settings an edit changes.
-#[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
 struct EditTarget {
     /// The profile.
     profile: ProfileId,
@@ -35,7 +34,6 @@ struct EditTarget {
     set: SettingsSet,
 }
 
-#[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
 impl EditTarget {
     /// The draft key of `line` in this set.
     fn draft(&self, line: usize) -> DraftKey {
@@ -86,7 +84,6 @@ impl Application {
     /// Makes MFD line `line` (from `0`) show `source` in the mode shown. A custom text line
     /// switched to another source keeps its text for the session, and gets it back when it
     /// switches to custom text again in the same profile, set and line.
-    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
     pub(crate) fn set_mfd_source(&self, line: usize, source: LineSource) {
         if line >= MFD_LINES {
             return;
@@ -106,7 +103,6 @@ impl Application {
 
     /// Sets the text of custom text line `line` (from `0`) in the mode shown; text that does not
     /// fit the line is refused, and the editor shows the line's text again.
-    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
     pub(crate) fn set_mfd_text(&self, line: usize, text: String) {
         if let Err(error) = MfdText::new(&text) {
             tracing::debug!("MFD line {line} text {text:?} refused: {error}");
@@ -121,13 +117,11 @@ impl Application {
     }
 
     /// Sets the MFD brightness of the mode shown.
-    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
     pub(crate) fn set_mfd_brightness(&self, brightness: Brightness) {
         self.edit_shown_settings(|settings| settings.mfd_brightness = brightness);
     }
 
     /// Turns the SHIFT label on or off in the mode shown.
-    #[expect(dead_code, reason = "the MFD editor of the next commit uses it")]
     pub(crate) fn set_shift(&self, shift: bool) {
         self.edit_shown_settings(|settings| settings.shift = shift);
     }

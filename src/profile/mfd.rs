@@ -18,11 +18,6 @@
 //!
 //! Plain Rust: the widgets only apply what is computed here, so the rules are tested here.
 
-#![cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the MFD editor of the next commit uses it")
-)]
-
 use std::collections::BTreeMap;
 
 use gettextrs::gettext;

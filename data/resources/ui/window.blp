@@ -142,11 +142,7 @@ template $GX52Window: Adw.ApplicationWindow {
                       title: _("MFD");
                       icon-name: "video-display-symbolic";
 
-                      child: Adw.StatusPage {
-                        icon-name: "video-display-symbolic";
-                        title: _("MFD");
-                        description: _("The MFD editor is not available yet.");
-                      };
+                      child: $GX52MfdEditor mfd_editor {};
                     }
 
                     Adw.ViewStackPage {
