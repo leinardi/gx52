@@ -31,10 +31,6 @@ use std::time::Duration;
 use super::ProfileId;
 
 /// How long after the last edit a profile is saved (docs/ui.md, "Profile editor").
-#[cfg_attr(
-    test,
-    expect(dead_code, reason = "only the application's debounce timer reads it")
-)]
 pub(crate) const DEBOUNCE: Duration = Duration::from_millis(500);
 
 /// A file operation of one profile.
@@ -103,11 +99,6 @@ pub(crate) struct WriteQueue {
 }
 
 impl WriteQueue {
-    /// An empty queue.
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
-
     /// `id` was edited: its save is due [`DEBOUNCE`] after the last edit. Ignored while it is
     /// removed.
     pub(crate) fn edited(&mut self, id: &ProfileId) -> Vec<Command> {

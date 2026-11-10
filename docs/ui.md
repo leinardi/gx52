@@ -58,11 +58,15 @@ on the right.
 - **Profile list:** a `gtk::ListBox` with the `navigation-sidebar` style, the connected device
   type's profiles only ([profiles.md](profiles.md#model)).
   - The **default profile** is always first. It can be renamed and edited, never removed or moved.
-  - The **other profiles** are in the user's order: drag a row to move it; "Move Up" and "Move
-    Down" in its menu do the same from the keyboard. The order is stored per device type
+  - The **other profiles** are in the user's order: drag a row to move it, by the handle
+    (`list-drag-handle-symbolic`) that shows at its start while the pointer is over it; "Move Up"
+    and "Move Down" in its menu do the same from the keyboard. The order is stored per device type
     ([profiles.md](profiles.md#profile-order)).
   - The **active profile** (the one on the device) is the selected row. Selecting a row makes that
-    profile active at once.
+    profile active at once. When another row is selected (a profile that failed to load), the
+    active row shows a check mark next to its menu button.
+  - **Renaming** in place: while the name is edited, the entry and the reason a name is refused
+    take the whole row; the handle, the badges, the check mark and the menu button are hidden.
   - A **per-mode profile** shows small "1 2 3" badges, the current mode highlighted while it is
     active.
   - A profile that **failed to load** (unreadable, newer schema) is listed greyed out with a

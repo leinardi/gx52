@@ -53,11 +53,6 @@ pub(crate) struct Reservations {
 }
 
 impl Reservations {
-    /// No name reserved.
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
-
     /// Whether `name` is used by a profile of `device_type` in `store` other than `except`, or
     /// reserved.
     pub(crate) fn taken(

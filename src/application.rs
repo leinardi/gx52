@@ -41,6 +41,10 @@ use crate::profile::{
 };
 use crate::window::{self, Window};
 
+mod persistence;
+
+pub(crate) use self::persistence::RenameProblem;
+
 /// The settings key that records the one-time GX52 0.7 import as done.
 const LEGACY_IMPORT_DONE: &str = "legacy-import-done";
 
@@ -82,16 +86,20 @@ const UNRELEASED_VERSION: &str = "0.0.0";
 
 mod imp {
     use std::cell::{Cell, OnceCell, RefCell};
+    use std::collections::{BTreeMap, BTreeSet};
 
     use adw::{prelude::*, subclass::prelude::*};
     use gettextrs::gettext;
     use gtk::{gio, glib};
     use x52::input::{HeldInputs, Mode};
 
+    use super::persistence::Removal;
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
+    use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
+    use crate::profile::writes::WriteQueue;
     use crate::{config, window::Window};
 
     #[derive(Debug, Default)]
@@ -123,6 +131,22 @@ mod imp {
         pub(crate) shows_last_button: Cell<bool>,
         /// The shown device type's profiles, as the profile list shows them.
         pub(crate) profile_list: OnceCell<gio::ListStore>,
+        /// Every pending save, delete and create.
+        pub(crate) writes: RefCell<WriteQueue>,
+        /// The names of profiles not in the store yet, or removed until their file is gone.
+        pub(crate) reservations: RefCell<Reservations>,
+        /// The running debounce timers, by profile.
+        pub(crate) debounces: RefCell<BTreeMap<ProfileId, glib::SourceId>>,
+        /// Holds the application while the write queue is busy.
+        pub(crate) hold: RefCell<Option<gio::ApplicationHoldGuard>>,
+        /// The logout inhibition taken at the end of the session while profiles are saved.
+        pub(crate) inhibit_cookie: Cell<Option<u32>>,
+        /// The removed profiles whose removal can still be undone.
+        pub(crate) removals: RefCell<BTreeMap<ProfileId, Removal>>,
+        /// The profiles whose last save failed, so the failure is reported once.
+        pub(crate) failed_saves: RefCell<BTreeSet<ProfileId>>,
+        /// The default profiles whose damaged file the user chose to keep this session.
+        pub(crate) declined_replacements: RefCell<BTreeSet<ProfileId>>,
     }
 
     #[glib::object_subclass]
@@ -145,6 +169,7 @@ mod imp {
             let app = self.obj();
             app.setup_actions();
             app.setup_settings();
+            app.connect_query_end(super::Application::on_query_end);
             app.start_device_service();
             app.load_profiles();
         }
@@ -164,6 +189,11 @@ mod imp {
         }
 
         fn shutdown(&self) {
+            // The hold keeps the application alive until the queue is idle; only a forced end
+            // gets here with work pending.
+            if !self.obj().writes_idle() {
+                tracing::warn!("Exiting with profile changes not written");
+            }
             // Returns at once: the device threads are joined on a thread of their own.
             if let Some(device) = self.device.take() {
                 device.shutdown();
@@ -217,6 +247,9 @@ impl Application {
 
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("window.close", &["<Control>w"]);
+        self.set_accels_for_action("win.new-profile", &["<Control>n"]);
+        self.set_accels_for_action("win.import", &["<Control>o"]);
+        self.set_accels_for_action("win.export-selected", &["<Control><Shift>e"]);
         for (view, accel) in [
             ("leds", "<Control>1"),
             ("mfd", "<Control>2"),
@@ -426,25 +459,12 @@ impl Application {
         }
     }
 
-    /// The names of `device_type`'s profiles, once the profiles are loaded.
-    pub(crate) fn profile_names(&self, device_type: DeviceType) -> Option<Vec<String>> {
-        let profiles = self.imp().profiles.borrow();
-        Some(profiles.as_ref()?.names(device_type))
-    }
-
-    /// A copy of the usable profile `id` and the profile directory, once the profiles are loaded.
+    /// A copy of the usable profile `id`, once the profiles are loaded.
     pub(crate) fn profile(&self, id: &ProfileId) -> Option<Profile> {
         let profiles = self.imp().profiles.borrow();
         Some(profiles.as_ref()?.loaded(id)?.profile.clone())
     }
 
-    /// The profile directory, once the profiles are loaded.
-    pub(crate) fn profiles_dir(&self) -> Option<PathBuf> {
-        let profiles = self.imp().profiles.borrow();
-        Some(profiles.as_ref()?.dir().to_owned())
-    }
-
-    /// Adds a profile an import has just written under `id`.
     /// Marks a profile import as running until the returned guard is dropped; `None` while
     /// another import runs, so two imports never pick the same name.
     pub(crate) fn begin_profile_import(&self) -> Option<ImportGuard> {
@@ -453,15 +473,6 @@ impl Application {
         } else {
             Some(ImportGuard(self.downgrade()))
         }
-    }
-
-    pub(crate) fn add_imported_profile(&self, id: ProfileId, profile: Profile) {
-        if let Some(store) = self.imp().profiles.borrow_mut().as_mut() {
-            store.added(id, profile);
-        }
-        // The active id may name the profile that just came in.
-        self.push_desired_state();
-        self.refresh_profiles();
     }
 
     /// The device status the windows show.

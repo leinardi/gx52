@@ -25,11 +25,12 @@ use gtk::{gio, glib};
 use gettextrs::gettext;
 use x52::device::DeviceType;
 
+use crate::application::{Application, RenameProblem};
+use crate::config;
 use crate::model::{ProfileObject, ProfileState};
-use crate::profile::exchange::{self, ImportPreview};
-use crate::profile::{self, ProfileId, files};
-use crate::widgets::ProfileRow;
-use crate::{application::Application, config};
+use crate::profile::exchange::{self, ImportPreview, ImportStep};
+use crate::profile::{self, ProfileId, ProfileKind, files};
+use crate::widgets::{ProfileRow, RowAction};
 
 /// The command that stops and disables libx52's daemon (docs/protocol.md, "libx52's x52d").
 const X52D_DISABLE: &str = "sudo systemctl disable --now x52d";
@@ -41,7 +42,8 @@ mod imp {
     use gtk::{gio, glib};
 
     use crate::config;
-    use crate::widgets::DeviceFooter;
+    use crate::profile::ProfileKind;
+    use crate::widgets::{DeviceFooter, RowAction};
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
@@ -103,6 +105,32 @@ mod imp {
             klass.install_action_async("win.show-selected-file", None, |window, _, _| async move {
                 window.show_selected_file().await;
             });
+            klass.install_action("win.new-profile", None, |window, _, _| {
+                if let Some(app) = window.app() {
+                    app.new_profile(ProfileKind::Single);
+                }
+            });
+            klass.install_action("win.new-per-mode-profile", None, |window, _, _| {
+                if let Some(app) = window.app() {
+                    app.new_profile(ProfileKind::PerMode);
+                }
+            });
+            klass.install_action_async("win.import", None, |window, _, _| async move {
+                if let Some(device_type) = window.app().and_then(|app| app.shown_device_type()) {
+                    window.import_profile(device_type).await;
+                }
+            });
+            for (name, action) in [
+                ("win.rename-selected", RowAction::Rename),
+                ("win.remove-selected", RowAction::Remove),
+                ("win.export-selected", RowAction::Export),
+            ] {
+                klass.install_action(name, None, move |window, _, _| {
+                    if let Some(id) = window.selected().and_then(|item| item.profile_id()) {
+                        window.run_row_action(action, &id);
+                    }
+                });
+            }
         }
 
         fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
@@ -129,6 +157,11 @@ mod imp {
         fn close_request(&self) -> glib::Propagation {
             if let Err(err) = self.obj().save_window_state() {
                 tracing::warn!("Failed to save the window state: {err}");
+            }
+            // Pending saves start now and pending removals are carried out; the application
+            // holds itself until they are written.
+            if let Some(app) = self.obj().app() {
+                app.drain();
             }
             self.parent_close_request()
         }
@@ -195,8 +228,179 @@ impl Window {
         }
         imp.main_stack.set_visible_child_name("profiles");
         imp.footer.show(&status.footer(app.active_profile_kind()));
+        self.update_row_moves();
         self.select_current();
         self.show_selected();
+    }
+
+    /// Tells each row whether its profile can move up and down: only among the profiles other
+    /// than the default.
+    fn update_row_moves(&self) {
+        let imp = self.imp();
+        let Some(profiles) = imp.profiles.get() else {
+            return;
+        };
+        let movable = |position: u32| {
+            profiles
+                .item(position)
+                .and_downcast::<ProfileObject>()
+                .is_some_and(|item| item.is_usable() && !item.is_default())
+        };
+        for position in 0..profiles.n_items() {
+            let row = i32::try_from(position)
+                .ok()
+                .and_then(|index| imp.profile_list.row_at_index(index))
+                .and_downcast::<ProfileRow>();
+            if let Some(row) = row {
+                let up = position > 0 && movable(position - 1);
+                let down = movable(position + 1);
+                row.set_moves(up, down);
+            }
+        }
+    }
+
+    /// The row of the profile `id`.
+    fn row_of(&self, id: &ProfileId) -> Option<ProfileRow> {
+        let position = self.position_of(|item| item.id() == id.as_str())?;
+        self.imp()
+            .profile_list
+            .row_at_index(i32::try_from(position).ok()?)
+            .and_downcast()
+    }
+
+    /// Opens the name of `id` for editing in its row.
+    pub(crate) fn start_rename(&self, id: &ProfileId) {
+        if let Some(row) = self.row_of(id) {
+            self.imp().split_view.set_show_content(false);
+            row.start_rename();
+        }
+    }
+
+    /// Gives `id` the name typed in its row.
+    ///
+    /// # Errors
+    ///
+    /// The [`RenameProblem`] the row shows.
+    pub(crate) fn commit_rename(&self, id: &ProfileId, name: &str) -> Result<(), RenameProblem> {
+        self.app()
+            .ok_or(RenameProblem::Unavailable)?
+            .rename_profile(id, name)
+    }
+
+    /// Moves `id` to the place of `target`, after a drag.
+    pub(crate) fn move_profile_onto(&self, id: &ProfileId, target: &ProfileId) {
+        if let Some(app) = self.app() {
+            app.move_profile_onto(id, target);
+        }
+    }
+
+    /// Carries out a row menu item, or its shortcut, for `id`. The application checks the
+    /// profile again: the row may be older than the store.
+    pub(crate) fn run_row_action(&self, action: RowAction, id: &ProfileId) {
+        let Some(app) = self.app() else {
+            return;
+        };
+        match action {
+            RowAction::Rename => self.start_rename(id),
+            RowAction::Duplicate => app.duplicate_profile(id),
+            RowAction::Export => {
+                glib::spawn_future_local(glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    #[strong]
+                    id,
+                    async move { window.export_profile(&id).await }
+                ));
+            }
+            RowAction::UsePerMode => app.set_profile_kind(id, ProfileKind::PerMode),
+            RowAction::UseSingle => {
+                glib::spawn_future_local(glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    #[strong]
+                    id,
+                    async move { window.confirm_single(&id).await }
+                ));
+            }
+            RowAction::MoveUp => app.move_profile_by(id, -1),
+            RowAction::MoveDown => app.move_profile_by(id, 1),
+            RowAction::Remove => {
+                glib::spawn_future_local(glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    #[strong]
+                    id,
+                    async move { window.confirm_remove(&id).await }
+                ));
+            }
+            RowAction::ShowFile => {
+                glib::spawn_future_local(glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    #[strong]
+                    id,
+                    async move { window.show_file(&id).await }
+                ));
+            }
+        }
+    }
+
+    /// Asks before a per-mode profile drops modes 2 and 3.
+    async fn confirm_single(&self, id: &ProfileId) {
+        let Some(app) = self.app() else {
+            return;
+        };
+        let Some(profile) = app.profile(id) else {
+            return;
+        };
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Use Single Settings?")),
+            Some(
+                &gettext(
+                    "“{name}” keeps the settings of mode 1. The settings of modes 2 and 3 are \
+                 dropped.",
+                )
+                .replace("{name}", &profile.name),
+            ),
+        );
+        dialog.add_responses(&[
+            ("cancel", &gettext("_Cancel")),
+            ("single", &gettext("_Use Single Settings")),
+        ]);
+        dialog.set_response_appearance("single", adw::ResponseAppearance::Destructive);
+        dialog.set_close_response("cancel");
+        if dialog.choose_future(Some(self)).await == "single" {
+            app.set_profile_kind(id, ProfileKind::Single);
+        }
+    }
+
+    /// Asks before `id` is removed; the toast that follows offers Undo.
+    async fn confirm_remove(&self, id: &ProfileId) {
+        let Some(item) = self
+            .position_of(|item| item.id() == id.as_str())
+            .and_then(|position| self.imp().profiles.get()?.item(position))
+            .and_downcast::<ProfileObject>()
+        else {
+            return;
+        };
+        if item.is_default() {
+            return;
+        }
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Remove “{name}”?").replace("{name}", &item.title())),
+            Some(&gettext("Its file is deleted.")),
+        );
+        dialog.add_responses(&[
+            ("cancel", &gettext("_Cancel")),
+            ("remove", &gettext("_Remove")),
+        ]);
+        dialog.set_response_appearance("remove", adw::ResponseAppearance::Destructive);
+        dialog.set_close_response("cancel");
+        if dialog.choose_future(Some(self)).await == "remove"
+            && let Some(app) = self.app()
+        {
+            app.remove_profile(id);
+        }
     }
 
     /// Selects the failed profile the user picked while it is still listed, the active profile
@@ -216,6 +420,20 @@ impl Window {
             .and_then(|position| imp.profile_list.row_at_index(position));
         imp.profile_list.select_row(row.as_ref());
         imp.syncing.set(false);
+        self.update_markers();
+    }
+
+    /// Marks the active profile's row when another row is selected.
+    fn update_markers(&self) {
+        let imp = self.imp();
+        let selected = imp.profile_list.selected_row();
+        let mut index = 0;
+        while let Some(row) = imp.profile_list.row_at_index(index) {
+            if let Ok(row) = row.downcast::<ProfileRow>() {
+                row.set_marked(selected.as_ref() != Some(row.upcast_ref()));
+            }
+            index += 1;
+        }
     }
 
     /// The position of the first profile `matches` accepts.
@@ -299,6 +517,18 @@ impl Window {
             self,
             move |_, _| window.imp().split_view.set_show_content(true)
         ));
+        // Only while the list has the focus, so an entry keeps these keys.
+        let shortcuts = gtk::ShortcutController::new();
+        for (key, action) in [
+            ("F2", "win.rename-selected"),
+            ("Delete", "win.remove-selected"),
+        ] {
+            shortcuts.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(key),
+                Some(gtk::NamedAction::new(action)),
+            ));
+        }
+        imp.profile_list.add_controller(shortcuts);
     }
 
     fn on_profile_selected(&self) {
@@ -314,6 +544,7 @@ impl Window {
         } else {
             imp.selected_failed.replace(Some(item.id()));
         }
+        self.update_markers();
         self.show_selected();
     }
 
@@ -363,11 +594,14 @@ impl Window {
 
     /// Opens the folder of the selected profile's file, through the portal.
     async fn show_selected_file(&self) {
-        let Some(path) = self
-            .selected()
-            .and_then(|item| item.profile_id())
-            .and_then(|id| Some(self.app()?.profile_path(&id)))
-        else {
+        if let Some(id) = self.selected().and_then(|item| item.profile_id()) {
+            self.show_file(&id).await;
+        }
+    }
+
+    /// Opens the folder of the file of `id`, through the portal.
+    async fn show_file(&self, id: &ProfileId) {
+        let Some(path) = self.app().map(|app| app.profile_path(id)) else {
             return;
         };
         let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
@@ -431,18 +665,18 @@ impl Window {
         self.application()?.downcast::<Application>().ok()
     }
 
-    /// Picks a file, checks it, asks for confirmation with the problems listed, then imports it
-    /// into `device_type`'s profiles.
+    /// Picks a file, checks it, asks for confirmation when it had problems or gets another
+    /// name, then imports it into `device_type`'s profiles.
     async fn import_profile(&self, device_type: DeviceType) {
         let Some(app) = self.app() else {
             return;
         };
-        // Held until the end of the import: two imports at once could both keep the same name.
+        // Held until the write started: one file chooser and one check at a time.
         let Some(_import) = app.begin_profile_import() else {
             self.show_toast(&gettext("Another profile import is in progress"));
             return;
         };
-        let (Some(taken), Some(dir)) = (app.profile_names(device_type), app.profiles_dir()) else {
+        let Some(taken) = app.taken_names(device_type) else {
             self.show_toast(&gettext("The profiles are still loading"));
             return;
         };
@@ -472,35 +706,26 @@ impl Window {
             }
             Err(_) => return tracing::error!("The profile import task panicked"),
         };
-        // Confirmed against the names in the store right before the write; a profile added
-        // while the dialog was open changes the name, and the user confirms the new one.
+        // The names are checked again on the main thread after every wait, and reserved in the
+        // same step as the write starts, so a profile created or renamed meanwhile keeps its
+        // name (docs/profiles.md, "Import and export").
+        let mut confirmed = false;
         loop {
-            if !self.confirm_import(&preview).await {
-                return;
-            }
-            let Some(current) = app.profile_names(device_type) else {
+            let Some(taken) = app.taken_names(device_type) else {
                 return;
             };
-            if !exchange::revalidate_name(&mut preview, &current) {
-                break;
+            match exchange::next_step(&mut preview, &taken, confirmed) {
+                ImportStep::Confirm => {
+                    if !self.confirm_import(&preview).await {
+                        return;
+                    }
+                    confirmed = true;
+                }
+                ImportStep::Write => match app.write_import(Box::new(preview)) {
+                    Ok(()) => return,
+                    Err(back) => preview = *back,
+                },
             }
-        }
-        let name = preview.profile.name.clone();
-        let written = gio::spawn_blocking(move || {
-            exchange::write_import(&preview, &dir).map(|id| (id, preview.profile))
-        })
-        .await;
-        match written {
-            Ok(Ok((id, profile))) => {
-                tracing::info!("Profile {id} imported");
-                app.add_imported_profile(id, profile);
-                self.show_toast(&gettext("Imported “{name}”").replace("{name}", &name));
-            }
-            Ok(Err(error)) => {
-                tracing::warn!("Cannot write the imported profile: {error}");
-                self.show_toast(&gettext("The profile could not be saved"));
-            }
-            Err(_) => tracing::error!("The profile import task panicked"),
         }
     }
 

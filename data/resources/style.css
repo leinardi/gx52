@@ -36,3 +36,12 @@
   color: var(--accent-fg-color);
   opacity: 1;
 }
+
+/* The drag handle of a profile row: shown while the pointer is over a row that can move. */
+.drag-handle {
+  opacity: 0;
+}
+
+row:hover .drag-handle.movable {
+  opacity: 0.55;
+}

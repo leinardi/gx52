@@ -76,10 +76,6 @@ pub(crate) fn ordered(
 /// `id` is normally already in `store`, so the effective order lists it among the unlisted
 /// profiles; it is moved to the end. The result is complete: every loaded non-default profile,
 /// in the effective order, without the default.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 adds profiles")
-)]
 pub(crate) fn appended(
     entries: &[impl AsRef<str>],
     device_type: DeviceType,
@@ -97,10 +93,6 @@ pub(crate) fn appended(
 /// first when `original` is the default profile (or not in the order at all, then last).
 ///
 /// The result is complete, as for [`appended`].
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 duplicates profiles")
-)]
 pub(crate) fn inserted_after(
     entries: &[impl AsRef<str>],
     device_type: DeviceType,
@@ -130,10 +122,6 @@ pub(crate) fn inserted_after(
 /// moves: for it the effective order is returned unchanged.
 ///
 /// The result is complete, as for [`appended`].
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 reorders profiles")
-)]
 pub(crate) fn moved(
     entries: &[impl AsRef<str>],
     device_type: DeviceType,

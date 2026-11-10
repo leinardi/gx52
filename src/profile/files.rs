@@ -181,13 +181,6 @@ fn temporary_beside(path: &Path) -> io::Result<(PathBuf, File)> {
 /// # Errors
 ///
 /// The I/O error of reading `source` or creating the copy.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "saving, wired to the profile editor in M5, uses it"
-    )
-)]
 pub(crate) fn backup(source: &Path, suffix: &str) -> io::Result<PathBuf> {
     let base = format!("{}.{suffix}", source.display());
     for counter in 1_u32.. {
@@ -205,25 +198,11 @@ pub(crate) fn backup(source: &Path, suffix: &str) -> io::Result<PathBuf> {
 }
 
 /// The suffix of the backup of a bad default profile file: `rejected-YYYYMMDDTHHMMSSZ`, in UTC.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "saving, wired to the profile editor in M5, uses it"
-    )
-)]
 pub(crate) fn rejected_suffix(now: Timestamp) -> String {
     format!("rejected-{}", now.strftime("%Y%m%dT%H%M%SZ"))
 }
 
 /// The suffix of the backup of a file of an older schema: `schema-<version>.bak`.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "saving, wired to the profile editor in M5, uses it"
-    )
-)]
 pub(crate) fn schema_suffix(version: i64) -> String {
     format!("schema-{version}.bak")
 }

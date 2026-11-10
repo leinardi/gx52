@@ -35,7 +35,7 @@ const NONE: [Command; 0] = [];
 
 #[test]
 fn an_edit_is_saved_after_the_debounce() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     assert!(queue.is_idle());
     assert_eq!(queue.edited(&id("aaa")), [arm("aaa")]);
     assert_eq!(queue.edited(&id("aaa")), [arm("aaa")], "each edit re-arms");
@@ -48,7 +48,7 @@ fn an_edit_is_saved_after_the_debounce() {
 
 #[test]
 fn saves_of_one_profile_run_one_at_a_time_and_collapse() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     let _ = queue.debounce_fired(&id("aaa"));
     for _ in 0..2 {
@@ -70,7 +70,7 @@ fn saves_of_one_profile_run_one_at_a_time_and_collapse() {
 
 #[test]
 fn a_failed_save_waits_for_the_next_edit() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     let _ = queue.debounce_fired(&id("aaa"));
     assert_eq!(queue.finished(&id("aaa"), Outcome::Failed), NONE);
@@ -80,7 +80,7 @@ fn a_failed_save_waits_for_the_next_edit() {
 
 #[test]
 fn a_delete_waits_for_the_save_in_flight() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     let _ = queue.debounce_fired(&id("aaa"));
     assert_eq!(
@@ -105,7 +105,7 @@ fn a_delete_waits_for_the_save_in_flight() {
 
 #[test]
 fn a_removal_cancels_the_waiting_save_and_ignores_edits() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     assert_eq!(queue.removed(&id("aaa")), [cancel("aaa")]);
     assert_eq!(queue.edited(&id("aaa")), NONE);
@@ -124,7 +124,7 @@ fn a_removal_cancels_the_waiting_save_and_ignores_edits() {
 
 #[test]
 fn a_removal_drops_a_save_queued_behind_one_in_flight() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     let _ = queue.debounce_fired(&id("aaa"));
     let _ = queue.edited(&id("aaa"));
@@ -140,14 +140,14 @@ fn a_removal_drops_a_save_queued_behind_one_in_flight() {
 
 #[test]
 fn an_undo_saves_the_edits_the_removal_cancelled() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     let _ = queue.removed(&id("aaa"));
     assert_eq!(queue.undone(&id("aaa")), [arm("aaa")]);
     assert!(!queue.is_removing(&id("aaa")));
     assert_eq!(queue.debounce_fired(&id("aaa")), [start("aaa", Op::Save)]);
 
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.removed(&id("bbb"));
     assert_eq!(queue.undone(&id("bbb")), NONE, "nothing to save");
     assert!(queue.is_idle());
@@ -155,7 +155,7 @@ fn an_undo_saves_the_edits_the_removal_cancelled() {
 
 #[test]
 fn an_undo_comes_too_late_once_the_delete_is_due() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.removed(&id("aaa"));
     let _ = queue.delete_due(&id("aaa"));
     assert_eq!(queue.undone(&id("aaa")), NONE);
@@ -164,7 +164,7 @@ fn an_undo_comes_too_late_once_the_delete_is_due() {
 
 #[test]
 fn a_failed_delete_restores_the_profile_and_its_unsaved_edits() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     let _ = queue.removed(&id("aaa"));
     let _ = queue.delete_due(&id("aaa"));
@@ -178,7 +178,7 @@ fn a_failed_delete_restores_the_profile_and_its_unsaved_edits() {
 
 #[test]
 fn flush_starts_every_armed_save_at_once() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let _ = queue.edited(&id("aaa"));
     let _ = queue.edited(&id("bbb"));
     let _ = queue.debounce_fired(&id("bbb"));
@@ -197,7 +197,7 @@ fn flush_starts_every_armed_save_at_once() {
 
 #[test]
 fn creates_keep_the_queue_busy_until_committed() {
-    let mut queue = WriteQueue::new();
+    let mut queue = WriteQueue::default();
     let new = queue.create_started();
     let import = queue.create_started();
     assert_eq!(queue.flush(), NONE, "a drain cannot hurry a create");

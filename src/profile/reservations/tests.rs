@@ -46,7 +46,7 @@ fn file_named(name: &str) -> Vec<u8> {
 #[test]
 fn overlapping_creates_get_different_names() {
     let (_dir, store, _) = store(&[]);
-    let mut reservations = Reservations::new();
+    let mut reservations = Reservations::default();
     let first = reservations.claim_unique(&store, PRO, "New profile");
     let second = reservations.claim_unique(&store, PRO, "New profile");
     assert_eq!(first.name(), "New profile");
@@ -59,7 +59,7 @@ fn overlapping_creates_get_different_names() {
 #[test]
 fn names_are_reserved_per_device_type() {
     let (_dir, store, _) = store(&[]);
-    let mut reservations = Reservations::new();
+    let mut reservations = Reservations::default();
     let _pro = reservations.claim_unique(&store, PRO, "New profile");
     let other = reservations.claim_unique(&store, DeviceType::X52, "New profile");
     assert_eq!(other.name(), "New profile");
@@ -68,7 +68,7 @@ fn names_are_reserved_per_device_type() {
 #[test]
 fn an_import_does_not_take_the_name_of_a_pending_create() {
     let (_dir, store, _) = store(&[]);
-    let mut reservations = Reservations::new();
+    let mut reservations = Reservations::default();
     let _new = reservations.claim_unique(&store, PRO, "New profile");
     let preview = prepare_import(
         &file_named("New profile"),
@@ -84,7 +84,7 @@ fn an_import_does_not_take_the_name_of_a_pending_create() {
 #[test]
 fn a_rename_cannot_take_a_reserved_name() {
     let (_dir, store, ids) = store(&["DCS World"]);
-    let mut reservations = Reservations::new();
+    let mut reservations = Reservations::default();
     let _import = reservations.claim(&store, PRO, "Falcon BMS").unwrap();
     assert!(reservations.taken(&store, PRO, "Falcon BMS", Some(&ids[0])));
     assert!(
@@ -97,7 +97,7 @@ fn a_rename_cannot_take_a_reserved_name() {
 #[test]
 fn an_import_sees_a_rename_made_while_its_file_was_read() {
     let (_dir, mut store, ids) = store(&["DCS World"]);
-    let reservations = Reservations::new();
+    let reservations = Reservations::default();
     let mut preview = prepare_import(
         &file_named("Falcon BMS"),
         PRO,
@@ -119,7 +119,7 @@ fn an_import_sees_a_rename_made_while_its_file_was_read() {
 #[test]
 fn a_removed_profile_keeps_its_name_until_deleted_or_restored() {
     let (_dir, mut store, ids) = store(&["DCS"]);
-    let mut reservations = Reservations::new();
+    let mut reservations = Reservations::default();
     let entry = store.take(&ids[0]).unwrap();
     let removed = reservations.claim(&store, PRO, "DCS").unwrap();
     assert!(

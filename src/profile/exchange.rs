@@ -16,12 +16,10 @@
 //! Importing and exporting single profile files (docs/profiles.md, "Import and export").
 //!
 //! An import takes two steps: [`prepare_import`] validates the file without touching the store or
-//! the disk, so the user can see the problems and cancel; [`write_import`] writes the confirmed
-//! profile under a new id, and the caller adds it to the store with
-//! [`ProfileStore::added`]. Both steps block (parsing reads
-//! the time zone database), so the app runs them through `gio::spawn_blocking`.
-
-use std::path::Path;
+//! the disk, so the user can see the problems and cancel; an [`AddJob`] writes the confirmed
+//! profile under a new id, and the caller adds it to the store with [`ProfileStore::added`]. Both
+//! steps block (parsing reads the time zone database), so the app runs them through
+//! `gio::spawn_blocking`. [`next_step`] decides between them, against the names in use.
 
 use gettextrs::gettext;
 use x52::device::DeviceType;
@@ -29,9 +27,8 @@ use x52::device::DeviceType;
 use super::migrate::Schema;
 use super::schema::{self, FieldProblem, ParseError, Parsed};
 #[cfg(doc)]
-use super::store::ProfileStore;
-use super::store::{AddJob, StoreError};
-use super::{Profile, ProfileId, name};
+use super::store::{AddJob, ProfileStore};
+use super::{Profile, name};
 
 /// The contents of an exported profile: the schema without the id, which belongs to the store.
 pub(crate) fn export(profile: &Profile) -> String {
@@ -53,13 +50,6 @@ pub(crate) struct ImportPreview {
 impl ImportPreview {
     /// Whether the user has to confirm the import first: the file had problems, or the profile
     /// gets another name than the file's. A clean file under its own name is imported at once.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the import of M5 skips the dialog for a clean file"
-        )
-    )]
     pub(crate) fn needs_confirmation(&self) -> bool {
         !self.problems.is_empty() || self.renamed_from.is_some()
     }
@@ -144,7 +134,7 @@ pub(crate) fn prepare_import(
 
 /// Makes the name of `preview` unique against `taken`, starting again from the name in the file,
 /// and returns whether it changed. The caller checks the name against the store again right before
-/// [`write_import`], since profiles can be added while the user reads the preview, and asks for a
+/// the write, since profiles can be added while the user reads the preview, and asks for a
 /// new confirmation when it changed.
 pub(crate) fn revalidate_name(preview: &mut ImportPreview, taken: &[String]) -> bool {
     let original = preview
@@ -162,17 +152,33 @@ pub(crate) fn revalidate_name(preview: &mut ImportPreview, taken: &[String]) -> 
     true
 }
 
-/// Writes the confirmed import into `profiles_dir` under a new random id, never a default one,
-/// and returns the id; the caller then adds it to the store. Blocks: run it off the main thread.
+/// What an import does next, after [`next_step`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ImportStep {
+    /// Show the preview and wait for the user's confirmation.
+    Confirm,
+    /// Reserve the name and write the file, with no `.await` in between.
+    Write,
+}
+
+/// Checks the name of `preview` against `taken`, the names used or reserved now, and decides
+/// what comes next: a name that changed always asks again, a file with problems or another name
+/// asks until `confirmed`, and a clean file under its own name is written at once.
 ///
-/// # Errors
-///
-/// [`StoreError::Io`] when the file cannot be written; nothing is left behind.
-pub(crate) fn write_import(
-    preview: &ImportPreview,
-    profiles_dir: &Path,
-) -> Result<ProfileId, StoreError> {
-    AddJob::new(profiles_dir, &preview.profile).run()
+/// The import calls it after the file was read and after every confirmation, so a profile
+/// created or renamed meanwhile is never overwritten by name; nothing is reserved until it
+/// returns [`ImportStep::Write`], so the import never collides with itself.
+pub(crate) fn next_step(
+    preview: &mut ImportPreview,
+    taken: &[String],
+    confirmed: bool,
+) -> ImportStep {
+    let renamed = revalidate_name(preview, taken);
+    if renamed || (!confirmed && preview.needs_confirmation()) {
+        ImportStep::Confirm
+    } else {
+        ImportStep::Write
+    }
 }
 
 #[cfg(test)]

@@ -61,6 +61,13 @@ template $GX52Window: Adw.ApplicationWindow {
                   tooltip-text: _("Main Menu");
                   menu-model: primary_menu;
                 }
+
+                [end]
+                MenuButton {
+                  icon-name: "list-add-symbolic";
+                  tooltip-text: _("New Profile");
+                  menu-model: new_menu;
+                }
               }
 
               content: ScrolledWindow {
@@ -179,6 +186,17 @@ template $GX52Window: Adw.ApplicationWindow {
                           "pill",
                         ]
                       }
+
+                      Button {
+                        label: _("_Remove");
+                        use-underline: true;
+                        action-name: "win.remove-selected";
+
+                        styles [
+                          "pill",
+                          "destructive-action",
+                        ]
+                      }
                     };
                   };
                 }
@@ -221,6 +239,13 @@ template $GX52Window: Adw.ApplicationWindow {
 menu primary_menu {
   section {
     item {
+      label: _("_Import Profile…");
+      action: "win.import";
+    }
+  }
+
+  section {
+    item {
       label: _("_Keyboard Shortcuts");
       action: "app.shortcuts";
     }
@@ -228,6 +253,20 @@ menu primary_menu {
     item {
       label: _("_About GX52");
       action: "app.about";
+    }
+  }
+}
+
+menu new_menu {
+  section {
+    item {
+      label: _("New _Single Profile");
+      action: "win.new-profile";
+    }
+
+    item {
+      label: _("New _Per-Mode Profile");
+      action: "win.new-per-mode-profile";
     }
   }
 }

@@ -231,13 +231,6 @@ impl LoadReport {
 }
 
 /// Why a store operation failed.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the profile list of M5 runs the jobs that return it"
-    )
-)]
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum StoreError {
     /// No profile has that id.
@@ -477,11 +470,6 @@ impl ProfileStore {
         }
     }
 
-    /// The directory the store reads and writes.
-    pub(crate) fn dir(&self) -> &Path {
-        &self.dir
-    }
-
     /// Every profile, in id order.
     pub(crate) fn entries(&self) -> impl Iterator<Item = (&ProfileId, &Entry)> {
         self.entries.iter()
@@ -529,10 +517,6 @@ impl ProfileStore {
     }
 
     /// Whether a profile of `device_type` other than `except` is named `name`.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the profile list of M5 checks new names")
-    )]
     pub(crate) fn name_taken(
         &self,
         device_type: DeviceType,
@@ -584,20 +568,12 @@ pub(crate) struct SaveJob {
 }
 
 /// What a finished [`SaveJob`] did.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 runs save jobs")
-)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Saved {
     /// The backup made of the replaced file, if any.
     pub(crate) backup: Option<PathBuf>,
 }
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 runs save jobs")
-)]
 impl SaveJob {
     /// Writes the file. Blocks: run it in `gio::spawn_blocking`.
     ///
@@ -679,10 +655,6 @@ pub(crate) struct DeleteJob {
     path: PathBuf,
 }
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 deletes removed profiles")
-)]
 impl DeleteJob {
     /// Deletes the file; a file that is already gone counts as deleted. Blocks: run it in
     /// `gio::spawn_blocking`.
@@ -701,13 +673,6 @@ impl DeleteJob {
 
 /// Editing, saving and removing: the store changes in memory on the main thread, and the file
 /// work is a job run off it (docs/architecture.md, "Persistence").
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the profile list of M5 saves, adds and removes profiles; the tests cover it now"
-    )
-)]
 impl ProfileStore {
     /// Replaces the in-memory values of `id`; nothing is written until a [`SaveJob`] runs.
     ///

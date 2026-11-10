@@ -4,9 +4,12 @@ template $GX52ProfileRow: ListBoxRow {
   child: Box {
     spacing: 6;
 
-    Image active_icon {
-      icon-name: "object-select-symbolic";
-      opacity: 0;
+    Image drag_handle {
+      icon-name: "list-drag-handle-symbolic";
+
+      styles [
+        "drag-handle",
+      ]
     }
 
     Image warning_icon {
@@ -14,10 +17,44 @@ template $GX52ProfileRow: ListBoxRow {
       visible: false;
     }
 
-    Label title_label {
+    Stack name_stack {
       hexpand: true;
-      xalign: 0;
-      ellipsize: end;
+      vhomogeneous: false;
+
+      StackPage {
+        name: "label";
+
+        child: Label title_label {
+          xalign: 0;
+          ellipsize: end;
+        };
+      }
+
+      StackPage {
+        name: "entry";
+
+        child: Box {
+          orientation: vertical;
+          spacing: 3;
+
+          Entry name_entry {
+            accessibility {
+              label: _("Profile name");
+            }
+          }
+
+          Label name_problem {
+            xalign: 0;
+            wrap: true;
+            visible: false;
+
+            styles [
+              "caption",
+              "error",
+            ]
+          }
+        };
+      }
     }
 
     Box badges {
@@ -48,6 +85,22 @@ template $GX52ProfileRow: ListBoxRow {
           "mode-badge",
         ]
       }
+    }
+
+    Image active_icon {
+      icon-name: "object-select-symbolic";
+      visible: false;
+      tooltip-text: _("Active profile");
+    }
+
+    MenuButton menu_button {
+      icon-name: "view-more-symbolic";
+      valign: center;
+      tooltip-text: _("Profile Menu");
+
+      styles [
+        "flat",
+      ]
     }
   };
 }

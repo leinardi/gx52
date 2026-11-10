@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::fs;
+use std::path::Path;
 
 use x52::device::{BiColourLed, LedColour};
 use x52::input::Mode;
@@ -77,7 +78,7 @@ fn an_exported_profile_imports_back_unchanged() {
         "a clean file is imported at once"
     );
 
-    let id = write_import(&preview, target.path()).unwrap();
+    let id = store.add_job(&preview.profile).run().unwrap();
     assert_eq!(id.default_type(), None);
     store.added(id.clone(), preview.profile.clone());
     let (reloaded, _) = ProfileStore::load(target.path(), DefaultPersistence::Write);
@@ -218,4 +219,45 @@ fn a_name_taken_after_the_preview_is_made_unique_again() {
     assert!(revalidate_name(&mut first, &[]));
     assert_eq!(first.profile.name, "Night flying");
     assert_eq!(first.renamed_from, None);
+}
+
+#[test]
+fn a_clean_file_under_its_own_name_is_written_at_once() {
+    let mut preview = prepare_import(
+        &export(&custom_profile()).into_bytes(),
+        DeviceType::X52Pro,
+        &[],
+    )
+    .unwrap();
+    assert_eq!(next_step(&mut preview, &[], false), ImportStep::Write);
+}
+
+#[test]
+fn problems_ask_once_and_a_changed_name_asks_again() {
+    let mut preview =
+        prepare_import(&fixture("out-of-range.toml"), DeviceType::X52Pro, &[]).unwrap();
+    assert_eq!(next_step(&mut preview, &[], false), ImportStep::Confirm);
+    assert_eq!(
+        next_step(&mut preview, &[], true),
+        ImportStep::Write,
+        "confirmed"
+    );
+
+    // A profile took the name while the dialog was open.
+    let taken = vec![preview.profile.name.clone()];
+    let name = preview.profile.name.clone();
+    assert_eq!(next_step(&mut preview, &taken, true), ImportStep::Confirm);
+    assert_eq!(preview.profile.name, format!("{name} (2)"));
+    assert_eq!(next_step(&mut preview, &taken, true), ImportStep::Write);
+}
+
+#[test]
+fn a_rename_while_the_file_was_read_turns_a_clean_import_into_a_question() {
+    let profile = custom_profile();
+    let mut preview =
+        prepare_import(&export(&profile).into_bytes(), DeviceType::X52Pro, &[]).unwrap();
+    let taken = vec![profile.name.clone()];
+    assert_eq!(next_step(&mut preview, &taken, false), ImportStep::Confirm);
+    assert_eq!(preview.profile.name, format!("{} (2)", profile.name));
+    assert!(preview.needs_confirmation());
 }

@@ -27,18 +27,10 @@ pub(crate) mod list;
 pub(crate) mod migrate;
 pub(crate) mod name;
 pub(crate) mod order;
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 reserves names")
-)]
 pub(crate) mod reservations;
 pub(crate) mod schema;
 pub(crate) mod startup;
 pub(crate) mod store;
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 queues saves and deletes")
-)]
 pub(crate) mod writes;
 
 use std::fmt;
@@ -269,10 +261,6 @@ impl ModeSets {
     }
 
     /// Per-mode sets: a single set is copied into all three modes.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the profile editor of M5 changes the kind")
-    )]
     pub(crate) fn into_per_mode(self) -> Self {
         match self {
             Self::Single(settings) => {
@@ -283,10 +271,6 @@ impl ModeSets {
     }
 
     /// A single set: per-mode sets keep mode 1 and drop modes 2 and 3.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the profile editor of M5 changes the kind")
-    )]
     pub(crate) fn into_single(self) -> Self {
         match self {
             single @ Self::Single(_) => single,

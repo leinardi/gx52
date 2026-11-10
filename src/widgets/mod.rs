@@ -19,4 +19,4 @@ mod device_footer;
 mod profile_row;
 
 pub(crate) use self::device_footer::DeviceFooter;
-pub(crate) use self::profile_row::ProfileRow;
+pub(crate) use self::profile_row::{ProfileRow, RowAction};
