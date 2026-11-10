@@ -485,6 +485,8 @@ impl Session<'_> {
                 self.seen.modes.push(mode);
                 self.seen.mode = Some(mode);
             }
+            // The check follows the mode only; held buttons drive no step of it.
+            DeviceEvent::Held { .. } => {}
             DeviceEvent::X52dRunning(running) => self.seen.x52d = Some(running),
             DeviceEvent::Error(error) => {
                 self.info(&format!("error: {error}"));

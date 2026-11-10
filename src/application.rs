@@ -26,15 +26,15 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use x52::clock::SystemClock;
 use x52::device::DeviceType;
-use x52::input::Mode;
+use x52::input::{HeldInputs, Mode};
 use x52::state::DeviceState;
 
 use crate::config;
-use crate::device::{DeviceEvent, DeviceService, access};
+use crate::device::{DeviceEvent, DeviceService, access, names};
 use crate::profile::legacy::{self, FileWriter};
 use crate::profile::startup::{self, ImportOutcome};
 use crate::profile::store::{Entry, LoadReport, ProfileStore};
-use crate::profile::{self, Profile, ProfileId, mapping};
+use crate::profile::{self, LiveValues, MfdLineSource, Profile, ProfileId, active};
 use crate::window::{self, Window};
 
 /// The settings key that records the one-time GX52 0.7 import as done.
@@ -78,10 +78,11 @@ mod imp {
     use adw::{prelude::*, subclass::prelude::*};
     use gettextrs::gettext;
     use gtk::{gio, glib};
-    use x52::input::Mode;
+    use x52::input::{HeldInputs, Mode};
 
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
+    use crate::profile::ProfileId;
     use crate::profile::store::ProfileStore;
     use crate::{config, window::Window};
 
@@ -105,6 +106,13 @@ mod imp {
         pub(crate) pending_toasts: RefCell<Vec<adw::Toast>>,
         /// Whether a profile import is running, from the file chooser to the write.
         pub(crate) importing: Cell<bool>,
+        /// The profile and mode last logged as applied, so a push logs only when they change.
+        pub(crate) last_logged: RefCell<Option<(ProfileId, Mode)>>,
+        /// The buttons and POV 1 directions held on the selected device.
+        pub(crate) held: RefCell<HeldInputs>,
+        /// Whether the set last pushed has a "last button" MFD line, so a change of the held
+        /// inputs pushes only when the device shows it.
+        pub(crate) shows_last_button: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -201,12 +209,12 @@ impl Application {
         self.set_accels_for_action("window.close", &["<Control>w"]);
     }
 
-    /// Creates the settings and follows the mode mappings.
+    /// Creates the settings and follows the active profiles.
     fn setup_settings(&self) {
         let settings = gio::Settings::new(config::APP_ID);
         for device_type in DeviceType::ALL {
             settings.connect_changed(
-                Some(mapping::settings_key(device_type)),
+                Some(active::settings_key(device_type)),
                 glib::clone!(
                     #[weak(rename_to = app)]
                     self,
@@ -287,7 +295,7 @@ impl Application {
             {
                 for (key, value) in [
                     ("autostart", legacy.launch_on_login),
-                    ("show-tray", legacy.show_app_indicator),
+                    ("run-in-background", legacy.run_in_background),
                 ] {
                     if let Some(value) = value
                         && let Err(error) = settings.set_boolean(key, value)
@@ -422,6 +430,8 @@ impl Application {
         if let Some(store) = self.imp().profiles.borrow_mut().as_mut() {
             store.insert(id, profile);
         }
+        // The active id may name the profile that just came in.
+        self.push_desired_state();
     }
 
     /// Shows `message` in the active window, or keeps it until a window is presented.
@@ -490,8 +500,10 @@ impl Application {
         }
         match event {
             DeviceEvent::Selected(_) => {
-                // A new selection's mode is unknown until its reader reports it.
+                // A new selection's mode and held inputs are unknown until its reader reports
+                // them.
                 imp.active_mode.set(None);
+                imp.held.borrow_mut().clear();
                 self.push_desired_state();
             }
             DeviceEvent::Mode { mode, .. } => {
@@ -499,17 +511,39 @@ impl Application {
                     self.push_desired_state();
                 }
             }
-            DeviceEvent::Gone(_) => imp.active_mode.set(None),
+            DeviceEvent::Gone(_) => {
+                imp.active_mode.set(None);
+                imp.held.borrow_mut().clear();
+            }
+            DeviceEvent::InputNode { node: None, .. } => self.change_held(HeldInputs::clear),
+            DeviceEvent::Held { change, .. } => self.change_held(|held| change.apply(held)),
             DeviceEvent::Access(_)
-            | DeviceEvent::InputNode { .. }
+            | DeviceEvent::InputNode { node: Some(_), .. }
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)
             | DeviceEvent::Sent(_) => {}
         }
     }
 
-    /// Sends the device the profile its type's mapping gives the active mode (mode 1 until the
-    /// mode is known), or the built-in default until the profiles are loaded.
+    /// Applies `change` to the held inputs; pushes the state when the last held input changed and
+    /// the device shows it. Never logs: this runs per input event.
+    fn change_held(&self, change: impl FnOnce(&mut HeldInputs)) {
+        let imp = self.imp();
+        let changed = {
+            let mut held = imp.held.borrow_mut();
+            let before = held.last();
+            change(&mut held);
+            held.last() != before
+        };
+        if changed && imp.shows_last_button.get() {
+            self.push_desired_state();
+        }
+    }
+
+    /// Sends the device its type's active profile, in the set of the active mode (mode 1 until
+    /// the mode is known), or the built-in default until the profiles are loaded.
+    ///
+    /// Logs only when the profile or the mode changes, never per push.
     fn push_desired_state(&self) {
         let imp = self.imp();
         let Some(device_type) = imp.device_status.get().device_type else {
@@ -520,23 +554,44 @@ impl Application {
             return;
         };
         let mode = imp.active_mode.get().unwrap_or(Mode::One);
+        imp.shows_last_button.set(false);
         let profiles = imp.profiles.borrow();
-        let state = match (profiles.as_ref(), imp.settings.get()) {
+        let resolved = match (profiles.as_ref(), imp.settings.get()) {
             (Some(store), Some(settings)) => {
-                let entries: Vec<String> = settings
-                    .strv(mapping::settings_key(device_type))
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect();
-                let id = mapping::resolve(&entries, device_type, mode, store);
-                tracing::info!("Mode {mode:?} on the {device_type}: profile {id}");
-                store
-                    .loaded(&id)
-                    .map(|loaded| loaded.profile.to_device_state())
+                let id = active::resolve(
+                    &settings.string(active::settings_key(device_type)),
+                    device_type,
+                    store,
+                );
+                store.loaded(&id).map(|loaded| {
+                    // The mode shown is the active mode until M5's mode bar can override it.
+                    let live = LiveValues {
+                        mode_shown: mode,
+                        last_button: imp.held.borrow().last().map(names::input_name),
+                    };
+                    let shows_last_button = loaded
+                        .profile
+                        .settings_for(mode)
+                        .mfd_lines
+                        .contains(&MfdLineSource::LastButton);
+                    imp.shows_last_button.set(shows_last_button);
+                    (id, loaded.profile.to_device_state(mode, &live))
+                })
             }
             _ => None,
         };
-        device.set_state(state.unwrap_or_else(|| DeviceState::default_for(device_type)));
+        let state = match resolved {
+            Some((id, state)) => {
+                let applied = (id, mode);
+                if imp.last_logged.borrow().as_ref() != Some(&applied) {
+                    tracing::info!("Mode {mode:?} on the {device_type}: profile {}", applied.0);
+                    imp.last_logged.replace(Some(applied));
+                }
+                state
+            }
+            None => DeviceState::default_for(device_type),
+        };
+        device.set_state(state);
     }
 
     fn show_about_dialog(&self) {

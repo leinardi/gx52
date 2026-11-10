@@ -200,6 +200,33 @@ M5, so the UI is built on the new model.
    profile switches sets with the selector, a single profile ignores it, and an unknown or
    wrong-type active id falls back to the type's default.
 
+Results on 2026-11-10:
+
+- **Schema and store:** single and per-mode profiles read and write the layout of
+  [profiles.md](profiles.md#toml-schema-version-1), and both kinds round-trip (write, parse, equal,
+  no problems), the legacy import, export and store tests included. A fixture per new validation
+  case: an unknown `kind`, a missing mode table, the other kind's tables, an unknown line source,
+  a text line over 16 converted bytes and one without `text`. Dynamic lines are cut to 16 bytes
+  (`MfdText::fit`).
+- **Active profile and profile order:** `active-profile-*`, `profile-order-*` and
+  `run-in-background` replace `mode-profiles-*` and `show-tray`. The active id resolves as
+  [profiles.md](profiles.md#active-profile) says, falling back to the type's default for an unknown,
+  unloaded or other-type id; the order functions return the complete effective order to store, a
+  new profile last and a duplicate right after its original. The applied profile and mode are
+  logged only when they change.
+- **Mode sets and dynamic lines:** the reader sends the held buttons and POV 1 directions
+  (`HeldInputs`, a snapshot at every open), and the "last button" line shows the newest one still
+  held; the "mode" line shows the active mode.
+- **Hands-on, X52 Pro, Devel build on the host:** a per-mode profile switched LEDs, brightness and
+  MFD lines with the selector (1 → 2 → 3 → 1, and 3 → 1 in one turn without showing mode 2's
+  set); a single profile changed only its "mode" line with the selector. An unknown active id and
+  the id of an X52 profile both fell back to `x52-pro-default`. The "last button" line showed the
+  newest held button, fell back to the one held before when it was released, and stayed empty
+  while the selector moved. The first run showed that some names were longer than a line ("Trigger,
+  first stage" came out as "Trigger, first s"), so the MFD names were shortened to fit
+  ("Trigger stage 1", "Scroll press", "Thr. hat left") and checked again on the device. The log had
+  one line per profile or mode change and none per button press.
+
 ## M4: UI design session
 
 Before any UI work. A dedicated session that writes `docs/ui.md` (postponed from stage C because the
@@ -210,8 +237,9 @@ The app ships no pictures or drawings of the device; the LED editor is the schem
 
 1. **[`docs/ui.md`](ui.md).** Screens, navigation, libadwaita widgets, adaptive layout, the
    guidance pages, the LED editor's schematic layout, the MFD line sources. Drafted on 2026-11-09
-   from an interview with the maintainer; the items marked "Proposed" are the assistant's. Done
-   when: `make check` passes and the user has reviewed it.
+   from an interview with the maintainer. Done when: `make check` passes and the user has reviewed
+   it. **Done** on 2026-11-10: reviewed through the clickable prototype in
+   [`art/prototype/`](../art/prototype/), the reference for M5.
 
 ## M5: UI implementation
 
@@ -225,7 +253,9 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    reachable, and the window works at 360×294.
 2. **(code) LED editor**: the schematic layout of
    [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
-   of states, grid positions as data), the mode bar of a per-mode profile, POV 1 shown fixed green
+   of states, grid positions as data), the mode bar of a per-mode profile (it overrides
+   `LiveValues::mode_shown` and the set sent until the selector moves; until then the "mode" MFD
+   line shows the active mode), POV 1 shown fixed green
    with its explanation, every change sent to the device at once. Every LED is shown off while
    brightness is `0`, with its state kept. Done when: DW, plus brightness `0` shows every LED off in
    the editor and on the device and the states come back above `0`, plus the S7 checks skipped on

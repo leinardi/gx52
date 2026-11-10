@@ -1,28 +1,8 @@
 schema_version = 1
 device_type = "x52-pro"
 name = "Asia"
-
-led_brightness = 128
-mfd_brightness = 128
-shift = false
-blink = false
+kind = "single"
 date_format = "yy-mm-dd"
-
-[leds]
-fire = "on"
-throttle = "on"
-a = "green"
-b = "green"
-d = "green"
-e = "green"
-t1_t2 = "green"
-t3_t4 = "green"
-t5_t6 = "green"
-pov_2 = "green"
-i = "green"
-
-[mfd]
-lines = ["", "", ""]
 
 [clock_1]
 source = "local"
@@ -35,3 +15,29 @@ use_24h = true
 [clock_3]
 source = { fixed_offset_minutes = 345 }
 use_24h = true
+
+[settings]
+led_brightness = 128
+mfd_brightness = 128
+shift = false
+blink = false
+
+[settings.leds]
+fire = "on"
+throttle = "on"
+a = "green"
+b = "green"
+d = "green"
+e = "green"
+t1_t2 = "green"
+t3_t4 = "green"
+t5_t6 = "green"
+pov_2 = "green"
+i = "green"
+
+[settings.mfd]
+lines = [
+  { source = "empty" },
+  { source = "empty" },
+  { source = "empty" },
+]

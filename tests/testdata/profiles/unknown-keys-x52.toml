@@ -1,20 +1,9 @@
 schema_version = 1
 device_type = "x52"
 name = "Plain"
-
-led_brightness = 128
-mfd_brightness = 0
+kind = "single"
 date_format = "yy-mm-dd"
 colour_scheme = "dark"
-shift = true
-blink = false
-
-[leds]
-fire = "on"
-
-[mfd]
-scroll = true
-lines = ["", "", ""]
 
 [clock_1]
 source = "utc"
@@ -27,3 +16,20 @@ use_24h = true
 [clock_3]
 source = { fixed_offset_minutes = 480 }
 use_24h = true
+
+[settings]
+led_brightness = 128
+mfd_brightness = 0
+shift = true
+blink = false
+
+[settings.leds]
+fire = "on"
+
+[settings.mfd]
+scroll = true
+lines = [
+  { source = "empty" },
+  { source = "empty" },
+  { source = "empty" },
+]

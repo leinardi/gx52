@@ -24,6 +24,7 @@ pub(crate) mod access;
 pub(crate) mod check;
 pub(crate) mod id;
 pub(crate) mod monotonic;
+pub(crate) mod names;
 pub(crate) mod reader;
 pub(crate) mod status;
 pub(crate) mod usb;
@@ -46,6 +47,7 @@ use x52::transport::Transport;
 use self::access::AccessState;
 use self::id::{DeviceId, Generation};
 use self::monotonic::SystemMonotonic;
+pub(crate) use self::reader::HeldChange;
 use self::reader::{EvdevSource, Reader, ReaderEvent, ReaderMessage, SysfsEvdev};
 use self::usb::{NusbOpener, Opener};
 use self::watch::{SelectionChange, ShutdownSignal, ShutdownTrigger, WatchEvent};
@@ -120,6 +122,13 @@ pub(crate) enum DeviceEvent {
         /// The mode.
         mode: Mode,
     },
+    /// The held inputs of the selection `generation` changed.
+    Held {
+        /// The selection it belongs to.
+        generation: Generation,
+        /// What changed.
+        change: HeldChange,
+    },
     /// libx52's `x52d` started or stopped running.
     X52dRunning(bool),
     /// Something failed; already logged by the thread that reports it.
@@ -150,6 +159,7 @@ impl From<ReaderEvent> for DeviceEvent {
                 node: None,
             },
             ReaderEvent::Mode { generation, mode } => Self::Mode { generation, mode },
+            ReaderEvent::Held { generation, change } => Self::Held { generation, change },
         }
     }
 }
@@ -164,7 +174,7 @@ pub(crate) struct CurrentSelection(Option<Generation>);
 
 impl CurrentSelection {
     /// Follows `event` and returns whether it belongs to the current selection: `false` for a
-    /// node or mode event of another generation and for a `Gone` of a selection that is not the
+    /// node, mode or held-input event of another generation and for a `Gone` of a selection that is not the
     /// current one.
     pub(crate) fn accept(&mut self, event: &DeviceEvent) -> bool {
         match event {
@@ -179,9 +189,9 @@ impl CurrentSelection {
                 }
                 current
             }
-            DeviceEvent::InputNode { generation, .. } | DeviceEvent::Mode { generation, .. } => {
-                self.0 == Some(*generation)
-            }
+            DeviceEvent::InputNode { generation, .. }
+            | DeviceEvent::Mode { generation, .. }
+            | DeviceEvent::Held { generation, .. } => self.0 == Some(*generation),
             DeviceEvent::Access(_)
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)

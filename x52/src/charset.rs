@@ -133,6 +133,20 @@ impl MfdText {
             .map_err(|_| TextTooLong { len: bytes.len() })
     }
 
+    /// `text` converted with [`encode`] and cut to the first 16 bytes: for text the app makes
+    /// up (a profile name, a button name), which is shown cut rather than not at all.
+    ///
+    /// Every glyph is one byte, so the cut always falls on a character boundary of the converted
+    /// text.
+    #[must_use]
+    pub fn fit(text: &str) -> Self {
+        let bytes = encode(text);
+        let cut = bytes.get(..MfdBytes::MAX_LEN).unwrap_or(&bytes);
+        // `encode` never yields a blank byte and the cut fits a line, so the empty line is
+        // never what comes out.
+        MfdBytes::new(cut).map_or(Self::EMPTY, Self)
+    }
+
     /// The converted bytes.
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {

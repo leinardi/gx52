@@ -309,6 +309,10 @@ match GX52 0.7 and GitHub issue #3):
 - **POV 2**: the top-left hat on the stick head; buttons 707–710; LED bits 16/17.
 - **Throttle hat**: buttons 711–714; no LED.
 
+The MFD's "last button" line uses short forms that fit its 16 characters (`src/device/names.rs`):
+"Trigger stage 1" and "Trigger stage 2", "Scroll up", "Scroll down" and "Scroll press" for the
+scroll wheel, "Thr. hat up" (right, down, left) for the throttle hat.
+
 ### Mode selector
 
 Each position is a held button (715 / 716 / 717). The current mode is in the key state at start-up
