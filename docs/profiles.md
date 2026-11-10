@@ -123,11 +123,11 @@ Each of the three lines has a **source** (decided in the M4 UI session, [ui.md](
 
 | `source` | Extra keys | The line shows |
 | --- | --- | --- |
-| `"text"` | `text`: at most 16 bytes **after** conversion through the [MFD character set](protocol.md#mfd-character-set) | The text. Characters without a glyph are stored as typed and converted (with the protocol.md fallback) when sent; the length is checked on the converted bytes |
+| `"text"` | `text`: at most 16 bytes **after** conversion through the [MFD character set](protocol.md#mfd-character-set) | The text. Characters without a glyph are stored as typed and converted (with the protocol.md fallback) when sent; the length is checked on the converted bytes. The editor's entry stops accepting input at 16 converted bytes, so it never saves a line the store would reject |
 | `"empty"` |  | Nothing |
 | `"profile_name"` |  | The active profile's name |
-| `"mode"` |  | The mode selector position, "Mode 2" (translated), also with a single profile active |
-| `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), translated); empty when none is held |
+| `"mode"` |  | The mode whose settings are on the device, "Mode 2" (translated): the selector position, or the mode picked in the editor's [mode bar](ui.md#mode-bar) until the selector moves. With a single profile active, the selector position |
+| `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), translated), POV 1 directions included; the mode selector positions (keys 715–717, always one held) never count. Empty when none is held |
 
 The dynamic sources are resolved on the main thread into the desired device state
 ([architecture.md](architecture.md#state-model)), which still carries three lines of text. **Every

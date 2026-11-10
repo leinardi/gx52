@@ -34,7 +34,7 @@ on the right.
 
 ```text
 ┌───────────────────────┬─────────────────────────────────────────────────┐
-│ ☰  GX52             + │ DCS World          [ LEDs | MFD | Clocks ]       │
+│ ☰  GX52             + │             [ LEDs | MFD | Clocks ]             │
 ├───────────────────────┼─────────────────────────────────────────────────┤
 │ PROFILES              │ Editing mode   [ 1 | 2 | 3 ]                    │
 │ ● Default             │   The mode selector on the stick picks the mode.│
@@ -46,7 +46,8 @@ on the right.
 │                       │  └─────────────┘                                │
 │                       │                                                 │
 │                       │  Brightness ───────────●──────── 96             │
-│ ● X52 Pro · Mode 2    │  Blink                              [  ]        │
+│ ● X52 Pro             │  Blink                              [  ]        │
+│   Connected · Mode 2  │                                                 │
 └───────────────────────┴─────────────────────────────────────────────────┘
 ```
 
@@ -65,8 +66,9 @@ on the right.
   - A **per-mode profile** shows small "1 2 3" badges, the current mode highlighted while it is
     active.
   - A profile that **failed to load** (unreadable, newer schema) is listed greyed out with a
-    warning icon; it can be selected to see why, but it is never sent to the device.
-    **Proposed.**
+    warning icon; it can be selected to see why, but it is never sent to the device. A damaged
+    file has no readable name, so its row shows the file name; a newer-schema profile shows its
+    name when the file can be read. **Proposed.**
 - **"Test input"** row below the profiles, opening the [input tester](#input-tester) in the
   content area. Selecting it does not change the active profile; the sidebar keeps a marker on the
   active profile while the tester is open.
@@ -96,9 +98,21 @@ A "⋮" button on each row, also opened by right-click or long press:
 style). After removing, a toast "“DCS World” removed" offers **Undo** for its timeout; the file is
 deleted when the toast goes away. Removing the active profile makes the default profile active.
 
+A profile that [failed to load](#a-profile-that-failed-to-load) has a shorter menu: **Show File**
+and **Remove** (Delete).
+
 ### Main menu
 
 Import Profile… (Ctrl+O), Preferences (Ctrl+,), Keyboard Shortcuts (Ctrl+?), About GX52.
+
+**Import Profile…** opens the file chooser, then one of
+([profiles.md](profiles.md#import-and-export)):
+
+- a file without problems is added at once, with the toast "Imported “Falcon BMS”";
+- a file with per-field problems opens an `adw::AlertDialog` "Import “Falcon BMS”?" that lists
+  each value and what it is replaced with, with **Cancel** and **Import** (suggested);
+- a file for the other model, or made by a newer GX52, opens an `adw::AlertDialog` "Can’t Import
+  This Profile" that names the model or the version, with **Close**.
 
 ## Profile kinds
 
@@ -117,10 +131,12 @@ Changing the kind is in the row menu:
 
 ## Profile editor
 
-The content area for a profile: an `adw::ToolbarView` whose header bar has the profile name as
-title and an `adw::ViewSwitcher` with three views: **LEDs** (Ctrl+1), **MFD** (Ctrl+2) and
-**Clocks** (Ctrl+3). Each view is an `adw::PreferencesPage`-style scrolled page, content limited by
-an `adw::Clamp`.
+The content area for a profile: an `adw::ToolbarView` whose header bar has an `adw::ViewSwitcher`
+as title widget, with three views: **LEDs** (Ctrl+1), **MFD** (Ctrl+2) and **Clocks** (Ctrl+3).
+The profile name is not repeated there: the selected sidebar row names the profile. In the narrow
+layout, where the sidebar is not visible, the header bar shows the profile name and the switcher
+moves to the bottom ([Adaptive layout](#adaptive-layout)). Each view is an
+`adw::PreferencesPage`-style scrolled page, content limited by an `adw::Clamp`.
 
 Edits apply to the device at once and are saved automatically, a short moment after the last
 change (**Proposed:** 500 ms), with the atomic write of profiles.md.
@@ -166,7 +182,7 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
 │GX52              │
 │Fire              │   Line 1   [ Custom text     ▾ ]  [ GX52           ]
 │DCS World         │   Line 2   [ Last button     ▾ ]
-│12:45     09-11-26│   Line 3   [ Profile name    ▾ ]
+│12:45     09.11.26│   Line 3   [ Profile name    ▾ ]
 └──────────────────┘
   Clock [ 1 | 2 | 3 ]       Brightness ────●──── 128     Shift [  ]
 ```
@@ -175,16 +191,19 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
   the clock and date area. It shows **live values**: the line sources resolved now (the active
   profile, the current mode, the button being held), the converted characters (a character the MFD
   cannot show appears as its fallback, [protocol.md](protocol.md#mfd-character-set)), and the
-  time ticking. The clock area shows **clock 1**; a small "1 | 2 | 3" toggle under it shows the
-  other clocks. The app cannot read which clock the MFD shows, so it never guesses.
+  time ticking. The date uses dots, as the device draws it ("09.11.26",
+  [protocol.md](protocol.md#usb-vendor-commands)). The clock area shows **clock 1**; a small
+  "1 | 2 | 3" toggle under it shows the other clocks, with the note "Clock 1 is shown by default.
+  Start/Stop and Reset on the throttle cycle the clocks on the device." The app cannot read which
+  clock the MFD shows, so it never guesses.
 - **Line rows**, one per line, each an `adw::ComboRow` for the source:
 
   | Source | Shows |
   | --- | --- |
-  | Custom text | The text typed in the entry beside it (shown only for this source); a counter "n/16" counts converted bytes and the row warns when a character will be replaced |
+  | Custom text | The text typed in an `adw::EntryRow` below it (shown only for this source); a counter "n/16" counts converted bytes, the entry stops accepting input at 16, and the row lists the characters that will be replaced ("ő → o") |
   | Profile name | The active profile's name |
-  | Mode | The mode selector position, "Mode 2", also with a Single profile active |
-  | Last button | The name of the button being held; the line clears on release |
+  | Mode | The mode whose settings are on the device, "Mode 2": the selector position, or the mode picked in the [mode bar](#mode-bar) until the selector moves; with a Single profile active, the selector position |
+  | Last button | The name of the button being held, POV 1 directions included; the mode selector positions never count. The line clears on release |
   | Empty | Nothing |
 
 - **Below:** Brightness (0–128) and Shift (`adw::SwitchRow`, "Show SHIFT on the display"; X52 Pro
@@ -199,8 +218,8 @@ Three `adw::PreferencesGroup`s and the date format:
 - **Clocks 2 and 3:** a "Time zone | Fixed offset" `adw::ToggleGroup`.
   - **Time zone:** a row with the place and its time ("Tokyo · 21:45"); activating it opens a
     search dialog over cities and zones, like GNOME Clocks' "Add World Clock".
-  - **Fixed offset:** an hours:minutes `adw::SpinRow`, UTC−12:00 to UTC+14:00 in 15-minute steps.
-    An imported GX52 0.7 offset is shown here.
+  - **Fixed offset:** an hours:minutes `adw::SpinRow`, UTC−12:00 to UTC+14:00 in 15-minute steps,
+    subtitle "Fixed offset, no daylight saving time". An imported GX52 0.7 offset is shown here.
   - 24-hour switch.
 - **Date format:** `adw::ComboRow` with DD-MM-YY, MM-DD-YY, YY-MM-DD, each with today's date as
   example.
@@ -237,8 +256,11 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
 - **Ministick:** a second square.
 - **Toggles:** T1–T6 in pairs. **Mode:** 1 / 2 / 3, the current one highlighted.
 - **Buttons:** one indicator per button, lit while pressed, labelled with the name on the device
-  and the button number games show ("Fire · 2"); the evdev code in the tooltip. The MFD buttons
-  and the wheels are included.
+  and the button number games show ("Fire · 2"); the evdev code in the tooltip. The toggles carry
+  their numbers too. The buttons are grouped Stick, Throttle and MFD; the MFD buttons and the
+  wheels are included.
+- **X52 (non-Pro):** a warning line under the intro, "The X52 input map has not been verified on a
+  device yet. Names may not match the controls." ([protocol.md](protocol.md#x52-non-pro)).
 - **POVs:** POV 1, POV 2 and the throttle hat as 3×3 direction grids.
 - The indicators are not focusable; each group has an accessible label, and the page's state is
   readable by a screen reader as text ("Buttons pressed: Fire"). **Proposed.**
@@ -247,15 +269,16 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
 
 ## Device status
 
-The sidebar footer, always visible: a status dot, the device name and a status line.
+The sidebar footer, always visible: a status dot and two lines, the device name in bold and a
+status line below it.
 
-| State | Dot | Text |
-| --- | --- | --- |
-| Connected, active profile Single | green | "X52 Pro" |
-| Connected, active profile Per-mode | green | "X52 Pro · Mode 2" |
-| No permission | red | "X52 Pro · No permission" |
-| Waiting for a device | empty grey circle | "Not connected" |
-| `x52d` running | green, with a warning icon | "X52 Pro · x52d is running" |
+| State | Dot | Name | Status line |
+| --- | --- | --- | --- |
+| Connected, active profile Single | green | "X52 Pro" | "Connected" |
+| Connected, active profile Per-mode | green | "X52 Pro" | "Connected · Mode 2" |
+| No permission | red | "X52 Pro" | "No permission" |
+| Waiting for a device | empty grey circle | "Not connected" | "Waiting for an X52 or X52 Pro" |
+| `x52d` running | green | "X52 Pro" | a warning icon and "x52d is running" |
 
 The dot is decorative; the text carries the state, and the footer is one accessible element that
 reads the whole line.
@@ -267,7 +290,7 @@ reads the whole line.
 | No device was ever connected (no last device type) | The whole window is an `adw::StatusPage`: "Connect your X52 or X52 Pro", with a "How to Fix" button when a device is present but not accessible. No profiles until a device appears |
 | No device now, one was connected before | The last device type's profiles, editable; the footer says "Not connected" |
 | Device present, no permission (USB) | The content area is replaced by the [udev guidance](#guidance-pages) until access works; the sidebar stays |
-| `x52d` running | An `adw::Banner` over the editor: "x52d is running and may overwrite these settings", with "Learn More" ([protocol.md](protocol.md#libx52s-x52d)) |
+| `x52d` running | An `adw::Banner` over the editor: "x52d is running and may overwrite these settings", with "Learn More", which opens an `adw::Dialog` "x52d Is Running": what x52d is, that GX52 does not stop it, and the command `sudo systemctl disable --now x52d` with a copy button ([protocol.md](protocol.md#libx52s-x52d)) |
 | A different supported model connected | The sidebar switches to that type's profiles |
 
 ## Guidance pages
@@ -275,7 +298,8 @@ reads the whole line.
 - **udev (USB access):** replaces the content area. It shows the rule file with a copy button, the
   commands to install it, "no need to unplug", and what keeps working without access
   ([protocol.md](protocol.md#udev-rule)). It goes away by itself when access works, after
-  `udevadm trigger`, without a replug.
+  `udevadm trigger`, without a replug; a **Try Again** button checks at once and shows the toast
+  "Still no access to the device" when it still fails.
 - **uinput (virtual mouse only):** in Preferences. When the virtual mouse switch is on and
   `/dev/uinput` is not writable, the row shows a warning and a "How to Fix" button that pushes a
   subpage of the preferences dialog with the second rule line and the security note.
@@ -288,9 +312,10 @@ An `adw::PreferencesDialog` with one page:
   - **Run in background** (`adw::SwitchRow`): closing the window keeps GX52 running and applying
     profiles. With a tray host the tray icon shows; without one (plain GNOME), GNOME lists GX52
     under Background Apps and launching GX52 again shows the window.
-  - **Start on login** (`adw::SwitchRow`): starts hidden, through the Background portal (works in
-    the Flatpak). **Proposed:** only sensitive while "Run in background" is on, since starting
-    hidden needs it.
+  - **Start on login** (`adw::SwitchRow`, subtitle "Start hidden when you log in. Needs Run in
+    Background"): starts hidden, through the Background portal (works in the Flatpak).
+    **Proposed:** only sensitive while "Run in background" is on, since starting hidden needs it;
+    turning "Run in background" off also turns it off.
 - **Virtual mouse**
   - **Use the ministick as a mouse** (`adw::SwitchRow`, off by default); the uinput warning above.
   - **Speed**, **Curve**, **Deadzone** (`adw::SpinRow` or scales) and **Invert wheel**
@@ -319,7 +344,10 @@ With `ksni`, when running in the background and a tray host exists:
 - the GX52 0.7 import: "Imported 4 profiles from GX52 0.7"; with problems, a "Details" button that
   opens the list;
 - the GX52 0.7 import deferred: "Close GX52 0.7 to import its profiles";
-- "“DCS World” removed" with Undo.
+- "“DCS World” removed" with Undo;
+- "Imported “Falcon BMS”" after a profile import, and "Exported “DCS World”" after an export;
+- "Copied to clipboard" after a copy button on a guidance page or dialog;
+- "Still no access to the device" from the udev page's Try Again.
 
 ## About
 
@@ -348,7 +376,8 @@ menu and the tray. **Proposed.**
 
 - **Below about 600 px wide** the split view collapses: the sidebar is the first page (profiles,
   Test input, footer); selecting a profile or "Test input" pushes the content with a back button.
-  The view switcher moves from the header bar to an `adw::ViewSwitcherBar` at the bottom.
+  The view switcher moves from the header bar to an `adw::ViewSwitcherBar` at the bottom, and the
+  header bar shows the profile name instead.
 - The LED cards, the MFD display and its rows, the clock groups and the input tester's groups
   wrap and stack into one column. The mode bar stays at the top of the page.
 - The window remembers its size and maximised state (GSettings `window-width`, `window-height`,
