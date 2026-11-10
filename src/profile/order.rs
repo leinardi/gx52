@@ -27,13 +27,6 @@ use super::ProfileId;
 use super::store::ProfileStore;
 
 /// The `GSettings` key of `device_type`'s profile order.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the profile list of M5 reads and writes the order"
-    )
-)]
 pub(crate) const fn settings_key(device_type: DeviceType) -> &'static str {
     match device_type {
         DeviceType::X52Pro => "profile-order-x52-pro",
@@ -46,10 +39,6 @@ pub(crate) const fn settings_key(device_type: DeviceType) -> &'static str {
 /// The default profile comes first. The listed ids that name a loaded profile of the type follow
 /// in their order, each once; the loaded profiles the setting does not list come last, by name
 /// (then by id, so the order is total).
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the profile list of M5 shows the order")
-)]
 pub(crate) fn ordered(
     entries: &[impl AsRef<str>],
     device_type: DeviceType,

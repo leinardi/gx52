@@ -21,7 +21,9 @@
 mod application;
 mod config;
 mod device;
+mod model;
 mod profile;
+mod widgets;
 mod window;
 
 use std::{env, io, io::Write, path::PathBuf};

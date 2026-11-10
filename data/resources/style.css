@@ -1,3 +1,38 @@
 /* Loaded automatically by AdwApplication from <resource-base-path>/style.css.
    Prefer libadwaita CSS variables (var(--accent-bg-color)) over hard-coded colors;
    @define-color and named colors like @accent_color are deprecated. */
+
+/* The device status dot of the sidebar footer: decorative, the text carries the state. */
+.status-dot {
+  min-width: 10px;
+  min-height: 10px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background-color: var(--success-color);
+}
+
+.status-dot.problem {
+  background-color: var(--error-color);
+}
+
+.status-dot.waiting {
+  box-shadow: inset 0 0 0 1px currentColor;
+  opacity: 0.55;
+}
+
+/* The "1 2 3" badges of a per-mode profile in the profile list. */
+.mode-badge {
+  font-size: smaller;
+  font-feature-settings: "tnum";
+  padding: 0 4px;
+  border-radius: 4px;
+  opacity: 0.55;
+}
+
+.mode-badge.current {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+  opacity: 1;
+}

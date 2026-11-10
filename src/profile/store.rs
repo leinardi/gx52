@@ -111,10 +111,6 @@ impl Entry {
         }
     }
 
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the profile list of M5 lists entries by type")
-    )]
     /// Whether the entry is listed with `device_type`'s profiles: a damaged file of an unknown
     /// type is listed with every type.
     pub(crate) fn for_type(&self, device_type: DeviceType) -> bool {

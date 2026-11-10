@@ -33,6 +33,11 @@
       <summary>Order of the X52 profiles</summary>
       <description>The ids of the X52 profiles other than the default, in the order the profile list shows them. The default profile is always first; profiles not listed follow in name order.</description>
     </key>
+    <key name="last-device-type" type="s">
+      <default>''</default>
+      <summary>Type of the last device</summary>
+      <description>The device type of the last joystick GX52 saw, x52-pro or x52; its profiles are shown while no joystick is connected. Empty before the first one.</description>
+    </key>
     <key name="autostart" type="b">
       <default>false</default>
       <summary>Start when logging in</summary>

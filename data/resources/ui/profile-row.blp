@@ -1,0 +1,53 @@
+using Gtk 4.0;
+
+template $GX52ProfileRow: ListBoxRow {
+  child: Box {
+    spacing: 6;
+
+    Image active_icon {
+      icon-name: "object-select-symbolic";
+      opacity: 0;
+    }
+
+    Image warning_icon {
+      icon-name: "dialog-warning-symbolic";
+      visible: false;
+    }
+
+    Label title_label {
+      hexpand: true;
+      xalign: 0;
+      ellipsize: end;
+    }
+
+    Box badges {
+      spacing: 2;
+      valign: center;
+      visible: false;
+
+      Label badge_one {
+        label: "1";
+
+        styles [
+          "mode-badge",
+        ]
+      }
+
+      Label badge_two {
+        label: "2";
+
+        styles [
+          "mode-badge",
+        ]
+      }
+
+      Label badge_three {
+        label: "3";
+
+        styles [
+          "mode-badge",
+        ]
+      }
+    }
+  };
+}

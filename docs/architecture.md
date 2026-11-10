@@ -334,16 +334,20 @@ settings, defaulting to the S9 values.
 
 - **GSettings** (schema id and path from the app ID; the Devel build has its own): app settings
   (run in background, autostart, the virtual mouse switch and settings, window state, the
-  legacy-import-done flag) and, per device type, the **active profile** and the **profile order**
-  ([profiles.md](profiles.md#active-profile)). One
-  `gio::Settings` instance, held by the application.
+  legacy-import-done flag, the last device type) and, per device type, the **active profile** and
+  the **profile order** ([profiles.md](profiles.md#active-profile)). One `gio::Settings` instance,
+  held by the application.
 - **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
   format, defaults, validation and recovery rules are in [profiles.md](profiles.md). The code is
   in `src/profile/`: plain Rust with no GObject, whose file operations block (`files.rs`: the
   size-capped read, `gio::File::replace_contents` for a save, create-new writes for every new file,
   backups that never overwrite a backup). The application loads the store once at start-up in
   `gio::spawn_blocking`, keeps it on the main thread, logs the load report and shows its one toast.
-  The GObject wrappers the UI binds to come with the profile editor in M5.
+  The UI binds to `ProfileObject`s (`src/model/`), one per row of the profile list, which the
+  application keeps in one `gio::ListStore` for the shown device type and rebuilds from the
+  store, the order and the active profile (`src/profile/list.rs`), keeping the objects of the
+  profiles that stay. The shown type is the connected one, or the last one seen (GSettings
+  `last-device-type`) while no device is connected.
   - **Edits change the store in memory; file work is a job.** `store.rs` hands out `SaveJob`,
     `AddJob` and `DeleteJob` values (the path, the contents and how to write them) that run in
     `gio::spawn_blocking`; the main thread then commits the result (`saved`, `added`). A removal

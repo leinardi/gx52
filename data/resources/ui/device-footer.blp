@@ -1,0 +1,50 @@
+using Gtk 4.0;
+
+template $GX52DeviceFooter: Box {
+  spacing: 10;
+  margin-start: 12;
+  margin-end: 12;
+  margin-top: 6;
+  margin-bottom: 12;
+
+  Box dot {
+    valign: center;
+
+    styles [
+      "status-dot",
+    ]
+  }
+
+  Box {
+    orientation: vertical;
+    hexpand: true;
+
+    Label name_label {
+      xalign: 0;
+      ellipsize: end;
+
+      styles [
+        "heading",
+      ]
+    }
+
+    Box {
+      spacing: 4;
+
+      Image warning_icon {
+        icon-name: "dialog-warning-symbolic";
+        visible: false;
+      }
+
+      Label line_label {
+        xalign: 0;
+        ellipsize: end;
+
+        styles [
+          "caption",
+          "dim-label",
+        ]
+      }
+    }
+  }
+}

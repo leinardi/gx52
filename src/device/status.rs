@@ -21,6 +21,7 @@ use x52::input::Mode;
 
 use super::DeviceEvent;
 use super::access::AccessState;
+use crate::profile::ProfileKind;
 
 /// The device's state as the main thread sees it, built from [`DeviceEvent`]s.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,40 +70,78 @@ impl DeviceStatus {
         *self != before
     }
 
-    /// The one line the window shows about the device.
-    pub(crate) fn status_line(self) -> String {
+    /// What the sidebar footer shows (docs/ui.md, "Device status"); `active_kind` is the kind of
+    /// the active profile, since only a per-mode profile shows the mode.
+    pub(crate) fn footer(self, active_kind: ProfileKind) -> Footer {
         let Some(device_type) = self.device_type else {
-            return gettext("No X52 joystick connected");
+            return Footer {
+                name: gettext("Not connected"),
+                line: gettext("Waiting for an X52 or X52 Pro"),
+                dot: Dot::Waiting,
+                warning: false,
+            };
         };
-        let device = device_name(device_type);
-        let line = match (self.access, self.mode) {
-            (AccessState::NoDevice, _) => gettext("{device} connected"),
-            (AccessState::NoPermission, _) => {
-                gettext("{device} connected, but GX52 is not allowed to control it")
+        let name = device_name(device_type).to_owned();
+        if self.access == AccessState::NoPermission {
+            return Footer {
+                name,
+                line: gettext("No permission"),
+                dot: Dot::Problem,
+                warning: false,
+            };
+        }
+        if self.x52d_running {
+            return Footer {
+                name,
+                line: gettext("x52d is running"),
+                dot: Dot::Connected,
+                warning: true,
+            };
+        }
+        let line = match (active_kind, self.mode) {
+            (ProfileKind::PerMode, Some(mode)) => {
+                // Translators: {mode} is the position of the mode selector, 1, 2 or 3.
+                gettext("Connected · Mode {mode}").replace("{mode}", mode_number(mode))
             }
-            (AccessState::Ready, None) => gettext("{device} ready"),
-            (AccessState::Ready, Some(mode)) => {
-                return gettext("{device} ready, mode {mode}")
-                    .replace("{device}", device)
-                    .replace("{mode}", mode_number(mode));
-            }
+            _ => gettext("Connected"),
         };
-        line.replace("{device}", device)
+        Footer {
+            name,
+            line,
+            dot: Dot::Connected,
+            warning: false,
+        }
     }
 
-    /// Whether the window offers "Try again": only when the permission was denied.
+    /// Whether the device is there but GX52 may not open it: the window then shows how to give
+    /// it access, with "Try again".
     pub(crate) fn offers_retry(self) -> bool {
         self.device_type.is_some() && self.access == AccessState::NoPermission
     }
+}
 
-    /// The conflict warning, while `x52d` is running.
-    pub(crate) fn x52d_warning(self) -> Option<String> {
-        self.x52d_running.then(|| {
-            gettext(
-                "libx52’s x52d is running and will fight GX52 over the LEDs, the MFD and the clocks",
-            )
-        })
-    }
+/// The status dot of the footer; decorative, the text carries the state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Dot {
+    /// Green: the device is there.
+    Connected,
+    /// Red: the device is there but cannot be used.
+    Problem,
+    /// An empty circle: no device.
+    Waiting,
+}
+
+/// What the sidebar footer shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Footer {
+    /// The device's name in bold, or "Not connected".
+    pub(crate) name: String,
+    /// The status line below it.
+    pub(crate) line: String,
+    /// The status dot.
+    pub(crate) dot: Dot,
+    /// Whether the line starts with a warning icon.
+    pub(crate) warning: bool,
 }
 
 /// The product name of `device_type`; product names are not translated.
@@ -137,55 +176,79 @@ mod tests {
         }
     }
 
+    fn footer(status: DeviceStatus, kind: ProfileKind) -> (String, String, Dot, bool) {
+        let footer = status.footer(kind);
+        (footer.name, footer.line, footer.dot, footer.warning)
+    }
+
+    fn texts(name: &str, line: &str, dot: Dot, warning: bool) -> (String, String, Dot, bool) {
+        (name.to_owned(), line.to_owned(), dot, warning)
+    }
+
     #[test]
     fn no_device() {
         let status = DeviceStatus::default();
-        assert_eq!(status.status_line(), "No X52 joystick connected");
+        assert_eq!(
+            footer(status, ProfileKind::PerMode),
+            texts(
+                "Not connected",
+                "Waiting for an X52 or X52 Pro",
+                Dot::Waiting,
+                false
+            )
+        );
         assert!(!status.offers_retry());
-        assert_eq!(status.x52d_warning(), None);
     }
 
     #[test]
     fn found_but_not_opened_yet() {
         let status = status(AccessState::NoDevice, Some(DeviceType::X52Pro));
-        assert_eq!(status.status_line(), "X52 Pro connected");
+        assert_eq!(
+            footer(status, ProfileKind::Single),
+            texts("X52 Pro", "Connected", Dot::Connected, false)
+        );
         assert!(!status.offers_retry());
     }
 
     #[test]
     fn no_permission_offers_try_again() {
-        let status = status(AccessState::NoPermission, Some(DeviceType::X52));
+        let mut status = status(AccessState::NoPermission, Some(DeviceType::X52));
+        status.x52d_running = true;
         assert_eq!(
-            status.status_line(),
-            "X52 connected, but GX52 is not allowed to control it"
+            footer(status, ProfileKind::Single),
+            texts("X52", "No permission", Dot::Problem, false)
         );
         assert!(status.offers_retry());
     }
 
     #[test]
-    fn ready_with_and_without_a_mode() {
+    fn only_a_per_mode_profile_shows_the_mode() {
         let mut status = status(AccessState::Ready, Some(DeviceType::X52Pro));
-        assert_eq!(status.status_line(), "X52 Pro ready");
+        assert_eq!(
+            footer(status, ProfileKind::PerMode),
+            texts("X52 Pro", "Connected", Dot::Connected, false),
+            "no mode reported yet"
+        );
+        status.mode = Some(Mode::Two);
+        assert_eq!(
+            footer(status, ProfileKind::PerMode),
+            texts("X52 Pro", "Connected · Mode 2", Dot::Connected, false)
+        );
+        assert_eq!(
+            footer(status, ProfileKind::Single),
+            texts("X52 Pro", "Connected", Dot::Connected, false)
+        );
         assert!(!status.offers_retry());
-        status.mode = Some(Mode::Three);
-        assert_eq!(status.status_line(), "X52 Pro ready, mode 3");
     }
 
     #[test]
-    fn the_x52d_warning_shows_while_it_runs() {
+    fn x52d_shows_in_the_line() {
         let mut status = status(AccessState::Ready, Some(DeviceType::X52Pro));
         status.x52d_running = true;
+        status.mode = Some(Mode::Two);
         assert_eq!(
-            status.x52d_warning().as_deref(),
-            Some(
-                "libx52’s x52d is running and will fight GX52 over the LEDs, the MFD and the \
-                 clocks"
-            )
-        );
-        assert_eq!(
-            status.status_line(),
-            "X52 Pro ready",
-            "the line is unchanged"
+            footer(status, ProfileKind::PerMode),
+            texts("X52 Pro", "x52d is running", Dot::Connected, true)
         );
     }
 

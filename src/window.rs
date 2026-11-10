@@ -16,8 +16,8 @@
 // Adapted from gtk-rs-skills/skills/gtk-rs-new-app/assets/template/src/window.rs at 42eb5e9,
 // originally MIT-licensed, Copyright (c) 2026 Roberto Leinardi
 
-//! The main window, with its size and maximized state kept in `GSettings`, showing the device
-//! status.
+//! The main window: the profile list in the sidebar, the editor of the active profile, and the
+//! problem states of docs/ui.md, with its size and maximized state kept in `GSettings`.
 
 use adw::{prelude::*, subclass::prelude::*};
 use gtk::{gio, glib};
@@ -25,17 +25,23 @@ use gtk::{gio, glib};
 use gettextrs::gettext;
 use x52::device::DeviceType;
 
+use crate::model::{ProfileObject, ProfileState};
 use crate::profile::exchange::{self, ImportPreview};
 use crate::profile::{self, ProfileId, files};
-use crate::{application::Application, config, device::status::DeviceStatus};
+use crate::widgets::ProfileRow;
+use crate::{application::Application, config};
+
+/// The command that stops and disables libx52's daemon (docs/protocol.md, "libx52's x52d").
+const X52D_DISABLE: &str = "sudo systemctl disable --now x52d";
 
 mod imp {
-    use std::cell::OnceCell;
+    use std::cell::{Cell, OnceCell, RefCell};
 
     use adw::{prelude::*, subclass::prelude::*};
     use gtk::{gio, glib};
 
     use crate::config;
+    use crate::widgets::DeviceFooter;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
@@ -44,11 +50,33 @@ mod imp {
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
+        pub main_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub split_view: TemplateChild<adw::NavigationSplitView>,
+        #[template_child]
+        pub profile_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub footer: TemplateChild<DeviceFooter>,
+        #[template_child]
+        pub content_page: TemplateChild<adw::NavigationPage>,
+        #[template_child]
         pub x52d_banner: TemplateChild<adw::Banner>,
         #[template_child]
-        pub status_page: TemplateChild<adw::StatusPage>,
+        pub content_stack: TemplateChild<gtk::Stack>,
         #[template_child]
-        pub retry_button: TemplateChild<gtk::Button>,
+        pub view_stack: TemplateChild<adw::ViewStack>,
+        #[template_child]
+        pub failed_page: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub status_page: TemplateChild<adw::StatusPage>,
+        /// The profiles shown, from the application.
+        pub profiles: OnceCell<gio::ListStore>,
+        /// Set while the window selects a row itself, so the selection is not taken as the
+        /// user's.
+        pub syncing: Cell<bool>,
+        /// The id of the profile that failed to load and is selected to show why; the active
+        /// profile is selected otherwise.
+        pub selected_failed: RefCell<Option<String>>,
     }
 
     #[glib::object_subclass]
@@ -58,7 +86,23 @@ mod imp {
         type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
+            DeviceFooter::ensure_type();
             klass.bind_template();
+            klass.install_action(
+                "win.show-view",
+                Some(glib::VariantTy::STRING),
+                |window, _, parameter| {
+                    if let Some(name) = parameter.and_then(glib::Variant::get::<String>) {
+                        window.imp().view_stack.set_visible_child_name(&name);
+                    }
+                },
+            );
+            klass.install_action("win.x52d-help", None, |window, _, _| {
+                window.show_x52d_help();
+            });
+            klass.install_action_async("win.show-selected-file", None, |window, _, _| async move {
+                window.show_selected_file().await;
+            });
         }
 
         fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
@@ -74,6 +118,7 @@ mod imp {
                 obj.add_css_class("devel");
             }
             obj.setup_actions();
+            obj.setup_profile_list();
             obj.load_window_state();
         }
     }
@@ -122,17 +167,215 @@ impl Window {
         glib::Object::builder().property("application", app).build()
     }
 
-    /// Shows `status`: the status line, the `x52d` warning and "Try again" when it applies.
-    pub(crate) fn show_device_status(&self, status: DeviceStatus) {
+    /// Shows `profiles`, the application's list of the shown device type's profiles.
+    pub(crate) fn set_profiles(&self, profiles: &gio::ListStore) {
         let imp = self.imp();
-        imp.status_page.set_description(Some(&status.status_line()));
-        imp.retry_button.set_visible(status.offers_retry());
-        match status.x52d_warning() {
-            Some(warning) => {
-                imp.x52d_banner.set_title(&warning);
-                imp.x52d_banner.set_revealed(true);
+        if imp.profiles.set(profiles.clone()).is_err() {
+            return;
+        }
+        imp.profile_list.bind_model(Some(profiles), |item| {
+            item.downcast_ref::<ProfileObject>().map_or_else(
+                || gtk::Label::new(None).upcast(),
+                |item| ProfileRow::new(item).upcast(),
+            )
+        });
+        self.refresh();
+    }
+
+    /// Shows the application's state: which page, the selected profile, the device status.
+    pub(crate) fn refresh(&self) {
+        let Some(app) = self.app() else {
+            return;
+        };
+        let imp = self.imp();
+        let status = app.device_status();
+        if app.shown_device_type().is_none() {
+            imp.main_stack.set_visible_child_name("waiting");
+            return;
+        }
+        imp.main_stack.set_visible_child_name("profiles");
+        imp.footer.show(&status.footer(app.active_profile_kind()));
+        self.select_current();
+        self.show_selected();
+    }
+
+    /// Selects the failed profile the user picked while it is still listed, the active profile
+    /// otherwise.
+    fn select_current(&self) {
+        let imp = self.imp();
+        let failed = imp.selected_failed.borrow().clone();
+        let target = failed
+            .and_then(|id| self.position_of(|item| item.id() == id && !item.is_usable()))
+            .or_else(|| self.position_of(ProfileObject::active));
+        if target.is_none() {
+            imp.selected_failed.replace(None);
+        }
+        imp.syncing.set(true);
+        let row = target
+            .and_then(|position| i32::try_from(position).ok())
+            .and_then(|position| imp.profile_list.row_at_index(position));
+        imp.profile_list.select_row(row.as_ref());
+        imp.syncing.set(false);
+    }
+
+    /// The position of the first profile `matches` accepts.
+    fn position_of(&self, matches: impl Fn(&ProfileObject) -> bool) -> Option<u32> {
+        let profiles = self.imp().profiles.get()?;
+        (0..profiles.n_items()).find(|position| {
+            profiles
+                .item(*position)
+                .and_downcast::<ProfileObject>()
+                .is_some_and(|item| matches(&item))
+        })
+    }
+
+    /// The selected profile.
+    fn selected(&self) -> Option<ProfileObject> {
+        let imp = self.imp();
+        let row = imp.profile_list.selected_row()?;
+        let position = u32::try_from(row.index()).ok()?;
+        imp.profiles.get()?.item(position).and_downcast()
+    }
+
+    /// Shows the content of the selected profile: its editor, why it failed to load, or the
+    /// missing permission.
+    fn show_selected(&self) {
+        let imp = self.imp();
+        let Some(app) = self.app() else {
+            return;
+        };
+        let status = app.device_status();
+        let selected = self.selected();
+        imp.content_page.set_title(
+            &selected
+                .as_ref()
+                .map_or_else(|| gettext("Profile"), ProfileObject::title),
+        );
+        let page = if status.offers_retry() {
+            imp.status_page.set_description(Some(&gettext(
+                "GX52 is not allowed to control the joystick. Install the udev rule, then try again.",
+            )));
+            "no-permission"
+        } else {
+            match selected.as_ref().map(ProfileObject::state) {
+                Some(ProfileState::Newer) => {
+                    imp.failed_page.set_title(&gettext("Made by a Newer GX52"));
+                    imp.failed_page.set_description(Some(&gettext(
+                        "This profile can be used once GX52 is updated. It is never changed here.",
+                    )));
+                    "failed"
+                }
+                Some(ProfileState::Damaged) => {
+                    imp.failed_page
+                        .set_title(&gettext("This Profile File Is Damaged"));
+                    imp.failed_page.set_description(Some(&gettext(
+                        "GX52 cannot read it. The file is kept as it is.",
+                    )));
+                    "failed"
+                }
+                Some(ProfileState::Usable) | None => "editor",
             }
-            None => imp.x52d_banner.set_revealed(false),
+        };
+        imp.content_stack.set_visible_child_name(page);
+        imp.x52d_banner
+            .set_revealed(status.x52d_running && page == "editor");
+    }
+
+    /// Follows the list: a usable profile becomes the active one, a failed one shows why.
+    fn setup_profile_list(&self) {
+        let imp = self.imp();
+        imp.profile_list.connect_row_selected(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, row| {
+                if row.is_none() || window.imp().syncing.get() {
+                    return;
+                }
+                window.on_profile_selected();
+            }
+        ));
+        imp.profile_list.connect_row_activated(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, _| window.imp().split_view.set_show_content(true)
+        ));
+    }
+
+    fn on_profile_selected(&self) {
+        let Some(item) = self.selected() else {
+            return;
+        };
+        let imp = self.imp();
+        if item.is_usable() {
+            imp.selected_failed.replace(None);
+            if let (Some(app), Some(id)) = (self.app(), item.profile_id()) {
+                app.activate_profile(&id);
+            }
+        } else {
+            imp.selected_failed.replace(Some(item.id()));
+        }
+        self.show_selected();
+    }
+
+    /// Explains `x52d` and how to stop it (docs/ui.md, "Problem states").
+    fn show_x52d_help(&self) {
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("x52d Is Running")),
+            Some(&gettext(
+                "x52d is the daemon of libx52, another program for the X52. While it runs, it may \
+                 overwrite the LEDs, the MFD and the clocks that GX52 sets. GX52 does not stop \
+                 it; to stop and disable it, run:",
+            )),
+        );
+        let command = gtk::Label::builder()
+            .label(X52D_DISABLE)
+            .selectable(true)
+            .wrap(true)
+            .hexpand(true)
+            .xalign(0.0)
+            .css_classes(["monospace"])
+            .build();
+        let copy = gtk::Button::builder()
+            .icon_name("edit-copy-symbolic")
+            .tooltip_text(gettext("Copy"))
+            .valign(gtk::Align::Center)
+            .css_classes(["flat"])
+            .build();
+        copy.connect_clicked(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |button| {
+                button.clipboard().set_text(X52D_DISABLE);
+                window.show_toast(&gettext("Copied to clipboard"));
+            }
+        ));
+        let line = gtk::Box::builder().spacing(6).css_classes(["card"]).build();
+        line.set_margin_top(6);
+        command.set_margin_start(12);
+        command.set_margin_top(6);
+        command.set_margin_bottom(6);
+        line.append(&command);
+        line.append(&copy);
+        dialog.set_extra_child(Some(&line));
+        dialog.add_response("close", &gettext("_Close"));
+        dialog.present(Some(self));
+    }
+
+    /// Opens the folder of the selected profile's file, through the portal.
+    async fn show_selected_file(&self) {
+        let Some(path) = self
+            .selected()
+            .and_then(|item| item.profile_id())
+            .and_then(|id| Some(self.app()?.profile_path(&id)))
+        else {
+            return;
+        };
+        let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
+        if let Err(error) = launcher.open_containing_folder_future(Some(self)).await
+            && !error.matches(gtk::DialogError::Dismissed)
+        {
+            tracing::warn!("Cannot show the profile file: {error}");
+            self.show_toast(&gettext("The folder cannot be opened"));
         }
     }
 
@@ -147,8 +390,7 @@ impl Window {
     }
 
     /// `win.import-profile` (a device type id: `x52-pro` or `x52`) and `win.export-profile` (a
-    /// profile id). The profile editor of M5 puts them in its profile list; until then they are
-    /// reached through the action names only.
+    /// profile id).
     fn setup_actions(&self) {
         let import = gio::ActionEntry::builder("import-profile")
             .parameter_type(Some(&String::static_variant_type()))

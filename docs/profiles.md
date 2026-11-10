@@ -335,7 +335,7 @@ it is replaced only through the confirm-and-back-up path there.
 
 | Case | Outcome | File |
 | --- | --- | --- |
-| Malformed TOML, over the size limit, not UTF-8, or a missing or wrong `schema_version` / `device_type` | The profile is not loaded. The problem is logged and shown once: one toast per start that lists every file that failed. Other profiles load normally | Kept as is |
+| Malformed TOML, over the size limit, not UTF-8, or a missing or wrong `schema_version` / `device_type` | The profile is not loaded. The problem is logged and shown once: one toast per start that lists every file that failed. Other profiles load normally. The file is listed greyed out by its file name under the device type its TOML names (`device_type` read on its own), or under every type when that cannot be read | Kept as is; deleted only when the user removes it from the list |
 | Out-of-range value: brightness outside `0`–`128`, an MFD line over 16 bytes after conversion or not exactly 3 lines, `fixed_offset_minutes` outside `−720`–`+840`, an empty or too long name, a missing key | Rejected **per field**: that field gets the type default in memory, the rest of the profile loads. The problem is reported (log and the same toast) | Unchanged until the user saves the profile, which writes the corrected values |
 | Unknown enum value: LED state, date format, clock 1 source, a clock 2/3 source tag, an MFD line source, the profile `kind` (read as `"single"`, from `[settings]`), an IANA zone the tz database does not know | Same as out of range | Same |
 | A key the schema does not have, or a key the device type does not have (`[leds]` in an `x52` file) | Ignored in memory and reported | Same: the key is dropped only when the user saves |
