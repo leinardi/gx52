@@ -280,6 +280,9 @@ status line below it.
 | Waiting for a device | empty grey circle | "Not connected" | "Waiting for an X52 or X52 Pro" |
 | `x52d` running | green | "X52 Pro" | a warning icon and "x52d is running" |
 
+The mode is always the selector position on the stick, also while the editor's
+[mode bar](#mode-bar) shows another mode; the same holds for the [tray](#tray-menu) status line.
+
 The dot is decorative; the text carries the state, and the footer is one accessible element that
 reads the whole line.
 
