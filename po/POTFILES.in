@@ -6,6 +6,7 @@ data/resources/ui/clock-editor.blp
 data/resources/ui/led-editor.blp
 data/resources/ui/mfd-editor.blp
 data/resources/ui/mode-bar.blp
+data/resources/ui/preferences-dialog.blp
 data/resources/ui/profile-row.blp
 data/resources/ui/shortcuts-dialog.blp
 data/resources/ui/window.blp
@@ -25,6 +26,7 @@ src/profile/schema.rs
 src/widgets/clock_editor.rs
 src/widgets/led_button.rs
 src/widgets/mfd_editor.rs
+src/widgets/preferences_dialog.rs
 src/widgets/profile_row.rs
 src/widgets/zone_clock_group.rs
 src/widgets/zone_dialog.rs

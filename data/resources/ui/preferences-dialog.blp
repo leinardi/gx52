@@ -1,0 +1,70 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52PreferencesDialog: Adw.PreferencesDialog {
+  Adw.PreferencesPage {
+    name: "general";
+    title: _("General");
+    icon-name: "preferences-system-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("Background");
+
+      Adw.SwitchRow run_in_background {
+        title: _("Run in Background");
+        subtitle: _("Keep GX52 running and applying profiles when the window is closed");
+      }
+
+      Adw.SwitchRow autostart {
+        title: _("Start on Login");
+        subtitle: _("Start hidden when you log in. Needs Run in Background");
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Virtual Mouse");
+      description: _("Move the pointer with the ministick. Games still receive the ministick.");
+
+      Adw.SwitchRow virtual_mouse {
+        title: _("Use the Ministick as a Mouse");
+      }
+
+      // The bounds come from the schema's ranges (preferences::spin_bounds).
+      Adw.SpinRow speed {
+        title: _("Speed");
+        subtitle: _("Pixels per step, 100 times a second");
+        digits: 1;
+
+        adjustment: Adjustment {
+          step-increment: 0.1;
+          page-increment: 0.5;
+        };
+      }
+
+      Adw.SpinRow curve {
+        title: _("Curve");
+        subtitle: _("Higher values move slowly near the centre");
+        digits: 1;
+
+        adjustment: Adjustment {
+          step-increment: 0.1;
+          page-increment: 0.5;
+        };
+      }
+
+      Adw.SpinRow deadzone {
+        title: _("Deadzone");
+        subtitle: _("Steps around the centre treated as centred");
+
+        adjustment: Adjustment {
+          step-increment: 1;
+          page-increment: 1;
+        };
+      }
+
+      Adw.SwitchRow invert_wheel {
+        title: _("Invert Wheel");
+      }
+    }
+  }
+}

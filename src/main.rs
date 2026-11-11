@@ -22,6 +22,7 @@ mod application;
 mod config;
 mod device;
 mod model;
+mod preferences;
 mod profile;
 mod widgets;
 mod window;
