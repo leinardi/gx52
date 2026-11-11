@@ -11,6 +11,8 @@ blueprint_files = [
     'ui/preferences-dialog.blp',
     'ui/profile-row.blp',
     'ui/shortcuts-dialog.blp',
+    'ui/udev-guide.blp',
+    'ui/uinput-page.blp',
     'ui/window.blp',
     'ui/zone-clock-group.blp',
     'ui/zone-dialog.blp',

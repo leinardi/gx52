@@ -9,6 +9,8 @@ data/resources/ui/mode-bar.blp
 data/resources/ui/preferences-dialog.blp
 data/resources/ui/profile-row.blp
 data/resources/ui/shortcuts-dialog.blp
+data/resources/ui/udev-guide.blp
+data/resources/ui/uinput-page.blp
 data/resources/ui/window.blp
 data/resources/ui/zone-clock-group.blp
 data/resources/ui/zone-dialog.blp
@@ -28,6 +30,8 @@ src/widgets/led_button.rs
 src/widgets/mfd_editor.rs
 src/widgets/preferences_dialog.rs
 src/widgets/profile_row.rs
+src/widgets/udev_guide.rs
+src/widgets/uinput_page.rs
 src/widgets/zone_clock_group.rs
 src/widgets/zone_dialog.rs
 src/window.rs

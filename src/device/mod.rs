@@ -27,6 +27,7 @@ pub(crate) mod monotonic;
 pub(crate) mod names;
 pub(crate) mod reader;
 pub(crate) mod status;
+pub(crate) mod udev;
 pub(crate) mod usb;
 pub(crate) mod watch;
 pub(crate) mod writer;
@@ -135,6 +136,8 @@ pub(crate) enum DeviceEvent {
     Error(String),
     /// The writer sent this command successfully.
     Sent(Command),
+    /// The open attempt the user asked for with "Try Again" is done, leaving this access.
+    Retried(AccessState),
 }
 
 impl From<WriterEvent> for DeviceEvent {
@@ -143,6 +146,7 @@ impl From<WriterEvent> for DeviceEvent {
             WriterEvent::Access(access) => Self::Access(access),
             WriterEvent::Error(error) => Self::Error(writer::error_chain(&error)),
             WriterEvent::Sent(command) => Self::Sent(command),
+            WriterEvent::Retried(access) => Self::Retried(access),
         }
     }
 }
@@ -195,7 +199,8 @@ impl CurrentSelection {
             DeviceEvent::Access(_)
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)
-            | DeviceEvent::Sent(_) => true,
+            | DeviceEvent::Sent(_)
+            | DeviceEvent::Retried(_) => true,
         }
     }
 }

@@ -259,8 +259,7 @@ impl Application {
             Some(&gettext("Replace the Damaged File?")),
             Some(
                 &gettext(
-                    "The file {file} cannot be read. GX52 keeps a copy of it next to it and \
-                     saves the profile in its place.",
+                    "The file {file} cannot be read. GX52 keeps a copy of it next to it and saves the profile in its place.",
                 )
                 .replace("{file}", &file_name),
             ),

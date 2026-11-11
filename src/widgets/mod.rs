@@ -25,6 +25,8 @@ mod mode_bar;
 mod preferences_dialog;
 mod profile_row;
 mod ticker;
+mod udev_guide;
+mod uinput_page;
 mod zone_clock_group;
 mod zone_dialog;
 
@@ -40,6 +42,8 @@ pub(crate) use self::mfd_editor::MfdEditor;
 pub(crate) use self::mode_bar::ModeBar;
 pub(crate) use self::preferences_dialog::PreferencesDialog;
 pub(crate) use self::profile_row::{ProfileRow, RowAction};
+pub(crate) use self::udev_guide::UdevGuide;
+pub(crate) use self::uinput_page::UinputPage;
 pub(crate) use self::zone_clock_group::ZoneClockGroup;
 pub(crate) use self::zone_dialog::ZoneDialog;
 use crate::application::Application;

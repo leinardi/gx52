@@ -23,6 +23,7 @@
 //! corrected at the next wake, at most [`WAKE_INTERVAL`] later.
 
 use std::collections::HashMap;
+use std::mem;
 use std::ops::ControlFlow;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::time::Duration;
@@ -70,6 +71,9 @@ pub(crate) enum WriterEvent {
     Error(WriterError),
     /// A command was sent successfully.
     Sent(Command),
+    /// The open attempt a [`WriterMessage::Retry`] asked for is done; the access it left, sent
+    /// whether or not it changed.
+    Retried(AccessState),
 }
 
 /// Why the writer could not show the desired state.
@@ -123,6 +127,8 @@ pub(crate) struct Writer<O: Opener, C, M, E> {
     access: AccessState,
     /// Whether a failure has been reported since the last successful open or new selection.
     failure_reported: bool,
+    /// Whether a [`WriterMessage::Retry`] waits for the next wake to report its result.
+    retry_requested: bool,
 }
 
 impl<O, C, M, E> Writer<O, C, M, E>
@@ -152,6 +158,7 @@ where
             link: Link::Idle,
             access: AccessState::NoDevice,
             failure_reported: false,
+            retry_requested: false,
         }
     }
 
@@ -206,6 +213,7 @@ where
                 }
             }
             WriterMessage::Retry => {
+                self.retry_requested = true;
                 let now = self.monotonic.elapsed();
                 if let Link::Waiting { retry_at } = &mut self.link {
                     *retry_at = now;
@@ -225,6 +233,9 @@ where
             self.open(now);
         }
         self.sync(now);
+        if mem::take(&mut self.retry_requested) {
+            self.send(WriterEvent::Retried(self.access));
+        }
     }
 
     /// How long to wait for a message before the next wake: until the next clock change, the

@@ -29,6 +29,30 @@ template $GX52PreferencesDialog: Adw.PreferencesDialog {
         title: _("Use the Ministick as a Mouse");
       }
 
+      // Shown while the switch is on and /dev/uinput is not writable.
+      Adw.ActionRow uinput_warning {
+        visible: false;
+        title: _("Virtual mouse unavailable");
+        subtitle: _("GX52 cannot write to /dev/uinput");
+
+        [prefix]
+        Image {
+          icon-name: "dialog-warning-symbolic";
+
+          styles [
+            "warning",
+          ]
+        }
+
+        [suffix]
+        Button {
+          label: _("_How to Fix");
+          use-underline: true;
+          valign: center;
+          action-name: "preferences.uinput-help";
+        }
+      }
+
       // The bounds come from the schema's ranges (preferences::spin_bounds).
       Adw.SpinRow speed {
         title: _("Speed");

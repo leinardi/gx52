@@ -39,6 +39,7 @@ use x52::state::DeviceState;
 use super::access::{self, AccessState, UinputAccess};
 use super::id::{DeviceId, Generation};
 use super::monotonic::{Monotonic, SystemMonotonic};
+use super::udev;
 use super::writer::WAKE_INTERVAL;
 use super::{DeviceEvent, DeviceService};
 
@@ -46,7 +47,7 @@ use super::{DeviceEvent, DeviceService};
 pub(crate) const OPTION: &str = "--device-check";
 
 /// The udev rule the permission scenario moves away and back.
-const RULE: &str = "/etc/udev/rules.d/70-gx52.rules";
+const RULE: &str = udev::RULE_PATH;
 
 /// Where the permission scenario parks the rule.
 const RULE_DISABLED: &str = "/etc/udev/rules.d/70-gx52.rules.disabled";
@@ -485,8 +486,9 @@ impl Session<'_> {
                 self.seen.modes.push(mode);
                 self.seen.mode = Some(mode);
             }
-            // The check follows the mode only; held buttons drive no step of it.
-            DeviceEvent::Held { .. } => {}
+            // The check follows the mode only; held buttons drive no step of it. It never asks
+            // for a retry either: it waits for the periodic one.
+            DeviceEvent::Held { .. } | DeviceEvent::Retried(_) => {}
             DeviceEvent::X52dRunning(running) => self.seen.x52d = Some(running),
             DeviceEvent::Error(error) => {
                 self.info(&format!("error: {error}"));

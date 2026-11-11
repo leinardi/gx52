@@ -508,10 +508,11 @@ impl Application {
     /// The device type whose profiles are shown: the connected one, or the last one seen; `None`
     /// before any device was seen.
     pub(crate) fn shown_device_type(&self) -> Option<DeviceType> {
-        self.device_status().device_type.or_else(|| {
-            let settings = self.imp().settings.get()?;
-            profile::device_type_from_id(&settings.string(LAST_DEVICE_TYPE))
-        })
+        let last =
+            self.imp().settings.get().and_then(|settings| {
+                profile::device_type_from_id(&settings.string(LAST_DEVICE_TYPE))
+            });
+        self.device_status().shown_type(last)
     }
 
     /// The shown device type's profiles, as the profile list shows them.
@@ -776,7 +777,11 @@ impl Application {
             }
             DeviceEvent::InputNode { node: None, .. } => self.change_held(HeldInputs::clear),
             DeviceEvent::Held { change, .. } => self.change_held(|held| change.apply(held)),
+            DeviceEvent::Retried(access::AccessState::NoPermission) => {
+                self.toast(&gettext("Still no access to the device"));
+            }
             DeviceEvent::Access(_)
+            | DeviceEvent::Retried(_)
             | DeviceEvent::InputNode { node: Some(_), .. }
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)

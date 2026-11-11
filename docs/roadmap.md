@@ -402,6 +402,39 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    without access, the uinput security note ([protocol.md](protocol.md#udev-rule)). Done when: DW,
    plus the udev page appears in the "no permission" state and goes away after `udevadm trigger`
    without a replug.
+
+   Results on 2026-11-11:
+
+   - **udev page:** the prototype's "Allow Access to the Device" in place of the editor, titled
+     "Device Access": the rule's USB line and the load command, each with a copy button, what
+     works without access, and Try Again. The page scrolls, so it fits the narrowest window. The
+     writer now answers every Try Again with the access it left (`Retried`), so a retry that still
+     fails shows "Still no access to the device"; unit-tested from a denied, an open and an idle
+     link. The rule lines, path and command live in `src/device/udev.rs`, tested against the
+     supported product IDs and against protocol.md.
+   - **No full-window guide:** a present device always has a type, so it shows its type's profiles
+     with the udev page, also on a first connection; the prototype's full-window "How to Fix" can
+     never be reached and ui.md retires it. The rule is `DeviceStatus::shown_type`, with tests.
+   - **uinput:** with the virtual mouse switch on and `/dev/uinput` not writable, Preferences shows
+     "Virtual mouse unavailable" with How to Fix, which pushes the "Virtual Mouse Access" subpage
+     (the uinput line, the command, the security note). The check runs off the main thread when
+     the dialog shows and the switch turns on, then every second while the warning shows.
+   - **Hands-on, X52 Pro, Devel build on the host:** every check of the plan as expected: the page
+     with the rule removed, Try Again's toast, each copy button's exact text; the editor back
+     after `udevadm trigger` with no replug; a first connection with no last device type; the
+     uinput warning with the ACL removed, the subpage and its copies, the row gone after the
+     trigger; keyboard only, 360×294, light and dark style, Orca. One fix came out of it: the wide
+     header kept the LEDs / MFD / Clocks switcher over the udev page (and over a failed profile,
+     since task 1); every page but the editor now shows its title, and the narrow switcher bar
+     hides with it.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: a retry test
+     with the device open, and two translatable strings split with `\` that xgettext extracts
+     with the indentation, so they could never be translated; the four older strings with the
+     same problem too, and a meta-test (`meta/tests/translations.rs`) keeps every translatable
+     Rust file free of them. Fixed after the maintainer's review: a uinput check that finished
+     after the switch went off and on again could hide the warning for good; checks now carry a
+     generation, a stale result is dropped and a fresh check starts, unit-tested with a delayed
+     result.
 7. **(code) Input tester**: the "Test input" page of
    [S7](spikes/07-led-editor.md#input-tester-test-page), reading evdev without grabbing the device.
    Done when: DW, plus every button, axis, hat, toggle and the mode selector of the X52 Pro shows on

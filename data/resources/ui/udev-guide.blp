@@ -1,0 +1,143 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52UdevGuide: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Adw.Clamp {
+      maximum-size: 600;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 24;
+        margin-top: 36;
+        margin-bottom: 36;
+        margin-start: 12;
+        margin-end: 12;
+
+        Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Image {
+            icon-name: "dialog-password-symbolic";
+            pixel-size: 64;
+
+            styles [
+              "dimmed",
+            ]
+          }
+
+          Label {
+            label: _("Allow Access to the Device");
+            wrap: true;
+            justify: center;
+
+            styles [
+              "title-1",
+            ]
+          }
+
+          Label body {
+            wrap: true;
+            justify: center;
+          }
+        }
+
+        Adw.PreferencesGroup rule_group {
+          title: _("Rule File");
+
+          Adw.ActionRow rule_row {
+            use-markup: false;
+            title-selectable: true;
+
+            styles [
+              "monospace",
+            ]
+
+            [suffix]
+            Button copy_rule {
+              icon-name: "edit-copy-symbolic";
+              tooltip-text: _("Copy Rule");
+              valign: center;
+
+              accessibility {
+                label: _("Copy Rule");
+              }
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Load the Rule");
+          description: _("No need to unplug: the device can be opened as soon as the rule is loaded.");
+
+          Adw.ActionRow command_row {
+            use-markup: false;
+            title-selectable: true;
+
+            styles [
+              "monospace",
+            ]
+
+            [suffix]
+            Button copy_command {
+              icon-name: "edit-copy-symbolic";
+              tooltip-text: _("Copy Command");
+              valign: center;
+
+              accessibility {
+                label: _("Copy Command");
+              }
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Without Access");
+
+          Adw.ActionRow {
+            title: _("Test input keeps working");
+            subtitle: _("Buttons, axes and the mode selector are read without access");
+
+            [prefix]
+            Image {
+              icon-name: "object-select-symbolic";
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("LEDs, MFD and clocks are unavailable");
+            subtitle: _("They need the rule above");
+
+            [prefix]
+            Image {
+              icon-name: "action-unavailable-symbolic";
+            }
+          }
+        }
+
+        Button {
+          label: _("_Try Again");
+          use-underline: true;
+          halign: center;
+          action-name: "app.retry-device";
+          tooltip-text: _("Open the joystick again after loading the rule");
+
+          styles [
+            "pill",
+          ]
+        }
+      };
+    };
+  };
+}

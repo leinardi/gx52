@@ -160,6 +160,17 @@ impl Harness {
         std::iter::from_fn(|| self.events.try_recv().ok())
             .filter_map(|event| match event {
                 WriterEvent::Access(access) => Some(access),
+                WriterEvent::Error(_) | WriterEvent::Sent(_) | WriterEvent::Retried(_) => None,
+            })
+            .collect()
+    }
+
+    /// Drains the events; the access changes and the retry results, in order.
+    fn access_reports(&self) -> Vec<AccessReport> {
+        std::iter::from_fn(|| self.events.try_recv().ok())
+            .filter_map(|event| match event {
+                WriterEvent::Access(access) => Some(AccessReport::Changed(access)),
+                WriterEvent::Retried(access) => Some(AccessReport::Retried(access)),
                 WriterEvent::Error(_) | WriterEvent::Sent(_) => None,
             })
             .collect()
@@ -257,7 +268,7 @@ fn every_command_sent_is_reported() {
     let reported: Vec<Command> = std::iter::from_fn(|| harness.events.try_recv().ok())
         .filter_map(|event| match event {
             WriterEvent::Sent(command) => Some(command),
-            WriterEvent::Access(_) | WriterEvent::Error(_) => None,
+            WriterEvent::Access(_) | WriterEvent::Error(_) | WriterEvent::Retried(_) => None,
         })
         .collect();
 
@@ -541,6 +552,78 @@ fn retry_opens_at_once_after_a_denied_permission() {
     assert_eq!(harness.opens(), 3);
     assert_eq!(harness.access_events(), [AccessState::Ready]);
     assert_eq!(harness.sent(), harness.full_replay(&pro_default()));
+}
+
+/// An access event, as [`Harness::access_reports`] lists it.
+#[derive(Debug, PartialEq, Eq)]
+enum AccessReport {
+    Changed(AccessState),
+    Retried(AccessState),
+}
+
+#[test]
+fn a_retry_that_still_fails_reports_its_result_and_no_change() {
+    let mut harness = Harness::new(vec![
+        Err(OpenError::PermissionDenied),
+        Err(OpenError::PermissionDenied),
+    ]);
+    harness.send([WriterMessage::Selected(device(1, 5))]);
+    assert_eq!(
+        harness.access_reports(),
+        [AccessReport::Changed(AccessState::NoPermission)]
+    );
+
+    harness.send([WriterMessage::Retry]);
+
+    assert_eq!(harness.opens(), 2);
+    assert_eq!(
+        harness.access_reports(),
+        [AccessReport::Retried(AccessState::NoPermission)]
+    );
+}
+
+#[test]
+fn a_retry_that_opens_reports_the_change_then_its_result() {
+    let mut harness = Harness::new(vec![Err(OpenError::PermissionDenied)]);
+    harness.send([WriterMessage::Selected(device(1, 5))]);
+    harness.access_reports();
+
+    harness.send([WriterMessage::Retry]);
+
+    assert_eq!(
+        harness.access_reports(),
+        [
+            AccessReport::Changed(AccessState::Ready),
+            AccessReport::Retried(AccessState::Ready),
+        ]
+    );
+}
+
+#[test]
+fn a_retry_while_open_reports_ready_and_opens_nothing() {
+    let mut harness = connected();
+    harness.access_reports();
+
+    harness.send([WriterMessage::Retry]);
+
+    assert_eq!(harness.opens(), 1);
+    assert_eq!(
+        harness.access_reports(),
+        [AccessReport::Retried(AccessState::Ready)]
+    );
+}
+
+#[test]
+fn a_retry_with_nothing_selected_reports_no_device() {
+    let mut harness = Harness::new(vec![]);
+
+    harness.send([WriterMessage::Retry]);
+
+    assert_eq!(harness.opens(), 0);
+    assert_eq!(
+        harness.access_reports(),
+        [AccessReport::Retried(AccessState::NoDevice)]
+    );
 }
 
 #[test]

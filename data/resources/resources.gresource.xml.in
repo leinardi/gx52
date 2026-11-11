@@ -15,6 +15,8 @@
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/zone-clock-group.ui">zone-clock-group.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/zone-dialog.ui">zone-dialog.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/preferences-dialog.ui">preferences-dialog.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/udev-guide.ui">udev-guide.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/uinput-page.ui">uinput-page.ui</file>
     <!-- Root alias: AdwApplication wires app.shortcuts / Ctrl+? to it automatically. -->
     <file compressed="true" preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">shortcuts-dialog.ui</file>
     <file compressed="true">style.css</file>

@@ -883,7 +883,8 @@ fn a_selection_reaches_the_main_thread_before_its_initial_mode() {
                 | DeviceEvent::Held { .. }
                 | DeviceEvent::X52dRunning(_)
                 | DeviceEvent::Error(_)
-                | DeviceEvent::Sent(_) => {}
+                | DeviceEvent::Sent(_)
+                | DeviceEvent::Retried(_) => {}
             }
         }
         service.shutdown();
