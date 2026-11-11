@@ -366,21 +366,39 @@ reads the whole line.
 
 ## Preferences
 
-An `adw::PreferencesDialog` with one page:
+An `adw::PreferencesDialog` with one page, General. Every row is bound to its GSettings key, so a
+change applies at once and a change made elsewhere (the tray, `gsettings`) shows in the open dialog.
 
 - **Background**
-  - **Run in background** (`adw::SwitchRow`): closing the window keeps GX52 running and applying
-    profiles. With a tray host the tray icon shows; without one (plain GNOME), GNOME lists GX52
-    under Background Apps and launching GX52 again shows the window.
-  - **Start on login** (`adw::SwitchRow`, subtitle "Start hidden when you log in. Needs Run in
-    Background"): starts hidden, through the Background portal (works in the Flatpak).
-    Only sensitive while "Run in background" is on, since starting hidden needs it;
-    turning "Run in background" off also turns it off.
-- **Virtual mouse**
-  - **Use the ministick as a mouse** (`adw::SwitchRow`, off by default); the uinput warning above.
-  - **Speed**, **Curve**, **Deadzone** (`adw::SpinRow` or scales) and **Invert wheel**
-    (`adw::SwitchRow`), defaulting to the S9 values
-    ([architecture.md](architecture.md#virtual-mouse)). Settings only, no live test area.
+  - **Run in Background** (`adw::SwitchRow`, subtitle "Keep GX52 running and applying profiles
+    when the window is closed"; key `run-in-background`, on by default): closing the window keeps
+    GX52 running and applying profiles. With a tray host the tray icon shows; without one (plain
+    GNOME), GNOME lists GX52 under Background Apps and launching GX52 again shows the window.
+  - **Start on Login** (`adw::SwitchRow`, subtitle "Start hidden when you log in. Needs Run in
+    Background"; key `autostart`, off by default): starts hidden, through the Background portal
+    (works in the Flatpak). Only sensitive while "Run in Background" is on, since starting hidden
+    needs it. Turning "Run in Background" off also turns it off; the application enforces this for
+    every writer of the key, and at startup for values stored inconsistent while it was not
+    running.
+- **Virtual Mouse**, description "Move the pointer with the ministick. Games still receive the
+  ministick."
+  - **Use the Ministick as a Mouse** (`adw::SwitchRow`; key `virtual-mouse`, off by default); the
+    uinput warning above.
+  - **Speed** (subtitle "Pixels per step, 100 times a second": the gain, in pixels per ministick
+    step every 10 ms tick), **Curve** ("Higher values move slowly near the centre": the exponent)
+    and **Deadzone** ("Steps around the centre treated as centred"), each an `adw::SpinRow`, and
+    **Invert Wheel** (`adw::SwitchRow`). Insensitive while the switch is off. They default to the
+    S9 values ([protocol.md](protocol.md#virtual-mouse-uinput)):
+
+    | Row | Key | Default | Range | Step |
+    | --- | --- | --- | --- | --- |
+    | Speed | `virtual-mouse-speed` | 0.6 | 0.1–3.0 | 0.1 |
+    | Curve | `virtual-mouse-curve` | 1.6 | 1.0–3.0 | 0.1 |
+    | Deadzone | `virtual-mouse-deadzone` | 1 | 0–4 | 1 |
+    | Invert Wheel | `virtual-mouse-invert-wheel` | off |  |  |
+
+    The ranges are the schema's; the spin rows take their bounds from it. Settings only, no live
+    test area.
 
 There is no tray switch: the tray icon shows whenever GX52 runs in the background and a tray host
 exists.

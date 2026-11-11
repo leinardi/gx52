@@ -376,6 +376,27 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
      transition can come before the next minute), and a test file's licence notice.
 5. **(code) Preferences**: run in background, start on login, the virtual mouse switch and settings
    (wired in M7). Done when: DW, plus each preference is a GSettings key bound to its row.
+
+   Results on 2026-11-11:
+
+   - **Dialog:** the General page of [ui.md](ui.md#preferences), opened with Ctrl+, or the main
+     menu (one dialog at a time), every row bound to its key. The five virtual-mouse keys are new,
+     with the S9 defaults; the spin rows take their bounds from the schema's ranges. Only the keys
+     and rows: running in the background is M6 task 1, the Background portal M6 task 2, the
+     uinput warning task 6, the mouse loop M7.
+   - **Start on login needs run in background:** the application turns `autostart` off whenever
+     `run-in-background` is off, on a change of either key by any writer, at startup for values
+     stored inconsistent, and after the GX52 0.7 import. Tested on the real schema compiled into a
+     temporary directory with a memory backend (so under plain `cargo test` too), with the
+     defaults, ranges and the `d` and `u` bindings to a double property; checked on the Devel build
+     with `gsettings set` while running and while closed.
+   - **Hands-on, X52 Pro, Devel build on the host:** keyboard only, 360×294, light and dark
+     style, Orca, Ctrl+, with the dialog open, all as expected. Turning the virtual mouse on moves
+     nothing yet, as planned: the loop that reads the keys is M7 task 1.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: autostart turned
+     on while running in the background is off is turned off again, Ctrl+, with the dialog open
+     shows the same dialog. Left: a dialog with no window to attach to (M6, when the app runs
+     without one), and 0.1 steps stored as `0.7000000000000001` (inside the range, harmless).
 6. **(code) udev/uinput guidance**: the udev page in place of the content area, the uinput subpage
    in Preferences; the rule file, a copy button, the commands, "no need to unplug", what works
    without access, the uinput security note ([protocol.md](protocol.md#udev-rule)). Done when: DW,

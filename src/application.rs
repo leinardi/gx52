@@ -35,6 +35,7 @@ use crate::config;
 use crate::device::status::DeviceStatus;
 use crate::device::{DeviceEvent, DeviceService, access, names};
 use crate::model::{ProfileObject, splice};
+use crate::preferences;
 use crate::profile::legacy::{self, FileWriter};
 use crate::profile::mfd::{self, MfdPreview, ShownClock};
 use crate::profile::startup::{self, ImportOutcome};
@@ -42,6 +43,7 @@ use crate::profile::store::{Entry, LoadReport, ProfileStore};
 use crate::profile::{
     self, LiveValues, MfdLineSource, Profile, ProfileId, ProfileKind, active, list, order,
 };
+use crate::widgets::PreferencesDialog;
 use crate::window::{self, Window};
 
 mod clocks;
@@ -109,6 +111,7 @@ mod imp {
     use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
     use crate::profile::writes::WriteQueue;
+    use crate::widgets::PreferencesDialog;
     use crate::zones::ZoneEntry;
     use crate::{config, window::Window};
 
@@ -166,6 +169,8 @@ mod imp {
         pub(crate) text_drafts: RefCell<TextDrafts>,
         /// The time zones clocks 2 and 3 left this session, by profile and clock.
         pub(crate) zone_memory: RefCell<ZoneMemory>,
+        /// The preferences dialog while it is open, so the action shows it instead of a second.
+        pub(crate) preferences_dialog: glib::WeakRef<PreferencesDialog>,
         /// The zones of the search dialog, once read.
         pub(crate) zone_catalog: RefCell<Option<Arc<[ZoneEntry]>>>,
     }
@@ -258,6 +263,9 @@ impl Application {
         let about = gio::ActionEntry::builder("about")
             .activate(|app: &Self, _, _| app.show_about_dialog())
             .build();
+        let preferences = gio::ActionEntry::builder("preferences")
+            .activate(|app: &Self, _, _| app.show_preferences_dialog())
+            .build();
         let retry_device = gio::ActionEntry::builder("retry-device")
             .activate(|app: &Self, _, _| {
                 if let Some(device) = app.imp().device.borrow().as_ref() {
@@ -265,9 +273,10 @@ impl Application {
                 }
             })
             .build();
-        self.add_action_entries([quit, about, retry_device]);
+        self.add_action_entries([quit, about, preferences, retry_device]);
 
         self.set_accels_for_action("app.quit", &["<Control>q"]);
+        self.set_accels_for_action("app.preferences", &["<Control>comma"]);
         self.set_accels_for_action("window.close", &["<Control>w"]);
         self.set_accels_for_action("win.new-profile", &["<Control>n"]);
         self.set_accels_for_action("win.import", &["<Control>o"]);
@@ -307,6 +316,7 @@ impl Application {
                 ),
             );
         }
+        preferences::follow_background(&settings);
         // Set once, in startup.
         let _ = self.imp().settings.set(settings);
     }
@@ -378,16 +388,7 @@ impl Application {
                 settings: legacy, ..
             } = outcome
             {
-                for (key, value) in [
-                    ("autostart", legacy.launch_on_login),
-                    ("run-in-background", legacy.run_in_background),
-                ] {
-                    if let Some(value) = value
-                        && let Err(error) = settings.set_boolean(key, value)
-                    {
-                        tracing::warn!("Cannot import the GX52 0.7 setting {key}: {error}");
-                    }
-                }
+                preferences::apply_legacy(settings, *legacy);
             }
             if let Err(error) = settings.set_boolean(LEGACY_IMPORT_DONE, true) {
                 tracing::warn!("Cannot record the GX52 0.7 import as done: {error}");
@@ -893,6 +894,19 @@ impl Application {
             None => DeviceState::default_for(device_type),
         };
         device.set_state(state);
+    }
+
+    fn show_preferences_dialog(&self) {
+        let Some(settings) = self.imp().settings.get() else {
+            return;
+        };
+        let imp = self.imp();
+        let dialog = imp.preferences_dialog.upgrade().unwrap_or_else(|| {
+            let dialog = PreferencesDialog::new(settings);
+            imp.preferences_dialog.set(Some(&dialog));
+            dialog
+        });
+        dialog.present(self.active_window().as_ref());
     }
 
     fn show_about_dialog(&self) {
