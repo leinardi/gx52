@@ -164,8 +164,11 @@ impl InputNode for FakeNode {
         Ok(vec![MODE_1])
     }
 
-    fn abs_value(&self, _code: u16) -> io::Result<i32> {
-        Ok(0)
+    fn abs_info(&self, _code: u16) -> io::Result<x52::input::AxisState> {
+        Ok(x52::input::AxisState {
+            range: x52::input::AxisRange { min: 0, max: 0 },
+            value: 0,
+        })
     }
 
     fn wait(&mut self, timeout: Duration) -> io::Result<bool> {
@@ -881,6 +884,7 @@ fn a_selection_reaches_the_main_thread_before_its_initial_mode() {
                 | DeviceEvent::Access(_)
                 | DeviceEvent::InputNode { .. }
                 | DeviceEvent::Held { .. }
+                | DeviceEvent::Axes { .. }
                 | DeviceEvent::X52dRunning(_)
                 | DeviceEvent::Error(_)
                 | DeviceEvent::Sent(_)

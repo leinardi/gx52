@@ -27,6 +27,7 @@ pub(crate) mod monotonic;
 pub(crate) mod names;
 pub(crate) mod reader;
 pub(crate) mod status;
+pub(crate) mod tester;
 pub(crate) mod udev;
 pub(crate) mod usb;
 pub(crate) mod watch;
@@ -48,7 +49,7 @@ use x52::transport::Transport;
 use self::access::AccessState;
 use self::id::{DeviceId, Generation};
 use self::monotonic::SystemMonotonic;
-pub(crate) use self::reader::HeldChange;
+pub(crate) use self::reader::{AxisChange, HeldChange};
 use self::reader::{EvdevSource, Reader, ReaderEvent, ReaderMessage, SysfsEvdev};
 use self::usb::{NusbOpener, Opener};
 use self::watch::{SelectionChange, ShutdownSignal, ShutdownTrigger, WatchEvent};
@@ -130,6 +131,13 @@ pub(crate) enum DeviceEvent {
         /// What changed.
         change: HeldChange,
     },
+    /// The axes of the selection `generation` changed; only while the input tester listens.
+    Axes {
+        /// The selection it belongs to.
+        generation: Generation,
+        /// What changed.
+        change: AxisChange,
+    },
     /// libx52's `x52d` started or stopped running.
     X52dRunning(bool),
     /// Something failed; already logged by the thread that reports it.
@@ -164,6 +172,27 @@ impl From<ReaderEvent> for DeviceEvent {
             },
             ReaderEvent::Mode { generation, mode } => Self::Mode { generation, mode },
             ReaderEvent::Held { generation, change } => Self::Held { generation, change },
+            ReaderEvent::Axes { generation, change } => Self::Axes { generation, change },
+        }
+    }
+}
+
+impl DeviceEvent {
+    /// Whether the event can change what the input tester shows: the held inputs, the axes, the
+    /// mode (the mode keys change no held input) or whether there is a node to read.
+    pub(crate) const fn shows_in_tester(&self) -> bool {
+        match self {
+            Self::Selected(_)
+            | Self::Gone(_)
+            | Self::InputNode { .. }
+            | Self::Mode { .. }
+            | Self::Held { .. }
+            | Self::Axes { .. } => true,
+            Self::Access(_)
+            | Self::X52dRunning(_)
+            | Self::Error(_)
+            | Self::Sent(_)
+            | Self::Retried(_) => false,
         }
     }
 }
@@ -178,7 +207,7 @@ pub(crate) struct CurrentSelection(Option<Generation>);
 
 impl CurrentSelection {
     /// Follows `event` and returns whether it belongs to the current selection: `false` for a
-    /// node, mode or held-input event of another generation and for a `Gone` of a selection that is not the
+    /// node, mode, held-input or axis event of another generation and for a `Gone` of a selection that is not the
     /// current one.
     pub(crate) fn accept(&mut self, event: &DeviceEvent) -> bool {
         match event {
@@ -195,7 +224,8 @@ impl CurrentSelection {
             }
             DeviceEvent::InputNode { generation, .. }
             | DeviceEvent::Mode { generation, .. }
-            | DeviceEvent::Held { generation, .. } => self.0 == Some(*generation),
+            | DeviceEvent::Held { generation, .. }
+            | DeviceEvent::Axes { generation, .. } => self.0 == Some(*generation),
             DeviceEvent::Access(_)
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)
@@ -303,6 +333,16 @@ impl DeviceService {
     /// Sets the desired device state; the writer sends what differs from what the device shows.
     pub(crate) fn set_state(&self, state: DeviceState) {
         let _ = self.writer.send(WriterMessage::SetState(state));
+    }
+
+    /// Starts reporting the axes, for the input tester: a snapshot, then every change.
+    pub(crate) fn listen_to_axes(&self) {
+        let _ = self.reader.send(ReaderMessage::ListenToAxes);
+    }
+
+    /// Stops reporting the axes.
+    pub(crate) fn ignore_axes(&self) {
+        let _ = self.reader.send(ReaderMessage::IgnoreAxes);
     }
 
     /// Tries to open the device again at once, after a denied permission.
@@ -422,6 +462,34 @@ mod tests {
             generation: Generation(generation),
             mode,
         }
+    }
+
+    #[test]
+    fn a_mode_change_alone_refreshes_the_input_tester() {
+        // The mode keys make no held-input change, so the mode event itself must refresh it.
+        let mode = DeviceEvent::Mode {
+            generation: Generation(1),
+            mode: Mode::Two,
+        };
+        assert!(mode.shows_in_tester());
+        let axes = DeviceEvent::Axes {
+            generation: Generation(1),
+            change: AxisChange::Values(Vec::new()),
+        };
+        assert!(axes.shows_in_tester());
+        assert!(DeviceEvent::Gone(Generation(1)).shows_in_tester());
+        assert!(!DeviceEvent::Access(AccessState::Ready).shows_in_tester());
+        assert!(!DeviceEvent::Sent(Command::Blink(false)).shows_in_tester());
+    }
+
+    #[test]
+    fn axis_events_of_an_earlier_selection_are_dropped() {
+        let mut selection = CurrentSelection(Some(Generation(2)));
+        let stale = DeviceEvent::from(ReaderEvent::Axes {
+            generation: Generation(1),
+            change: AxisChange::Values(Vec::new()),
+        });
+        assert!(!selection.accept(&stale));
     }
 
     #[test]

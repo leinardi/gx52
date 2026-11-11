@@ -202,3 +202,91 @@ button.led.blinking {
   font-size: 22px;
   letter-spacing: 0.06em;
 }
+
+/* The input tester (docs/ui.md, "Input tester"), from the prototype. */
+.tester-card {
+  padding: 14px 18px 18px;
+}
+
+.tester-card.tester-wide {
+  min-width: 300px;
+}
+
+/* An indicator, lit while its button is held; a button's number sits in a badge at its start. */
+.input-pill {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  background-color: alpha(currentColor, 0.1);
+  font-size: 13px;
+}
+
+.input-pill.numbered {
+  padding-left: 4px;
+}
+
+.input-pill.on {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
+/* The number games show for the button. */
+/* A 20 px circle: GTK adds the padding to the minimum size, so the two add up to 20 px. The
+   label is centred by its line box, which keeps room for a descent digits do not have and puts
+   them a little left of their advance: 2 px at the top and 1 px at the start centre them. */
+.input-number {
+  min-width: 19px;
+  min-height: 18px;
+  padding: 2px 0 0 1px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: bold;
+  font-feature-settings: "tnum";
+  background-color: var(--card-bg-color);
+  color: alpha(var(--window-fg-color), 0.55);
+}
+
+.input-pill.on .input-number {
+  background-color: var(--accent-fg-color);
+  color: var(--accent-bg-color);
+}
+
+/* The stick and the ministick; the crosshair is drawn in `color`, the dot in the accent. */
+axis-pad {
+  border-radius: 9px;
+  background-color: alpha(currentColor, 0.1);
+}
+
+/* An axis as a bar; the fill is drawn in the accent. */
+axis-bar {
+  background-color: alpha(currentColor, 0.1);
+}
+
+axis-bar.horizontal {
+  min-height: 8px;
+  min-width: 80px;
+  border-radius: 4px;
+}
+
+axis-bar.vertical {
+  min-width: 22px;
+  min-height: 120px;
+  border-radius: 6px;
+}
+
+/* A cell of a hat's 3×3 direction grid; the centre is a smaller dot. */
+.pov-cell {
+  min-width: 18px;
+  min-height: 18px;
+  border-radius: 4px;
+  background-color: alpha(currentColor, 0.1);
+}
+
+.pov-cell.centre {
+  border-radius: 9999px;
+  transform: scale(0.6);
+}
+
+.pov-cell.on {
+  background-color: var(--accent-bg-color);
+}

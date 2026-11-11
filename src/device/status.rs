@@ -32,6 +32,8 @@ pub(crate) struct DeviceStatus {
     pub(crate) device_type: Option<DeviceType>,
     /// The active mode, while the evdev node is read.
     pub(crate) mode: Option<Mode>,
+    /// Whether the selected device's evdev node is open, so the input tester has input to show.
+    pub(crate) input_open: bool,
     /// Whether libx52's `x52d` is running.
     pub(crate) x52d_running: bool,
 }
@@ -42,6 +44,7 @@ impl Default for DeviceStatus {
             access: AccessState::NoDevice,
             device_type: None,
             mode: None,
+            input_open: false,
             x52d_running: false,
         }
     }
@@ -52,13 +55,20 @@ impl DeviceStatus {
     pub(crate) fn apply(&mut self, event: &DeviceEvent) -> bool {
         let before = *self;
         match event {
-            DeviceEvent::Selected(device) => self.device_type = Some(device.device_type),
+            // A new selection starts without a node, and the earlier selection's `NodeClosed`
+            // may never pass `CurrentSelection::accept`, so both clear `input_open` here.
+            DeviceEvent::Selected(device) => {
+                self.device_type = Some(device.device_type);
+                self.input_open = false;
+            }
             DeviceEvent::Gone(_) => {
                 self.device_type = None;
                 self.mode = None;
+                self.input_open = false;
             }
             DeviceEvent::Access(access) => self.access = *access,
             DeviceEvent::InputNode { node, .. } => {
+                self.input_open = node.is_some();
                 if node.is_none() {
                     self.mode = None;
                 }
@@ -66,6 +76,7 @@ impl DeviceStatus {
             DeviceEvent::Mode { mode, .. } => self.mode = Some(*mode),
             DeviceEvent::X52dRunning(running) => self.x52d_running = *running,
             DeviceEvent::Held { .. }
+            | DeviceEvent::Axes { .. }
             | DeviceEvent::Error(_)
             | DeviceEvent::Sent(_)
             | DeviceEvent::Retried(_) => {}
@@ -299,7 +310,7 @@ mod tests {
         assert!(status.apply(&DeviceEvent::Selected(device)));
         assert!(status.apply(&DeviceEvent::Access(AccessState::Ready)));
         assert!(!status.apply(&DeviceEvent::Access(AccessState::Ready)));
-        assert!(!status.apply(&DeviceEvent::InputNode {
+        assert!(status.apply(&DeviceEvent::InputNode {
             generation: Generation(1),
             node: Some(PathBuf::from("/dev/input/event20")),
         }));
@@ -315,6 +326,7 @@ mod tests {
                 access: AccessState::Ready,
                 device_type: Some(DeviceType::X52Pro),
                 mode: Some(Mode::Two),
+                input_open: true,
                 x52d_running: true,
             }
         );
@@ -330,5 +342,66 @@ mod tests {
         });
         assert!(status.apply(&DeviceEvent::Gone(Generation(1))));
         assert_eq!(status.mode, None);
+    }
+
+    fn selected(generation: u64) -> DeviceEvent {
+        DeviceEvent::Selected(DeviceId {
+            device_type: DeviceType::X52Pro,
+            sysfs_path: PathBuf::from("/sys/bus/usb/devices/1-4"),
+            attachment: Attachment { bus: 1, address: 5 },
+            generation: Generation(generation),
+        })
+    }
+
+    fn node(generation: u64, open: bool) -> DeviceEvent {
+        DeviceEvent::InputNode {
+            generation: Generation(generation),
+            node: open.then(|| PathBuf::from("/dev/input/event20")),
+        }
+    }
+
+    /// The events as the application applies them: only those `CurrentSelection` accepts.
+    fn input_open_after(events: &[DeviceEvent]) -> bool {
+        let mut selection = crate::device::CurrentSelection::default();
+        let mut status = DeviceStatus::default();
+        for event in events {
+            if selection.accept(event) {
+                status.apply(event);
+            }
+        }
+        status.input_open
+    }
+
+    #[test]
+    fn the_node_is_open_only_between_its_open_and_close() {
+        assert!(input_open_after(&[selected(1), node(1, true)]));
+        assert!(!input_open_after(&[selected(1)]), "not opened yet");
+        assert!(!input_open_after(&[
+            selected(1),
+            node(1, true),
+            node(1, false)
+        ]));
+        assert!(
+            input_open_after(&[selected(1), node(1, true), node(1, false), node(1, true)]),
+            "reopened"
+        );
+    }
+
+    #[test]
+    fn a_dropped_close_of_an_earlier_selection_leaves_no_node_open() {
+        // The `NodeClosed` of generation 1 arrives after its `Gone` and is dropped.
+        assert!(!input_open_after(&[
+            selected(1),
+            node(1, true),
+            DeviceEvent::Gone(Generation(1)),
+            node(1, false),
+        ]));
+        // A replacement whose node never opens: generation 1's close is dropped after it.
+        assert!(!input_open_after(&[
+            selected(1),
+            node(1, true),
+            selected(2),
+            node(1, false),
+        ]));
     }
 }

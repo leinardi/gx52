@@ -488,7 +488,7 @@ impl Session<'_> {
             }
             // The check follows the mode only; held buttons drive no step of it. It never asks
             // for a retry either: it waits for the periodic one.
-            DeviceEvent::Held { .. } | DeviceEvent::Retried(_) => {}
+            DeviceEvent::Held { .. } | DeviceEvent::Axes { .. } | DeviceEvent::Retried(_) => {}
             DeviceEvent::X52dRunning(running) => self.seen.x52d = Some(running),
             DeviceEvent::Error(error) => {
                 self.info(&format!("error: {error}"));

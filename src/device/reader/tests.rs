@@ -64,6 +64,8 @@ fn key(code: u16, pressed: bool, at: Duration) -> InputEvent {
 enum Step {
     /// An event, read by the first wait whose timeout reaches its timestamp.
     Event(InputEvent),
+    /// Events read together by one read, at the first one's timestamp.
+    Batch(Vec<InputEvent>),
     /// The next read fails with this `errno`.
     Fail(i32),
     /// These messages are sent to the reader during the wait.
@@ -92,12 +94,16 @@ impl InputNode for FakeNode {
         Ok(self.held.clone())
     }
 
-    fn abs_value(&self, code: u16) -> io::Result<i32> {
-        Ok(self
+    fn abs_info(&self, code: u16) -> io::Result<AxisState> {
+        let value = self
             .abs
             .iter()
             .find(|(axis, _)| *axis == code)
-            .map_or(0, |(_, value)| *value))
+            .map_or(0, |(_, value)| *value);
+        Ok(AxisState {
+            range: fake_range(code),
+            value,
+        })
     }
 
     fn wait(&mut self, timeout: Duration) -> io::Result<bool> {
@@ -111,6 +117,15 @@ impl InputNode for FakeNode {
                 self.clock.set(event.at.max(now));
                 self.queued.push(*event);
                 self.steps.pop_front();
+                Ok(true)
+            }
+            Some(Step::Batch(batch))
+                if batch.first().is_some_and(|first| first.at <= now + timeout) =>
+            {
+                self.clock.set(batch[0].at.max(now));
+                if let Some(Step::Batch(batch)) = self.steps.pop_front() {
+                    self.queued.extend(batch);
+                }
                 Ok(true)
             }
             Some(Step::Fail(errno)) => {
@@ -135,7 +150,7 @@ impl InputNode for FakeNode {
                 self.clock.advance(timeout);
                 Ok(false)
             }
-            Some(Step::Event(_)) => {
+            Some(Step::Event(_) | Step::Batch(_)) => {
                 self.clock.advance(timeout);
                 Ok(false)
             }
@@ -248,6 +263,15 @@ impl Harness {
         Reader::new(source, self.clock.clone(), events).run(&self.receiver);
         let events = std::iter::from_fn(|| received.try_recv().ok()).collect();
         (events, self)
+    }
+}
+
+/// The range the fake node reports for an axis: the code in the maximum, so a test can tell the
+/// axes apart.
+fn fake_range(code: u16) -> AxisRange {
+    AxisRange {
+        min: 0,
+        max: 100 + i32::from(code),
     }
 }
 
@@ -646,5 +670,204 @@ fn a_node_belongs_to_the_device_whose_directory_contains_it() {
             Path::new("/sys/devices/pci0000:00/0000:00:14.0/usb1/1-6")
         ),
         None
+    );
+}
+
+fn abs(code: u16, value: i32, at: Duration) -> InputEvent {
+    InputEvent {
+        event_type: EV_ABS,
+        code,
+        value,
+        at,
+    }
+}
+
+/// The axes of the X52 Pro other than POV 1, as the fake node reports them, at `values` (by code;
+/// every other axis is `0`).
+fn axis_snapshot_of(generation: u64, values: &[(u16, i32)]) -> ReaderEvent {
+    let map = InputMap::for_device(DeviceType::X52Pro);
+    let axes = map
+        .axes()
+        .filter(|(_, axis)| !matches!(axis, Axis::Pov1X | Axis::Pov1Y))
+        .map(|(code, axis)| {
+            let value = values
+                .iter()
+                .find(|(known, _)| *known == code)
+                .map_or(0, |(_, value)| *value);
+            (
+                axis,
+                AxisState {
+                    range: fake_range(code),
+                    value,
+                },
+            )
+        })
+        .collect();
+    ReaderEvent::Axes {
+        generation: Generation(generation),
+        change: AxisChange::Snapshot(axes),
+    }
+}
+
+fn axis_values(values: Vec<(Axis, i32)>) -> ReaderEvent {
+    ReaderEvent::Axes {
+        generation: Generation(1),
+        change: AxisChange::Values(values),
+    }
+}
+
+/// Only the axis events of `events`.
+fn only_axes(events: &[ReaderEvent]) -> Vec<ReaderEvent> {
+    events
+        .iter()
+        .filter(|event| matches!(event, ReaderEvent::Axes { .. }))
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn no_axis_is_reported_while_nothing_listens() {
+    let harness = Harness::new();
+    let ms = Duration::from_millis;
+    let node = harness.node(vec![
+        Step::Event(abs(0x00, 512, ms(10))),
+        Step::Batch(vec![abs(0x02, 40, ms(20)), abs(0x28, 3, ms(20))]),
+    ]);
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+
+    let (events, _) = harness.run(source);
+
+    assert_eq!(only_axes(&events), []);
+}
+
+#[test]
+fn listening_reports_a_snapshot_then_one_change_per_read() {
+    let harness = Harness::new();
+    let ms = Duration::from_millis;
+    let mut node = harness.node(vec![
+        // The throttle twice and the stick in one read: one event, the throttle's last value.
+        Step::Batch(vec![
+            abs(0x02, 40, ms(10)),
+            abs(0x00, 600, ms(10)),
+            abs(0x02, 42, ms(10)),
+            key(289, true, ms(10)),
+        ]),
+        // POV 1 stays a held-input change.
+        Step::Event(abs(0x10, 1, ms(20))),
+    ]);
+    node.abs = vec![(0x00, 511), (0x06, 31)];
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+    harness.sender.send(ReaderMessage::ListenToAxes).unwrap();
+
+    let (events, _) = harness.run(source);
+
+    assert_eq!(
+        only_axes(&events),
+        [
+            axis_snapshot_of(1, &[(0x00, 511), (0x06, 31)]),
+            axis_values(vec![(Axis::StickX, 600), (Axis::Throttle, 42)]),
+        ]
+    );
+    let snapshot_at = events
+        .iter()
+        .position(|event| matches!(event, ReaderEvent::Axes { .. }))
+        .unwrap();
+    assert!(
+        matches!(
+            events[snapshot_at - 1],
+            ReaderEvent::Held {
+                change: HeldChange::Snapshot(_),
+                ..
+            }
+        ),
+        "the axis snapshot follows the held snapshot: {events:?}"
+    );
+}
+
+#[test]
+fn listening_starts_and_stops_on_an_open_node() {
+    let harness = Harness::new();
+    let ms = Duration::from_millis;
+    let node = harness.node(vec![
+        Step::Event(abs(0x00, 100, ms(10))),
+        Step::Messages(vec![ReaderMessage::ListenToAxes]),
+        Step::Event(abs(0x00, 200, ms(30))),
+        Step::Messages(vec![ReaderMessage::IgnoreAxes]),
+        Step::Event(abs(0x00, 300, ms(50))),
+    ]);
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+
+    let (events, _) = harness.run(source);
+
+    assert_eq!(
+        only_axes(&events),
+        [
+            axis_snapshot_of(1, &[]),
+            axis_values(vec![(Axis::StickX, 200)]),
+        ]
+    );
+}
+
+#[test]
+fn a_reopened_node_gets_a_new_axis_snapshot_while_listening() {
+    let harness = Harness::new();
+    let first = harness.node(vec![Step::Fail(ENODEV)]);
+    let mut second = harness.node(Vec::new());
+    second.abs = vec![(0x02, 77)];
+    let source = harness.source(
+        vec![vec![entry(20, USB)], Vec::new(), vec![entry(21, USB)]],
+        vec![Ok(first), Ok(second)],
+    );
+    harness.sender.send(ReaderMessage::ListenToAxes).unwrap();
+
+    let (events, _) = harness.run(source);
+
+    assert_eq!(
+        only_axes(&events),
+        [axis_snapshot_of(1, &[]), axis_snapshot_of(1, &[(0x02, 77)])]
+    );
+}
+
+#[test]
+fn listening_survives_a_new_selection() {
+    let harness = Harness::new();
+    let first = harness.node(vec![Step::Messages(vec![ReaderMessage::Selected(device(
+        2,
+    ))])]);
+    let second = harness.node(Vec::new());
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(first), Ok(second)]);
+    harness.sender.send(ReaderMessage::ListenToAxes).unwrap();
+
+    let (events, _) = harness.run(source);
+
+    assert_eq!(
+        only_axes(&events),
+        [axis_snapshot_of(1, &[]), axis_snapshot_of(2, &[])]
+    );
+}
+
+#[test]
+fn a_listen_right_after_an_ignore_sends_a_new_snapshot() {
+    // Leaving the tester and coming back within one poll: both messages are drained together, and
+    // the main thread has forgotten the axes in between.
+    let harness = Harness::new();
+    let ms = Duration::from_millis;
+    let mut node = harness.node(vec![
+        Step::Messages(vec![ReaderMessage::IgnoreAxes, ReaderMessage::ListenToAxes]),
+        Step::Event(abs(0x00, 300, ms(50))),
+    ]);
+    node.abs = vec![(0x00, 200)];
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+    harness.sender.send(ReaderMessage::ListenToAxes).unwrap();
+
+    let (events, _) = harness.run(source);
+
+    assert_eq!(
+        only_axes(&events),
+        [
+            axis_snapshot_of(1, &[(0x00, 200)]),
+            axis_snapshot_of(1, &[(0x00, 200)]),
+            axis_values(vec![(Axis::StickX, 300)]),
+        ]
     );
 }
