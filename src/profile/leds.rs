@@ -298,8 +298,7 @@ pub(crate) fn accessible_label(led: EditorLed, choice: LedChoice, lighting: Ligh
 pub(crate) fn tooltip(led: EditorLed, choice: LedChoice) -> String {
     match led {
         EditorLed::Pov1 => gettext(
-            "POV 1 is always green. It can’t be changed and follows the brightness and blink \
-             settings.",
+            "POV 1 is always green. It can’t be changed and follows the brightness and blink settings.",
         ),
         // Translators: {led} is the name of an LED, for example "Fire", {state} its state.
         EditorLed::Bi(_) | EditorLed::Single(_) => gettext("{led} LED: {state}")

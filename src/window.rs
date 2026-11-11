@@ -403,8 +403,7 @@ impl Window {
             Some(&gettext("Use Single Settings?")),
             Some(
                 &gettext(
-                    "“{name}” keeps the settings of mode 1. The settings of modes 2 and 3 are \
-                 dropped.",
+                    "“{name}” keeps the settings of mode 1. The settings of modes 2 and 3 are dropped.",
                 )
                 .replace("{name}", &profile.name),
             ),
@@ -615,9 +614,7 @@ impl Window {
         let dialog = adw::AlertDialog::new(
             Some(&gettext("x52d Is Running")),
             Some(&gettext(
-                "x52d is the daemon of libx52, another program for the X52. While it runs, it may \
-                 overwrite the LEDs, the MFD and the clocks that GX52 sets. GX52 does not stop \
-                 it; to stop and disable it, run:",
+                "x52d is the daemon of libx52, another program for the X52. While it runs, it may overwrite the LEDs, the MFD and the clocks that GX52 sets. GX52 does not stop it; to stop and disable it, run:",
             )),
         );
         let command = gtk::Label::builder()
