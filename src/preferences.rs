@@ -61,10 +61,13 @@ pub(crate) fn follow_background(settings: &gio::Settings) {
 
 /// Writes the settings imported from GX52 0.7, then applies the background rule, whatever order
 /// the change signals come in.
+///
+/// [`RUN_IN_BACKGROUND`] goes first: with [`follow_background`] connected, an imported autostart
+/// written while the stored value is still off would be turned off at once and not come back.
 pub(crate) fn apply_legacy(settings: &gio::Settings, legacy: LegacySettings) {
     for (key, value) in [
-        (AUTOSTART, legacy.launch_on_login),
         (RUN_IN_BACKGROUND, legacy.run_in_background),
+        (AUTOSTART, legacy.launch_on_login),
     ] {
         if let Some(value) = value
             && let Err(error) = settings.set_boolean(key, value)

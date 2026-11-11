@@ -170,6 +170,50 @@ fn legacy_import_without_background_ends_without_autostart() {
 }
 
 #[test]
+fn legacy_import_keeps_autostart_while_followed() {
+    with_context(|context| {
+        let (_dir, settings) = test_settings();
+        set(&settings, RUN_IN_BACKGROUND, false);
+        follow_background(&settings);
+        drain(context);
+
+        apply_legacy(
+            &settings,
+            LegacySettings {
+                launch_on_login: Some(true),
+                run_in_background: Some(true),
+            },
+        );
+        drain(context);
+        assert!(settings.boolean(RUN_IN_BACKGROUND));
+        assert!(
+            settings.boolean(AUTOSTART),
+            "the imported autostart is kept"
+        );
+    });
+}
+
+#[test]
+fn legacy_import_without_background_ends_without_autostart_while_followed() {
+    with_context(|context| {
+        let (_dir, settings) = test_settings();
+        follow_background(&settings);
+        drain(context);
+
+        apply_legacy(
+            &settings,
+            LegacySettings {
+                launch_on_login: Some(true),
+                run_in_background: Some(false),
+            },
+        );
+        drain(context);
+        assert!(!settings.boolean(RUN_IN_BACKGROUND));
+        assert!(!settings.boolean(AUTOSTART));
+    });
+}
+
+#[test]
 fn legacy_import_keeps_what_it_does_not_name() {
     let (_dir, settings) = test_settings();
     apply_legacy(
