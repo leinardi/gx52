@@ -440,6 +440,41 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    Done when: DW, plus every button, axis, hat, toggle and the mode selector of the X52 Pro shows on
    the page (checked on the device), and a game keeps receiving input while the page is open.
 
+   Results on 2026-11-11:
+
+   - **Reader:** the axes other than POV 1 flow only while a tester page is mapped (a listener
+     count on the main thread, `ListenToAxes` / `IgnoreAxes` to the reader), starting with a
+     snapshot of the ranges and values evdev reports (absinfo), then one coalesced event per read.
+     Whether the node is open is part of `DeviceStatus`, cleared on `Selected` and `Gone` too, so
+     a dropped stale `NodeClosed` never leaves the page live. Unit-tested on the fake evdev source:
+     nothing while not listening, the snapshot order, coalescing, a reopen, a new selection, and a
+     listen right after an ignore.
+   - **Page:** the groups of the prototype, laid out from controls, never evdev codes, each resolved
+     through the device's input map (the i button is 718 on the Pro and 717 on the X52), with the
+     number games show from the ascending code order; the ministick hidden on the X52, the X52
+     warning, POV grids, the debounced mode, and a screen-reader summary of what is held. Wheel
+     notches stay lit for 150 ms. The grouping, numbering, hat cells, tooltips, summary and pulse
+     are plain Rust with unit tests. Departures from the prototype, recorded in ui.md: the pads put
+     the rest value in the middle (the ministick rests at 8 of 0–15), the Z bar fills as the lever
+     goes forward (the X52 reports 0 at full throttle), the axes are drawn widgets rather than
+     GtkLevelBar, which showed nothing.
+   - **Hands-on, X52 Pro, Devel build on the host and in the Devel Flatpak:** every check of the
+     plan as expected: every button, wheel notch, axis, hat, toggle and the mode selector;
+     leaving and coming back; unplug and replug; the page live with no permission on the USB
+     device; `jstest` and a game receiving input while the page was open; keyboard only, 360×294,
+     light and dark style, Orca. The look took three rounds from the maintainer's screenshots:
+     the bars, the number badges (round, centred digits), card widths that stay put as values
+     change, and the toggles sharing a line with the buttons.
+   - **Adversarial review** in fresh Sonnet subagents, one on the page and one on the look's
+     fixes: request changes, then approve; approve with nits. Fixed: a return to the page within
+     one poll left the axes blank (every listen now gets a snapshot, with a test), axis events
+     applied with no tester left, an axis-only refresh going over the buttons and the summary, and
+     the centring of an extreme or two-value range (overflow, max not at the end). Not changed,
+     with the reason: Duplicate and Import keep the tester open, since neither activates the new
+     profile; the drawn figures' `dispose` needs no chaining (glib chains it); the raw labels'
+     width in characters, enough for tabular digits and checked on the device; the figures' accent
+     from `StyleManager`, the colour `--accent-bg-color` is.
+
 ## M6: tray and background
 
 1. **(code) Tray** with `ksni` as in [architecture.md](architecture.md#threads-and-data-flow): the
