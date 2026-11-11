@@ -845,3 +845,29 @@ fn listening_survives_a_new_selection() {
         [axis_snapshot_of(1, &[]), axis_snapshot_of(2, &[])]
     );
 }
+
+#[test]
+fn a_listen_right_after_an_ignore_sends_a_new_snapshot() {
+    // Leaving the tester and coming back within one poll: both messages are drained together, and
+    // the main thread has forgotten the axes in between.
+    let harness = Harness::new();
+    let ms = Duration::from_millis;
+    let mut node = harness.node(vec![
+        Step::Messages(vec![ReaderMessage::IgnoreAxes, ReaderMessage::ListenToAxes]),
+        Step::Event(abs(0x00, 300, ms(50))),
+    ]);
+    node.abs = vec![(0x00, 200)];
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+    harness.sender.send(ReaderMessage::ListenToAxes).unwrap();
+
+    let (events, _) = harness.run(source);
+
+    assert_eq!(
+        only_axes(&events),
+        [
+            axis_snapshot_of(1, &[(0x00, 200)]),
+            axis_snapshot_of(1, &[(0x00, 200)]),
+            axis_values(vec![(Axis::StickX, 300)]),
+        ]
+    );
+}

@@ -215,9 +215,13 @@ button.led.blinking {
 /* An indicator, lit while its button is held. */
 .input-pill {
   min-height: 28px;
-  padding: 0 10px;
+  padding: 0 4px 0 10px;
   border-radius: 9999px;
   background-color: alpha(currentColor, 0.1);
+}
+
+.input-pill.mode {
+  padding: 0 10px;
 }
 
 .input-pill.on {
@@ -228,7 +232,6 @@ button.led.blinking {
 /* The number games show for the button. */
 .input-number {
   min-width: 20px;
-  margin-right: -6px;
   border-radius: 9999px;
   font-size: smaller;
   font-feature-settings: "tnum";

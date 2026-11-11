@@ -139,9 +139,7 @@ impl InputTester {
             app.ignore_axes();
         }
         if let Some(view) = imp.view.borrow().as_ref() {
-            for pill in &view.pills {
-                pill.cancel();
-            }
+            view.forget();
         }
     }
 
@@ -173,9 +171,7 @@ impl InputTester {
             return;
         }
         if let Some(old) = imp.view.take() {
-            for pill in &old.pills {
-                pill.cancel();
-            }
+            old.forget();
         }
         imp.cards.remove_all();
         let map = InputMap::for_device(device_type);
@@ -416,6 +412,7 @@ fn build_toggles(
         .into_iter()
         .map(|mode| {
             let pill = pill_box(&mode_number(mode));
+            pill.add_css_class("mode");
             pill.set_tooltip_text(Some(&profile::mode_text(mode)));
             mode_row.append(&pill);
             (mode, pill)
@@ -501,8 +498,11 @@ struct View {
     clock: SystemMonotonic,
     /// The summary last given to the screen reader.
     summary: RefCell<String>,
-    /// The mode last shown.
-    mode: Cell<Option<Mode>>,
+    /// The held inputs and the mode last shown, `None` until shown: an axis event changes
+    /// neither, and the indicators are only gone over when they change.
+    held: RefCell<Option<(HeldInputs, Option<Mode>)>>,
+    /// The axes last shown.
+    axes_shown: RefCell<Option<AxisValues>>,
 }
 
 impl View {
@@ -525,52 +525,64 @@ impl View {
             toggles_card,
             clock: SystemMonotonic::new(),
             summary: RefCell::default(),
-            mode: Cell::new(None),
+            held: RefCell::default(),
+            axes_shown: RefCell::default(),
         }
     }
 
     /// Shows the application's live input.
     fn show(&self, app: &Application) {
-        let held = app.held_inputs();
         let axes = app.axis_values();
-        let mode = app.selector_mode();
-        self.show_axes(&axes);
+        if self.axes_shown.borrow().as_ref() != Some(&axes) {
+            self.show_axes(&axes);
+            self.axes_shown.replace(Some(axes));
+        }
+        let shown = (app.held_inputs(), app.selector_mode());
+        if self.held.borrow().as_ref() == Some(&shown) {
+            return;
+        }
+        let (held, mode) = &shown;
         let now = self.clock.elapsed();
         for pill in &self.pills {
-            pill.show(&held, now);
+            pill.show(held, now);
         }
-        if self.mode.replace(mode) != mode {
-            for (each, pill) in &self.modes {
-                if Some(*each) == mode {
-                    pill.add_css_class("on");
-                } else {
-                    pill.remove_css_class("on");
-                }
+        for (each, pill) in &self.modes {
+            if Some(*each) == *mode {
+                pill.add_css_class("on");
+            } else {
+                pill.remove_css_class("on");
             }
-            let description = mode.map(profile::mode_text).unwrap_or_default();
-            self.toggles_card
-                .update_property(&[gtk::accessible::Property::Description(&description)]);
         }
+        let description = mode.map(profile::mode_text).unwrap_or_default();
+        self.toggles_card
+            .update_property(&[gtk::accessible::Property::Description(&description)]);
         for (hat, cells) in &self.hats {
-            let (column, row) = hat.cell(&held);
+            let (column, row) = hat.cell(held);
             let lit = usize::try_from(row * 3 + column).ok();
             for (index, cell) in cells.iter().enumerate() {
-                let on = Some(index) == lit && lit != Some(4);
-                if cell.has_css_class("on") != on {
-                    if on {
-                        cell.add_css_class("on");
-                    } else {
-                        cell.remove_css_class("on");
-                    }
+                if Some(index) == lit && lit != Some(4) {
+                    cell.add_css_class("on");
+                } else {
+                    cell.remove_css_class("on");
                 }
             }
         }
-        let summary = tester::summary(&self.map, &held, mode);
+        let summary = tester::summary(&self.map, held, *mode);
         if *self.summary.borrow() != summary {
             self.buttons_card
                 .update_property(&[gtk::accessible::Property::Description(&summary)]);
             self.summary.replace(summary);
         }
+        self.held.replace(Some(shown));
+    }
+
+    /// Puts out every indicator and forgets what was shown, so the next refresh shows it all.
+    fn forget(&self) {
+        for pill in &self.pills {
+            pill.cancel();
+        }
+        self.held.replace(None);
+        self.axes_shown.replace(None);
     }
 
     /// Shows the axes, without animating: the throttle and the rotaries flicker by ±1 at rest.

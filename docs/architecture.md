@@ -214,13 +214,15 @@ flowchart LR
     `ListenToAxes` on the first and `IgnoreAxes` after the last, so nothing streams while the
     window is hidden or another page is shown. The flag is kept across node reopens and new
     selections. While it is on, the reader sends an `Axes` `Snapshot` (every axis but POV 1's,
-    with the range and value `EVIOCGABS` reports) when listening starts on an open node and on
-    every open, after the held snapshot, then one `Values` event per read with the last value of
-    each axis that moved, so the throttle's noise is coalesced to one message per wake-up. The
-    main thread keeps them in an `x52::input::AxisValues`, cleared with the held set and when the
-    last tester goes. Whether the node is open is part of `DeviceStatus` (`input_open`), cleared
-    on `Selected` and `Gone` as well, because the earlier selection's `NodeClosed` can be dropped
-    as stale.
+    with the range and value `EVIOCGABS` reports) for every `ListenToAxes` while a node is open
+    (also one right after an `IgnoreAxes`, since the main thread has forgotten the axes by then)
+    and on every open while listening, after the held snapshot. Then it sends one `Values` event
+    per read with the last value of each axis that moved, so the throttle's noise is coalesced
+    to one message per wake-up. The main thread keeps them in an `x52::input::AxisValues`,
+    cleared with the held set and when the last tester goes; an `Axes` event that arrives with
+    no tester left is dropped. Whether the node is open is part of `DeviceStatus`
+    (`input_open`), cleared on `Selected` and `Gone` as well, because the earlier selection's
+    `NodeClosed` can be dropped as stale.
   - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
     further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
     follow the wall clock, so the time since the last key event is measured with monotonic time.

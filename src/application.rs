@@ -786,7 +786,12 @@ impl Application {
                 self.change_held(HeldInputs::clear);
             }
             DeviceEvent::Held { change, .. } => self.change_held(|held| change.apply(held)),
-            DeviceEvent::Axes { change, .. } => change.apply(&mut imp.axes.borrow_mut()),
+            // A change sent before the last tester went is not kept: nothing would update it.
+            DeviceEvent::Axes { change, .. } => {
+                if imp.axis_listeners.get() > 0 {
+                    change.apply(&mut imp.axes.borrow_mut());
+                }
+            }
             DeviceEvent::Retried(access::AccessState::NoPermission) => {
                 self.toast(&gettext("Still no access to the device"));
             }

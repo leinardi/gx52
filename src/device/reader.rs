@@ -465,6 +465,10 @@ pub(crate) struct Reader<S, M, E> {
     events: async_channel::Sender<E>,
     /// Whether the input tester listens to the axes; kept across nodes and selections.
     axes: Listening,
+    /// Whether the open node owes the main thread an axis snapshot: set by every
+    /// [`ReaderMessage::ListenToAxes`] (the main thread forgets the axes when nothing listens,
+    /// so a listen right after an ignore needs one too) and on every open while listening.
+    snapshot_due: bool,
 }
 
 /// Whether the axes are reported.
@@ -484,6 +488,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             monotonic,
             events,
             axes: Listening::Off,
+            snapshot_due: false,
         }
     }
 
@@ -496,7 +501,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
                     Ok(ReaderMessage::Selected(device)) => Next::Selected(device),
                     Ok(ReaderMessage::Gone(_)) => Next::Gone,
                     Ok(ReaderMessage::ListenToAxes) => {
-                        self.axes = Listening::On;
+                        self.listen();
                         continue;
                     }
                     Ok(ReaderMessage::IgnoreAxes) => {
@@ -586,16 +591,14 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             generation,
             change: HeldChange::Snapshot(HeldInputs::from_snapshot(&map, &held, pov1)),
         });
-        let mut reported = Listening::Off;
+        self.snapshot_due = self.axes == Listening::On;
         let stop = loop {
-            if self.axes != reported {
-                reported = self.axes;
-                if reported == Listening::On {
-                    let Ok(change) = axis_snapshot(&node, &map) else {
-                        break Stop::NodeLost;
-                    };
-                    self.send(ReaderEvent::Axes { generation, change });
-                }
+            if self.snapshot_due && self.axes == Listening::On {
+                self.snapshot_due = false;
+                let Ok(change) = axis_snapshot(&node, &map) else {
+                    break Stop::NodeLost;
+                };
+                self.send(ReaderEvent::Axes { generation, change });
             }
             let Ok(readable) = node.wait(tracker.timeout(self.monotonic.elapsed())) else {
                 break Stop::NodeLost;
@@ -645,6 +648,12 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
         let _ = self.events.try_send(event.into());
     }
 
+    /// Starts reporting the axes, with a snapshot first.
+    fn listen(&mut self) {
+        self.axes = Listening::On;
+        self.snapshot_due = true;
+    }
+
     /// Handles every queued message; returns what ends following `device`, if one does.
     fn drain_messages(
         &mut self,
@@ -672,7 +681,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             ReaderMessage::Gone(generation) if generation == device.generation => Some(Next::Gone),
             ReaderMessage::Gone(_) => None,
             ReaderMessage::ListenToAxes => {
-                self.axes = Listening::On;
+                self.listen();
                 None
             }
             ReaderMessage::IgnoreAxes => {
