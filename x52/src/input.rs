@@ -558,7 +558,9 @@ impl AxisRange {
     /// at 8 (docs/protocol.md, "Axes").
     #[must_use]
     pub fn centre(self) -> i32 {
-        self.min + (self.max - self.min + 1) / 2
+        // In i64: a range as wide as `i32` itself would overflow.
+        let centre = (i64::from(self.min) + i64::from(self.max) + 1).div_euclid(2);
+        i32::try_from(centre).unwrap_or(self.max)
     }
 
     /// Where `value` lies for a control that centres: `0.0` at [`Self::min`], `0.5` at
@@ -570,9 +572,10 @@ impl AxisRange {
             return 0.5;
         }
         let centre = self.centre();
+        // An empty half (the upper one of a two-value range) is all of its end.
         let half = |from: i32, to: i32| {
             if to == from {
-                0.0
+                1.0
             } else {
                 ((f64::from(value) - f64::from(from)) / (f64::from(to) - f64::from(from)))
                     .clamp(0.0, 1.0)

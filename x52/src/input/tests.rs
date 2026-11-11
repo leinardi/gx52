@@ -638,3 +638,23 @@ fn a_centring_axis_rests_in_the_middle() {
     let empty = AxisRange { min: 3, max: 3 };
     assert!((empty.centred_fraction(3) - 0.5).abs() < f64::EPSILON);
 }
+
+#[test]
+fn centring_survives_extreme_and_tiny_ranges() {
+    let widest = AxisRange {
+        min: i32::MIN,
+        max: i32::MAX,
+    };
+    assert_eq!(widest.centre(), 0);
+    assert!((widest.centred_fraction(i32::MAX) - 1.0).abs() < f64::EPSILON);
+    assert!((widest.centred_fraction(i32::MIN) - 0.0).abs() < f64::EPSILON);
+    let two = AxisRange { min: 0, max: 1 };
+    assert_eq!(two.centre(), 1);
+    assert!(
+        (two.centred_fraction(1) - 1.0).abs() < f64::EPSILON,
+        "max is the end"
+    );
+    assert!((two.centred_fraction(0) - 0.0).abs() < f64::EPSILON);
+    let negative = AxisRange { min: -8, max: 7 };
+    assert_eq!(negative.centre(), 0);
+}
