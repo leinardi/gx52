@@ -33,6 +33,58 @@ use crate::preferences::{
 /// itself once the rule is loaded, as the udev page does.
 const UINPUT_RECHECK: Duration = Duration::from_secs(1);
 
+/// The uinput checks of the dialog: at most one runs, and only the result of the latest request
+/// is shown. A request or an invalidation while a check runs makes that check stale; its result
+/// is then dropped and a fresh check starts.
+#[derive(Debug, Default)]
+struct UinputChecks {
+    /// Bumped by every request and every invalidation.
+    generation: u64,
+    /// Whether a check runs.
+    running: bool,
+}
+
+/// A started check, to hand back to [`UinputChecks::finish`] with its result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct UinputTicket(u64);
+
+/// What to do with a finished check's result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UinputFinish {
+    /// Show it: nothing changed since the check started.
+    Show,
+    /// Drop it and request a check again if one is still wanted.
+    Stale,
+}
+
+impl UinputChecks {
+    /// Asks for a check: the ticket of a new one, or `None` while another runs (it turns stale,
+    /// and its finish asks for the fresh check).
+    fn request(&mut self) -> Option<UinputTicket> {
+        self.generation += 1;
+        if self.running {
+            return None;
+        }
+        self.running = true;
+        Some(UinputTicket(self.generation))
+    }
+
+    /// Makes the running check, if any, stale: the virtual mouse turned off or the dialog went.
+    fn invalidate(&mut self) {
+        self.generation += 1;
+    }
+
+    /// Ends the check of `ticket`.
+    fn finish(&mut self, ticket: UinputTicket) -> UinputFinish {
+        self.running = false;
+        if ticket.0 == self.generation {
+            UinputFinish::Show
+        } else {
+            UinputFinish::Stale
+        }
+    }
+}
+
 mod imp {
     use std::cell::{Cell, RefCell};
 
@@ -63,8 +115,8 @@ mod imp {
         pub(super) uinput_warning: TemplateChild<adw::ActionRow>,
         /// The next uinput check, while the warning shows.
         pub(super) uinput_recheck: RefCell<Option<glib::SourceId>>,
-        /// Whether a uinput check runs.
-        pub(super) uinput_checking: Cell<bool>,
+        /// The uinput checks, running and requested.
+        pub(super) uinput_checks: RefCell<super::UinputChecks>,
         /// The uinput access last found, to log it once per change.
         pub(super) uinput_access: Cell<Option<UinputAccess>>,
     }
@@ -92,7 +144,7 @@ mod imp {
             self.parent_constructed();
             let dialog = self.obj();
             dialog.connect_map(super::PreferencesDialog::check_uinput);
-            dialog.connect_unmap(super::PreferencesDialog::stop_uinput_recheck);
+            dialog.connect_unmap(super::PreferencesDialog::check_uinput);
             self.virtual_mouse.connect_active_notify(glib::clone!(
                 #[weak]
                 dialog,
@@ -128,32 +180,37 @@ impl PreferencesDialog {
         let imp = self.imp();
         self.stop_uinput_recheck();
         if !self.wants_uinput() {
+            imp.uinput_checks.borrow_mut().invalidate();
             imp.uinput_warning.set_visible(false);
             return;
         }
-        if imp.uinput_checking.replace(true) {
-            // The running check shows its result, if it still applies.
+        let Some(ticket) = imp.uinput_checks.borrow_mut().request() else {
+            // The running check is stale now; its finish starts a fresh one.
             return;
-        }
+        };
         glib::spawn_future_local(glib::clone!(
             #[weak(rename_to = dialog)]
             self,
             async move {
                 let result = gio::spawn_blocking(access::check_uinput).await;
-                dialog.show_uinput(result.ok());
+                dialog.finish_uinput(ticket, result.ok());
             }
         ));
     }
 
-    /// Shows the result of a uinput check (`None` when the check itself panicked), then checks
-    /// again later while the access is missing.
+    /// Ends the check of `ticket`: shows its result, or checks again when the result is stale.
+    fn finish_uinput(&self, ticket: UinputTicket, access: Option<UinputAccess>) {
+        let finish = self.imp().uinput_checks.borrow_mut().finish(ticket);
+        match finish {
+            UinputFinish::Show => self.show_uinput(access),
+            UinputFinish::Stale => self.check_uinput(),
+        }
+    }
+
+    /// Shows the result of a current uinput check (`None` when the check itself panicked), then
+    /// checks again later while the access is missing.
     fn show_uinput(&self, access: Option<UinputAccess>) {
         let imp = self.imp();
-        imp.uinput_checking.set(false);
-        if !self.wants_uinput() {
-            imp.uinput_warning.set_visible(false);
-            return;
-        }
         if let Some(access) = access
             && imp.uinput_access.replace(Some(access)) != Some(access)
         {
@@ -241,5 +298,47 @@ impl PreferencesDialog {
             .bind(VIRTUAL_MOUSE, &*imp.invert_wheel, "sensitive")
             .get_only()
             .build();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_result_with_no_change_meanwhile_is_shown() {
+        let mut checks = UinputChecks::default();
+        let ticket = checks.request().expect("nothing runs");
+        assert_eq!(checks.finish(ticket), UinputFinish::Show);
+    }
+
+    #[test]
+    fn a_delayed_result_after_off_and_on_is_dropped_for_a_fresh_check() {
+        let mut checks = UinputChecks::default();
+        // The check starts while the access is there; its result is delayed.
+        let delayed = checks.request().expect("nothing runs");
+        // The switch turns off, the access goes, the switch turns on.
+        checks.invalidate();
+        assert_eq!(checks.request(), None, "one check at a time");
+
+        assert_eq!(checks.finish(delayed), UinputFinish::Stale);
+        let fresh = checks.request().expect("the stale check is done");
+        assert_eq!(checks.finish(fresh), UinputFinish::Show);
+    }
+
+    #[test]
+    fn a_result_after_the_switch_turned_off_is_dropped() {
+        let mut checks = UinputChecks::default();
+        let ticket = checks.request().expect("nothing runs");
+        checks.invalidate();
+        assert_eq!(checks.finish(ticket), UinputFinish::Stale);
+    }
+
+    #[test]
+    fn a_request_while_a_check_runs_makes_it_stale() {
+        let mut checks = UinputChecks::default();
+        let first = checks.request().expect("nothing runs");
+        assert_eq!(checks.request(), None);
+        assert_eq!(checks.finish(first), UinputFinish::Stale);
     }
 }
