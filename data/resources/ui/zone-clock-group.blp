@@ -1,0 +1,53 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52ZoneClockGroup: Adw.PreferencesGroup {
+  Adw.ActionRow {
+    title: _("Source");
+
+    [suffix]
+    Adw.ToggleGroup source_toggles {
+      valign: center;
+
+      Adw.Toggle {
+        name: "zone";
+        label: _("Time Zone");
+      }
+
+      Adw.Toggle {
+        name: "fixed";
+        label: _("Fixed Offset");
+      }
+    }
+  }
+
+  Adw.ActionRow zone_row {
+    title: _("Time Zone");
+    activatable: true;
+
+    [suffix]
+    Image {
+      icon-name: "go-next-symbolic";
+      accessible-role: presentation;
+    }
+  }
+
+  Adw.SpinRow offset_row {
+    title: _("Offset From UTC");
+    subtitle: _("Fixed offset, no daylight saving time");
+    numeric: false;
+    snap-to-ticks: false;
+    update-policy: if_valid;
+
+    adjustment: Adjustment {
+      lower: -720;
+      upper: 840;
+      step-increment: 15;
+      page-increment: 60;
+    };
+  }
+
+  Adw.SwitchRow h24_row {
+    title: _("24-Hour Format");
+  }
+}

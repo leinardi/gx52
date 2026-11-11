@@ -24,7 +24,7 @@ use gettextrs::gettext;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use x52::charset::{self, LINE_BYTES};
-use x52::clock::{self, ClockError};
+use x52::clock::{self, Clock1Source, ClockError, DateFormat};
 use x52::command::{Brightness, ClockTime};
 use x52::device::DeviceType;
 use x52::input::Mode;
@@ -274,9 +274,56 @@ pub(crate) fn preview(
     now: Timestamp,
     local: &TimeZone,
 ) -> Result<MfdPreview, ClockError> {
+    let ClockDisplay { time, half } = clock_display(state, shown_clock, now, local)?;
+    let date = date_text(state, now, local)?;
+    Ok(MfdPreview {
+        mode: selector,
+        shift: device_type.has_shift() && state.shift,
+        lines: state
+            .mfd_lines
+            .map(|line| format!("{:<width$}", line.preview(), width = LINE_BYTES)),
+        time,
+        half,
+        date,
+        backlight: Backlight::of(state.mfd_brightness),
+        shown_clock,
+    })
+}
+
+/// The time of one clock as the MFD draws it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ClockDisplay {
+    /// `13:05`, or `1:05` in 12 h.
+    pub(crate) time: String,
+    /// `AM` or `PM` in 12 h, as the MFD draws it next to the time.
+    pub(crate) half: Option<&'static str>,
+}
+
+impl ClockDisplay {
+    /// The time with its half of the day: `13:05`, `1:05 PM`.
+    pub(crate) fn text(&self) -> String {
+        match self.half {
+            Some(half) => format!("{} {half}", self.time),
+            None => self.time.clone(),
+        }
+    }
+}
+
+/// The time `clock` of `state` shows at `now`, with `local` as the system time zone: for clock 2
+/// or 3, clock 1's time plus the offset sent, exactly as the device shows it.
+///
+/// # Errors
+///
+/// [`ClockError`] when the clock cannot be computed at `now`, as for the device.
+pub(crate) fn clock_display(
+    state: &DeviceState,
+    clock: ShownClock,
+    now: Timestamp,
+    local: &TimeZone,
+) -> Result<ClockDisplay, ClockError> {
     let clock1_source = state.clock1.source;
     let clock1 = clock::clock1_time(now, local, clock1_source)?;
-    let (offset, h24) = match shown_clock {
+    let (offset, h24) = match clock {
         ShownClock::One => (0, state.clock1.h24),
         ShownClock::Two => (
             clock::clock_offset(now, local, clock1_source, &state.clock2.source)?.minutes(),
@@ -288,24 +335,42 @@ pub(crate) fn preview(
         ),
     };
     let (time, half) = clock_text(clock1, offset, h24);
-    let date = clock::date_fields(now, local, clock1_source, state.date_format)?;
-    Ok(MfdPreview {
-        mode: selector,
-        shift: device_type.has_shift() && state.shift,
-        lines: state
-            .mfd_lines
-            .map(|line| format!("{:<width$}", line.preview(), width = LINE_BYTES)),
-        time,
-        half,
-        date: format!(
-            "{:02}.{:02}.{:02}",
-            date.first(),
-            date.second(),
-            date.third()
-        ),
-        backlight: Backlight::of(state.mfd_brightness),
-        shown_clock,
-    })
+    Ok(ClockDisplay { time, half })
+}
+
+/// The date `state` shows at `now` with `local` as the system time zone, with dots, as the MFD
+/// draws it: `09.11.26`.
+///
+/// # Errors
+///
+/// [`ClockError`] when the date cannot be computed at `now`, as for the device.
+pub(crate) fn date_text(
+    state: &DeviceState,
+    now: Timestamp,
+    local: &TimeZone,
+) -> Result<String, ClockError> {
+    format_date(state.date_format, state.clock1.source, now, local)
+}
+
+/// The date in `format` at `now` in clock 1's zone (`clock1_source`, `local` being the system
+/// time zone), with dots: `09.11.26`.
+///
+/// # Errors
+///
+/// [`ClockError`] when the date cannot be computed at `now`, as for the device.
+pub(crate) fn format_date(
+    format: DateFormat,
+    clock1_source: Clock1Source,
+    now: Timestamp,
+    local: &TimeZone,
+) -> Result<String, ClockError> {
+    let date = clock::date_fields(now, local, clock1_source, format)?;
+    Ok(format!(
+        "{:02}.{:02}.{:02}",
+        date.first(),
+        date.second(),
+        date.third()
+    ))
 }
 
 /// The time `offset` minutes from `clock1`, as the MFD draws it: `13:05` in 24 h, `1:05` and
@@ -337,10 +402,11 @@ pub(crate) fn accessible_label(preview: &MfdPreview) -> String {
             text => text.to_owned(),
         })
         .collect();
-    let time = match preview.half {
-        Some(half) => format!("{} {half}", preview.time),
-        None => preview.time.clone(),
-    };
+    let time = ClockDisplay {
+        time: preview.time.clone(),
+        half: preview.half,
+    }
+    .text();
     let mut indicators = Vec::new();
     if let Some(mode) = preview.mode {
         // Translators: the mode lit on the joystick's display; {number} is 1, 2 or 3.

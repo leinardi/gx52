@@ -246,18 +246,40 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
 
 ### Clocks view
 
-Three `adw::PreferencesGroup`s and the date format:
+Three `adw::PreferencesGroup`s and the date format, with no mode bar (the clocks are shared by
+every mode). The times are the ones the MFD shows: clock 2 or 3 is clock 1's time plus the offset
+sent. They tick at each minute and at a daylight saving change of any of the zones.
 
-- **Each clock group** shows that clock's current time and date as the MFD will show it, ticking.
-- **Clock 1:** source Local time / UTC (`adw::ToggleGroup`), 24-hour (`adw::SwitchRow`).
-- **Clocks 2 and 3:** a "Time zone | Fixed offset" `adw::ToggleGroup`.
-  - **Time zone:** a row with the place and its time ("Tokyo · 21:45"); activating it opens a
-    search dialog over cities and zones, like GNOME Clocks' "Add World Clock".
-  - **Fixed offset:** an hours:minutes `adw::SpinRow`, UTC−12:00 to UTC+14:00 in 15-minute steps,
-    subtitle "Fixed offset, no daylight saving time". An imported GX52 0.7 offset is shown here.
-  - 24-hour switch.
-- **Date format:** `adw::ComboRow` with DD-MM-YY, MM-DD-YY, YY-MM-DD, each with today's date as
-  example.
+- **Clock 1:** description "Shows 14:05 · 11.11.26 · system time zone" (or "· UTC"): its time
+  and the date, which follows clock 1 on the device. A "Source" row with a Local Time / UTC
+  `adw::ToggleGroup`, and "24-Hour Format" (`adw::SwitchRow`).
+- **Clocks 2 and 3:** description "Shows 21:45 · UTC+09:00", or "Shows 18:30 · UTC+05:45 all
+  year" for a fixed offset. No date: the device shows one date, clock 1's. A "Source" row with a
+  Time Zone / Fixed Offset `adw::ToggleGroup`.
+  - **Time zone:** an activatable row "Time Zone" with the place and the clock's time ("Tokyo ·
+    21:45"), which opens the search dialog below.
+  - **Fixed offset:** "Offset From UTC", an `adw::SpinRow` written "UTC+05:45" (U+2212 for the
+    minus), UTC−12:00 to UTC+14:00 in 15-minute steps, subtitle "Fixed offset, no daylight
+    saving time". It also reads a typed offset ("+5:45", "-3"), which is kept as typed, on a
+    15-minute step or not, as an imported GX52 0.7 offset is; the arrows step from it.
+  - **Switching the source:** Time Zone → Fixed Offset takes the zone's offset now, rounded to
+    15 minutes. Fixed Offset → Time Zone brings back the zone this clock of this profile had
+    earlier in the session; with none, the toggle stays on Fixed Offset and the search dialog
+    opens.
+  - "24-Hour Format".
+- **Date:** "Date Format", an `adw::ComboRow` with DD-MM-YY, MM-DD-YY, YY-MM-DD, each with today's
+  date as example ("DD-MM-YY · 11.11.26").
+
+**Time zone search:** an `adw::Dialog` "Select Time Zone" whose header bar holds a search entry
+("Search cities and time zones"). The list shows one row per zone of the runtime's tz database
+(`zone.tab`, with the country names of `iso3166.tab`, plus UTC), named by the city of its IANA name
+("Buenos Aires" for `America/Argentina/Buenos_Aires`). The names are the database's, in English.
+Each row reads "Tokyo · 21:45" over "Japan · UTC+09:00", ticking, and the clock's current zone is
+marked "Current time zone". The search matches part of the city, the country or the IANA name, in
+any case. Enter picks the first match, Down moves to the list, Escape closes. Nothing matching
+shows "No Results Found". Without `zone.tab` the dialog lists every zone name the database knows,
+without countries. The pick goes to the profile and clock the dialog was opened for. The dialog
+closes when another profile is shown, and a pick still being looked up then is dropped.
 
 ### A profile that failed to load
 

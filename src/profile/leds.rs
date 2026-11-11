@@ -384,7 +384,8 @@ mod tests {
     use x52::input::Mode;
 
     use super::*;
-    use crate::profile::{ModeSettings, ProfileId, ProfileKind};
+    use crate::profile::clocks::ProfileClocks;
+    use crate::profile::{ModeSettings, Profile, ProfileId, ProfileKind};
 
     fn pro_state(level: u8, blink: bool) -> EditorState {
         let mut settings = ModeSettings::builtin(DeviceType::X52Pro);
@@ -396,6 +397,7 @@ mod tests {
             kind: ProfileKind::Single,
             mode: Mode::One,
             settings,
+            clocks: ProfileClocks::of(&Profile::builtin_default(DeviceType::X52Pro)),
         }
     }
 

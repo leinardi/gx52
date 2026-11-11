@@ -146,7 +146,8 @@ that still has it reports an unknown value and that line shows nothing until it 
 - **Clocks 2 and 3** have a tagged source:
   - `{ iana = "Europe/Rome" }`: a geographic zone from the runtime's tz database, read through
     `jiff` (desk research: GNOME 51 ships `/usr/share/zoneinfo`), with its daylight saving
-    transitions;
+    transitions. The Clocks view picks one from the same database's `zone.tab` and
+    `iso3166.tab` ([ui.md](ui.md#clocks-view)), but any name the database knows is valid;
   - `{ fixed_offset_minutes = 345 }`: a fixed offset from UTC in minutes, `−720`–`+840` (UTC−12:00
     to UTC+14:00, the range GX52 0.7 offered). A fixed offset has **no daylight saving**.
 - What is sent: the device only knows clock 1's time and offsets from clock 1, so the app sends

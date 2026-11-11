@@ -346,6 +346,34 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
 4. **(code) Clocks**: clock 1 local or UTC, clocks 2/3 time zone (search dialog) or fixed offset,
    12/24 h, date format, the live time per clock. Done when: DW, plus a zone with DST and a fixed
    offset both show correctly on the device.
+
+   Results on 2026-11-11:
+
+   - **Editor:** every time shown is computed from the desired state the device gets (clock 2 or
+     3 as clock 1's time plus the offset sent), and ticks at each minute and at a DST change of
+     any zone shown; a clock edit computes the next tick again. The offset text and parsing, the
+     rounding of a zone left for a fixed offset, the zone kept per profile and clock for a switch
+     back, and the guard that drops a late zone pick are plain Rust with unit tests. Edits can name
+     their profile (`ProfileStore::edit`), so a pick goes to the profile the dialog was opened for
+     and never to the one shown when it completes. The MFD editor moved onto the same minute
+     ticker. Where ui.md and the prototype differed, the prototype won and ui.md says so: clocks 2
+     and 3 show their time and offset, not a date.
+   - **Zone search:** the runtime's `zone.tab` and `iso3166.tab` (no libgweather in GNOME 51),
+     English names, UTC added, jiff's zone names as the fallback; the loader is tested on temporary
+     directories with each file missing and with an oversized file.
+   - **Hands-on, X52 Pro, Devel build on the host and in the Devel Flatpak:** every check of the
+     plan as expected: Australia/Sydney (in DST) and America/New_York on clocks 2 and 3, cycled with
+     Start/Stop; fixed offsets UTC+05:45 and UTC−03:30; clock 1 on UTC, 12/24 h on each clock, each
+     date format; search by city, country and IANA name, no results, keyboard only; Zone → Fixed and
+     back, and Fixed → Zone with no zone kept opening the dialog; a zone dialog open while the
+     active profile changed left both profiles as they were; 360×294, light and dark style, Orca.
+     In the Flatpak the list had country names and a country search found its zones.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: the UTC row's
+     name translatable, a zone kept only when its edit is made, the dialog closed when the editor
+     shows no profile, the dialog's rows updated only when their text changes, a fired tick timer
+     clearing only its own id; typed offsets off the 15-minute step are kept and ui.md says so.
+     Fixed after the maintainer's review: a change of clock sources reschedules the tick (a zone's
+     transition can come before the next minute), and a test file's licence notice.
 5. **(code) Preferences**: run in background, start on login, the virtual mouse switch and settings
    (wired in M7). Done when: DW, plus each preference is a GSettings key bound to its row.
 6. **(code) udev/uinput guidance**: the udev page in place of the content area, the uinput subpage

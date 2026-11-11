@@ -44,6 +44,7 @@ use crate::profile::{
 };
 use crate::window::{self, Window};
 
+mod clocks;
 mod editing;
 mod persistence;
 
@@ -91,6 +92,7 @@ const UNRELEASED_VERSION: &str = "0.0.0";
 mod imp {
     use std::cell::{Cell, OnceCell, RefCell};
     use std::collections::{BTreeMap, BTreeSet};
+    use std::sync::Arc;
 
     use adw::{prelude::*, subclass::prelude::*};
     use gettextrs::gettext;
@@ -100,12 +102,14 @@ mod imp {
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
+    use crate::profile::clocks::ZoneMemory;
     use crate::profile::editing::EditingMode;
     use crate::profile::mfd::TextDrafts;
     use crate::profile::removals::Removals;
     use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
     use crate::profile::writes::WriteQueue;
+    use crate::zones::ZoneEntry;
     use crate::{config, window::Window};
 
     #[derive(Debug, Default)]
@@ -160,6 +164,10 @@ mod imp {
         pub(crate) draining: Cell<bool>,
         /// The text of the custom text MFD lines switched to another source this session.
         pub(crate) text_drafts: RefCell<TextDrafts>,
+        /// The time zones clocks 2 and 3 left this session, by profile and clock.
+        pub(crate) zone_memory: RefCell<ZoneMemory>,
+        /// The zones of the search dialog, once read.
+        pub(crate) zone_catalog: RefCell<Option<Arc<[ZoneEntry]>>>,
     }
 
     #[glib::object_subclass]

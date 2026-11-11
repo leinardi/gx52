@@ -1,0 +1,64 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52ClockEditor: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Adw.Clamp {
+      maximum-size: 600;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 24;
+        margin-top: 24;
+        margin-bottom: 36;
+        margin-start: 12;
+        margin-end: 12;
+
+        Adw.PreferencesGroup clock1_group {
+          title: _("Clock 1");
+
+          Adw.ActionRow {
+            title: _("Source");
+
+            [suffix]
+            Adw.ToggleGroup clock1_source {
+              valign: center;
+
+              accessibility {
+                label: _("Clock 1 source");
+              }
+
+              Adw.Toggle {
+                name: "local";
+                label: _("Local Time");
+              }
+
+              Adw.Toggle {
+                name: "utc";
+                label: _("UTC");
+              }
+            }
+          }
+
+          Adw.SwitchRow clock1_h24 {
+            title: _("24-Hour Format");
+
+            accessibility {
+              label: _("Clock 1 24-hour format");
+            }
+          }
+        }
+
+        $GX52ZoneClockGroup clock2_group {}
+
+        $GX52ZoneClockGroup clock3_group {}
+
+        Adw.PreferencesGroup date_group {
+          title: _("Date");
+        }
+      };
+    };
+  };
+}

@@ -682,6 +682,32 @@ impl ProfileStore {
         Ok(())
     }
 
+    /// Applies `edit` to the in-memory values of `id`, and only of `id`; nothing is written until
+    /// a [`SaveJob`] runs.
+    ///
+    /// Returns whether the values changed: an edit that changes nothing leaves the store as it
+    /// was.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::update`]: [`StoreError::Unknown`] for an id that is gone,
+    /// [`StoreError::ReadOnly`] for a file that failed to load, [`StoreError::TypeChange`] when
+    /// `edit` changes the device type.
+    pub(crate) fn edit(
+        &mut self,
+        id: &ProfileId,
+        edit: impl FnOnce(&mut Profile),
+    ) -> Result<bool, StoreError> {
+        let mut profile = self.loaded_or_error(id)?.profile.clone();
+        let before = profile.clone();
+        edit(&mut profile);
+        if profile == before {
+            return Ok(false);
+        }
+        self.update(id, profile)?;
+        Ok(true)
+    }
+
     /// The job that writes `id`'s file from its in-memory values. A file of an older schema is
     /// first copied to `<id>.toml.schema-<version>.bak`.
     ///

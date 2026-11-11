@@ -1,0 +1,76 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52ZoneDialog: Adw.Dialog {
+  title: _("Select Time Zone");
+  content-width: 420;
+  content-height: 520;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: SearchEntry search_entry {
+        placeholder-text: _("Search cities and time zones");
+        hexpand: true;
+
+        accessibility {
+          label: _("Search cities and time zones");
+        }
+      };
+    }
+
+    content: Stack results_stack {
+      StackPage {
+        name: "list";
+
+        child: ScrolledWindow {
+          hscrollbar-policy: never;
+
+          child: Adw.Clamp {
+            child: ListBox zone_list {
+              margin-top: 12;
+              margin-bottom: 12;
+              margin-start: 12;
+              margin-end: 12;
+              valign: start;
+              selection-mode: none;
+
+              accessibility {
+                label: _("Time zones");
+              }
+
+              styles [
+                "boxed-list",
+              ]
+            };
+          };
+        };
+      }
+
+      StackPage {
+        name: "empty";
+
+        child: Adw.StatusPage {
+          icon-name: "edit-find-symbolic";
+          title: _("No Results Found");
+          description: _("Try a different search");
+
+          styles [
+            "compact",
+          ]
+        };
+      }
+
+      StackPage {
+        name: "loading";
+
+        child: Adw.Spinner {
+          halign: center;
+          valign: center;
+          width-request: 32;
+          height-request: 32;
+        };
+      }
+    };
+  };
+}

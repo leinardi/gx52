@@ -1,6 +1,7 @@
 # Blueprint: list outputs explicitly so ninja knows when every .ui exists
 # (output: '.' can race the gresource step).
 blueprint_files = [
+    'ui/clock-editor.blp',
     'ui/device-footer.blp',
     'ui/led-button.blp',
     'ui/led-editor.blp',
@@ -10,6 +11,8 @@ blueprint_files = [
     'ui/profile-row.blp',
     'ui/shortcuts-dialog.blp',
     'ui/window.blp',
+    'ui/zone-clock-group.blp',
+    'ui/zone-dialog.blp',
 ]
 
 ui_files = []

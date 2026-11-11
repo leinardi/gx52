@@ -18,6 +18,7 @@
 use x52::device::DeviceType;
 use x52::input::Mode;
 
+use super::clocks::ProfileClocks;
 use super::{ModeSettings, ProfileId, ProfileKind};
 
 /// What the profile editor shows: the shown device type's active profile, in the mode shown.
@@ -33,4 +34,6 @@ pub(crate) struct EditorState {
     pub(crate) mode: Mode,
     /// The settings of that mode.
     pub(crate) settings: ModeSettings,
+    /// The clocks and the date, shared by every mode.
+    pub(crate) clocks: ProfileClocks,
 }
