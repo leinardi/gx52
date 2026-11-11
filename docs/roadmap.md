@@ -390,6 +390,9 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
      temporary directory with a memory backend (so under plain `cargo test` too), with the
      defaults, ranges and the `d` and `u` bindings to a double property; checked on the Devel build
      with `gsettings set` while running and while closed.
+   - **Hands-on, X52 Pro, Devel build on the host:** keyboard only, 360×294, light and dark
+     style, Orca, Ctrl+, with the dialog open, all as expected. Turning the virtual mouse on moves
+     nothing yet, as planned: the loop that reads the keys is M7 task 1.
    - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: autostart turned
      on while running in the background is off is turned off again, Ctrl+, with the dialog open
      shows the same dialog. Left: a dialog with no window to attach to (M6, when the app runs
