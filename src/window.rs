@@ -43,7 +43,7 @@ mod imp {
 
     use crate::config;
     use crate::profile::ProfileKind;
-    use crate::widgets::{ClockEditor, DeviceFooter, LedEditor, MfdEditor, RowAction};
+    use crate::widgets::{ClockEditor, DeviceFooter, LedEditor, MfdEditor, RowAction, UdevGuide};
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
@@ -76,7 +76,11 @@ mod imp {
         #[template_child]
         pub failed_page: TemplateChild<adw::StatusPage>,
         #[template_child]
-        pub status_page: TemplateChild<adw::StatusPage>,
+        pub udev_guide: TemplateChild<UdevGuide>,
+        #[template_child]
+        pub wide_title_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub switcher_bar: TemplateChild<adw::ViewSwitcherBar>,
         /// The profiles shown, from the application.
         pub profiles: OnceCell<gio::ListStore>,
         /// Set while the window selects a row itself, so the selection is not taken as the
@@ -98,6 +102,7 @@ mod imp {
             LedEditor::ensure_type();
             MfdEditor::ensure_type();
             ClockEditor::ensure_type();
+            UdevGuide::ensure_type();
             klass.bind_template();
             klass.install_action(
                 "win.show-view",
@@ -505,15 +510,16 @@ impl Window {
         };
         let status = app.device_status();
         let selected = self.selected();
-        imp.content_page.set_title(
-            &selected
+        let denied_type = status.device_type.filter(|_| status.offers_retry());
+        imp.content_page.set_title(&if denied_type.is_some() {
+            gettext("Device Access")
+        } else {
+            selected
                 .as_ref()
-                .map_or_else(|| gettext("Profile"), ProfileObject::title),
-        );
-        let page = if status.offers_retry() {
-            imp.status_page.set_description(Some(&gettext(
-                "GX52 is not allowed to control the joystick. Install the udev rule, then try again.",
-            )));
+                .map_or_else(|| gettext("Profile"), ProfileObject::title)
+        });
+        let page = if let Some(device_type) = denied_type {
+            imp.udev_guide.set_device_type(device_type);
             "no-permission"
         } else {
             match selected.as_ref().map(ProfileObject::state) {
@@ -545,6 +551,12 @@ impl Window {
             imp.clock_editor.close_zone_dialogs();
         }
         imp.content_stack.set_visible_child_name(page);
+        // Only the editor has views to switch; the other pages show their title (the narrow
+        // breakpoint shows the title anyway and reveals the bar, which stays hidden here).
+        let editor = page == "editor";
+        imp.wide_title_stack
+            .set_visible_child_name(if editor { "switcher" } else { "title" });
+        imp.switcher_bar.set_visible(editor);
         imp.x52d_banner
             .set_revealed(status.x52d_running && page == "editor");
     }

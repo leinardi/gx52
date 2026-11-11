@@ -97,13 +97,29 @@ template $GX52Window: Adw.ApplicationWindow {
               Adw.HeaderBar {
                 title-widget: Stack title_stack {
                   hhomogeneous: false;
-
+                  // Wide: the switcher over the editor, the title over the other pages.
                   StackPage {
                     name: "switcher";
 
-                    child: Adw.ViewSwitcher {
-                      stack: view_stack;
-                      policy: wide;
+                    child: Stack wide_title_stack {
+                      hhomogeneous: false;
+
+                      StackPage {
+                        name: "switcher";
+
+                        child: Adw.ViewSwitcher {
+                          stack: view_stack;
+                          policy: wide;
+                        };
+                      }
+
+                      StackPage {
+                        name: "title";
+
+                        child: Adw.WindowTitle {
+                          title: bind content_page.title;
+                        };
+                      }
                     };
                   }
 
@@ -192,23 +208,7 @@ template $GX52Window: Adw.ApplicationWindow {
                 StackPage {
                   name: "no-permission";
 
-                  child: Adw.StatusPage status_page {
-                    icon-name: "dialog-warning-symbolic";
-                    title: _("No Permission");
-
-                    child: Button retry_button {
-                      label: _("_Try Again");
-                      use-underline: true;
-                      halign: center;
-                      action-name: "app.retry-device";
-                      tooltip-text: _("Open the joystick again after installing the udev rule");
-
-                      styles [
-                        "pill",
-                        "suggested-action",
-                      ]
-                    };
-                  };
+                  child: $GX52UdevGuide udev_guide {};
                 }
               };
 

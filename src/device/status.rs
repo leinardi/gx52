@@ -65,7 +65,10 @@ impl DeviceStatus {
             }
             DeviceEvent::Mode { mode, .. } => self.mode = Some(*mode),
             DeviceEvent::X52dRunning(running) => self.x52d_running = *running,
-            DeviceEvent::Held { .. } | DeviceEvent::Error(_) | DeviceEvent::Sent(_) => {}
+            DeviceEvent::Held { .. }
+            | DeviceEvent::Error(_)
+            | DeviceEvent::Sent(_)
+            | DeviceEvent::Retried(_) => {}
         }
         *self != before
     }
@@ -113,6 +116,12 @@ impl DeviceStatus {
         }
     }
 
+    /// The device type whose profiles the window shows: the selected device's, whether or not
+    /// GX52 may open it, else the `last` one connected; `None` before any device was seen.
+    pub(crate) fn shown_type(self, last: Option<DeviceType>) -> Option<DeviceType> {
+        self.device_type.or(last)
+    }
+
     /// Whether the device is there but GX52 may not open it: the window then shows how to give
     /// it access, with "Try again".
     pub(crate) fn offers_retry(self) -> bool {
@@ -145,7 +154,7 @@ pub(crate) struct Footer {
 }
 
 /// The product name of `device_type`; product names are not translated.
-const fn device_name(device_type: DeviceType) -> &'static str {
+pub(crate) const fn device_name(device_type: DeviceType) -> &'static str {
     match device_type {
         DeviceType::X52Pro => "X52 Pro",
         DeviceType::X52 => "X52",
@@ -219,6 +228,32 @@ mod tests {
             texts("X52", "No permission", Dot::Problem, false)
         );
         assert!(status.offers_retry());
+    }
+
+    #[test]
+    fn a_device_without_permission_shows_its_own_type() {
+        let denied_pro = status(AccessState::NoPermission, Some(DeviceType::X52Pro));
+        assert_eq!(
+            denied_pro.shown_type(None),
+            Some(DeviceType::X52Pro),
+            "no history"
+        );
+        let denied_x52 = status(AccessState::NoPermission, Some(DeviceType::X52));
+        assert_eq!(
+            denied_x52.shown_type(Some(DeviceType::X52Pro)),
+            Some(DeviceType::X52),
+            "another type connected before"
+        );
+    }
+
+    #[test]
+    fn without_a_device_the_last_type_is_shown() {
+        let status = DeviceStatus::default();
+        assert_eq!(
+            status.shown_type(Some(DeviceType::X52)),
+            Some(DeviceType::X52)
+        );
+        assert_eq!(status.shown_type(None), None);
     }
 
     #[test]

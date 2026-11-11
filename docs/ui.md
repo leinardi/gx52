@@ -347,7 +347,7 @@ reads the whole line.
 
 | State | What the window shows |
 | --- | --- |
-| No device was ever connected (no last device type) | The whole window is an `adw::StatusPage`: "Connect your X52 or X52 Pro", with a "How to Fix" button when a device is present but not accessible. No profiles until a device appears |
+| No device was ever connected (no last device type) | The whole window is an `adw::StatusPage`: "Connect your X52 or X52 Pro". No profiles until a device appears. A device that is present always has a type, accessible or not, so this page never needs a "How to Fix" button: a device without permission shows its type's profiles with the udev guidance, as in the prototype (whose full-window guide cannot be reached) |
 | No device now, one was connected before | The last device type's profiles, editable; the footer says "Not connected" |
 | Device present, no permission (USB) | The content area is replaced by the [udev guidance](#guidance-pages) until access works; the sidebar stays |
 | `x52d` running | An `adw::Banner` over the editor: "x52d is running and may overwrite these settings", with "Learn More", which opens an `adw::Dialog` "x52d Is Running": what x52d is, that GX52 does not stop it, and the command `sudo systemctl disable --now x52d` with a copy button ([protocol.md](protocol.md#libx52s-x52d)) |
@@ -355,14 +355,24 @@ reads the whole line.
 
 ## Guidance pages
 
-- **udev (USB access):** replaces the content area. It shows the rule file with a copy button, the
-  commands to install it, "no need to unplug", and what keeps working without access
-  ([protocol.md](protocol.md#udev-rule)). It goes away by itself when access works, after
+- **udev (USB access):** replaces the content area, titled "Device Access": "Allow Access to the
+  Device", "GX52 found your X52 Pro but cannot open it…", then three groups. **Rule File**: "Save
+  this line as /etc/udev/rules.d/70-gx52.rules" and the rule's first line (the USB one only; the
+  uinput line is in Preferences, as in the prototype) with a copy button. **Load the Rule**: "No
+  need to unplug…" and `sudo udevadm control --reload && sudo udevadm trigger` with a copy button.
+  **Without Access**: test input keeps working; LEDs, MFD and clocks are unavailable
+  ([protocol.md](protocol.md#udev-rule)). The page scrolls, so every row and Try Again stay
+  reachable in the narrowest window. It goes away by itself when access works, after
   `udevadm trigger`, without a replug; a **Try Again** button checks at once and shows the toast
   "Still no access to the device" when it still fails.
-- **uinput (virtual mouse only):** in Preferences. When the virtual mouse switch is on and
-  `/dev/uinput` is not writable, the row shows a warning and a "How to Fix" button that pushes a
-  subpage of the preferences dialog with the second rule line and the security note.
+- **uinput (virtual mouse only):** in Preferences. While the dialog shows, the virtual mouse switch
+  is on and `/dev/uinput` is not writable (for any reason), a row "Virtual mouse unavailable",
+  "GX52 cannot write to /dev/uinput", shows under the switch with a "How to Fix" button that
+  pushes the subpage "Virtual Mouse Access": where to add the line, **Rule Line** (the second rule
+  line, with a copy button), **Load the Rule** ("No need to log out or replug anything", the same
+  command) and **Security** ("Write access to uinput lets any program you run inject keyboard and
+  mouse input"). The access is checked again every second while the row shows, so it goes away by
+  itself after `udevadm trigger`.
 
 ## Preferences
 

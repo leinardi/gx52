@@ -1,0 +1,83 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52UinputPage: Adw.NavigationPage {
+  title: _("Virtual Mouse Access");
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Adw.PreferencesPage page {
+      Adw.PreferencesGroup {
+        title: _("Rule Line");
+
+        Adw.ActionRow rule_row {
+          use-markup: false;
+          title-selectable: true;
+
+          styles [
+            "monospace",
+          ]
+
+          [suffix]
+          Button copy_rule {
+            icon-name: "edit-copy-symbolic";
+            tooltip-text: _("Copy Rule Line");
+            valign: center;
+
+            accessibility {
+              label: _("Copy Rule Line");
+            }
+
+            styles [
+              "flat",
+            ]
+          }
+        }
+      }
+
+      Adw.PreferencesGroup {
+        title: _("Load the Rule");
+        description: _("No need to log out or replug anything.");
+
+        Adw.ActionRow command_row {
+          use-markup: false;
+          title-selectable: true;
+
+          styles [
+            "monospace",
+          ]
+
+          [suffix]
+          Button copy_command {
+            icon-name: "edit-copy-symbolic";
+            tooltip-text: _("Copy Command");
+            valign: center;
+
+            accessibility {
+              label: _("Copy Command");
+            }
+
+            styles [
+              "flat",
+            ]
+          }
+        }
+      }
+
+      Adw.PreferencesGroup {
+        title: _("Security");
+
+        Adw.ActionRow {
+          title: _("Write access to uinput lets any program you run inject keyboard and mouse input");
+
+          [prefix]
+          Image {
+            icon-name: "dialog-warning-symbolic";
+          }
+        }
+      }
+    };
+  };
+}

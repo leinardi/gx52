@@ -35,9 +35,11 @@ while the app writes to it (S1, and S3 for input during writes).
 
 ### udev rule
 
-Without a rule the USB node is `root:root 0664` and opening it fails with `EACCES`. The in-app
-guidance page shows this file, `/etc/udev/rules.d/70-gx52.rules` (the number must stay below 73
-for `uaccess` to apply):
+Without a rule the USB node is `root:root 0664` and opening it fails with `EACCES`. The rule file
+is `/etc/udev/rules.d/70-gx52.rules` (the number must stay below 73 for `uaccess` to apply); the
+udev guidance page shows its first line, the uinput subpage of Preferences the second
+([ui.md](ui.md#guidance-pages)). The app's copy of both lines (`src/device/udev.rs`) is tested
+against this file:
 
 ```
 SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="06a3", ATTR{idProduct}=="0762|0255|075c", TAG+="uaccess"
@@ -52,10 +54,10 @@ KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinpu
 - The evdev node (`/dev/input/event*`) needs no rule: systemd's joystick `uaccess` rule covers it
   (S1, S4).
 
-After installing or restoring the rule, `udevadm control --reload && udevadm trigger` is enough: the
-ACL comes back on the existing node **without replugging** and `open` works at once (S4). So the
-guidance page says there is no need to unplug, and the app retries `open` while it is in the "no
-permission" state (on each device poll, or when the user presses "Try again").
+After installing or restoring the rule, `sudo udevadm control --reload && sudo udevadm trigger` is
+enough: the ACL comes back on the existing node **without replugging** and `open` works at once
+(S4). So the guidance page says there is no need to unplug, and the app retries `open` while it is
+in the "no permission" state (every second, or at once when the user presses "Try Again").
 
 ### Access states
 
