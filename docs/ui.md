@@ -310,7 +310,9 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
 
 - **Axes:** stick X/Y as a square with a dot, throttle Z as a vertical bar, X/Y/Z rotation and the
   slider as horizontal bars, each with its raw value. Each axis fills its bar over the range the
-  device reports for it (evdev's absinfo), not a range from the docs.
+  device reports for it (evdev's absinfo), not a range from the docs. The squares put the rest
+  value in the middle, the upper of the two middle values of an even range (the ministick rests
+  at 8 of 0–15), each half scaled on its own.
 - **Ministick:** a second square. Not shown on the X52 (non-Pro), whose ministick codes are not
   known.
 - **Toggles:** T1–T6 in pairs. **Mode:** 1 / 2 / 3, the current one highlighted.

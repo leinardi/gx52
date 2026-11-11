@@ -552,6 +552,40 @@ impl AxisRange {
     }
 }
 
+impl AxisRange {
+    /// The value a centring control rests at: the middle of the range, the upper one of the two
+    /// middles when the range has an even count of values. The ministick reports 0–15 and rests
+    /// at 8 (docs/protocol.md, "Axes").
+    #[must_use]
+    pub fn centre(self) -> i32 {
+        self.min + (self.max - self.min + 1) / 2
+    }
+
+    /// Where `value` lies for a control that centres: `0.0` at [`Self::min`], `0.5` at
+    /// [`Self::centre`] and `1.0` at [`Self::max`], each half scaled on its own, clamped. `0.5`
+    /// for an empty or inverted range.
+    #[must_use]
+    pub fn centred_fraction(self, value: i32) -> f64 {
+        if self.max <= self.min {
+            return 0.5;
+        }
+        let centre = self.centre();
+        let half = |from: i32, to: i32| {
+            if to == from {
+                0.0
+            } else {
+                ((f64::from(value) - f64::from(from)) / (f64::from(to) - f64::from(from)))
+                    .clamp(0.0, 1.0)
+            }
+        };
+        if value < centre {
+            0.5 * half(self.min, centre)
+        } else {
+            0.5 + 0.5 * half(centre, self.max)
+        }
+    }
+}
+
 /// The range and the current value of an axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AxisState {

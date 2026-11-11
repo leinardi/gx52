@@ -622,3 +622,19 @@ fn axis_values_change_only_the_axes_of_the_snapshot() {
     values.clear();
     assert_eq!(values, AxisValues::new());
 }
+
+#[test]
+fn a_centring_axis_rests_in_the_middle() {
+    let ministick = AxisRange { min: 0, max: 15 };
+    assert_eq!(ministick.centre(), 8);
+    assert!((ministick.centred_fraction(8) - 0.5).abs() < f64::EPSILON);
+    assert!((ministick.centred_fraction(0) - 0.0).abs() < f64::EPSILON);
+    assert!((ministick.centred_fraction(15) - 1.0).abs() < f64::EPSILON);
+    assert!((ministick.centred_fraction(4) - 0.25).abs() < f64::EPSILON);
+    let stick = AxisRange { min: 0, max: 1023 };
+    assert_eq!(stick.centre(), 512);
+    assert!((stick.centred_fraction(512) - 0.5).abs() < f64::EPSILON);
+    assert!((stick.centred_fraction(2000) - 1.0).abs() < f64::EPSILON);
+    let empty = AxisRange { min: 3, max: 3 };
+    assert!((empty.centred_fraction(3) - 0.5).abs() < f64::EPSILON);
+}

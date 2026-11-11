@@ -36,7 +36,7 @@ use crate::device::monotonic::{Monotonic, SystemMonotonic};
 use crate::device::names;
 use crate::device::tester::{self, ButtonGroup, Hat, Pulse, PulseStep};
 use crate::profile;
-use crate::widgets::{AxisPad, app_of};
+use crate::widgets::{AxisBar, AxisPad, app_of};
 
 /// The size of the stick's pad, from the prototype.
 const STICK_PAD: i32 = 120;
@@ -199,9 +199,11 @@ impl Pill {
         if let Some(number) = map.button_number(code) {
             let badge = gtk::Label::builder()
                 .label(number.to_string())
+                .valign(gtk::Align::Center)
                 .css_classes(["input-number"])
                 .build();
-            widget.append(&badge);
+            widget.prepend(&badge);
+            widget.add_css_class("numbered");
         }
         widget.set_tooltip_text(Some(&tester::tooltip(map, button, code)));
         Rc::new(Self {
@@ -262,7 +264,7 @@ impl Pill {
 /// A pill-shaped indicator with `label`.
 fn pill_box(label: &str) -> gtk::Box {
     let widget = gtk::Box::builder()
-        .spacing(6)
+        .spacing(7)
         .valign(gtk::Align::Center)
         .css_classes(["input-pill"])
         .build();
@@ -270,29 +272,11 @@ fn pill_box(label: &str) -> gtk::Box {
     widget
 }
 
-/// A bar for an axis, from its range's minimum to its maximum.
-fn axis_bar(orientation: gtk::Orientation) -> gtk::LevelBar {
-    let bar = gtk::LevelBar::builder()
-        .orientation(orientation)
-        .min_value(0.0)
-        .max_value(1.0)
-        .css_classes(["axis-bar"])
-        .build();
-    for offset in ["low", "high", "full"] {
-        bar.remove_offset_value(Some(offset));
-    }
-    if orientation == gtk::Orientation::Vertical {
-        bar.set_inverted(true);
-    }
-    bar.update_state(&[gtk::accessible::State::Hidden(true)]);
-    bar
-}
-
 /// A row of the axes card: a name, a bar and the raw value.
 #[derive(Debug)]
 struct AxisRow {
     axis: Axis,
-    bar: gtk::LevelBar,
+    bar: AxisBar,
     value: gtk::Label,
 }
 
@@ -300,7 +284,7 @@ struct AxisRow {
 #[derive(Debug)]
 struct AxesView {
     stick: AxisPad,
-    throttle: gtk::LevelBar,
+    throttle: AxisBar,
     rows: Vec<AxisRow>,
     raw: gtk::Label,
 }
@@ -310,8 +294,7 @@ impl AxesView {
     fn build(map: &InputMap, cards: &adw::WrapBox) -> Self {
         let (axes_card, axes) = card(&gettext("Axes"));
         let stick = AxisPad::new(STICK_PAD);
-        let throttle = axis_bar(gtk::Orientation::Vertical);
-        throttle.add_css_class("throttle");
+        let throttle = AxisBar::new(gtk::Orientation::Vertical);
         // Wraps the rows under the pad and the bar when the card is narrow.
         let figures = adw::WrapBox::builder()
             .child_spacing(18)
@@ -337,8 +320,12 @@ impl AxesView {
         .enumerate()
         {
             let row = i32::try_from(row).unwrap_or(i32::MAX);
-            let label = gtk::Label::builder().label(name).xalign(0.0).build();
-            let bar = axis_bar(gtk::Orientation::Horizontal);
+            let label = gtk::Label::builder()
+                .label(name)
+                .xalign(0.0)
+                .width_chars(10)
+                .build();
+            let bar = AxisBar::new(gtk::Orientation::Horizontal);
             bar.set_hexpand(true);
             bar.set_valign(gtk::Align::Center);
             let value = value_label();
@@ -412,7 +399,6 @@ fn build_toggles(
         .into_iter()
         .map(|mode| {
             let pill = pill_box(&mode_number(mode));
-            pill.add_css_class("mode");
             pill.set_tooltip_text(Some(&profile::mode_text(mode)));
             mode_row.append(&pill);
             (mode, pill)
@@ -591,18 +577,23 @@ impl View {
             axes.get(axis)
                 .map(|state| state.range.fraction(state.value))
         };
+        // The stick and the ministick centre, so their rest value is the middle of the pad.
+        let centred = |axis| {
+            axes.get(axis)
+                .map(|state| state.range.centred_fraction(state.value))
+        };
         let text = |axis| {
             axes.get(axis)
                 .map_or_else(|| UNKNOWN.to_owned(), |state| state.value.to_string())
         };
         self.axes
             .stick
-            .set_position(fraction(Axis::StickX).zip(fraction(Axis::StickY)));
+            .set_position(centred(Axis::StickX).zip(centred(Axis::StickY)));
         self.axes
             .throttle
-            .set_value(fraction(Axis::Throttle).unwrap_or_default());
+            .set_fraction(fraction(Axis::Throttle).unwrap_or_default());
         for row in &self.axes.rows {
-            row.bar.set_value(fraction(row.axis).unwrap_or_default());
+            row.bar.set_fraction(fraction(row.axis).unwrap_or_default());
             row.value.set_label(&text(row.axis));
         }
         // Translators: the raw values of the stick (X, Y) and the throttle (Z) on the input
@@ -613,7 +604,7 @@ impl View {
             .replace("{z}", &text(Axis::Throttle));
         self.axes.raw.set_label(&raw);
         if let Some((pad, caption)) = &self.ministick {
-            pad.set_position(fraction(Axis::MinistickX).zip(fraction(Axis::MinistickY)));
+            pad.set_position(centred(Axis::MinistickX).zip(centred(Axis::MinistickY)));
             // Translators: the ministick's raw values on the input tester; it moves the mouse.
             let text_of = gettext("Mouse X / Y · {x}, {y}")
                 .replace("{x}", &text(Axis::MinistickX))
