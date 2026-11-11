@@ -20,6 +20,7 @@
 //! input map (X52 Pro)" and "X52 (non-Pro)"); the reader turns events into them. The mode
 //! debounce works on decoded modes and evdev's event timestamps, never on the wall clock.
 
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::device::DeviceType;
@@ -241,6 +242,12 @@ impl HeldInputs {
     #[must_use]
     pub fn last(&self) -> Option<Input> {
         self.held.last().copied()
+    }
+
+    /// Whether `input` is held now. A mode selector position never is.
+    #[must_use]
+    pub fn is_held(&self, input: Input) -> bool {
+        self.held.contains(&input)
     }
 }
 
@@ -476,6 +483,35 @@ impl InputMap {
         }
     }
 
+    /// The `EV_KEY` code of `button`, or `None` when the device does not have it.
+    #[must_use]
+    pub fn code_of(&self, button: Button) -> Option<u16> {
+        self.buttons
+            .iter()
+            .find(|(_, known)| *known == button)
+            .map(|(code, _)| *code)
+    }
+
+    /// The number games show for the button of `code`, from 1: its place among the device's key
+    /// codes in ascending order, the order joydev and SDL number buttons in. The mode selector
+    /// positions count, since games see them too. `None` for a code the device does not have.
+    #[must_use]
+    pub fn button_number(&self, code: u16) -> Option<usize> {
+        self.button(code)?;
+        Some(
+            self.buttons
+                .iter()
+                .filter(|(known, _)| *known <= code)
+                .count(),
+        )
+    }
+
+    /// Whether the device has `axis`.
+    #[must_use]
+    pub fn has_axis(&self, axis: Axis) -> bool {
+        self.axes.iter().any(|(_, known)| *known == axis)
+    }
+
     /// Every button code and its button.
     pub fn buttons(&self) -> impl Iterator<Item = (u16, Button)> {
         self.buttons.iter().copied()
@@ -492,6 +528,79 @@ fn lookup<T: Copy>(table: &[(u16, T)], code: u16) -> Option<T> {
         .iter()
         .find(|(known, _)| *known == code)
         .map(|(_, item)| *item)
+}
+
+/// The values an absolute axis reports, as the device's absinfo (`EVIOCGABS`) gives them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AxisRange {
+    /// The lowest value.
+    pub min: i32,
+    /// The highest value.
+    pub max: i32,
+}
+
+impl AxisRange {
+    /// Where `value` lies in the range, from `0.0` at [`Self::min`] to `1.0` at [`Self::max`],
+    /// clamped; `0.0` for an empty or inverted range.
+    #[must_use]
+    pub fn fraction(self, value: i32) -> f64 {
+        if self.max <= self.min {
+            return 0.0;
+        }
+        let span = f64::from(self.max) - f64::from(self.min);
+        ((f64::from(value) - f64::from(self.min)) / span).clamp(0.0, 1.0)
+    }
+}
+
+/// The range and the current value of an axis.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AxisState {
+    /// What the axis can report.
+    pub range: AxisRange,
+    /// What it reports now.
+    pub value: i32,
+}
+
+/// The axes of the open node and their values, for the input tester.
+///
+/// A snapshot fills it when the node opens; later values change only the axes it has, so a value
+/// is never shown against a range that was not read from the device.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AxisValues {
+    axes: BTreeMap<Axis, AxisState>,
+}
+
+impl AxisValues {
+    /// No axis known.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            axes: BTreeMap::new(),
+        }
+    }
+
+    /// Replaces every axis with those of a snapshot.
+    pub fn set_snapshot(&mut self, axes: impl IntoIterator<Item = (Axis, AxisState)>) {
+        self.axes = axes.into_iter().collect();
+    }
+
+    /// `axis` reports `value` now; ignored for an axis the snapshot did not have.
+    pub fn set_value(&mut self, axis: Axis, value: i32) {
+        if let Some(state) = self.axes.get_mut(&axis) {
+            state.value = value;
+        }
+    }
+
+    /// The range and value of `axis`, if known.
+    #[must_use]
+    pub fn get(&self, axis: Axis) -> Option<AxisState> {
+        self.axes.get(&axis).copied()
+    }
+
+    /// Nothing is known any more: the device or its node went away.
+    pub fn clear(&mut self) {
+        self.axes.clear();
+    }
 }
 
 /// A set of modes: the mode buttons held at one time.

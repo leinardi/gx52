@@ -22,7 +22,11 @@
 //! [`DISCOVERY_INTERVAL`]. A node is used only when its sysfs device lies under the selected USB
 //! device's sysfs directory, so USB and evdev always come from the same physical device. The node
 //! is opened without grabbing (games keep every input), and nothing is logged per event.
+//!
+//! The axes other than POV 1 are reported only while the input tester listens
+//! ([`ReaderMessage::ListenToAxes`]), coalesced to one [`ReaderEvent::Axes`] per read.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -30,7 +34,10 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, TryRecvError};
 use std::time::{Duration, UNIX_EPOCH};
 
 use rustix::event::{PollFd, PollFlags, Timespec};
-use x52::input::{Axis, Button, HeldInputs, InputMap, Mode, ModeDebouncer, ModeSet};
+use x52::input::{
+    Axis, AxisRange, AxisState, AxisValues, Button, HeldInputs, InputMap, Mode, ModeDebouncer,
+    ModeSet,
+};
 
 use super::id::{DeviceId, Generation};
 use super::monotonic::Monotonic;
@@ -60,6 +67,10 @@ pub(crate) enum ReaderMessage {
     Selected(DeviceId),
     /// The selection of that generation is gone.
     Gone(Generation),
+    /// The input tester shows the axes: report them, starting with a snapshot.
+    ListenToAxes,
+    /// Nothing shows the axes any more: stop reporting them.
+    IgnoreAxes,
     /// Stop the thread.
     Shutdown,
 }
@@ -93,6 +104,37 @@ pub(crate) enum ReaderEvent {
         /// What changed.
         change: HeldChange,
     },
+    /// The axes other than POV 1 changed; sent only while the input tester listens.
+    Axes {
+        /// The selection it belongs to.
+        generation: Generation,
+        /// What changed.
+        change: AxisChange,
+    },
+}
+
+/// A change of the axes, for [`AxisValues`] on the main thread.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AxisChange {
+    /// Every axis of the node, with its range and value (`EVIOCGABS`): sent when listening starts
+    /// on an open node and on every open while listening.
+    Snapshot(Vec<(Axis, AxisState)>),
+    /// The last value of each axis that moved within one read.
+    Values(Vec<(Axis, i32)>),
+}
+
+impl AxisChange {
+    /// Applies the change to `axes`.
+    pub(crate) fn apply(&self, axes: &mut AxisValues) {
+        match self {
+            Self::Snapshot(snapshot) => axes.set_snapshot(snapshot.iter().copied()),
+            Self::Values(values) => {
+                for (axis, value) in values {
+                    axes.set_value(*axis, *value);
+                }
+            }
+        }
+    }
 }
 
 /// A change of the held inputs, for [`HeldInputs`] on the main thread.
@@ -156,13 +198,13 @@ pub(crate) trait InputNode {
     /// The I/O error of the ioctl.
     fn held_keys(&self) -> io::Result<Vec<u16>>;
 
-    /// The value of the absolute axis `code` now (`EVIOCGABS`); `0` for an axis the node does not
-    /// have.
+    /// The range and value of the absolute axis `code` now (`EVIOCGABS`); all `0` for an axis the
+    /// node does not have.
     ///
     /// # Errors
     ///
     /// The I/O error of the ioctl.
-    fn abs_value(&self, code: u16) -> io::Result<i32>;
+    fn abs_info(&self, code: u16) -> io::Result<AxisState>;
 
     /// Waits up to `timeout` for events; true when there may be some to read.
     ///
@@ -325,6 +367,58 @@ impl HeldTracker {
     }
 }
 
+/// Collects the values of the axes other than POV 1 within one read, the last value per axis.
+#[derive(Debug)]
+pub(crate) struct AxisTracker {
+    map: InputMap,
+    moved: BTreeMap<Axis, i32>,
+}
+
+impl AxisTracker {
+    /// A tracker of the axes of `map`.
+    pub(crate) const fn new(map: InputMap) -> Self {
+        Self {
+            map,
+            moved: BTreeMap::new(),
+        }
+    }
+
+    /// Notes the value of an axis event other than POV 1's.
+    pub(crate) fn on_event(&mut self, event: &InputEvent) {
+        if event.event_type != EV_ABS {
+            return;
+        }
+        if let Some(axis) = self.map.axis(event.code).filter(|axis| !is_pov1(*axis)) {
+            self.moved.insert(axis, event.value);
+        }
+    }
+
+    /// The values noted since the last call, if any.
+    pub(crate) fn take(&mut self) -> Option<AxisChange> {
+        if self.moved.is_empty() {
+            return None;
+        }
+        Some(AxisChange::Values(
+            std::mem::take(&mut self.moved).into_iter().collect(),
+        ))
+    }
+}
+
+/// Whether `axis` is one of POV 1's, which the held inputs report.
+const fn is_pov1(axis: Axis) -> bool {
+    matches!(axis, Axis::Pov1X | Axis::Pov1Y)
+}
+
+/// Every axis of `map` other than POV 1's, with its range and value on `node` now.
+fn axis_snapshot(node: &impl InputNode, map: &InputMap) -> io::Result<AxisChange> {
+    let axes = map
+        .axes()
+        .filter(|(_, axis)| !is_pov1(*axis))
+        .map(|(code, axis)| Ok((axis, node.abs_info(code)?)))
+        .collect::<io::Result<Vec<_>>>()?;
+    Ok(AxisChange::Snapshot(axes))
+}
+
 /// The evdev codes of POV 1's two axes in `map`.
 fn pov1_codes(map: &InputMap) -> (Option<u16>, Option<u16>) {
     let code = |wanted| {
@@ -337,7 +431,9 @@ fn pov1_codes(map: &InputMap) -> (Option<u16>, Option<u16>) {
 
 /// POV 1's `x`, `y` on `node` now.
 fn pov1_state(node: &impl InputNode, map: &InputMap) -> io::Result<(i32, i32)> {
-    let value = |code: Option<u16>| code.map_or(Ok(0), |code| node.abs_value(code));
+    let value = |code: Option<u16>| -> io::Result<i32> {
+        code.map_or(Ok(0), |code| Ok(node.abs_info(code)?.value))
+    };
     let (x, y) = pov1_codes(map);
     Ok((value(x)?, value(y)?))
 }
@@ -367,6 +463,17 @@ pub(crate) struct Reader<S, M, E> {
     source: S,
     monotonic: M,
     events: async_channel::Sender<E>,
+    /// Whether the input tester listens to the axes; kept across nodes and selections.
+    axes: Listening,
+}
+
+/// Whether the axes are reported.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Listening {
+    /// Report them.
+    On,
+    /// Drop them.
+    Off,
 }
 
 impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
@@ -376,6 +483,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             source,
             monotonic,
             events,
+            axes: Listening::Off,
         }
     }
 
@@ -387,6 +495,14 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
                 None => match messages.recv() {
                     Ok(ReaderMessage::Selected(device)) => Next::Selected(device),
                     Ok(ReaderMessage::Gone(_)) => Next::Gone,
+                    Ok(ReaderMessage::ListenToAxes) => {
+                        self.axes = Listening::On;
+                        continue;
+                    }
+                    Ok(ReaderMessage::IgnoreAxes) => {
+                        self.axes = Listening::Off;
+                        continue;
+                    }
                     Ok(ReaderMessage::Shutdown) | Err(_) => Next::Shutdown,
                 },
                 Some(device) => self.follow(device, messages),
@@ -407,7 +523,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             loop {
                 match messages.try_recv() {
                     Ok(message) => {
-                        if let Some(next) = on_message(message, device) {
+                        if let Some(next) = self.on_message(message, device) {
                             return next;
                         }
                     }
@@ -423,7 +539,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             }
             match messages.recv_timeout(DISCOVERY_INTERVAL) {
                 Ok(message) => {
-                    if let Some(next) = on_message(message, device) {
+                    if let Some(next) = self.on_message(message, device) {
                         return next;
                     }
                 }
@@ -444,7 +560,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
 
     /// Reads `node` until it goes away or the selection changes.
     fn read(
-        &self,
+        &mut self,
         device: &DeviceId,
         mut node: S::Node,
         path: PathBuf,
@@ -457,6 +573,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
         let generation = device.generation;
         let mut tracker = ModeTracker::new(map, &held);
         let mut held_tracker = HeldTracker::new(map, pov1);
+        let mut axis_tracker = AxisTracker::new(map);
         tracing::info!("Reading input from {}", path.display());
         self.send(ReaderEvent::NodeOpened {
             generation,
@@ -469,11 +586,21 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             generation,
             change: HeldChange::Snapshot(HeldInputs::from_snapshot(&map, &held, pov1)),
         });
+        let mut reported = Listening::Off;
         let stop = loop {
+            if self.axes != reported {
+                reported = self.axes;
+                if reported == Listening::On {
+                    let Ok(change) = axis_snapshot(&node, &map) else {
+                        break Stop::NodeLost;
+                    };
+                    self.send(ReaderEvent::Axes { generation, change });
+                }
+            }
             let Ok(readable) = node.wait(tracker.timeout(self.monotonic.elapsed())) else {
                 break Stop::NodeLost;
             };
-            if let Some(next) = drain_messages(messages, device) {
+            if let Some(next) = self.drain_messages(messages, device) {
                 break Stop::Next(next);
             }
             if readable {
@@ -487,6 +614,12 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
                             if let Some(change) = held_tracker.on_event(event) {
                                 self.send(ReaderEvent::Held { generation, change });
                             }
+                            if self.axes == Listening::On {
+                                axis_tracker.on_event(event);
+                            }
+                        }
+                        if let Some(change) = axis_tracker.take() {
+                            self.send(ReaderEvent::Axes { generation, change });
                         }
                     }
                     Err(error) if error.kind() == io::ErrorKind::WouldBlock => {}
@@ -511,31 +644,43 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
         // An unbounded channel only fails once the main thread has stopped listening.
         let _ = self.events.try_send(event.into());
     }
-}
 
-/// Handles every queued message; returns what ends following `device`, if one does.
-fn drain_messages(messages: &Receiver<ReaderMessage>, device: &DeviceId) -> Option<Next> {
-    loop {
-        match messages.try_recv() {
-            Ok(message) => {
-                if let Some(next) = on_message(message, device) {
-                    return Some(next);
+    /// Handles every queued message; returns what ends following `device`, if one does.
+    fn drain_messages(
+        &mut self,
+        messages: &Receiver<ReaderMessage>,
+        device: &DeviceId,
+    ) -> Option<Next> {
+        loop {
+            match messages.try_recv() {
+                Ok(message) => {
+                    if let Some(next) = self.on_message(message, device) {
+                        return Some(next);
+                    }
                 }
+                Err(TryRecvError::Empty) => return None,
+                Err(TryRecvError::Disconnected) => return Some(Next::Shutdown),
             }
-            Err(TryRecvError::Empty) => return None,
-            Err(TryRecvError::Disconnected) => return Some(Next::Shutdown),
         }
     }
-}
 
-/// What `message` means while `device` is followed: `None` when it changes nothing.
-fn on_message(message: ReaderMessage, device: &DeviceId) -> Option<Next> {
-    match message {
-        ReaderMessage::Selected(selected) if selected == *device => None,
-        ReaderMessage::Selected(selected) => Some(Next::Selected(selected)),
-        ReaderMessage::Gone(generation) if generation == device.generation => Some(Next::Gone),
-        ReaderMessage::Gone(_) => None,
-        ReaderMessage::Shutdown => Some(Next::Shutdown),
+    /// What `message` means while `device` is followed: `None` when it changes nothing.
+    fn on_message(&mut self, message: ReaderMessage, device: &DeviceId) -> Option<Next> {
+        match message {
+            ReaderMessage::Selected(selected) if selected == *device => None,
+            ReaderMessage::Selected(selected) => Some(Next::Selected(selected)),
+            ReaderMessage::Gone(generation) if generation == device.generation => Some(Next::Gone),
+            ReaderMessage::Gone(_) => None,
+            ReaderMessage::ListenToAxes => {
+                self.axes = Listening::On;
+                None
+            }
+            ReaderMessage::IgnoreAxes => {
+                self.axes = Listening::Off;
+                None
+            }
+            ReaderMessage::Shutdown => Some(Next::Shutdown),
+        }
     }
 }
 
@@ -599,9 +744,21 @@ impl InputNode for EvdevNode {
             .collect())
     }
 
-    fn abs_value(&self, code: u16) -> io::Result<i32> {
+    fn abs_info(&self, code: u16) -> io::Result<AxisState> {
         let state = self.device.get_abs_state()?;
-        Ok(state.get(usize::from(code)).map_or(0, |info| info.value))
+        Ok(state.get(usize::from(code)).map_or(
+            AxisState {
+                range: AxisRange { min: 0, max: 0 },
+                value: 0,
+            },
+            |info| AxisState {
+                range: AxisRange {
+                    min: info.minimum,
+                    max: info.maximum,
+                },
+                value: info.value,
+            },
+        ))
     }
 
     fn wait(&mut self, timeout: Duration) -> io::Result<bool> {

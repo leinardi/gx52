@@ -13,12 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The names of the joystick's controls, as the MFD's "last button" line shows them
-//! (docs/protocol.md, "Buttons" and "Hats and names").
+//! The names of the joystick's controls (docs/protocol.md, "Buttons" and "Hats and names"): as the
+//! MFD's "last button" line shows them, and as the input tester labels its indicators.
 //!
-//! Each name fits an MFD line: at most 16 characters in English, shortened where the full name
-//! is longer ("Trigger stage 1", "Thr. hat left"). A longer translation is cut to 16 bytes when
-//! sent, as every dynamic line is.
+//! Each MFD name fits an MFD line: at most 16 characters in English, shortened where the full
+//! name is longer ("Trigger stage 1", "Thr. hat left"). A longer translation is cut to 16 bytes
+//! when sent, as every dynamic line is. The input tester shows a shorter label on each indicator
+//! and the full name in its tooltip (docs/ui.md, "Input tester").
 
 use gettextrs::gettext;
 use x52::input::{Button, Input, Pov1Direction};
@@ -103,6 +104,115 @@ fn button_name(button: Button) -> String {
         // Translators: the right MFD wheel turned down.
         Button::Down => gettext("Down"),
         Button::Select => gettext("Select"),
+    }
+}
+
+/// The label of `button` on its input tester indicator, translated: "Trigger", "Wheel up".
+pub(crate) fn tester_label(button: Button) -> String {
+    match button {
+        // Translators: a label on the input tester's indicator for the trigger's first stage;
+        // the labels there are short, the full name is in the tooltip.
+        Button::TriggerStage1 => gettext("Trigger"),
+        // Translators: the trigger's second stage, on its input tester indicator.
+        Button::TriggerStage2 => gettext("Trigger 2"),
+        // Translators: the pinkie switch, on its input tester indicator.
+        Button::Pinkie => gettext("Pinkie"),
+        // Translators: the mouse button next to the ministick, on its input tester indicator.
+        Button::MouseButton => gettext("Mouse"),
+        // Translators: the throttle's scroll wheel turned one notch down, on its input tester
+        // indicator.
+        Button::ScrollDown => gettext("Wheel down"),
+        // Translators: the throttle's scroll wheel turned one notch up.
+        Button::ScrollUp => gettext("Wheel up"),
+        // Translators: the throttle's scroll wheel pressed.
+        Button::ScrollPress => gettext("Wheel press"),
+        // Translators: the throttle hat pushed up, on its input tester indicator.
+        Button::ThrottleHatUp => gettext("Hat up"),
+        // Translators: the throttle hat pushed right.
+        Button::ThrottleHatRight => gettext("Hat right"),
+        // Translators: the throttle hat pushed down.
+        Button::ThrottleHatDown => gettext("Hat down"),
+        // Translators: the throttle hat pushed left.
+        Button::ThrottleHatLeft => gettext("Hat left"),
+        // Translators: the i button on the throttle, on its input tester indicator.
+        Button::Clutch => gettext("i"),
+        Button::Fire
+        | Button::ButtonA
+        | Button::ButtonB
+        | Button::ButtonC
+        | Button::ButtonD
+        | Button::ButtonE
+        | Button::T1
+        | Button::T2
+        | Button::T3
+        | Button::T4
+        | Button::T5
+        | Button::T6
+        | Button::Pov2Up
+        | Button::Pov2Right
+        | Button::Pov2Down
+        | Button::Pov2Left
+        | Button::Mode1
+        | Button::Mode2
+        | Button::Mode3
+        | Button::Function
+        | Button::StartStop
+        | Button::Reset
+        | Button::PageUp
+        | Button::PageDown
+        | Button::Up
+        | Button::Down
+        | Button::Select => button_name(button),
+    }
+}
+
+/// The full name of `button`, translated, for the input tester's tooltips: "Trigger, first
+/// stage", "Scroll wheel down".
+pub(crate) fn full_name(button: Button) -> String {
+    match button {
+        Button::TriggerStage1 => gettext("Trigger, first stage"),
+        Button::TriggerStage2 => gettext("Trigger, second stage"),
+        Button::ScrollDown => gettext("Scroll wheel down"),
+        Button::ScrollUp => gettext("Scroll wheel up"),
+        Button::ScrollPress => gettext("Scroll wheel press"),
+        Button::ThrottleHatUp => gettext("Throttle hat up"),
+        Button::ThrottleHatRight => gettext("Throttle hat right"),
+        Button::ThrottleHatDown => gettext("Throttle hat down"),
+        Button::ThrottleHatLeft => gettext("Throttle hat left"),
+        // Translators: the left MFD wheel, which pressed is Function, turned up.
+        Button::PageUp => gettext("Function wheel up"),
+        // Translators: the left MFD wheel turned down.
+        Button::PageDown => gettext("Function wheel down"),
+        // Translators: the right MFD wheel, which pressed is Select, turned up.
+        Button::Up => gettext("Select wheel up"),
+        // Translators: the right MFD wheel turned down.
+        Button::Down => gettext("Select wheel down"),
+        Button::Fire
+        | Button::ButtonA
+        | Button::ButtonB
+        | Button::ButtonC
+        | Button::Pinkie
+        | Button::ButtonD
+        | Button::ButtonE
+        | Button::T1
+        | Button::T2
+        | Button::T3
+        | Button::T4
+        | Button::T5
+        | Button::T6
+        | Button::MouseButton
+        | Button::Pov2Up
+        | Button::Pov2Right
+        | Button::Pov2Down
+        | Button::Pov2Left
+        | Button::Mode1
+        | Button::Mode2
+        | Button::Mode3
+        | Button::Clutch
+        | Button::Function
+        | Button::StartStop
+        | Button::Reset
+        | Button::Select => button_name(button),
     }
 }
 

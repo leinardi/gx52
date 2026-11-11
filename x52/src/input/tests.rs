@@ -538,3 +538,87 @@ fn clearing_drops_everything() {
     held.clear();
     assert_eq!(held, HeldInputs::new());
 }
+
+#[test]
+fn held_inputs_answer_whether_an_input_is_held() {
+    let mut held = HeldInputs::new();
+    held.press(button(Button::Fire));
+    held.press(button(Button::Mode2));
+    held.set_pov1(1, 0);
+    assert!(held.is_held(button(Button::Fire)));
+    assert!(held.is_held(POV1_RIGHT));
+    assert!(!held.is_held(POV1_UP));
+    assert!(!held.is_held(button(Button::Mode2)), "the mode selector");
+    held.release(button(Button::Fire));
+    assert!(!held.is_held(button(Button::Fire)));
+}
+
+#[test]
+fn button_numbers_follow_the_ascending_key_codes() {
+    // The prototype's numbers on the Pro (art/prototype, "BUTTONS"): 288 is 1, 726 is 39.
+    let pro = InputMap::for_device(DeviceType::X52Pro);
+    for (index, (code, _)) in pro.buttons().enumerate() {
+        assert_eq!(pro.button_number(code), Some(index + 1), "code {code}");
+    }
+    assert_eq!(pro.button_number(289), Some(2), "Fire");
+    assert_eq!(pro.button_number(718), Some(31), "i");
+    assert_eq!(pro.button_number(304), None);
+    let x52 = InputMap::for_device(DeviceType::X52);
+    let numbers: BTreeSet<usize> = x52
+        .buttons()
+        .filter_map(|(code, _)| x52.button_number(code))
+        .collect();
+    assert_eq!(numbers, (1..=34).collect(), "every X52 button once");
+    assert_eq!(x52.button_number(717), Some(30), "the X52's clutch");
+}
+
+#[test]
+fn code_of_inverts_the_map() {
+    for device in DeviceType::ALL {
+        let map = InputMap::for_device(device);
+        for (code, button) in map.buttons() {
+            assert_eq!(map.code_of(button), Some(code), "{device} {button:?}");
+        }
+    }
+    let x52 = InputMap::for_device(DeviceType::X52);
+    assert_eq!(x52.code_of(Button::Clutch), Some(717));
+    assert_eq!(x52.code_of(Button::Select), None);
+}
+
+#[test]
+fn the_ministick_is_only_on_the_pro() {
+    assert!(InputMap::for_device(DeviceType::X52Pro).has_axis(Axis::MinistickX));
+    assert!(!InputMap::for_device(DeviceType::X52).has_axis(Axis::MinistickY));
+    assert!(InputMap::for_device(DeviceType::X52).has_axis(Axis::Slider));
+}
+
+#[test]
+fn an_axis_fraction_is_clamped_to_its_range() {
+    let range = AxisRange { min: 0, max: 1023 };
+    assert!((range.fraction(0) - 0.0).abs() < f64::EPSILON);
+    assert!((range.fraction(1023) - 1.0).abs() < f64::EPSILON);
+    assert!((range.fraction(2000) - 1.0).abs() < f64::EPSILON);
+    assert!((range.fraction(-5) - 0.0).abs() < f64::EPSILON);
+    let centred = AxisRange { min: -8, max: 8 };
+    assert!((centred.fraction(0) - 0.5).abs() < f64::EPSILON);
+    let empty = AxisRange { min: 5, max: 5 };
+    assert!((empty.fraction(5) - 0.0).abs() < f64::EPSILON);
+}
+
+#[test]
+fn axis_values_change_only_the_axes_of_the_snapshot() {
+    let range = AxisRange { min: 0, max: 255 };
+    let mut values = AxisValues::new();
+    values.set_value(Axis::Throttle, 10);
+    assert_eq!(values.get(Axis::Throttle), None, "no snapshot yet");
+    values.set_snapshot([(Axis::Throttle, AxisState { range, value: 3 })]);
+    values.set_value(Axis::Throttle, 200);
+    values.set_value(Axis::Slider, 9);
+    assert_eq!(
+        values.get(Axis::Throttle),
+        Some(AxisState { range, value: 200 })
+    );
+    assert_eq!(values.get(Axis::Slider), None);
+    values.clear();
+    assert_eq!(values, AxisValues::new());
+}

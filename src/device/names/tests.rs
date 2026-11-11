@@ -58,3 +58,37 @@ fn names_follow_protocol_md_shortened_to_a_line() {
     assert_eq!(name(Button::Pov2Left), "POV 2 left");
     assert_eq!(name(Button::ThrottleHatRight), "Thr. hat right");
 }
+
+#[test]
+fn every_button_of_each_map_has_a_distinct_tester_label_and_full_name() {
+    for device_type in DeviceType::ALL {
+        let map = InputMap::for_device(device_type);
+        let mut labels = BTreeSet::new();
+        let mut full = BTreeSet::new();
+        for (_, button) in map.buttons() {
+            let label = tester_label(button);
+            assert!(!label.is_empty(), "{button:?}");
+            assert!(
+                labels.insert(label),
+                "{device_type}: {button:?} label used twice"
+            );
+            let name = full_name(button);
+            assert!(!name.is_empty(), "{button:?}");
+            assert!(
+                full.insert(name),
+                "{device_type}: {button:?} name used twice"
+            );
+        }
+    }
+}
+
+#[test]
+fn tester_names_follow_the_prototype() {
+    assert_eq!(tester_label(Button::TriggerStage1), "Trigger");
+    assert_eq!(tester_label(Button::ScrollUp), "Wheel up");
+    assert_eq!(tester_label(Button::Clutch), "i");
+    assert_eq!(tester_label(Button::PageUp), "Page Up");
+    assert_eq!(full_name(Button::TriggerStage2), "Trigger, second stage");
+    assert_eq!(full_name(Button::Up), "Select wheel up");
+    assert_eq!(full_name(Button::Fire), "Fire");
+}

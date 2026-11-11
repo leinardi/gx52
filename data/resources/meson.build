@@ -3,6 +3,7 @@
 blueprint_files = [
     'ui/clock-editor.blp',
     'ui/device-footer.blp',
+    'ui/input-tester.blp',
     'ui/led-button.blp',
     'ui/led-editor.blp',
     'ui/mfd-display.blp',

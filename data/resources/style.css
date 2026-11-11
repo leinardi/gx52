@@ -202,3 +202,75 @@ button.led.blinking {
   font-size: 22px;
   letter-spacing: 0.06em;
 }
+
+/* The input tester (docs/ui.md, "Input tester"), from the prototype. */
+.tester-card {
+  padding: 14px 18px 18px;
+}
+
+.tester-card.tester-wide {
+  min-width: 300px;
+}
+
+/* An indicator, lit while its button is held. */
+.input-pill {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  background-color: alpha(currentColor, 0.1);
+}
+
+.input-pill.on {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
+/* The number games show for the button. */
+.input-number {
+  min-width: 20px;
+  margin-right: -6px;
+  border-radius: 9999px;
+  font-size: smaller;
+  font-feature-settings: "tnum";
+  background-color: alpha(currentColor, 0.15);
+}
+
+axis-pad {
+  border-radius: 9px;
+  background-color: alpha(currentColor, 0.06);
+  box-shadow: inset 0 0 0 1px var(--border-color);
+  color: var(--accent-color);
+}
+
+levelbar.axis-bar > trough > block.filled {
+  background-color: var(--accent-bg-color);
+}
+
+levelbar.axis-bar.horizontal > trough > block {
+  min-height: 8px;
+}
+
+levelbar.axis-bar.vertical.throttle {
+  min-height: 120px;
+}
+
+levelbar.axis-bar.vertical > trough > block {
+  min-width: 22px;
+}
+
+/* A cell of a hat's 3×3 direction grid; the centre is a smaller dot. */
+.pov-cell {
+  min-width: 18px;
+  min-height: 18px;
+  border-radius: 4px;
+  background-color: alpha(currentColor, 0.1);
+}
+
+.pov-cell.centre {
+  border-radius: 9999px;
+  transform: scale(0.6);
+}
+
+.pov-cell.on {
+  background-color: var(--accent-bg-color);
+}

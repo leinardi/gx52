@@ -15,8 +15,10 @@
 
 //! The widgets of the main window.
 
+mod axis_pad;
 mod clock_editor;
 mod device_footer;
+mod input_tester;
 mod led_button;
 mod led_editor;
 mod mfd_display;
@@ -33,8 +35,10 @@ mod zone_dialog;
 use gtk::prelude::*;
 use x52::command::Brightness;
 
+pub(crate) use self::axis_pad::AxisPad;
 pub(crate) use self::clock_editor::ClockEditor;
 pub(crate) use self::device_footer::DeviceFooter;
+pub(crate) use self::input_tester::InputTester;
 pub(crate) use self::led_button::LedButton;
 pub(crate) use self::led_editor::LedEditor;
 pub(crate) use self::mfd_display::MfdDisplay;

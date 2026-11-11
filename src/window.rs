@@ -43,7 +43,9 @@ mod imp {
 
     use crate::config;
     use crate::profile::ProfileKind;
-    use crate::widgets::{ClockEditor, DeviceFooter, LedEditor, MfdEditor, RowAction, UdevGuide};
+    use crate::widgets::{
+        ClockEditor, DeviceFooter, InputTester, LedEditor, MfdEditor, RowAction, UdevGuide,
+    };
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
@@ -57,6 +59,10 @@ mod imp {
         pub split_view: TemplateChild<adw::NavigationSplitView>,
         #[template_child]
         pub profile_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub test_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub test_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub footer: TemplateChild<DeviceFooter>,
         #[template_child]
@@ -78,6 +84,8 @@ mod imp {
         #[template_child]
         pub udev_guide: TemplateChild<UdevGuide>,
         #[template_child]
+        pub input_tester: TemplateChild<InputTester>,
+        #[template_child]
         pub wide_title_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub switcher_bar: TemplateChild<adw::ViewSwitcherBar>,
@@ -89,6 +97,9 @@ mod imp {
         /// The id of the profile that failed to load and is selected to show why; the active
         /// profile is selected otherwise.
         pub selected_failed: RefCell<Option<String>>,
+        /// Whether the input tester is shown in place of a profile; the active profile stays on
+        /// the device and its row keeps the marker.
+        pub tester_open: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -103,6 +114,7 @@ mod imp {
             MfdEditor::ensure_type();
             ClockEditor::ensure_type();
             UdevGuide::ensure_type();
+            InputTester::ensure_type();
             klass.bind_template();
             klass.install_action(
                 "win.show-view",
@@ -257,6 +269,12 @@ impl Window {
         self.imp().mfd_editor.refresh_display();
     }
 
+    /// Shows the live input again in the input tester, and nothing else; the tester does
+    /// nothing while it is not shown.
+    pub(crate) fn refresh_tester(&self) {
+        self.imp().input_tester.refresh();
+    }
+
     /// Tells each row whether its profile can move up and down: only among the profiles other
     /// than the default.
     fn update_row_moves(&self) {
@@ -311,6 +329,8 @@ impl Window {
     /// Opens the name of `id` for editing in its row.
     pub(crate) fn start_rename(&self, id: &ProfileId) {
         if let Some(row) = self.row_of(id) {
+            // The name is edited in the list, next to the profile's own content.
+            self.close_tester();
             self.imp().split_view.set_show_content(false);
             row.start_rename();
         }
@@ -452,6 +472,15 @@ impl Window {
     /// otherwise.
     fn select_current(&self) {
         let imp = self.imp();
+        if imp.tester_open.get() {
+            // No profile row is selected while the tester is shown; the active one is marked.
+            imp.syncing.set(true);
+            imp.profile_list.unselect_all();
+            imp.test_list.select_row(Some(&*imp.test_row));
+            imp.syncing.set(false);
+            self.update_markers();
+            return;
+        }
         let failed = imp.selected_failed.borrow().clone();
         let target = failed
             .and_then(|id| self.position_of(|item| item.id() == id && !item.is_usable()))
@@ -464,6 +493,7 @@ impl Window {
             .and_then(|position| i32::try_from(position).ok())
             .and_then(|position| imp.profile_list.row_at_index(position));
         imp.profile_list.select_row(row.as_ref());
+        imp.test_list.unselect_all();
         imp.syncing.set(false);
         self.update_markers();
     }
@@ -501,12 +531,22 @@ impl Window {
     }
 
     /// Shows the content of the selected profile: its editor, why it failed to load, or the
-    /// missing permission.
+    /// missing permission; or the input tester, which works without access to the USB device.
     fn show_selected(&self) {
         let imp = self.imp();
         let Some(app) = self.app() else {
             return;
         };
+        if imp.tester_open.get() {
+            imp.content_page.set_title(&gettext("Test Input"));
+            imp.clock_editor.close_zone_dialogs();
+            imp.content_stack.set_visible_child_name("tester");
+            imp.wide_title_stack.set_visible_child_name("title");
+            imp.switcher_bar.set_visible(false);
+            imp.x52d_banner.set_revealed(false);
+            imp.input_tester.refresh();
+            return;
+        }
         let status = app.device_status();
         let selected = self.selected();
         let denied_type = status.device_type.filter(|_| status.offers_retry());
@@ -590,6 +630,40 @@ impl Window {
             ));
         }
         imp.profile_list.add_controller(shortcuts);
+        imp.test_list.connect_row_selected(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, row| {
+                if row.is_none() || window.imp().syncing.get() {
+                    return;
+                }
+                window.open_tester();
+            }
+        ));
+        imp.test_list.connect_row_activated(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, _| window.imp().split_view.set_show_content(true)
+        ));
+    }
+
+    /// Shows the input tester in place of the selected profile.
+    fn open_tester(&self) {
+        let imp = self.imp();
+        imp.tester_open.set(true);
+        imp.selected_failed.replace(None);
+        self.select_current();
+        self.show_selected();
+    }
+
+    /// Shows the selected profile again in place of the input tester.
+    fn close_tester(&self) {
+        let imp = self.imp();
+        if !imp.tester_open.replace(false) {
+            return;
+        }
+        self.select_current();
+        self.show_selected();
     }
 
     fn on_profile_selected(&self) {
@@ -597,6 +671,11 @@ impl Window {
             return;
         };
         let imp = self.imp();
+        if imp.tester_open.replace(false) {
+            imp.syncing.set(true);
+            imp.test_list.unselect_all();
+            imp.syncing.set(false);
+        }
         if item.is_usable() {
             imp.selected_failed.replace(None);
             if let (Some(app), Some(id)) = (self.app(), item.profile_id()) {

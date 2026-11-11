@@ -73,14 +73,51 @@ template $GX52Window: Adw.ApplicationWindow {
               content: ScrolledWindow {
                 hscrollbar-policy: never;
 
-                child: ListBox profile_list {
-                  accessibility {
-                    label: _("Profiles");
+                child: Box {
+                  orientation: vertical;
+
+                  ListBox profile_list {
+                    accessibility {
+                      label: _("Profiles");
+                    }
+
+                    styles [
+                      "navigation-sidebar",
+                    ]
                   }
 
-                  styles [
-                    "navigation-sidebar",
-                  ]
+                  ListBox test_list {
+                    accessibility {
+                      label: _("Test input");
+                    }
+
+                    ListBoxRow test_row {
+                      child: Box {
+                        spacing: 12;
+
+                        Image {
+                          icon-name: "input-gaming-symbolic";
+                          accessible-role: presentation;
+                        }
+
+                        Label {
+                          label: _("Test input");
+                          xalign: 0;
+                          hexpand: true;
+                          ellipsize: end;
+                        }
+
+                        Image {
+                          icon-name: "go-next-symbolic";
+                          accessible-role: presentation;
+                        }
+                      };
+                    }
+
+                    styles [
+                      "navigation-sidebar",
+                    ]
+                  }
                 };
               };
 
@@ -209,6 +246,12 @@ template $GX52Window: Adw.ApplicationWindow {
                   name: "no-permission";
 
                   child: $GX52UdevGuide udev_guide {};
+                }
+
+                StackPage {
+                  name: "tester";
+
+                  child: $GX52InputTester input_tester {};
                 }
               };
 

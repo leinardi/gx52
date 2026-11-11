@@ -28,7 +28,7 @@ use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use x52::clock::SystemClock;
 use x52::device::DeviceType;
-use x52::input::{HeldInputs, Mode};
+use x52::input::{AxisValues, HeldInputs, Mode};
 use x52::state::DeviceState;
 
 use crate::config;
@@ -99,7 +99,7 @@ mod imp {
     use adw::{prelude::*, subclass::prelude::*};
     use gettextrs::gettext;
     use gtk::{gio, glib};
-    use x52::input::{HeldInputs, Mode};
+    use x52::input::{AxisValues, HeldInputs, Mode};
 
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
@@ -141,6 +141,10 @@ mod imp {
         pub(crate) last_logged: RefCell<Option<(ProfileId, Mode)>>,
         /// The buttons and POV 1 directions held on the selected device.
         pub(crate) held: RefCell<HeldInputs>,
+        /// The other axes of the selected device, known only while an input tester listens.
+        pub(crate) axes: RefCell<AxisValues>,
+        /// How many input testers are shown; the reader reports the axes while there is one.
+        pub(crate) axis_listeners: Cell<u32>,
         /// Whether the set last pushed has a "last button" MFD line, so a change of the held
         /// inputs pushes only when the device shows it.
         pub(crate) shows_last_button: Cell<bool>,
@@ -755,6 +759,7 @@ impl Application {
                 imp.active_mode.set(None);
                 self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
+                imp.axes.borrow_mut().clear();
                 if let Some(settings) = imp.settings.get()
                     && let Err(error) =
                         settings.set_string(LAST_DEVICE_TYPE, device.device_type.id())
@@ -774,9 +779,14 @@ impl Application {
                 imp.active_mode.set(None);
                 self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
+                imp.axes.borrow_mut().clear();
             }
-            DeviceEvent::InputNode { node: None, .. } => self.change_held(HeldInputs::clear),
+            DeviceEvent::InputNode { node: None, .. } => {
+                imp.axes.borrow_mut().clear();
+                self.change_held(HeldInputs::clear);
+            }
             DeviceEvent::Held { change, .. } => self.change_held(|held| change.apply(held)),
+            DeviceEvent::Axes { change, .. } => change.apply(&mut imp.axes.borrow_mut()),
             DeviceEvent::Retried(access::AccessState::NoPermission) => {
                 self.toast(&gettext("Still no access to the device"));
             }
@@ -788,8 +798,61 @@ impl Application {
             | DeviceEvent::Sent(_) => {}
         }
         if changed {
-            // The device type, its mode or its state changed: the list and the footer follow.
+            // The device type, its mode or its state changed: the list and the footer follow,
+            // and so does the input tester, which every window refresh updates.
             self.refresh_profiles();
+        } else if imp.axis_listeners.get() > 0 && event.shows_in_tester() {
+            self.update_testers();
+        }
+    }
+
+    /// An input tester is shown: the reader reports the axes while at least one is.
+    pub(crate) fn listen_to_axes(&self) {
+        let imp = self.imp();
+        let listeners = imp.axis_listeners.get();
+        imp.axis_listeners.set(listeners + 1);
+        if listeners == 0
+            && let Some(device) = imp.device.borrow().as_ref()
+        {
+            device.listen_to_axes();
+        }
+    }
+
+    /// An input tester is no longer shown.
+    pub(crate) fn ignore_axes(&self) {
+        let imp = self.imp();
+        let listeners = imp.axis_listeners.get().saturating_sub(1);
+        imp.axis_listeners.set(listeners);
+        if listeners == 0 {
+            if let Some(device) = imp.device.borrow().as_ref() {
+                device.ignore_axes();
+            }
+            // Nothing keeps them current any more.
+            imp.axes.borrow_mut().clear();
+        }
+    }
+
+    /// The buttons and POV 1 directions held now.
+    pub(crate) fn held_inputs(&self) -> HeldInputs {
+        self.imp().held.borrow().clone()
+    }
+
+    /// The axes other than POV 1 and their values, while an input tester listens.
+    pub(crate) fn axis_values(&self) -> AxisValues {
+        self.imp().axes.borrow().clone()
+    }
+
+    /// The mode selector's position: the last one reported, kept while the node is reopened.
+    pub(crate) fn selector_mode(&self) -> Option<Mode> {
+        self.imp().active_mode.get()
+    }
+
+    /// Shows the live input again in every window's input tester, and nothing else.
+    fn update_testers(&self) {
+        for window in self.windows() {
+            if let Ok(window) = window.downcast::<Window>() {
+                window.refresh_tester();
+            }
         }
     }
 
