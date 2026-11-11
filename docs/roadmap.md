@@ -429,8 +429,12 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
      hides with it.
    - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: a retry test
      with the device open, and two translatable strings split with `\` that xgettext extracts
-     with the indentation, so they could never be translated. Left: four older strings with the
-     same problem, for a separate fix.
+     with the indentation, so they could never be translated; the four older strings with the
+     same problem too, and a meta-test (`meta/tests/translations.rs`) keeps every translatable
+     Rust file free of them. Fixed after the maintainer's review: a uinput check that finished
+     after the switch went off and on again could hide the warning for good; checks now carry a
+     generation, a stale result is dropped and a fresh check starts, unit-tested with a delayed
+     result.
 7. **(code) Input tester**: the "Test input" page of
    [S7](spikes/07-led-editor.md#input-tester-test-page), reading evdev without grabbing the device.
    Done when: DW, plus every button, axis, hat, toggle and the mode selector of the X52 Pro shows on
