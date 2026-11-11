@@ -150,11 +150,7 @@ template $GX52Window: Adw.ApplicationWindow {
                       title: _("Clocks");
                       icon-name: "preferences-system-time-symbolic";
 
-                      child: Adw.StatusPage {
-                        icon-name: "preferences-system-time-symbolic";
-                        title: _("Clocks");
-                        description: _("The clock editor is not available yet.");
-                      };
+                      child: $GX52ClockEditor clock_editor {};
                     }
                   };
                 }

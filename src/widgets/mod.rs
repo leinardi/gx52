@@ -15,6 +15,7 @@
 
 //! The widgets of the main window.
 
+mod clock_editor;
 mod device_footer;
 mod led_button;
 mod led_editor;
@@ -22,10 +23,14 @@ mod mfd_display;
 mod mfd_editor;
 mod mode_bar;
 mod profile_row;
+mod ticker;
+mod zone_clock_group;
+mod zone_dialog;
 
 use gtk::prelude::*;
 use x52::command::Brightness;
 
+pub(crate) use self::clock_editor::ClockEditor;
 pub(crate) use self::device_footer::DeviceFooter;
 pub(crate) use self::led_button::LedButton;
 pub(crate) use self::led_editor::LedEditor;
@@ -33,6 +38,8 @@ pub(crate) use self::mfd_display::MfdDisplay;
 pub(crate) use self::mfd_editor::MfdEditor;
 pub(crate) use self::mode_bar::ModeBar;
 pub(crate) use self::profile_row::{ProfileRow, RowAction};
+pub(crate) use self::zone_clock_group::ZoneClockGroup;
+pub(crate) use self::zone_dialog::ZoneDialog;
 use crate::application::Application;
 use crate::window::Window;
 

@@ -43,7 +43,7 @@ mod imp {
 
     use crate::config;
     use crate::profile::ProfileKind;
-    use crate::widgets::{DeviceFooter, LedEditor, MfdEditor, RowAction};
+    use crate::widgets::{ClockEditor, DeviceFooter, LedEditor, MfdEditor, RowAction};
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/window.ui")]
@@ -72,6 +72,8 @@ mod imp {
         #[template_child]
         pub mfd_editor: TemplateChild<MfdEditor>,
         #[template_child]
+        pub clock_editor: TemplateChild<ClockEditor>,
+        #[template_child]
         pub failed_page: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub status_page: TemplateChild<adw::StatusPage>,
@@ -95,6 +97,7 @@ mod imp {
             DeviceFooter::ensure_type();
             LedEditor::ensure_type();
             MfdEditor::ensure_type();
+            ClockEditor::ensure_type();
             klass.bind_template();
             klass.install_action(
                 "win.show-view",
@@ -537,6 +540,9 @@ impl Window {
         {
             imp.led_editor.show(&state);
             imp.mfd_editor.show(&state);
+            imp.clock_editor.show(&state);
+        } else {
+            imp.clock_editor.close_zone_dialogs();
         }
         imp.content_stack.set_visible_child_name(page);
         imp.x52d_banner

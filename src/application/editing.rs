@@ -14,16 +14,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The edits of the profile editor: they change the active profile's settings in the mode shown,
-//! go to the device at once and are saved after the debounce (docs/ui.md, "Profile editor").
+//! or its clocks, go to the device at once and are saved after the debounce (docs/ui.md,
+//! "Profile editor").
 
 use adw::subclass::prelude::*;
 use x52::command::Brightness;
 
 use super::Application;
+use crate::profile::clocks::ProfileClocks;
 use crate::profile::editor::EditorState;
 use crate::profile::leds::{self, EditorLed, LedChoice};
 use crate::profile::mfd::{DraftKey, LineSource, SettingsSet};
-use crate::profile::{self, MFD_LINES, MfdLineSource, ModeSettings, ProfileId};
+use crate::profile::store::StoreError;
+use crate::profile::{self, MFD_LINES, MfdLineSource, ModeSettings, Profile, ProfileId};
 
 /// The profile and the set of mode settings an edit changes.
 struct EditTarget {
@@ -58,6 +61,7 @@ impl Application {
             kind: profile.kind(),
             mode,
             settings: profile.settings_for(mode).clone(),
+            clocks: ProfileClocks::of(&profile),
         })
     }
 
@@ -133,44 +137,57 @@ impl Application {
 
     /// [`Self::edit_shown_settings`], with the profile and the set the edit changes.
     fn edit_shown(&self, edit: impl FnOnce(&EditTarget, &mut ModeSettings)) {
+        let mode = self.shown_mode();
+        self.edit_shown_profile(|id, profile| {
+            let target = EditTarget {
+                profile: id.clone(),
+                set: SettingsSet::of(profile.kind(), mode),
+            };
+            edit(&target, profile.settings.for_mode_mut(mode));
+        });
+    }
+
+    /// Applies `edit` to the shown device type's active profile, with its id; returns whether
+    /// the profile changed.
+    pub(super) fn edit_shown_profile(&self, edit: impl FnOnce(&ProfileId, &mut Profile)) -> bool {
         let Some(device_type) = self.shown_device_type() else {
-            return;
+            return false;
         };
         let Some(id) = self.active_profile_id(device_type) else {
-            return;
+            return false;
         };
-        let mode = self.shown_mode();
+        self.edit_profile(&id, |profile| edit(&id, profile))
+    }
+
+    /// Applies `edit` to profile `id`, and only to it, whichever profile is shown; a change goes
+    /// to the device (when `id` is the active profile) and the windows at once and is saved after
+    /// the debounce. A profile that is gone or not usable is left as it is. Returns whether the
+    /// profile changed.
+    pub(super) fn edit_profile(&self, id: &ProfileId, edit: impl FnOnce(&mut Profile)) -> bool {
         let edited = {
             let mut profiles = self.imp().profiles.borrow_mut();
             let Some(store) = profiles.as_mut() else {
-                return;
+                return false;
             };
-            if let Some(mut profile) = store.loaded(&id).map(|loaded| loaded.profile.clone()) {
-                let target = EditTarget {
-                    profile: id.clone(),
-                    set: SettingsSet::of(profile.kind(), mode),
-                };
-                let settings = profile.settings.for_mode_mut(mode);
-                let before = settings.clone();
-                edit(&target, settings);
-                *settings != before
-                    && store
-                        .update(&id, profile)
-                        .inspect_err(|error| {
-                            tracing::warn!("Cannot edit profile {id}: {error}");
-                        })
-                        .is_ok()
-            } else {
-                tracing::debug!("Profile {id} cannot be edited: it is not usable");
-                false
+            match store.edit(id, edit) {
+                Ok(changed) => changed,
+                Err(error @ (StoreError::Unknown(_) | StoreError::ReadOnly(_))) => {
+                    tracing::debug!("Profile {id} cannot be edited: {error}");
+                    false
+                }
+                Err(error) => {
+                    tracing::warn!("Cannot edit profile {id}: {error}");
+                    false
+                }
             }
         };
         if edited {
-            self.profile_edited(&id);
+            self.profile_edited(id);
             self.push_desired_state();
         }
         // The list shows none of the edited values: only the editor follows, and shows the
         // profile's values again after an edit that changed nothing.
         self.update_windows();
+        edited
     }
 }

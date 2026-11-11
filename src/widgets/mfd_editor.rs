@@ -21,18 +21,16 @@ use std::time::Duration;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
-use gtk::{gio, glib};
+use gtk::glib;
 use jiff::tz::TimeZone;
-use x52::clock::{self, Clock, Clock1Source, SystemClock};
+use x52::clock::{Clock, SystemClock};
 
 use crate::profile::editor::EditorState;
 use crate::profile::mfd::{self, LineSource, ShownClock, TextInfo};
 use crate::profile::{MfdLineSource, ProfileKind};
 use crate::widgets::brightness_at;
 use crate::widgets::mfd_display::DateArea;
-
-/// How long after a minute boundary the display ticks, so the system clock is surely past it.
-const TICK_SLACK: Duration = Duration::from_millis(50);
+use crate::widgets::ticker::{Ticker, Ticking};
 
 /// How long the date area shows the number of a clock just picked, as the device does.
 const CLOCK_FLASH: Duration = Duration::from_secs(3);
@@ -64,10 +62,10 @@ mod imp {
     use adw::subclass::prelude::*;
     use gtk::glib;
     use gtk::prelude::*;
-    use jiff::tz::TimeZone;
 
     use super::LineRow;
     use crate::profile::mfd::ShownClock;
+    use crate::widgets::ticker::Ticker;
     use crate::widgets::{MfdDisplay, ModeBar};
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
@@ -91,10 +89,8 @@ mod imp {
         pub(super) rows: RefCell<Vec<LineRow>>,
         /// The clock the display shows: the user's choice, never the device's.
         pub(super) clock: Cell<ShownClock>,
-        /// The system time zone, read at each tick.
-        pub(super) zone: RefCell<Option<TimeZone>>,
-        /// The timer of the next tick, while the editor is mapped.
-        pub(super) tick: RefCell<Option<glib::SourceId>>,
+        /// The minute tick of the display.
+        pub(super) ticker: Ticker,
         /// The timer that ends the flash of a picked clock's number in the date area.
         pub(super) flash: RefCell<Option<glib::SourceId>>,
         /// Set while the editor shows a state itself, so the change is not taken as the user's.
@@ -127,18 +123,18 @@ mod imp {
             obj.build_line_rows();
             obj.setup_rows();
             // The zone is read once now, so the display is complete the first time it is shown.
-            obj.tick();
+            Ticker::tick(&*obj);
         }
     }
 
     impl WidgetImpl for MfdEditor {
         fn map(&self) {
             self.parent_map();
-            self.obj().tick();
+            Ticker::tick(&*self.obj());
         }
 
         fn unmap(&self) {
-            self.obj().stop_ticking();
+            self.ticker.stop();
             self.parent_unmap();
         }
     }
@@ -350,7 +346,7 @@ impl MfdEditor {
     /// Shows the display again: the dynamic lines and the time follow the device and the clock.
     pub(crate) fn refresh_display(&self) {
         let imp = self.imp();
-        let Some(zone) = imp.zone.borrow().clone() else {
+        let Some(zone) = imp.ticker.zone() else {
             // The zone is read when the editor is mapped; the display waits for it.
             return;
         };
@@ -387,56 +383,14 @@ impl MfdEditor {
         }
         self.refresh_display();
     }
+}
 
-    /// Reads the system time zone off the main thread, shows the display and, while the editor is
-    /// mapped, schedules the next tick at the next minute boundary.
-    fn tick(&self) {
-        glib::spawn_future_local(glib::clone!(
-            #[weak(rename_to = editor)]
-            self,
-            async move {
-                // TimeZone::system may read /etc/localtime.
-                let Ok(zone) = gio::spawn_blocking(TimeZone::system).await else {
-                    tracing::error!("The task reading the system time zone panicked");
-                    return;
-                };
-                editor.imp().zone.replace(Some(zone.clone()));
-                editor.refresh_display();
-                if editor.is_mapped() {
-                    editor.schedule_tick(&zone);
-                }
-            }
-        ));
+impl Ticking for MfdEditor {
+    fn ticker(&self) -> &Ticker {
+        &self.imp().ticker
     }
 
-    /// Ticks again just after the next minute boundary in `zone`.
-    fn schedule_tick(&self, zone: &TimeZone) {
-        let now = SystemClock.now();
-        let delay = clock::next_resend(now, zone, Clock1Source::Local, &[])
-            .ok()
-            .and_then(|next| Duration::try_from(next.duration_since(now)).ok())
-            .unwrap_or(Duration::from_secs(60));
-        let source = glib::timeout_add_local_once(
-            delay + TICK_SLACK,
-            glib::clone!(
-                #[weak(rename_to = editor)]
-                self,
-                move || {
-                    // The timer has fired: it is no longer there to remove.
-                    editor.imp().tick.take();
-                    editor.tick();
-                }
-            ),
-        );
-        if let Some(previous) = self.imp().tick.replace(Some(source)) {
-            previous.remove();
-        }
-    }
-
-    /// Stops the ticks while the editor is not shown.
-    fn stop_ticking(&self) {
-        if let Some(source) = self.imp().tick.take() {
-            source.remove();
-        }
+    fn on_tick(&self, _zone: &TimeZone) {
+        self.refresh_display();
     }
 }

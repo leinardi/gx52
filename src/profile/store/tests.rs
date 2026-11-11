@@ -459,6 +459,48 @@ fn defaults_cannot_be_removed_or_change_type() {
 }
 
 #[test]
+fn an_edit_changes_only_the_profile_it_names() {
+    let dir = dir_with([(&file_name(ID), &fixture("valid-x52-pro.toml"))]);
+    let (mut store, _) = load_untouched(&dir, Schema::CURRENT);
+    let other_before = store.loaded(&pro_default()).unwrap().profile.clone();
+    let offset = x52::clock::FixedOffset::new(345).unwrap();
+    // Addressed to ID, whichever profile is shown when it completes.
+    let changed = store
+        .edit(&id(ID), |profile| {
+            profile.clock2.source = crate::profile::ZoneSpec::Fixed(offset);
+        })
+        .unwrap();
+    assert!(changed);
+    assert_eq!(
+        store.loaded(&id(ID)).unwrap().profile.clock2.source,
+        crate::profile::ZoneSpec::Fixed(offset)
+    );
+    assert_eq!(
+        store.loaded(&pro_default()).unwrap().profile,
+        other_before,
+        "another profile is untouched"
+    );
+    // Applying the same value again changes nothing.
+    let changed = store
+        .edit(&id(ID), |profile| {
+            profile.clock2.source = crate::profile::ZoneSpec::Fixed(offset);
+        })
+        .unwrap();
+    assert!(!changed);
+    // A profile that is gone is never recreated, and nothing else changes.
+    let gone = id("0f1e2d3c-aaaa-4bbb-8ccc-0123456789ff");
+    assert!(matches!(
+        store.edit(&gone, |profile| profile.clock2.h24 = false),
+        Err(StoreError::Unknown(_))
+    ));
+    assert!(store.entry(&gone).is_none());
+    assert!(matches!(
+        store.edit(&id(ID), |profile| profile.device_type = DeviceType::X52),
+        Err(StoreError::TypeChange(_))
+    ));
+}
+
+#[test]
 fn a_save_job_writes_the_values_it_was_made_from() {
     let dir = dir_with([(&file_name(ID), &fixture("valid-x52-pro.toml"))]);
     let (mut store, _) = load_untouched(&dir, Schema::CURRENT);

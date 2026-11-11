@@ -25,6 +25,7 @@ mod model;
 mod profile;
 mod widgets;
 mod window;
+mod zones;
 
 use std::{env, io, io::Write, path::PathBuf};
 

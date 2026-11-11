@@ -20,6 +20,7 @@
 //! through `gio::spawn_blocking`; the tests call them directly on a temporary directory.
 
 pub(crate) mod active;
+pub(crate) mod clocks;
 pub(crate) mod editing;
 pub(crate) mod editor;
 pub(crate) mod exchange;
@@ -186,6 +187,11 @@ impl IanaZone {
     /// The name the zone was looked up by.
     pub(crate) fn name(&self) -> &str {
         &self.name
+    }
+
+    /// The zone.
+    pub(crate) const fn zone(&self) -> &TimeZone {
+        &self.zone
     }
 }
 
