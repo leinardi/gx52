@@ -308,11 +308,13 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
                                                        POV 1  POV 2  Throttle hat
 ```
 
-- **Axes:** stick X/Y as a square with a dot, throttle Z as a vertical bar, X/Y/Z rotation and the
-  slider as horizontal bars, each with its raw value. Each axis fills its bar over the range the
-  device reports for it (evdev's absinfo), not a range from the docs. The squares put the rest
-  value in the middle, the upper of the two middle values of an even range (the ministick rests
-  at 8 of 0–15), each half scaled on its own.
+- **Axes:** stick X/Y as a square with a dot, throttle Z as a vertical bar (filled as the lever
+  goes forward: the X52 reports 0 at full throttle, so the bar is the inverse of the raw value),
+  X/Y/Z rotation and the slider as horizontal bars, each with its raw value. Each axis fills its
+  bar over the range the device reports for it (evdev's absinfo), not a range from the docs. The
+  squares put the rest value in the middle, the upper of the two middle values of an even range
+  (the ministick rests at 8 of 0–15), each half scaled on its own. The raw values keep the width
+  of their widest values, so the cards do not change size as they move.
 - **Ministick:** a second square. Not shown on the X52 (non-Pro), whose ministick codes are not
   known.
 - **Toggles:** T1–T6 in pairs. **Mode:** 1 / 2 / 3, the current one highlighted.
@@ -325,6 +327,9 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
   control the device lacks is left out. The MFD buttons and the wheels are included. A wheel
   notch is a press and a release a few milliseconds apart, so an indicator stays lit for at least
   150 ms.
+- **Wrapping:** the cards wrap and fill their line. A line of buttons asks for about 420 px, less
+  than all of them in one line, so the Toggles card shares its line with the Buttons card as in
+  the prototype; a card stretched alone keeps its chips at their size.
 - **X52 (non-Pro):** a warning line under the intro, "The X52 input map has not been verified on a
   device yet. Names may not match the controls." ([protocol.md](protocol.md#x52-non-pro)).
 - **POVs:** POV 1, POV 2 and the throttle hat as 3×3 direction grids, the cell the hat points at

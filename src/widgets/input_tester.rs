@@ -44,6 +44,9 @@ const STICK_PAD: i32 = 120;
 /// The size of the ministick's pad.
 const MINISTICK_PAD: i32 = 84;
 
+/// The natural width of a line of buttons, from the prototype's Buttons card.
+const BUTTONS_LINE: i32 = 420;
+
 /// The text of a value not known yet.
 const UNKNOWN: &str = "–";
 
@@ -336,8 +339,10 @@ impl AxesView {
         }
         figures.append(&grid);
         axes.append(&figures);
+        // As wide as the widest values, so the card keeps its size while they change.
         let raw = gtk::Label::builder()
             .xalign(0.0)
+            .width_chars(char_count(&raw_text("0000", "0000", "0000")))
             .css_classes(["caption", "numeric", "dimmed"])
             .build();
         axes.append(&raw);
@@ -359,7 +364,9 @@ fn build_ministick(map: &InputMap, cards: &adw::WrapBox) -> Option<(AxisPad, gtk
     }
     let (card_box, content) = card(&gettext("Ministick"));
     let pad = AxisPad::new(MINISTICK_PAD);
+    // As wide as two-digit values, so the card keeps its size while they change.
     let caption = gtk::Label::builder()
+        .width_chars(char_count(&ministick_text("00", "00")))
         .css_classes(["caption", "numeric", "dimmed"])
         .build();
     content.append(&pad);
@@ -376,14 +383,16 @@ fn build_toggles(
     pills: &mut Vec<Rc<Pill>>,
 ) -> (gtk::Box, Vec<(Mode, gtk::Box)>) {
     let (toggles_card, toggles) = card(&gettext("Toggles"));
+    // The chips keep their size when the card is stretched to fill its line.
     let toggle_grid = gtk::Grid::builder()
         .column_spacing(6)
         .row_spacing(6)
-        .column_homogeneous(true)
+        .halign(gtk::Align::Start)
         .build();
     for (index, (button, code)) in tester::toggles(map).into_iter().enumerate() {
         let index = i32::try_from(index).unwrap_or(i32::MAX);
         let pill = Pill::new(map, button, code);
+        pill.widget.set_halign(gtk::Align::Start);
         toggle_grid.attach(&pill.widget, index % 3, index / 3, 1, 1);
         pills.push(pill);
     }
@@ -394,7 +403,10 @@ fn build_toggles(
         .css_classes(["heading"])
         .build();
     toggles.append(&mode_heading);
-    let mode_row = gtk::Box::builder().spacing(6).build();
+    let mode_row = gtk::Box::builder()
+        .spacing(6)
+        .halign(gtk::Align::Start)
+        .build();
     let modes = Mode::ALL
         .into_iter()
         .map(|mode| {
@@ -422,9 +434,12 @@ fn build_buttons(map: &InputMap, cards: &adw::WrapBox, pills: &mut Vec<Rc<Pill>>
             .xalign(0.0)
             .css_classes(["caption", "dimmed"])
             .build();
+        // A shorter natural width than one line of every button, so a narrower card (the
+        // toggles) can share its line, as in the prototype.
         let row = adw::WrapBox::builder()
             .child_spacing(6)
             .line_spacing(6)
+            .natural_line_length(BUTTONS_LINE)
             .build();
         for (button, code) in present {
             let pill = Pill::new(map, button, code);
@@ -591,25 +606,23 @@ impl View {
             .set_position(centred(Axis::StickX).zip(centred(Axis::StickY)));
         self.axes
             .throttle
-            .set_fraction(fraction(Axis::Throttle).unwrap_or_default());
+            .set_fraction(fraction(Axis::Throttle).map_or(0.0, |fraction| 1.0 - fraction));
         for row in &self.axes.rows {
             row.bar.set_fraction(fraction(row.axis).unwrap_or_default());
             row.value.set_label(&text(row.axis));
         }
-        // Translators: the raw values of the stick (X, Y) and the throttle (Z) on the input
-        // tester.
-        let raw = gettext("X {x} · Y {y} · Z {z}")
-            .replace("{x}", &text(Axis::StickX))
-            .replace("{y}", &text(Axis::StickY))
-            .replace("{z}", &text(Axis::Throttle));
+        let raw = raw_text(
+            &text(Axis::StickX),
+            &text(Axis::StickY),
+            &text(Axis::Throttle),
+        );
         self.axes.raw.set_label(&raw);
         if let Some((pad, caption)) = &self.ministick {
             pad.set_position(centred(Axis::MinistickX).zip(centred(Axis::MinistickY)));
-            // Translators: the ministick's raw values on the input tester; it moves the mouse.
-            let text_of = gettext("Mouse X / Y · {x}, {y}")
-                .replace("{x}", &text(Axis::MinistickX))
-                .replace("{y}", &text(Axis::MinistickY));
-            caption.set_label(&text_of);
+            caption.set_label(&ministick_text(
+                &text(Axis::MinistickX),
+                &text(Axis::MinistickY),
+            ));
         }
     }
 }
@@ -663,6 +676,28 @@ fn value_label() -> gtk::Label {
         .xalign(1.0)
         .css_classes(["caption", "numeric"])
         .build()
+}
+
+/// The raw values of the stick and the throttle: "X 511 · Y 512 · Z 82".
+fn raw_text(x: &str, y: &str, z: &str) -> String {
+    // Translators: the raw values of the stick (X, Y) and the throttle (Z) on the input tester.
+    gettext("X {x} · Y {y} · Z {z}")
+        .replace("{x}", x)
+        .replace("{y}", y)
+        .replace("{z}", z)
+}
+
+/// The ministick's raw values: "Mouse X / Y · 8, 8".
+fn ministick_text(x: &str, y: &str) -> String {
+    // Translators: the ministick's raw values on the input tester; it moves the mouse.
+    gettext("Mouse X / Y · {x}, {y}")
+        .replace("{x}", x)
+        .replace("{y}", y)
+}
+
+/// The number of characters of `text`, as a label's width in characters.
+fn char_count(text: &str) -> i32 {
+    i32::try_from(text.chars().count()).unwrap_or(i32::MAX)
 }
 
 /// The digit of `mode` on its indicator.
