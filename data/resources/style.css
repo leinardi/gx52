@@ -231,12 +231,13 @@ button.led.blinking {
 }
 
 /* The number games show for the button. */
-/* A 20 px circle: GTK adds the padding to `min-width`, so there is none at the sides; digits
-   have no descent, so 1 px at the top centres them. */
+/* A 20 px circle: GTK adds the padding to the minimum size, so the two add up to 20 px. The
+   label is centred by its line box, which keeps room for a descent digits do not have and puts
+   them a little left of their advance: 2 px at the top and 1 px at the start centre them. */
 .input-number {
-  min-width: 20px;
-  min-height: 19px;
-  padding: 1px 0 0;
+  min-width: 19px;
+  min-height: 18px;
+  padding: 2px 0 0 1px;
   border-radius: 9999px;
   font-size: 11px;
   font-weight: bold;
