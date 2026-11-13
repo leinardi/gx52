@@ -127,6 +127,53 @@ impl DeviceStatus {
         }
     }
 
+    /// The tray menu's status line (docs/ui.md, "Tray menu"): the device, the selector's mode for
+    /// a per-mode profile and the active profile's name, or what keeps the device from using it.
+    /// `selector` is the mode the application keeps (`Application::selector_mode`), not this
+    /// status's, which a reopen of the evdev node clears and a new selection does not; `active`
+    /// is the active profile's name and kind, once the profiles are loaded.
+    pub(crate) fn tray_line(
+        self,
+        selector: Option<Mode>,
+        active: Option<(&str, ProfileKind)>,
+    ) -> String {
+        let Some(device_type) = self.device_type else {
+            return gettext("Not connected");
+        };
+        let device = device_name(device_type);
+        let problem = |state: String| {
+            // Translators: {device} is the joystick's name, {state} what keeps it from showing the
+            // profile, as "No permission" or "x52d is running".
+            gettext("{device} · {state}")
+                .replace("{device}", device)
+                .replace("{state}", &state)
+        };
+        if self.access == AccessState::NoPermission {
+            return problem(gettext("No permission"));
+        }
+        if self.x52d_running {
+            return problem(gettext("x52d is running"));
+        }
+        match (active, selector) {
+            (Some((profile, ProfileKind::PerMode)), Some(mode)) => {
+                // Translators: {device} is the joystick's name, {mode} the position of the mode
+                // selector, 1, 2 or 3, and {profile} the active profile's name.
+                gettext("{device} · Mode {mode} · {profile}")
+                    .replace("{device}", device)
+                    .replace("{mode}", mode_number(mode))
+                    .replace("{profile}", profile)
+            }
+            (Some((profile, _)), _) => {
+                // Translators: {device} is the joystick's name, {profile} the active profile's
+                // name.
+                gettext("{device} · {profile}")
+                    .replace("{device}", device)
+                    .replace("{profile}", profile)
+            }
+            (None, _) => problem(gettext("Connected")),
+        }
+    }
+
     /// The device type whose profiles the window shows: the selected device's, whether or not
     /// GX52 may open it, else the `last` one connected; `None` before any device was seen.
     pub(crate) fn shown_type(self, last: Option<DeviceType>) -> Option<DeviceType> {
@@ -285,6 +332,92 @@ mod tests {
             texts("X52 Pro", "Connected", Dot::Connected, false)
         );
         assert!(!status.offers_retry());
+    }
+
+    #[test]
+    fn the_tray_line_names_the_device_mode_and_profile() {
+        let status = status(AccessState::Ready, Some(DeviceType::X52Pro));
+        let two = Some(Mode::Two);
+        assert_eq!(
+            status.tray_line(two, Some(("DCS World", ProfileKind::PerMode))),
+            "X52 Pro · Mode 2 · DCS World"
+        );
+        assert_eq!(
+            status.tray_line(two, Some(("DCS World", ProfileKind::Single))),
+            "X52 Pro · DCS World",
+            "a single profile has no mode"
+        );
+        assert_eq!(
+            status.tray_line(None, Some(("DCS World", ProfileKind::PerMode))),
+            "X52 Pro · DCS World",
+            "no mode reported yet"
+        );
+        assert_eq!(
+            status.tray_line(two, None),
+            "X52 Pro · Connected",
+            "profiles not loaded yet"
+        );
+    }
+
+    #[test]
+    fn the_tray_line_shows_the_selector_not_the_status_mode() {
+        let per_mode = Some(("DCS World", ProfileKind::PerMode));
+        let mut status = status(AccessState::Ready, Some(DeviceType::X52Pro));
+        status.mode = Some(Mode::Two);
+        // A reopen of the evdev node clears the status's mode; the application keeps the
+        // selector's.
+        let node = PathBuf::from("/dev/input/event7");
+        status.apply(&DeviceEvent::InputNode {
+            generation: Generation(1),
+            node: None,
+        });
+        assert_eq!(status.mode, None);
+        assert_eq!(
+            status.tray_line(Some(Mode::Two), per_mode),
+            "X52 Pro · Mode 2 · DCS World",
+            "the mode survives the reopen"
+        );
+        // A new device keeps the status's mode of the old one until its reader reports; the
+        // application has cleared the selector's.
+        status.apply(&DeviceEvent::InputNode {
+            generation: Generation(1),
+            node: Some(node),
+        });
+        status.apply(&DeviceEvent::Mode {
+            generation: Generation(1),
+            mode: Mode::Three,
+        });
+        status.apply(&DeviceEvent::Selected(DeviceId {
+            device_type: DeviceType::X52,
+            sysfs_path: PathBuf::from("/sys/bus/usb/devices/1-2"),
+            attachment: Attachment { bus: 1, address: 9 },
+            generation: Generation(2),
+        }));
+        assert_eq!(status.mode, Some(Mode::Three), "kept from the old device");
+        assert_eq!(
+            status.tray_line(None, per_mode),
+            "X52 · DCS World",
+            "no mode of the old device"
+        );
+    }
+
+    #[test]
+    fn the_tray_line_says_what_keeps_the_device_from_the_profile() {
+        assert_eq!(
+            DeviceStatus::default().tray_line(None, Some(("DCS World", ProfileKind::Single))),
+            "Not connected"
+        );
+        let mut status = status(AccessState::NoPermission, Some(DeviceType::X52));
+        status.x52d_running = true;
+        assert_eq!(
+            status.tray_line(None, Some(("DCS World", ProfileKind::Single))),
+            "X52 · No permission"
+        );
+        status.access = AccessState::Ready;
+        assert_eq!(
+            status.tray_line(None, Some(("DCS World", ProfileKind::Single))),
+            "X52 · x52d is running"
+        );
     }
 
     #[test]

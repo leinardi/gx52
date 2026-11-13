@@ -92,8 +92,14 @@ jiff = "0.2"
 thiserror = "2"
 # Awaits the host hotplug stream against the shutdown signal, with no async runtime.
 futures-lite = "2"
-# The device watch's periodic x52d check next to the hotplug stream (the tray uses it too, later).
+# The device watch's periodic x52d check next to the hotplug stream.
 async-io = "2"
+# The tray icon (spike S5): StatusNotifierItem over D-Bus, on its own async-io executor, no tokio.
+ksni = { version = "0.3.7", default-features = false, features = ["async-io"] }
+# Ends the launch GNOME starts for a tray click that shows no window (gtk_shell1.set_startup_id,
+# src/tray/launch.rs): GTK sends it only without xdg-activation. The pure-Rust backend, no libwayland.
+wayland-client = "0.31.15"
+wayland-scanner = "0.31.11"
 # The joystick's input events: the mode selector (spike S3).
 evdev = "0.13"
 # poll(2) on the evdev node with a timeout.

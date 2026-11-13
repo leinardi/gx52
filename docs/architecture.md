@@ -268,19 +268,56 @@ flowchart LR
   - **Shutdown:** the hotplug stream is awaited with `futures_lite::future::or` against a shutdown
     signal; the polling loop waits on the same signal with the 250 ms timeout. Dropping the
     trigger signals both.
-- **ksni tray.** `ksni` with the `async-io` feature runs its own executor thread and is spawned from
-  `glib::spawn_future_local` (desk research, S5). Menu callbacks send a `TrayAction` through an
-  `async_channel` to a main-thread loop; the main thread pushes state with `Handle::update`. The
-  `Handle` is stored and `shutdown()` is called from the application's `shutdown`. Tray
-  availability is a tri-state (unknown, available, not available) where a successful `spawn()` only
-  fills "unknown", because the offline report can arrive first (S5). The tray shows only while
-  "Run in background" is on. Closing the window with "Run in background" on hides it whether or not
-  a tray is available (GNOME lists the app under Background Apps, and launching it again shows the
-  window; [ui.md](ui.md#preferences)); with it off, closing quits. A watcher that goes away while
-  the window is hidden brings the window back.
+- **ksni tray** (`src/tray.rs`, `src/application/background.rs`). `ksni` with the `async-io`
+  feature runs its own executor thread and is spawned from `glib::spawn_future_local` (desk
+  research, S5). The tray item holds only plain data: a `TrayModel` slot (status line, whether a
+  window is shown, the connected type's usable profiles) that the main thread publishes and the
+  tray reads when the host asks for the menu, so updates in flight never apply out of order; the
+  main thread then calls `Handle::update` only to make the host read it again, and only when the
+  model changed. Menu callbacks send a `TrayMessage` (the action and the tray's generation)
+  through an unbounded `async_channel` to a main-thread loop.
+  - **Lifecycle:** the tray shows only while "Run in background" is on and GX52 is not quitting.
+    `spawn()` is asynchronous, so every start gets a generation (`TrayLifecycle`): a start that
+    completes after the tray was turned off, or after a newer start, has its handle shut down at
+    once, and the messages of any generation but the current one are dropped. The handle of the
+    running tray is shut down when the setting goes off, on Quit and in the application's
+    `shutdown`. Availability is a tri-state (unknown, available, not available) reset by each
+    start. `ksni` reports a missing watcher during `spawn()` and never reports a present one for
+    the first registration (S5), so a successful start sends `Registered` through the same channel
+    as the tray's own reports, after that report; it only fills "unknown". The start's handle
+    comes back by another path and sets no availability.
+  - **Closing the window** with "Run in background" on destroys it, whether or not a tray is
+    available, also after a tray host went away while the window was open (GNOME lists the app
+    under Background Apps, and launching it again shows the window;
+    [ui.md](ui.md#preferences)), and a background hold keeps the application, the device service
+    and the tray running; with it off, closing quits. Showing the window again builds a new one,
+    so a hidden start (M6 task 2) and a closed window are the same state. The hold is separate from
+    the write queue's (see Persistence).
+  - **Quit** (the menu, Ctrl+Q, the tray) sets `quitting`: the tray goes, the window closes
+    without the background hold and the process ends once the profiles are written. While
+    quitting, tray messages are dropped; launching GX52 again calls the quit off.
+  - **Activation tokens:** GNOME's AppIndicator extension starts a launch (the busy cursor) for
+    every click on the icon or the menu and hands its XDG activation token to the item first
+    (`ProvideXdgActivationToken`); the launch lasts until the token is used. Each `TrayMessage`
+    carries the token of its click (`ksni::current_xdg_activation_token`, only valid inside the
+    callback). A click that shows the window (Show, Preferences, About) presents it with the
+    token (`set_startup_id`), which also gives it the focus. Every other click, a dropped one
+    included, ends the launch with `gtk_shell1.set_startup_id`, which mutter takes without a
+    window: GTK sends it only on a compositor without xdg-activation, so
+    `notify_startup_complete` does nothing on GNOME. `src/tray/launch.rs` sends it on a short
+    Wayland connection of its own (`wayland-client`, pure-Rust backend, `gtk-shell.xml`
+    vendored from GTK 4.22) to the socket GDK uses, on a blocking-pool thread; an X11 display
+    still gets `notify_startup_complete`. A Quit that exits at once may end before it is sent;
+    the launch then ends with the process.
+  - **Closing a window with dialogs** (Hide, Quit) force-closes its dialogs first: with a dialog
+    open, closing the window closes only that dialog.
+  - A watcher that goes away while no window is there brings the window back (only a host that
+    showed the icon: one that never appeared, as on plain GNOME, is not a loss), never while
+    quitting. "Run in background" turned off while no window is there shows the window too, since
+    the tray goes with it.
 - **Background and autostart:** the Background portal through `ashpd` (`request_background` with
   autostart), with `default-features = false` and the `async-io` and `background` features (ashpd
-  0.13), awaited on the main context, so the app adds no tokio runtime. While the window is hidden
+  0.13), awaited on the main context, so the app adds no tokio runtime. While no window is there
   the app holds an `ApplicationHoldGuard`; re-activating the app drops it (S5).
 
 ## State model

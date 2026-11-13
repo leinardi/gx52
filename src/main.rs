@@ -24,6 +24,7 @@ mod device;
 mod model;
 mod preferences;
 mod profile;
+mod tray;
 mod widgets;
 mod window;
 mod zones;

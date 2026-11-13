@@ -36,6 +36,12 @@ ignore = [
     # application. No vulnerability is reported against it; serde-saphyr is the safe-Rust way out
     # if that changes.
     { id = "RUSTSEC-2024-0449", reason = "unsafe-libyaml is unmaintained, transitive via serde_yaml_ng in the meta crate's tests only; no known vulnerability" },
+    # zbus 6 absorbed these three crates, so their zbus 5 releases get no more updates. They come
+    # through zbus 5, which ksni (the tray, spike S5) needs: 0.3.7, the latest, has no zbus 6
+    # release. No vulnerability is reported against them; drop these once ksni moves to zbus 6.
+    { id = "RUSTSEC-2026-0370", reason = "zvariant merged into zbus 6; transitive via zbus 5 under ksni, whose latest release needs zbus 5; no known vulnerability" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names merged into zbus 6; transitive via zbus 5 under ksni, whose latest release needs zbus 5; no known vulnerability" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive merged into zbus 6; transitive via zbus 5 under ksni, whose latest release needs zbus 5; no known vulnerability" },
 ]
 
 [licenses]
@@ -62,6 +68,9 @@ allow = [
     # foldhash, the default hasher of hashbrown, through hashlink, rusqlite's statement cache (the
     # GX52 0.7 import); a permissive, GPL-compatible licence.
     "Zlib",
+    # ksni, the tray (spike S5); a public-domain dedication with a fallback licence, which the FSF
+    # lists as GPL-compatible.
+    "Unlicense",
 ]
 confidence-threshold = 0.9
 

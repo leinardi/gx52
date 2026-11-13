@@ -406,7 +406,10 @@ change applies at once and a change made elsewhere (the tray, `gsettings`) shows
   - **Run in Background** (`adw::SwitchRow`, subtitle "Keep GX52 running and applying profiles
     when the window is closed"; key `run-in-background`, on by default): closing the window keeps
     GX52 running and applying profiles. With a tray host the tray icon shows; without one (plain
-    GNOME), GNOME lists GX52 under Background Apps and launching GX52 again shows the window.
+    GNOME, or after the tray host went away), GNOME lists GX52 under Background Apps and launching
+    GX52 again shows the window.
+    Turned off while no window is open (with `gsettings`), it shows the window, since the tray goes
+    away with it.
   - **Start on Login** (`adw::SwitchRow`, subtitle "Start hidden when you log in. Needs Run in
     Background"; key `autostart`, off by default): starts hidden, through the Background portal
     (works in the Flatpak). Only sensitive while "Run in Background" is on, since starting hidden
@@ -438,13 +441,21 @@ exists.
 
 ## Tray menu
 
-With `ksni`, when running in the background and a tray host exists:
+With `ksni`, when running in the background and a tray host exists. The icon is the app's
+symbolic icon (`com.leinardi.gx52-symbolic`, `.Devel` in development builds).
 
-1. A status line, disabled: "X52 Pro · Mode 2 · DCS World" (the mode only for a per-mode profile).
-2. Show GX52 / Hide GX52.
-3. **Profile** submenu: radio items with the profiles of the connected type; picking one makes it
-   the active profile.
-4. Preferences, About GX52.
+1. A status line, disabled: "X52 Pro · Mode 2 · DCS World" (the selector's mode, only for a
+   per-mode profile). Without a device "Not connected"; with the device but no access "X52 Pro ·
+   No permission"; with `x52d` running "X52 Pro · x52d is running"; before the profiles are
+   loaded "X52 Pro · Connected".
+2. Show GX52 / Hide GX52: first, because on GNOME a single click on the icon opens the menu
+   ([S5](spikes/05-tray.md#visual-check-on-gnome-2026-11-02)); a click where the host sends one
+   (KDE Plasma, a double click on GNOME) does the same. Hide closes the window with its dialogs,
+   the same path as the close button.
+3. **Profile** submenu: radio items with the usable profiles of the connected type, in the
+   profile list's order; picking one makes it the active profile. Not shown while no device is
+   connected. Names are shown as typed: an underscore is not taken as an access key.
+4. Preferences, About GX52: with no window, the window is shown first and the dialog over it.
 5. Quit.
 
 ## Notifications

@@ -46,6 +46,7 @@ use crate::profile::{
 use crate::widgets::PreferencesDialog;
 use crate::window::{self, Window};
 
+mod background;
 mod clocks;
 mod editing;
 mod persistence;
@@ -111,6 +112,7 @@ mod imp {
     use crate::profile::reservations::Reservations;
     use crate::profile::store::ProfileStore;
     use crate::profile::writes::WriteQueue;
+    use crate::tray::{ModelSlot, TrayHandle, TrayLifecycle, TrayMessage, TrayModel};
     use crate::widgets::PreferencesDialog;
     use crate::zones::ZoneEntry;
     use crate::{config, window::Window};
@@ -177,6 +179,22 @@ mod imp {
         pub(crate) preferences_dialog: glib::WeakRef<PreferencesDialog>,
         /// The zones of the search dialog, once read.
         pub(crate) zone_catalog: RefCell<Option<Arc<[ZoneEntry]>>>,
+        /// Keeps the application running while it runs in the background with no window.
+        pub(crate) background_hold: RefCell<Option<gio::ApplicationHoldGuard>>,
+        /// Whether Quit was chosen: closing the window then ends the application, and the tray
+        /// is gone. A launch calls it off.
+        pub(crate) quitting: Cell<bool>,
+        /// The tray, while "Run in Background" is on.
+        pub(crate) tray: RefCell<TrayLifecycle<TrayHandle>>,
+        /// Where every tray sends its clicks, from `startup`.
+        pub(crate) tray_actions: OnceCell<async_channel::Sender<TrayMessage>>,
+        /// What the tray reads its menu from.
+        pub(crate) tray_model: ModelSlot,
+        /// The model last published to the tray, so an unchanged one is not sent again.
+        pub(crate) tray_published: RefCell<Option<TrayModel>>,
+        /// The activation token of the tray click that asked for the window, for its next
+        /// presentation.
+        pub(crate) startup_id: RefCell<Option<String>>,
     }
 
     #[glib::object_subclass]
@@ -199,6 +217,7 @@ mod imp {
             let app = self.obj();
             app.setup_actions();
             app.setup_settings();
+            app.setup_background();
             app.connect_query_end(super::Application::on_query_end);
             app.start_device_service();
             app.load_profiles();
@@ -215,7 +234,12 @@ mod imp {
                 window.upcast()
             });
             app.imp().draining.set(false);
+            if let Some(startup_id) = app.imp().startup_id.take() {
+                // Ends the launch the tray host started for the click, and grants the focus.
+                window.set_startup_id(&startup_id);
+            }
             window.present();
+            app.back_from_background();
             app.show_pending_toasts();
         }
 
@@ -225,6 +249,7 @@ mod imp {
             if !self.obj().writes_idle() {
                 tracing::warn!("Exiting with profile changes not written");
             }
+            self.obj().stop_tray();
             // Returns at once: the device threads are joined on a thread of their own.
             if let Some(device) = self.device.take() {
                 device.shutdown();
@@ -255,14 +280,7 @@ impl Application {
 
     fn setup_actions(&self) {
         let quit = gio::ActionEntry::builder("quit")
-            .activate(|app: &Self, _, _| {
-                // Close the windows instead of calling quit(): quit() skips close-request,
-                // so windows could not save their state. The application exits by itself
-                // once its last window is gone.
-                for window in app.windows() {
-                    window.close();
-                }
-            })
+            .activate(|app: &Self, _, _| app.quit_for_good())
             .build();
         let about = gio::ActionEntry::builder("about")
             .activate(|app: &Self, _, _| app.show_about_dialog())
@@ -683,13 +701,14 @@ impl Application {
         self.update_windows();
     }
 
-    /// Shows the current state in every window.
+    /// Shows the current state in every window and in the tray.
     fn update_windows(&self) {
         for window in self.windows() {
             if let Ok(window) = window.downcast::<Window>() {
                 window.refresh();
             }
         }
+        self.update_tray();
     }
 
     /// Shows `message` in the active window, or keeps it until a window is presented.
