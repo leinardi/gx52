@@ -193,6 +193,8 @@ mod imp {
             // holds itself until they are written.
             if let Some(app) = self.obj().app() {
                 app.drain();
+                // With "Run in Background" on, the application keeps running without the window.
+                app.window_closing();
             }
             self.parent_close_request()
         }

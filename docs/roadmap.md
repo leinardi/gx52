@@ -483,6 +483,38 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
    background" on, closing the window keeps the app running whether or not a tray is available;
    with a tray, a watcher that goes away while the window is hidden brings the window back.
    Done when: DW, plus the S5 visual checks pass with the real app on the host.
+
+   Results on 2026-11-13:
+
+   - **Tray:** `ksni` 0.3.7 on its `async-io` executor, the menu of ui.md with labels escaped for
+     dbusmenu mnemonics, the status line from the selector's retained mode (not the status's,
+     which a reader reopen clears). The tray reads the latest model from a shared slot and is
+     told to refresh only when the model changed. Every start has a generation, a pending start
+     included: an obsolete start's handle is shut down, an obsolete tray's clicks and watcher
+     reports are dropped; unit-tested with a fake handle (off before the start completes, off and
+     on with the first start completing last).
+   - **Background:** closing the window with "Run in background" on destroys it and a background
+     hold keeps the app; Show builds a new window. Quit closes the dialogs, then the window, and
+     the process ends once the profiles are written; while quitting, tray clicks and watcher
+     losses are ignored. A watcher lost while no window exists shows the window.
+   - **Busy cursor:** GNOME's extension starts a launch for every click; a click that shows the
+     window presents it with the click's activation token, every other click ends the launch
+     with `gtk_shell1.set_startup_id` on a short Wayland connection of its own
+     (`wayland-client`, the pure-Rust backend), since GTK's `notify_startup_complete` does
+     nothing on GNOME (S5).
+   - **Dependencies:** `deny.toml` allows the Unlicense and ignores three zbus 5 "unmaintained"
+     advisories until `ksni` moves to zbus 6; `async-executor` pinned to 1.13.3, 1.14.0 is
+     yanked.
+   - **Hands-on, X52 Pro, host build (`make meson-install`) and Devel Flatpak:** the S5 visual
+     checks with the app's own icon, the Profile submenu and the status line following the
+     selector and an unplug, Preferences / About with no window, Quit with a dialog open and with
+     a pending save, the extension disabled while hidden, "Run in background" off, no busy cursor
+     after any click; all as expected.
+   - **Adversarial review** in a fresh Sonnet subagent: approve with nits. Fixed: the tray loop
+     holds the application only per message, a translator comment moved onto its string, docs
+     for a window closed after the tray host went away (the app stays in the background, as
+     without a host). Left: the tray model is rebuilt on every edit to compare with the last one,
+     cheap at today's profile counts.
 2. **(code) Background and autostart** through the Background portal (`ashpd` `async-io`). Done
    when: DW, plus the acceptance below.
 

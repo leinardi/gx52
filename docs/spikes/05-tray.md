@@ -59,9 +59,25 @@ middle click sends `SecondaryActivate`. KDE Plasma calls `Activate` on a single 
 for the app: the first menu item must be "Show GX52" / "Hide GX52", because on GNOME the menu is
 what a single click gives; `Activate` stays mapped to show/hide for KDE and for double-clicks.
 
+## With the real app (2026-11-13)
+
+M6 task 1, X52 Pro, Ubuntu GNOME 50 on Wayland, `ubuntu-appindicators@ubuntu.com`; host build
+installed with `make meson-install` and the Devel Flatpak. The visual checks above pass again with
+the app's own symbolic icon (`com.leinardi.gx52.Devel-symbolic`), also in the Flatpak, where only
+`--talk-name=org.kde.StatusNotifierWatcher` is needed. New findings:
+
+- **Busy cursor:** the extension starts a launch for every click (icon or menu item) and hands
+  its activation token over first (`ProvideXdgActivationToken`); mutter shows the busy cursor
+  until the launch ends, with no timeout seen in practice. A click that shows the window ends it
+  by presenting the window with the token. Any other click (Hide, a profile, Quit) has no window
+  to use it on, and `gdk_display_notify_startup_complete` does nothing on a compositor with
+  xdg-activation; the app sends `gtk_shell1.set_startup_id` itself (architecture.md, "ksni
+  tray").
+- **Dialogs:** closing a window with a dialog open closes only the dialog, so Hide and Quit
+  close the dialogs first.
+
 ## Not done yet
 
-- The app's own symbolic icon instead of `input-gaming-symbolic` (with the real app).
 - Background portal (`ashpd` `request_background` with autostart): the first request shows a
   permission dialog on GNOME, so it needs a human.
 - KDE Plasma (native watcher).

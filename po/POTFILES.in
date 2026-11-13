@@ -27,6 +27,7 @@ src/profile/legacy.rs
 src/profile/mfd.rs
 src/profile/mod.rs
 src/profile/schema.rs
+src/tray.rs
 src/widgets/clock_editor.rs
 src/widgets/input_tester.rs
 src/widgets/led_button.rs

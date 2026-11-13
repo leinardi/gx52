@@ -277,10 +277,15 @@ impl ShutdownSignal {
     }
 }
 
+/// Whether GX52 runs inside a Flatpak sandbox.
+pub(crate) fn is_sandboxed() -> bool {
+    Path::new(FLATPAK_INFO).exists()
+}
+
 /// Runs the watch until shutdown, with the source that works where the app runs, and passes
 /// every selection change and every change of `x52d`'s state to `notify`.
 pub(crate) fn run(shutdown: &ShutdownSignal, notify: impl FnMut(WatchEvent)) {
-    if Path::new(FLATPAK_INFO).exists() {
+    if is_sandboxed() {
         tracing::info!("Sandboxed: polling the USB device list");
         run_polling(NusbLister, x52d::is_running, shutdown, notify);
         return;

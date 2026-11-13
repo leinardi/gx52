@@ -43,7 +43,7 @@ Results go to [spikes/04-flatpak-sandbox.md](spikes/04-flatpak-sandbox.md).
 
 - [x] Run `spikes/s5-tray`: icon visible in the panel, menu looks right, click opens/hides the window.
       (2026-11-02: single left-click opens the menu on GNOME, double-click toggles; see S5.)
-- [ ] Same in the Flatpak build.
+- [x] Same in the Flatpak build, with the real app (2026-11-13, M6 task 1; see S5).
 - [ ] Background portal: first request shows GNOME's permission dialog; accept, then check autostart
       after logging out and in.
 - [ ] Optional: KDE Plasma (native watcher), if a session is at hand.
