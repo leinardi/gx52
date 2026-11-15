@@ -24,6 +24,11 @@ pub(crate) mod access;
 pub(crate) mod check;
 pub(crate) mod id;
 pub(crate) mod monotonic;
+#[expect(
+    dead_code,
+    reason = "the virtual-mouse loop, the next M7 step, is its user"
+)]
+pub(crate) mod mouse;
 pub(crate) mod names;
 pub(crate) mod reader;
 pub(crate) mod status;
