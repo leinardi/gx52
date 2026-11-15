@@ -866,6 +866,9 @@ impl InputNode for EvdevNode {
     }
 
     fn read(&mut self) -> io::Result<Vec<InputEvent>> {
+        // The synced fetch: after a SYN_DROPPED (the kernel's buffer overflowed) evdev re-reads
+        // the key and axis state and inserts the changes as events, so a lost release still
+        // arrives and no virtual-mouse button stays held.
         Ok(self
             .device
             .fetch_events()?

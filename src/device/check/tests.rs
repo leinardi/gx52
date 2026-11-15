@@ -557,7 +557,10 @@ fn x52d_without_the_daemon_installed_is_reported() {
 fn uinput_is_reported() {
     let (outcome, report) = check(Scenario::Uinput, Vec::new(), Vec::new(), NOON, &test_env());
     assert_eq!(outcome, Outcome::Passed, "{report}");
-    assert!(report.contains("uinput: available"), "{report}");
+    assert!(
+        report.contains("uinput: \"GX52 virtual mouse\" created and removed"),
+        "{report}"
+    );
     let env = Env {
         uinput: || UinputAccess::NoPermission,
         ..test_env()
