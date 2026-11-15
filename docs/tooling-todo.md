@@ -72,9 +72,12 @@ item off, or delete it, in the commit that does it.
       there: `cargo-deny` (the `deny` job) and `flatpak-builder-lint` (the `flatpak` job); the
       meta-tests run in their own bare-runner job, `meta`.
 - [x] `docs/release.md`: the release specification (rewrite analysis, section 9).
-- [ ] `.github/workflows/release.yaml`, implementing [release.md](release.md).
-- [ ] `scheduled-scan.yaml` (dependency audit only) and, possibly, a check for a newer GNOME
-      runtime on Flathub (rewrite analysis, section 8).
+- [x] `.github/workflows/release.yaml`, implementing [release.md](release.md): `release.yaml`,
+      `release-publish.yaml`, `release-gate.yaml` and `flathub-pr.yaml`, on gh-reusable-workflows'
+      version-bump-pr, release-on-merge and simple-tag-and-release (M8).
+- [x] `scheduled-scan.yaml`: cargo-deny on the trunk every week, and a check that fails when
+      Flathub has a newer GNOME runtime than the manifests (rewrite analysis, section 8). On
+      `master` until M9 ([release.md](release.md#dispatching-before-m9)).
 - [ ] Repository settings in `gh-leinardi-iac`: required checks once `ci.yaml` exists, the Flathub
       token secret for the release workflow, private vulnerability reporting (linked from
       `SECURITY.md` and the issue template config).
@@ -83,7 +86,8 @@ item off, or delete it, in the commit that does it.
 
 - [ ] `CONTRIBUTING.md`: rewrite for the Rust project (build from source with Meson, Flatpak
       Devel build, `make check`, commit conventions), adapted from `swarm-device-access`.
-- [ ] `RELEASING.md`: replace with `docs/release.md`.
+- [x] `RELEASING.md`: replaced by `docs/release.md`; the file goes with the legacy tree in M9
+      (below).
 - [ ] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
 - [x] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists.
 - [x] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
@@ -114,3 +118,13 @@ item off, or delete it, in the commit that does it.
       it.
 - [ ] Remove `.gitlab/` with the GitLab tombstone (rewrite analysis, section 7.4).
 - [ ] Rename the trunk to `main` (rewrite analysis, section 1, Branching).
+- [ ] Remove `RELEASING.md`, the legacy manual release procedure.
+- [ ] Release workflows ([release.md](release.md#dispatching-before-m9)): remove the `ci.yaml`,
+      `release.yaml` and `flathub-pr.yaml` stubs from the old `master`; move
+      `scheduled-scan.yaml` to the trunk and drop its explicit `rust-rewrite` checkout; drop the
+      `base_branch` inputs of the gh-reusable-workflows calls and every `rust-rewrite` ref in the
+      release workflows (the trunk is then the default branch); point the metainfo screenshot
+      URLs at `main`.
+- [ ] Repository settings: move `ci-result` from the `rust-rewrite` ruleset to
+      `default_branch_required_checks` and remove that ruleset, and set the `release`
+      environment's deployment branch to `main`.
