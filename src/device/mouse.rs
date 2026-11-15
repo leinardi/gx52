@@ -118,7 +118,7 @@ impl AxisMotion {
 }
 
 /// A button of the virtual mouse.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum PointerButton {
     /// `BTN_LEFT`, from the mouse button next to the ministick.
     Left,
@@ -230,6 +230,10 @@ pub(crate) fn pointer_event(
 
 /// Whether `button` is one of the four the virtual mouse uses.
 #[must_use]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the evdev reader, the next M7 step, is its user")
+)]
 pub(crate) fn is_mouse_button(button: Button) -> bool {
     pointer_event(button, true, &Tuning::default()).is_some()
 }

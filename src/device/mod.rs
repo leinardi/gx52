@@ -16,19 +16,16 @@
 //! The device service: the threads that own the joystick (docs/architecture.md, "Threads and data
 //! flow").
 //!
-//! [`DeviceService::start`] spawns the device watch, the writer and the evdev reader. The main
-//! thread pushes the desired state through the returned handle and receives [`DeviceEvent`]s;
-//! nothing here touches a `GObject`.
+//! [`DeviceService::start`] spawns the device watch, the writer, the evdev reader and the
+//! virtual-mouse loop. The main thread pushes the desired state through the returned handle and
+//! receives [`DeviceEvent`]s; nothing here touches a `GObject`.
 
 pub(crate) mod access;
 pub(crate) mod check;
 pub(crate) mod id;
 pub(crate) mod monotonic;
-#[expect(
-    dead_code,
-    reason = "the virtual-mouse loop, the next M7 step, is its user"
-)]
 pub(crate) mod mouse;
+pub(crate) mod mouse_loop;
 pub(crate) mod names;
 pub(crate) mod reader;
 pub(crate) mod status;
@@ -54,6 +51,8 @@ use x52::transport::Transport;
 use self::access::AccessState;
 use self::id::{DeviceId, Generation};
 use self::monotonic::SystemMonotonic;
+use self::mouse::Tuning;
+use self::mouse_loop::{MouseLoop, MouseMessage, MouseStatus, PointerFactory, UinputFactory};
 pub(crate) use self::reader::{AxisChange, HeldChange};
 use self::reader::{EvdevSource, Reader, ReaderEvent, ReaderMessage, SysfsEvdev};
 use self::usb::{NusbOpener, Opener};
@@ -66,12 +65,17 @@ pub(crate) trait Backend: Send + 'static {
     type Opener: Opener + Send + 'static;
     /// Lists and opens evdev nodes for the reader.
     type Evdev: EvdevSource + Send + 'static;
+    /// Creates the virtual mouse's pointer.
+    type Pointers: PointerFactory + Send + 'static;
 
     /// The writer's opener.
     fn opener(&mut self) -> Self::Opener;
 
     /// The reader's evdev source.
     fn evdev(&mut self) -> Self::Evdev;
+
+    /// The virtual-mouse loop's pointer factory.
+    fn pointers(&mut self) -> Self::Pointers;
 
     /// The system time zone the writer's clocks follow.
     fn local_zone(&self) -> fn() -> TimeZone;
@@ -87,6 +91,7 @@ pub(crate) struct SystemBackend;
 impl Backend for SystemBackend {
     type Opener = NusbOpener;
     type Evdev = SysfsEvdev;
+    type Pointers = UinputFactory;
 
     fn opener(&mut self) -> NusbOpener {
         NusbOpener
@@ -94,6 +99,10 @@ impl Backend for SystemBackend {
 
     fn evdev(&mut self) -> SysfsEvdev {
         SysfsEvdev
+    }
+
+    fn pointers(&mut self) -> UinputFactory {
+        UinputFactory
     }
 
     fn local_zone(&self) -> fn() -> TimeZone {
@@ -151,6 +160,15 @@ pub(crate) enum DeviceEvent {
     Sent(Command),
     /// The open attempt the user asked for with "Try Again" is done, leaving this access.
     Retried(AccessState),
+    /// The virtual mouse's status changed; sent once per change, so a failure retried every
+    /// second is reported once.
+    VirtualMouse(MouseStatus),
+}
+
+impl From<MouseStatus> for DeviceEvent {
+    fn from(status: MouseStatus) -> Self {
+        Self::VirtualMouse(status)
+    }
 }
 
 impl From<WriterEvent> for DeviceEvent {
@@ -197,7 +215,8 @@ impl DeviceEvent {
             | Self::X52dRunning(_)
             | Self::Error(_)
             | Self::Sent(_)
-            | Self::Retried(_) => false,
+            | Self::Retried(_)
+            | Self::VirtualMouse(_) => false,
         }
     }
 }
@@ -235,7 +254,8 @@ impl CurrentSelection {
             | DeviceEvent::X52dRunning(_)
             | DeviceEvent::Error(_)
             | DeviceEvent::Sent(_)
-            | DeviceEvent::Retried(_) => true,
+            | DeviceEvent::Retried(_)
+            | DeviceEvent::VirtualMouse(_) => true,
         }
     }
 }
@@ -247,6 +267,7 @@ impl CurrentSelection {
 pub(crate) struct DeviceService {
     writer: Sender<WriterMessage>,
     reader: Sender<ReaderMessage>,
+    mouse: Sender<MouseMessage>,
     /// The watch's shutdown trigger and every thread, until shutdown.
     running: Option<(ShutdownTrigger, Vec<JoinHandle<()>>)>,
 }
@@ -281,11 +302,13 @@ impl DeviceService {
         let (events, received) = async_channel::unbounded();
         let (writer, writer_messages) = mpsc::channel();
         let (reader, reader_messages) = mpsc::channel();
+        let (mouse, mouse_messages) = mpsc::channel();
         let (trigger, signal) = watch::shutdown_signal();
         let mut threads = Vec::new();
 
         let opener = backend.opener();
         let evdev = backend.evdev();
+        let pointers = backend.pointers();
         let local_zone = backend.local_zone();
         let writer_events = events.clone();
         threads.push(spawn("device-writer", move || {
@@ -302,6 +325,11 @@ impl DeviceService {
         let reader_events = events.clone();
         threads.push(spawn("evdev-reader", move || {
             Reader::new(evdev, SystemMonotonic::new(), reader_events).run(&reader_messages);
+        })?);
+
+        let mouse_events = events.clone();
+        threads.push(spawn("virtual-mouse", move || {
+            MouseLoop::new(pointers).run(&mouse_messages, &SystemMonotonic::new(), &mouse_events);
         })?);
 
         let to_writer = writer.clone();
@@ -330,6 +358,7 @@ impl DeviceService {
         let service = Self {
             writer,
             reader,
+            mouse,
             running: Some((trigger, threads)),
         };
         Ok((service, received))
@@ -350,6 +379,18 @@ impl DeviceService {
         let _ = self.reader.send(ReaderMessage::IgnoreAxes);
     }
 
+    /// Turns the virtual mouse on with `tuning`, or off (`None`).
+    pub(crate) fn set_virtual_mouse(&self, tuning: Option<Tuning>) {
+        let _ = self
+            .mouse
+            .send(tuning.map_or(MouseMessage::Disable, MouseMessage::Enable));
+    }
+
+    /// Changes the virtual mouse's tuning while it is on, without creating it again.
+    pub(crate) fn tune_virtual_mouse(&self, tuning: Tuning) {
+        let _ = self.mouse.send(MouseMessage::Tune(tuning));
+    }
+
     /// Tries to open the device again at once, after a denied permission.
     pub(crate) fn retry(&self) {
         let _ = self.writer.send(WriterMessage::Retry);
@@ -367,6 +408,7 @@ impl DeviceService {
         };
         let _ = self.writer.send(WriterMessage::Shutdown);
         let _ = self.reader.send(ReaderMessage::Shutdown);
+        let _ = self.mouse.send(MouseMessage::Shutdown);
         drop(trigger);
         let joined = thread::Builder::new()
             .name("device-join".into())

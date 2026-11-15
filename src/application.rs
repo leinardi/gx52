@@ -32,6 +32,7 @@ use x52::input::{AxisValues, HeldInputs, Mode};
 use x52::state::DeviceState;
 
 use crate::config;
+use crate::device::mouse_loop::MouseStatus;
 use crate::device::status::DeviceStatus;
 use crate::device::{DeviceEvent, DeviceService, access, names};
 use crate::model::{ProfileObject, splice};
@@ -404,13 +405,42 @@ impl Application {
             }
             Err(error) => tracing::error!("Cannot start the device service: {error}"),
         }
-        // The uinput access is reported on request; for now it is logged once, off the main
-        // thread, until the virtual mouse (M7) asks for it.
-        glib::spawn_future_local(async {
-            if let Ok(access) = gio::spawn_blocking(access::check_uinput).await {
-                tracing::info!("uinput access: {access:?}");
-            }
-        });
+        self.follow_virtual_mouse();
+    }
+
+    /// Passes the virtual mouse's switch and tuning to the device service, now and on every
+    /// change: the switch turns the loop on or off, a tuning key changes the running pointer.
+    fn follow_virtual_mouse(&self) {
+        let Some(settings) = self.imp().settings.get() else {
+            return;
+        };
+        for key in preferences::VIRTUAL_MOUSE_KEYS {
+            settings.connect_changed(
+                Some(key),
+                glib::clone!(
+                    #[weak(rename_to = app)]
+                    self,
+                    move |settings, key| {
+                        let tuning = preferences::virtual_mouse(settings);
+                        let device = app.imp().device.borrow();
+                        let Some(device) = device.as_ref() else {
+                            return;
+                        };
+                        match tuning {
+                            Some(tuning) if key != preferences::VIRTUAL_MOUSE => {
+                                device.tune_virtual_mouse(tuning);
+                            }
+                            tuning => device.set_virtual_mouse(tuning),
+                        }
+                    }
+                ),
+            );
+        }
+        // Reads every key, which arms `changed` for each.
+        let tuning = preferences::virtual_mouse(settings);
+        if let Some(device) = self.imp().device.borrow().as_ref() {
+            device.set_virtual_mouse(tuning);
+        }
     }
 
     /// Loads the profile store off the main thread.
@@ -858,6 +888,12 @@ impl Application {
             DeviceEvent::Retried(access::AccessState::NoPermission) => {
                 self.toast(&gettext("Still no access to the device"));
             }
+            // Sent once per change, so each is logged once; the Preferences warning runs its own
+            // access check.
+            DeviceEvent::VirtualMouse(MouseStatus::Failed(failure)) => {
+                tracing::warn!("Virtual mouse: {failure}");
+            }
+            DeviceEvent::VirtualMouse(status) => tracing::info!("Virtual mouse: {status:?}"),
             DeviceEvent::Access(_)
             | DeviceEvent::Retried(_)
             | DeviceEvent::InputNode { node: Some(_), .. }

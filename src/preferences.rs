@@ -18,6 +18,7 @@
 
 use gtk::{gio, glib, prelude::*};
 
+use crate::device::mouse::{Tuning, WheelDirection};
 use crate::profile::legacy::LegacySettings;
 
 /// Keep GX52 running when its window is closed.
@@ -34,6 +35,32 @@ pub(crate) const VIRTUAL_MOUSE_CURVE: &str = "virtual-mouse-curve";
 pub(crate) const VIRTUAL_MOUSE_DEADZONE: &str = "virtual-mouse-deadzone";
 /// Scroll the other way with the scroll wheel.
 pub(crate) const VIRTUAL_MOUSE_INVERT_WHEEL: &str = "virtual-mouse-invert-wheel";
+
+/// The keys the virtual mouse follows: the switch and its tuning.
+pub(crate) const VIRTUAL_MOUSE_KEYS: [&str; 5] = [
+    VIRTUAL_MOUSE,
+    VIRTUAL_MOUSE_SPEED,
+    VIRTUAL_MOUSE_CURVE,
+    VIRTUAL_MOUSE_DEADZONE,
+    VIRTUAL_MOUSE_INVERT_WHEEL,
+];
+
+/// The virtual mouse's tuning while [`VIRTUAL_MOUSE`] is on, `None` while it is off.
+///
+/// Every one of the five keys is read every time, so each stays armed for `changed`.
+pub(crate) fn virtual_mouse(settings: &gio::Settings) -> Option<Tuning> {
+    let tuning = Tuning {
+        gain: settings.double(VIRTUAL_MOUSE_SPEED),
+        curve: settings.double(VIRTUAL_MOUSE_CURVE),
+        deadzone: f64::from(settings.uint(VIRTUAL_MOUSE_DEADZONE)),
+        wheel: if settings.boolean(VIRTUAL_MOUSE_INVERT_WHEEL) {
+            WheelDirection::Inverted
+        } else {
+            WheelDirection::Natural
+        },
+    };
+    settings.boolean(VIRTUAL_MOUSE).then_some(tuning)
+}
 
 /// Turns [`AUTOSTART`] off while [`RUN_IN_BACKGROUND`] is off: starting hidden needs the app to
 /// keep running without a window.

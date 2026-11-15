@@ -79,7 +79,8 @@ impl DeviceStatus {
             | DeviceEvent::Axes { .. }
             | DeviceEvent::Error(_)
             | DeviceEvent::Sent(_)
-            | DeviceEvent::Retried(_) => {}
+            | DeviceEvent::Retried(_)
+            | DeviceEvent::VirtualMouse(_) => {}
         }
         *self != before
     }
