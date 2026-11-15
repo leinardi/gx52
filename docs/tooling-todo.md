@@ -81,10 +81,12 @@ item off, or delete it, in the commit that does it.
 
 ## Docs and project files
 
-- [ ] `CONTRIBUTING.md`: rewrite for the Rust project (build from source with Meson, Flatpak
+- [x] `CONTRIBUTING.md`: rewrite for the Rust project (build from source with Meson, Flatpak
       Devel build, `make check`, commit conventions), adapted from `swarm-device-access`.
 - [ ] `RELEASING.md`: replace with `docs/release.md`.
-- [ ] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
+- [x] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
+- [ ] `README.md`: the screenshot table (LEDs, MFD, profiles, Preferences), in the commit that adds
+      the PNGs in `data/screenshots/` the metainfo points at.
 - [x] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists.
 - [x] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
 - [x] `.agents/skills/`: decide whether gx52 needs a domain skill like `swarm-device-access`'s
@@ -95,10 +97,11 @@ item off, or delete it, in the commit that does it.
       already impossible by type: only the range-checked `x52` constructors build one. The
       boundaries, their rules and their tests are listed once, in the `adversarial-review`
       skill's untrusted-input pass, which every review runs.
-- [ ] `SECURITY.md`: check the security model against the final Flatpak `finish-args` (spike S4
+- [x] `SECURITY.md`: check the security model against the final Flatpak `finish-args` (spike S4
       may need `--share=network` for hotplug) and the profile import/export path (portal or
-      filesystem permission).
-- [ ] `.serena/memories/`: write the project memories for the Rust code base.
+      filesystem permission). Checked in M8: no network; import and export through the file
+      chooser portal.
+- [x] `.serena/memories/`: write the project memories for the Rust code base.
 
 ## Cleanup when the rewrite lands
 

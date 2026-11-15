@@ -18,8 +18,9 @@ Order: stage A and stage B can overlap; stage C is written from the spike result
       #3 "No POV1 LED Control" (now GitHub #3) and #6 "Fix permissions on default flatpak
       installation for Pop!OS users" (now GitHub #4). #5 "python strange error" is obsolete with the
       rewrite.
-- [ ] Decide on GitHub #1 "[feature request] Deb Snap ?" (opened on the mirror in 2023). Still
-      open; owned by [roadmap.md, M8](roadmap.md#m8-release-pipeline-and-the-first-099x-on-beta).
+- [x] Decide on GitHub #1 "[feature request] Deb Snap ?" (opened on the mirror in 2023): closed as
+      "not planned" on 2026-10-28. Flathub is the only official channel; distribution packagers are
+      welcome ([rewrite analysis, section 7.2](rewrite-analysis.md#72-current-state-2026-10-28)).
 - [x] Update section 7 of `rewrite-analysis.md` with the current state: the GitLab push mirror is
       off, GitHub is in sync and is the working repository.
 
