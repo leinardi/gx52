@@ -377,10 +377,14 @@ game):
 | Curve | 1.6: speed per axis = `sign(offset) × gain × (abs(offset) − deadzone) ^ curve` px per tick |
 | Sub-pixel | fractions carry over between ticks, so small offsets still move; dropped when the axis returns to the centre, so the pointer stops dead |
 
-Release rule: when the joystick goes away (the read fails with `ENODEV`) or the feature is disabled,
-the app sends `BTN_LEFT` and `BTN_RIGHT` release events followed by `SYN_REPORT`, whether or not it
-keeps the uinput device alive. Destroying the uinput device also releases them (S9 unplug test), but
-the app does not rely on that.
+The key codes in the table are the X52 Pro's; the X52 sends the mouse button, the scroll wheel
+press, down and up on 718, 719, 720 and 721 ([X52 (non-Pro)](#x52-non-pro)). The values in the
+second table are the defaults of the Speed, Curve and Deadzone settings.
+
+Release rule: when the joystick goes away (the evdev node is closed) or the feature is disabled,
+the app sends `BTN_LEFT` and `BTN_RIGHT` release events followed by `SYN_REPORT`, then removes the
+uinput device: it exists only while the feature is on and a joystick is connected. Destroying the
+uinput device also releases them (S9 unplug test), but the app does not rely on that.
 
 ## X52 (non-Pro)
 
@@ -400,8 +404,13 @@ app assumes, all unverified until a test on the device is recorded here:
   704–706, throttle hat 707–710, **mode 1/2/3 at 711/712/713**, MFD Function / Start/Stop / Reset at
   714 / 715 / 716, i at 717, mouse button 718, scroll wheel press / down / up at 719 / 720 / 721. It
   is to be compared with the non-Pro report order in [libx52](https://github.com/nirenjan/libx52)
-  (which differs from the Pro's). Neither has been checked against a device, and the ministick axis
-  codes on the non-Pro are not known.
+  (which differs from the Pro's). Not checked against a device.
+- **Ministick and mouse controls**, derived from documented sources, not tested on a device. The
+  kernel's `hid-quirks.c` applies `HID_QUIRK_INCREMENT_USAGE_ON_DUPLICATE` to all three X52 IDs, so
+  the X52's ministick, like the Pro's, is `ABS_MISC` (40) and code 41. libx52's report parser
+  (`libx52io/parser.c`, `parse_x52`) puts the mouse primary button, secondary button, scroll down
+  and scroll up at button bits 30–33; hid-input numbers the first 16 buttons 288–303 and the rest
+  from 704, so those bits are keys 718–721, the codes of the candidate map above.
 - **Mode selector and virtual mouse** on the non-Pro use that candidate map (the per-type mode
   mapping exists for `x52` too). Confirming the map on a device, with an input tester, is an open
   item owned by the roadmap (see [roadmap.md](roadmap.md): the input tester verifies the map,
