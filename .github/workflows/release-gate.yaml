@@ -72,6 +72,24 @@ jobs:
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
           make cargo-sources
 
+      # The metainfo's screenshot URLs follow the trunk, which a run from another ref (a dry run of a
+      # pull request branch) may not hold yet: there they name the dispatched commit, so its own
+      # screenshots are mirrored. A run on the trunk builds the metainfo as Flathub will.
+      - name: Point the screenshots at the commit off the trunk
+        if: github.ref != 'refs/heads/rust-rewrite'
+        env:
+          METAINFO: data/com.leinardi.gx52.metainfo.xml.in.in
+          TRUNK_URL: https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/
+        run: |
+          set -euo pipefail
+          grep -qF "$TRUNK_URL" "$METAINFO"
+          sed -i "s|$TRUNK_URL|https://raw.githubusercontent.com/leinardi/gx52/$GITHUB_SHA/|g" "$METAINFO"
+          if grep -qF "$TRUNK_URL" "$METAINFO"; then
+            echo "A screenshot URL still names the trunk." >&2
+            exit 1
+          fi
+          grep -F "<image>" "$METAINFO"
+
       # Flathub runs the tests of the app module; the stable manifest leaves them off for a plain
       # local build, so the gate builds a copy that turns them on.
       - name: Write the gate manifest

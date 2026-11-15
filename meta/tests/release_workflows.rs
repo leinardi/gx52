@@ -403,6 +403,73 @@ fn input_problems(workflows: &Workflows) -> Vec<String> {
     problems
 }
 
+/// The runs of a job's steps, joined.
+fn runs(job: &Value) -> String {
+    job["steps"]
+        .as_sequence()
+        .into_iter()
+        .flatten()
+        .filter_map(|step| step["run"].as_str())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// A real run comes from the trunk only, in release.yaml and flathub-pr.yaml; the gate builds the
+/// copy with the tests on and lints both the manifest and the repository.
+fn guard_problems(workflows: &Workflows) -> Vec<String> {
+    let mut problems = Vec::new();
+    let policy = runs(job(&workflows.release, "policy"));
+    if !policy
+        .contains("[ \"$DRY_RUN\" != \"true\" ] && [ \"$REF\" != \"refs/heads/rust-rewrite\" ]")
+    {
+        problems.push("release.yaml's policy job lets a real run off the trunk".to_owned());
+    }
+    let prepare = runs(job(&workflows.flathub, "prepare"));
+    if !prepare.contains("[ \"$DRY_RUN\" != true ] && [ \"$REF\" != refs/heads/rust-rewrite ]") {
+        problems.push("flathub-pr.yaml lets a real run off the trunk".to_owned());
+    }
+    let build = job(&workflows.gate, "build");
+    let gate_runs = runs(build);
+    if !gate_runs.contains(r#". + {"run-tests": true}"#) {
+        problems.push("the gate does not turn the app module's tests on".to_owned());
+    }
+    let builds_copy = build["steps"]
+        .as_sequence()
+        .into_iter()
+        .flatten()
+        .any(|step| {
+            text(&step["uses"]).starts_with("flatpak/flatpak-github-actions/flatpak-builder@")
+                && text(&step["with"]["manifest-path"]) == "build-aux/com.leinardi.gx52.gate.json"
+                && step["with"]["run-tests"] == Value::Bool(true)
+        });
+    if !builds_copy {
+        problems.push("the gate does not build the copy with the tests on".to_owned());
+    }
+    if !gate_runs.contains("TRUNK_URL")
+        || !build["steps"]
+            .as_sequence()
+            .into_iter()
+            .flatten()
+            .any(|step| {
+                text(&step["if"]) == "github.ref != 'refs/heads/rust-rewrite'"
+                    && text(&step["env"]["TRUNK_URL"])
+                        == "https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/"
+            })
+    {
+        problems
+            .push("the gate does not point the screenshots at the commit off the trunk".to_owned());
+    }
+    for lint in [
+        "flatpak-builder-lint manifest build-aux/com.leinardi.gx52.json",
+        "flatpak-builder-lint repo repo",
+    ] {
+        if !gate_runs.contains(lint) {
+            problems.push(format!("the gate does not run `{lint}`"));
+        }
+    }
+    problems
+}
+
 fn all_problems(workflows: &Workflows) -> Vec<String> {
     [
         version_problems(workflows),
@@ -410,6 +477,7 @@ fn all_problems(workflows: &Workflows) -> Vec<String> {
         order_problems(workflows),
         secret_problems(workflows),
         input_problems(workflows),
+        guard_problems(workflows),
     ]
     .concat()
 }
@@ -438,11 +506,13 @@ fn set(workflows: &mut Workflows, path: &[&str], value: Value) {
     *target = value;
 }
 
-/// Each mutation breaks one rule, and the checks see it.
-#[test]
-fn the_checks_catch_each_break() {
+/// A path in the workflows, and the value that breaks a rule when put there.
+type Break = (&'static str, Vec<&'static str>, Value);
+
+/// Breaks of the consistency rules: values, names and pins.
+fn value_breaks() -> Vec<Break> {
     let other_commit = format!("{REUSABLE}release-on-merge.yaml@{}", "1".repeat(40));
-    let cases: Vec<(&str, Vec<&str>, Value)> = vec![
+    vec![
         (
             "allowed_files drift",
             vec!["publish", "jobs", "decide", "with", "allowed_files"],
@@ -532,11 +602,95 @@ fn the_checks_catch_each_break() {
             vec!["gate", "jobs", "build", "timeout-minutes"],
             Value::Null,
         ),
-    ];
+    ]
+}
+
+/// Breaks of the guards: a real run off the trunk, the gate without its tests or linters.
+fn guard_breaks() -> Vec<Break> {
+    let gate_steps = |drop: &str| {
+        let steps = job(&workflows().gate, "build")["steps"].clone();
+        Value::Sequence(
+            steps
+                .as_sequence()
+                .into_iter()
+                .flatten()
+                .filter(|step| !text(&step["name"]).starts_with(drop))
+                .cloned()
+                .collect(),
+        )
+    };
+    let without_first_step = |file: &str, name: &str| {
+        let workflows = workflows();
+        let workflow = if file == "release" {
+            &workflows.release
+        } else {
+            &workflows.flathub
+        };
+        let steps = job(workflow, name)["steps"]
+            .as_sequence()
+            .cloned()
+            .unwrap_or_default();
+        Value::Sequence(steps.into_iter().skip(1).collect())
+    };
+    vec![
+        (
+            "a real release off the trunk",
+            vec!["release", "jobs", "policy", "steps"],
+            without_first_step("release", "policy"),
+        ),
+        (
+            "the gate without its tests",
+            vec!["gate", "jobs", "build", "steps"],
+            gate_steps("Write the gate manifest"),
+        ),
+        (
+            "the gate without the linters",
+            vec!["gate", "jobs", "build", "steps"],
+            gate_steps("Lint the manifest"),
+        ),
+        (
+            "the screenshots on the trunk in a dry run",
+            vec!["gate", "jobs", "build", "steps"],
+            gate_steps("Point the screenshots"),
+        ),
+    ]
+}
+
+/// Each mutation breaks one rule, and the checks see it.
+#[test]
+fn the_checks_catch_each_break() {
+    let mut flathub_guard = workflows();
+    let check = &mut flathub_guard.flathub["jobs"]["prepare"]["steps"][0]["run"];
+    *check = Value::from(text(check).replace("[ \"$DRY_RUN\" != true ] && ", ""));
+    assert!(
+        !all_problems(&flathub_guard).is_empty(),
+        "a real Flathub run off the trunk: not caught"
+    );
+
     let good = workflows();
-    for (name, path, value) in cases {
+    for (name, path, value) in value_breaks().into_iter().chain(guard_breaks()) {
         let mut broken = good.clone();
         set(&mut broken, &path, value);
         assert!(!all_problems(&broken).is_empty(), "{name}: not caught");
+    }
+}
+
+/// Every screenshot of the metainfo is under the trunk URL the gate rewrites off the trunk, so a
+/// dry run of a branch mirrors that branch's screenshots.
+#[test]
+fn the_screenshots_follow_the_trunk_url() {
+    let metainfo = repo::read("data/com.leinardi.gx52.metainfo.xml.in.in");
+    let images: Vec<&str> = metainfo
+        .lines()
+        .filter_map(|line| {
+            line.trim()
+                .strip_prefix("<image>")?
+                .strip_suffix("</image>")
+        })
+        .collect();
+    assert!(!images.is_empty(), "the metainfo lists no screenshots");
+    let trunk = "https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/";
+    for image in images {
+        assert!(image.starts_with(trunk), "{image} is not under {trunk}");
     }
 }

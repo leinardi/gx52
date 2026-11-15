@@ -31,7 +31,9 @@ on:
         required: false
         default: true
 
-# One release dispatch at a time; version-bump-pr has a group of its own inside.
+# One release dispatch at a time; version-bump-pr has a group of its own inside. GitHub keeps one
+# pending run per group: a dispatch that queues behind a running one replaces an older pending one
+# (docs/release.md, "How to release").
 concurrency:
   group: release-dispatch-${{ github.repository }}
   cancel-in-progress: false

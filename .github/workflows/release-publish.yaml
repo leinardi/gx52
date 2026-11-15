@@ -25,10 +25,12 @@ on:
       - meson.build
       - data/com.leinardi.gx52.metainfo.xml.in.in
 
-# Never cancelled, one at a time: two merges in flight would race for the same version.
-concurrency:
-  group: release-publish-${{ github.repository }}
-  cancel-in-progress: false
+# No concurrency group of its own: GitHub keeps one pending run per group, so a later push of a
+# version file (a Dependabot lock update) would cancel a release run waiting for CI. The reusable
+# workflows serialise what must not race: release-on-merge and simple-tag-and-release each run in
+# a group of their own per repository, never cancelled once running. One window remains: a
+# release push pending behind another run of release-on-merge is replaced by a third version-file
+# push. That run then shows as cancelled; re-run it (docs/release.md, "Recovering a failed run").
 
 permissions: {}
 

@@ -78,6 +78,7 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
     outputs:
       branch: ${{ steps.check.outputs.branch }}
+      changed: ${{ steps.commit.outputs.changed }}
 
     steps:
       - name: Check the tag, the channel and the ref
@@ -187,18 +188,29 @@ jobs:
       - name: Lint the Flathub manifest
         run: flatpak-builder-lint manifest "flathub/$APP_ID.json"
 
+      # A channel that already holds exactly this change (a re-dispatch after its pull request was
+      # merged) has nothing to ship: the build and the push are skipped.
       - name: Commit the change as a bundle
+        id: commit
         env:
           TAG: ${{ inputs.tag }}
+          CHANNEL: ${{ inputs.channel }}
         run: |
           set -euo pipefail
           cd flathub
+          if git diff --cached --quiet; then
+            echo "::notice::$CHANNEL already holds $TAG exactly: nothing to ship."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit --quiet --no-verify -m "Update to $TAG"
           git bundle create ../flathub.bundle HEAD^..HEAD
           git rev-parse HEAD^ >../flathub.base
 
       - name: Upload the Flathub change
+        if: steps.commit.outputs.changed == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: flathub-change
@@ -212,6 +224,7 @@ jobs:
 
   build:
     needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
     strategy:
       fail-fast: false
       matrix:
