@@ -1,256 +1,125 @@
 # GX52
 
-GX52 is a GTK application designed to provide control for the LEDs and MFD of Logitech X52 and X52
-Pro H.O.T.A.S.
+GX52 configures the Logitech (Saitek) X52 and X52 Pro joysticks on Linux: the LEDs, the brightness,
+the text and clocks of the multi-function display (MFD), and profiles that switch with the mode
+selector. It is a GNOME application written in Rust with GTK 4 and libadwaita, distributed through
+Flathub.
 
-## 💡 Features
+<img src="data/icons/com.leinardi.gx52.svg" alt="GX52 icon" width="96" align="right" hspace="0" />
 
-<img src="/data/icons/hicolor/48x48@2x/apps/com.leinardi.gx52.png" alt="GX52 icon"
-     width="96" align="right" hspace="0" />
+## Features
 
-* Set LEDs color (X52 Pro only)
-* Turn on/off individual LEDs (X52 Pro only)
-* Set LEDs brightness
-* Set MFD brightness
-* Update MFD date and time
-* Show on MFD which button is currently pressed
-* Save and restore multiple profiles
+- LED colours and on/off states per LED, and the blinking of the i and POV 1 LEDs (X52 Pro), on a
+  schematic of the stick, its base and the throttle, plus the LED and MFD brightness.
+- MFD text per line, the SHIFT indicator (X52 Pro), and the three clocks with real time zones
+  (daylight saving included) instead of minute offsets.
+- Profiles: a single set of settings, or one per position of the mode selector (1/2/3). Import and
+  export as TOML files; the profiles of GX52 0.7 are imported on first start.
+- A tray icon, running in the background and starting on login.
+- An input tester: a live view of the axes, buttons, hats, toggles and the mode selector.
+- A virtual mouse: the throttle's ministick moves the pointer, with left click, right click (press
+  the wheel) and the wheel, with speed, curve, deadzone and wheel direction settings.
+- Guidance in the app for the udev rule the joystick (and the virtual mouse) needs.
 
-<img src="/art/screenshot-1.png" alt="GX52 screenshot 1" width="800" align="middle"/>
-<img src="/art/screenshot-2.png" alt="GX52 screenshot 2" width="800" align="middle"/>
+The X52 Pro is the device GX52 is developed and tested with. The plain X52 is supported on a best
+effort basis: its individual LEDs cannot be set, GX52 leaves out the LED blinking and the SHIFT
+indicator until they are verified on one, and its input codes come from the documentation, not from
+a device on the desk. Reports from X52 owners are welcome.
 
-## 📦 How to get GX52
+## Install
 
-### Install from Flathub
+### Flathub
 
-This is the preferred way to get GX52 on any major distribution (Arch, Fedora, Linux Mint, openSUSE,
-Ubuntu, etc).
-
-If you don't have Flatpak installed you can find step by step instructions in the [Flatpak setup
-guide](https://flatpak.org/setup/).
-
-Make sure to have the Flathub remote added to the current user:
-
-```bash
-flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-```
-
-#### Install
+GX52 is on [Flathub](https://flathub.org/apps/com.leinardi.gx52). With
+[Flatpak set up](https://flatpak.org/setup/):
 
 ```bash
-flatpak --user install flathub com.leinardi.gx52
-```
-
-#### Run
-
-```bash
+flatpak install flathub com.leinardi.gx52
 flatpak run com.leinardi.gx52
 ```
 
-### Install from source code
+Flathub is the only official channel: there are no `.deb` or Snap packages. Distribution packagers
+are welcome; the build is plain Meson and Cargo (see [Building from source](#building-from-source)).
 
-#### Build time dependencies
+### Beta
 
-| Distro | pkg-config | Python 3.6+ | gobject-introspection | meson | ninja-build | appstream-util | libusb-1.0-0 | libudev | gtk3+ |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Arch Linux | pkg-config | python | gobject-introspection | meson | ninja | appstream-glib | libusb | libudev0 | libgtk-3 |
-| Fedora | pkgconf-pkg-config | python3 | gobject-introspection-devel | meson | ninja-build | appstream-util | libusbx-devel | libudev-devel | libgtk-3-dev |
-| Ubuntu | pkg-config | python3 | libgirepository1.0-dev | meson | ninja-build | appstream-util | libusb-1.0-0-dev | libudev-dev | libgtk-3-dev |
-
-#### Run time dependencies
-
-| Distro | Python 3.6+ | pip | gobject-introspection | libappindicator | gnome-shell-extension-appindicator |
-| --- | --- | --- | --- | --- | --- |
-| Arch Linux | python | python-pip | gobject-introspection | libappindicator3 | gnome-shell-extension-appindicator |
-| Fedora | python3 | python3-pip | gobject-introspection-devel | libappindicator-gtk3 | gnome-shell-extension-appindicator |
-| Ubuntu | python3 | python3-pip | libgirepository1.0-dev | gir1.2-appindicator3-0.1 | gnome-shell-extension-appindicator |
-
-plus all the Python dependencies listed in [requirements.txt](requirements.txt)
-
-#### Clone project and install
-
-If you have not installed GX52 yet:
+The rewrite is published as `0.99.x` development builds on the Flathub beta channel, until `1.0.0`
+replaces the legacy `0.7.6` on stable:
 
 ```bash
-git clone --recurse-submodules -j4 https://gitlab.com/leinardi/gx52.git
+flatpak remote-add --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
+flatpak install flathub-beta com.leinardi.gx52
+```
+
+## Device access (udev)
+
+Without a udev rule the joystick's USB node belongs to root and GX52 cannot set anything. When it
+cannot open the device, GX52 shows a page with the rule, where to put it and the commands to reload
+udev; the virtual mouse's page in Preferences does the same for `/dev/uinput`. The rule uses
+`TAG+="uaccess"`, so only the user of the active seat gets access, and GX52 never asks for root or
+installs anything itself. The rule, line by line, is in
+[docs/protocol.md](docs/protocol.md#udev-rule).
+
+If libx52's `x52d` daemon is running, it writes the same LEDs and MFD as GX52 does; GX52 shows a
+warning while it sees it.
+
+## Running
+
+`gx52 --hidden` starts in the background, without a window (the login autostart uses it). Logs go to
+the terminal; set `RUST_LOG=debug` for more.
+
+The GX52 0.7 command line options are gone: `--add-udev-rule` and `--remove-udev-rule` (GX52 no
+longer writes host files; the guidance page shows the rule instead), `--autostart-on` and
+`--autostart-off` (the switch in Preferences, through the Background portal), `--hide-window`
+(now `--hidden`), and `--debug` and `--version` (set `RUST_LOG`; the About dialog shows the version).
+
+## Where settings and profiles are stored
+
+| Installation | Location |
+| --- | --- |
+| Flatpak | `~/.var/app/com.leinardi.gx52/config/gx52/` |
+| From source | `$XDG_CONFIG_HOME/gx52/` (usually `~/.config/gx52/`) |
+
+Profiles are TOML files in its `profiles/` directory; the preferences are GSettings keys.
+
+**Moving from a source install of GX52 0.7 to the Flatpak:** the old profiles are in
+`~/.config/gx52/gx52.db`, which the sandbox cannot read. Copy the file before the first start, and
+GX52 imports it:
+
+```bash
+mkdir -p ~/.var/app/com.leinardi.gx52/config/gx52
+cp ~/.config/gx52/gx52.db ~/.var/app/com.leinardi.gx52/config/gx52/gx52.db
+```
+
+## Building from source
+
+On Ubuntu 26.04 (other distributions: the same libraries at the versions the GNOME 51 runtime
+ships):
+
+```bash
+sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler meson \
+    desktop-file-utils appstream
+git clone https://github.com/leinardi/gx52.git
 cd gx52
-git checkout release
-sudo -H pip3 install -r requirements.txt
-meson . build --prefix /usr
-ninja -v -C build
-sudo ninja -v -C build install
+meson setup _build
+meson compile -C _build
+meson test -C _build
+sudo meson install -C _build
 ```
 
-#### Update old installation
+Rust comes from `rustup`; `rust-toolchain.toml` pins the release. The development build
+(`com.leinardi.gx52.Devel`, installable next to the stable app) and its Flatpak are described in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-If you installed GX52 from source code previously and you want to update it:
+## Contributing and security
 
-```bash
-cd gx52
-git fetch
-git checkout release
-git reset --hard origin/release
-git submodule init
-git submodule update
-sudo -H pip3 install -r requirements.txt
-meson . build --prefix /usr
-ninja -v -C build
-sudo ninja -v -C build install
-```
+- [CONTRIBUTING.md](CONTRIBUTING.md): building, checks, branches, commits and translations.
+- [SECURITY.md](SECURITY.md): reporting a vulnerability privately, and the security model.
+- [docs/](docs/): the architecture, the device protocol, the release process and the roadmap.
 
-#### Run
-
-Once installed, to start it you can simply execute on a terminal:
-
-```bash
-gx52
-```
-
-## Running the app
-
-To start the app you have to run the command `gx52` in a terminal. The app needs to access the USB
-interface of the X52 that, normally, is not available to unprivileged users.
-
-To allow normal users to access the X52's USB interface you can
-create a custom udev rule
-
-### Adding Udev rule
-
-#### Using GX52
-
-Simply run:
-
-```bash
-gx52 --add-udev-rule
-```
-
-It will automatically refresh also the udev rules.
-
-#### Manually
-
-Create a new file in `/lib/udev/rules.d/60-gx52.rules` containing this text:
-
-```bash
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="06a3", ATTRS{idProduct}=="0762", MODE="0666"
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="06a3", ATTRS{idProduct}=="0255", MODE="0666"
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="06a3", ATTRS{idProduct}=="075c", MODE="0666"
-```
-
-After that, run the following commands
-
-```bash
-sudo udevadm control --reload-rules
-sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=06a3 --action=add
-```
-
-## Command line options
-
-  | Parameter | Description | Source | Flatpak |
-  | --- | --- | :-: | :-: |
-  | -v, --version | Show the app version | x | x |
-  | --debug | Show debug messages | x | x |
-  | --hide-window | Start with the main window hidden | x | x |
-  | --add-udev-rule | Add udev rule to allow execution without root permission | x | x |
-  | --remove-udev-rule | Remove udev rule that allow execution without root permission | x | x |
-  | --autostart-on | Enable automatic start of the app on login | x |  |
-  | --autostart-off | Disable automatic start of the app on login | x |  |
-
-## 🖥️ Build, install and run with Flatpak
-
-If you don't have Flatpak installed you can find step by step instructions in the [Flatpak setup
-guide](https://flatpak.org/setup/).
-
-Make sure to have the Flathub remote added to the current user:
-
-```bash
-flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-```
-
-### Clone the repo
-
-```bash
-git clone --recurse-submodules -j4 https://gitlab.com/leinardi/gx52.git
-```
-
-It is possible to build the local source or the remote one (the same that Flathub uses)
-
-### Local repository
-
-```bash
-./build.sh --flatpak-local --flatpak-install
-```
-
-### Remote repository
-
-```bash
-./build.sh --flatpak-remote --flatpak-install
-```
-
-### Run
-
-```bash
-flatpak run com.leinardi.gx52 --debug
-```
-
-## ❓ FAQ
-
-### The Flatpak version of GX52 is not using my theme, how can I fix it?
-
-To fix this issue install a Gtk theme from Flathub. This way, Flatpak applications will
-automatically pick the installed Gtk theme and use that instead of Adwaita.
-
-Use this command to get a list of all the available Gtk themes on Flathub:
-
-```bash
-flatpak --user remote-ls flathub | grep org.gtk.Gtk3theme
-```
-
-And then just install your preferred theme. For example, to install Yaru:
-
-```
-flatpak install flathub org.gtk.Gtk3theme.Yaru
-``````
-
-### Where are the settings and profiles stored on the filesystem?
-
-| Installation type | Location |
-| --- | :-: |
-| Flatpak | `$HOME/.var/app/com.leinardi.gx52/` |
-| Source code | `$XDG_CONFIG_HOME` (usually `$HOME/.config/gx52`) |
-
-## 💚 How to help the project
-
-### Discord server
-
-If you want to help testing or developing it would be easier to get in touch using the discord
-server of the project: <https://discord.gg/HTCrmU8> Just write a message on the general channel
-saying how you want to help (test, dev, etc) and quoting @leinardi. If you don't use discor but
-still want to help just open a new issue here.
-
-### Can I support this project some other way?
-
-Something simple that everyone can do is to star it on both
-[GitLab](https://gitlab.com/leinardi/gx52) and [GitHub](https://github.com/leinardi/gx52). Feedback
-is always welcome: if you found a bug or would like to suggest a feature, feel free to open an issue
-on the [issue tracker](https://gitlab.com/leinardi/gx52/issues).
+Bug reports and feature requests go to the [issue tracker](https://github.com/leinardi/gx52/issues).
 
 ## License
 
-```
-This file is part of gx52.
-
-Copyright (c) 2019 Roberto Leinardi
-
-gx52 is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-gx52 is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with gx52.  If not, see <http://www.gnu.org/licenses/>.
-```
+GX52 is free software under the [GNU General Public License, version 3 or
+later](COPYING.txt). Copyright (c) 2019 Roberto Leinardi.
