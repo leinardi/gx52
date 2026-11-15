@@ -57,10 +57,6 @@ pub(crate) const RETRY_INTERVAL: Duration = Duration::from_secs(1);
 pub(crate) const VIRTUAL_MOUSE_NAME: &str = "GX52 virtual mouse";
 
 /// A ministick axis.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the evdev reader, the next M7 step, sends them")
-)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum StickAxis {
     /// Left-right: `REL_X`.
@@ -70,13 +66,6 @@ pub(crate) enum StickAxis {
 }
 
 /// A message to the loop, from the main thread or the evdev reader.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the evdev reader, the next M7 step, sends the reader's messages"
-    )
-)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum MouseMessage {
     /// The switch is on, with this tuning (main thread).

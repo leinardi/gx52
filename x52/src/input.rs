@@ -380,8 +380,10 @@ const PRO_AXES: [(u16, Axis); 11] = [
     (0x29, Axis::MinistickY),
 ];
 
-/// The X52's axes: assumed as on the Pro, without the ministick, whose codes are not known.
-const X52_AXES: [(u16, Axis); 9] = [
+/// The X52's axes: assumed as on the Pro. The ministick is on `ABS_MISC` and the code after it
+/// as on the Pro: the kernel applies `HID_QUIRK_INCREMENT_USAGE_ON_DUPLICATE` to all three X52
+/// IDs (docs/protocol.md, "X52 (non-Pro)"); not checked on a device.
+const X52_AXES: [(u16, Axis); 11] = [
     (0x00, Axis::StickX),
     (0x01, Axis::StickY),
     (0x02, Axis::Throttle),
@@ -391,6 +393,8 @@ const X52_AXES: [(u16, Axis); 9] = [
     (0x06, Axis::Slider),
     (0x10, Axis::Pov1X),
     (0x11, Axis::Pov1Y),
+    (0x28, Axis::MinistickX),
+    (0x29, Axis::MinistickY),
 ];
 
 /// The evdev codes of one device type.

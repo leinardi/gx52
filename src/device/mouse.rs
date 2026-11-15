@@ -230,10 +230,6 @@ pub(crate) fn pointer_event(
 
 /// Whether `button` is one of the four the virtual mouse uses.
 #[must_use]
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the evdev reader, the next M7 step, is its user")
-)]
 pub(crate) fn is_mouse_button(button: Button) -> bool {
     pointer_event(button, true, &Tuning::default()).is_some()
 }

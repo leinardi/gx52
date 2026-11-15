@@ -323,8 +323,10 @@ impl DeviceService {
         })?);
 
         let reader_events = events.clone();
+        let reader_mouse = mouse.clone();
         threads.push(spawn("evdev-reader", move || {
-            Reader::new(evdev, SystemMonotonic::new(), reader_events).run(&reader_messages);
+            Reader::new(evdev, SystemMonotonic::new(), reader_events, reader_mouse)
+                .run(&reader_messages);
         })?);
 
         let mouse_events = events.clone();

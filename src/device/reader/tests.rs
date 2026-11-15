@@ -208,12 +208,18 @@ struct Harness {
     timeouts: Arc<Mutex<Vec<Duration>>>,
     opened: Arc<Mutex<Vec<PathBuf>>>,
     discoveries: Arc<Mutex<usize>>,
+    /// The virtual-mouse loop's channel.
+    mouse: Sender<MouseMessage>,
+    mouse_received: Receiver<MouseMessage>,
 }
 
 impl Harness {
     fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
+        let (mouse, mouse_received) = mpsc::channel();
         Self {
+            mouse,
+            mouse_received,
             clock: FakeMonotonic::default(),
             sender,
             receiver,
@@ -256,13 +262,21 @@ impl Harness {
 
     /// Selects `device(1)`, runs the reader over `source` until it stops and returns its events.
     fn run(self, source: FakeSource) -> (Vec<ReaderEvent>, Self) {
+        self.run_selected(source, device(1))
+    }
+
+    /// [`Harness::run`] with `selected` selected.
+    fn run_selected(self, source: FakeSource, selected: DeviceId) -> (Vec<ReaderEvent>, Self) {
         let (events, received) = async_channel::unbounded::<ReaderEvent>();
-        self.sender
-            .send(ReaderMessage::Selected(device(1)))
-            .unwrap();
-        Reader::new(source, self.clock.clone(), events).run(&self.receiver);
+        self.sender.send(ReaderMessage::Selected(selected)).unwrap();
+        Reader::new(source, self.clock.clone(), events, self.mouse.clone()).run(&self.receiver);
         let events = std::iter::from_fn(|| received.try_recv().ok()).collect();
         (events, self)
+    }
+
+    /// What the reader sent the virtual-mouse loop.
+    fn mouse_messages(&self) -> Vec<MouseMessage> {
+        self.mouse_received.try_iter().collect()
     }
 }
 
@@ -869,5 +883,120 @@ fn a_listen_right_after_an_ignore_sends_a_new_snapshot() {
             axis_snapshot_of(1, &[(0x00, 200)]),
             axis_values(vec![(Axis::StickX, 300)]),
         ]
+    );
+}
+
+fn stick(axis: StickAxis, value: i32) -> MouseMessage {
+    MouseMessage::Stick { axis, value }
+}
+
+fn mouse_button(button: Button, pressed: bool) -> MouseMessage {
+    MouseMessage::Button { button, pressed }
+}
+
+#[test]
+fn the_mouse_loop_hears_present_and_the_ministick_on_open_and_gone_on_close() {
+    let harness = Harness::new();
+    let mut node = harness.node(Vec::new());
+    // The mouse button is held at the open: not a press for the loop.
+    node.held = vec![MODE_1, 303];
+    node.abs = vec![(0x28, 3), (0x29, 12)];
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+
+    let (_, harness) = harness.run(source);
+
+    assert_eq!(
+        harness.mouse_messages(),
+        [
+            MouseMessage::Present(DeviceType::X52Pro),
+            stick(StickAxis::Horizontal, 3),
+            stick(StickAxis::Vertical, 12),
+            MouseMessage::Gone,
+        ]
+    );
+}
+
+#[test]
+fn the_ministick_and_mouse_buttons_reach_the_loop_with_the_tester_off() {
+    let harness = Harness::new();
+    let at = Duration::from_millis(10);
+    let node = harness.node(vec![Step::Batch(vec![
+        abs(0x28, 12, at),
+        abs(0x00, 700, at),
+        key(303, true, at),
+        InputEvent {
+            value: KEY_REPEAT,
+            ..key(303, true, at)
+        },
+        key(289, true, at),
+        key(705, true, at),
+        key(705, false, at),
+        abs(0x29, 4, at),
+        key(706, true, at),
+        key(303, false, at),
+    ])]);
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+
+    let (events, harness) = harness.run(source);
+
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, ReaderEvent::Axes { .. })),
+        "the tester does not listen"
+    );
+    assert_eq!(
+        harness.mouse_messages(),
+        [
+            MouseMessage::Present(DeviceType::X52Pro),
+            stick(StickAxis::Horizontal, 0),
+            stick(StickAxis::Vertical, 0),
+            stick(StickAxis::Horizontal, 12),
+            mouse_button(Button::MouseButton, true),
+            mouse_button(Button::ScrollUp, true),
+            mouse_button(Button::ScrollUp, false),
+            stick(StickAxis::Vertical, 4),
+            mouse_button(Button::ScrollPress, true),
+            mouse_button(Button::MouseButton, false),
+            MouseMessage::Gone,
+        ],
+        "no stick axis, Fire or repeat"
+    );
+}
+
+#[test]
+fn the_plain_x52_forwards_its_own_mouse_codes() {
+    let harness = Harness::new();
+    let at = Duration::from_millis(10);
+    let node = harness.node(vec![Step::Batch(vec![
+        key(718, true, at),
+        key(719, true, at),
+        key(720, true, at),
+        key(721, true, at),
+        key(303, true, at),
+        abs(0x28, 15, at),
+    ])]);
+    let source = harness.source(vec![vec![entry(20, USB)]], vec![Ok(node)]);
+    let x52 = DeviceId {
+        device_type: DeviceType::X52,
+        ..device(1)
+    };
+
+    let (_, harness) = harness.run_selected(source, x52);
+
+    assert_eq!(
+        harness.mouse_messages(),
+        [
+            MouseMessage::Present(DeviceType::X52),
+            stick(StickAxis::Horizontal, 0),
+            stick(StickAxis::Vertical, 0),
+            mouse_button(Button::MouseButton, true),
+            mouse_button(Button::ScrollPress, true),
+            mouse_button(Button::ScrollDown, true),
+            mouse_button(Button::ScrollUp, true),
+            stick(StickAxis::Horizontal, 15),
+            MouseMessage::Gone,
+        ],
+        "303 is POV 2 up on the X52"
     );
 }
