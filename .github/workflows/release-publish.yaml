@@ -40,7 +40,7 @@ jobs:
       contents: read
       pull-requests: read
       actions: read
-    uses: leinardi/gh-reusable-workflows/.github/workflows/release-on-merge.yaml@589834d473bab1b4ab3d8f92f54404841c6d1a24 # v1.8.0 candidate (feat/base-branch); repin to the v1.8.0 release
+    uses: leinardi/gh-reusable-workflows/.github/workflows/release-on-merge.yaml@2635363c6cdbba761accc2a3d4a756787d1f911d # v1.8.0
     with:
       version_command: make -s release-version
       allowed_files: Cargo.toml Cargo.lock meson.build data/com.leinardi.gx52.metainfo.xml.in.in
@@ -61,7 +61,7 @@ jobs:
     if: needs.decide.outputs.release == 'true'
     permissions:
       contents: write
-    uses: leinardi/gh-reusable-workflows/.github/workflows/simple-tag-and-release.yaml@589834d473bab1b4ab3d8f92f54404841c6d1a24 # v1.8.0 candidate (feat/base-branch); repin to the v1.8.0 release
+    uses: leinardi/gh-reusable-workflows/.github/workflows/simple-tag-and-release.yaml@2635363c6cdbba761accc2a3d4a756787d1f911d # v1.8.0
     with:
       version: ${{ needs.decide.outputs.tag }}
       base_branch: rust-rewrite

@@ -79,7 +79,7 @@ jobs:
       contents: write
       pull-requests: write
       actions: write
-    uses: leinardi/gh-reusable-workflows/.github/workflows/version-bump-pr.yaml@589834d473bab1b4ab3d8f92f54404841c6d1a24 # v1.8.0 candidate (feat/base-branch); repin to the v1.8.0 release
+    uses: leinardi/gh-reusable-workflows/.github/workflows/version-bump-pr.yaml@2635363c6cdbba761accc2a3d4a756787d1f911d # v1.8.0
     with:
       version: ${{ inputs.version }}
       dry_run: ${{ inputs.dry_run }}
