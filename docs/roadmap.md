@@ -623,11 +623,27 @@ Acceptance:
 1. **(code) `release.yaml`** implementing [release.md](release.md), including the decision on how
    the workflow is dispatched before the trunk is the default branch. Done when: DW, plus a dry run
    passes on both architectures and the tooling-todo item is ticked.
+   - **Code done, dry run pending (2026-11-15):** `release.yaml` (policy, bump PR through
+     gh-reusable-workflows' `version-bump-pr` with `base_branch: rust-rewrite`, gate and Flathub
+     dry runs), `release-publish.yaml` (release-on-merge, the gate, tag and GitHub pre-release for
+     `0.x`, the Flathub PR to `beta`), `release-gate.yaml` and `flathub-pr.yaml`, with
+     `scripts/release-bump.sh`, `release-policy.sh` and `flathub-manifest.sh` and their meta-tests.
+     Before M9 they are dispatched with `--ref rust-rewrite` through stubs on `master`
+     ([release.md](release.md#dispatching-before-m9)). The metainfo `<screenshots>` block is in;
+     its PNGs are not captured yet. Open: the gh-reusable-workflows `base_branch` change released
+     as v1.8.0 and the pins moved to it, the master stubs merged, then the dry run on both
+     architectures.
 2. **(code) `scheduled-scan.yaml` and repository settings**, the remaining items of
    [tooling-todo.md, "Needs CI and the release
    flow"](tooling-todo.md#needs-ci-and-the-release-flow), plus the one-time setup of
    [release.md](release.md#one-time-setup) (release identity, Flathub token, the Flathub `beta`
    branch). Done when: the items are ticked and the setup is recorded.
+   - **Code done, apply pending (2026-11-15):** `scheduled-scan.yaml` on `master` (weekly
+     `cargo deny` on the trunk, and a check that both manifests are on Flathub's newest GNOME
+     runtime); gh-leinardi-iac `repo_gx52`: the `rust-rewrite` ruleset with `ci-result` required,
+     Actions may create pull requests, the `release` environment deployable from `rust-rewrite`
+     only. Recorded in [release.md](release.md#one-time-setup). Open: `tofu apply`, the
+     `FLATHUB_TOKEN` secret (and which token kind Flathub accepted) and the Flathub `beta` branch.
 3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
@@ -639,6 +655,12 @@ Acceptance:
    `make check` passes and the items are ticked.
 5. **First `0.99.x` on beta.** Done when: the Flathub PR is merged, the beta build installs with
    `flatpak install flathub-beta com.leinardi.gx52`, and an X52 non-Pro call for testers is posted.
+   - **Prepared (2026-11-15):** the call for testers is drafted in
+     [x52-call-for-testers.md](x52-call-for-testers.md) (the input tester map, the mode selector,
+     the MFD, the character set, the clocks and the virtual mouse), for the maintainer to post as a
+     GitHub issue or discussion once the beta installs. Its results go here and in
+     [protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro). The dispatch, the bump PR merge, the
+     Flathub `beta` branch and the Flathub PR merge are the maintainer's.
 
 ## M9: the rewrite lands
 
