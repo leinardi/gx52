@@ -1,0 +1,78 @@
+name: Release publish
+
+# The second half of a release (docs/release.md): on the push that merges release.yaml's bump pull
+# request into the trunk, in this order, each job only when the one before succeeded:
+#
+#   decide   gh-reusable-workflows' release-on-merge: the push is the merge of the one bump commit
+#            of version-bump-pr's pull request, and CI passed on the merge commit.
+#   gate     release-gate.yaml on the merge commit: the Flathub-style build, meson test and the
+#            linters on x86_64 and aarch64. A failure stops here: no tag exists yet, so the version
+#            is never published and the next bump drops its metainfo entry.
+#   publish  gh-reusable-workflows' simple-tag-and-release: the vX.Y.Z tag on the merge commit,
+#            created by publishing the release with both bundles; a 0.x release is a pre-release.
+#   flathub  for 0.x only, flathub-pr.yaml on the tag to the beta channel, its one valid channel.
+#            From 1.0.0 on no Flathub pull request is opened here: the maintainer dispatches
+#            flathub-pr.yaml with the channel (beta first, master to promote the same tag).
+#
+# Every step is re-runnable ("Re-run failed jobs"): each reusable workflow finishes what exists.
+on:
+  push:
+    branches:
+      - rust-rewrite
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - meson.build
+      - data/com.leinardi.gx52.metainfo.xml.in.in
+
+# Never cancelled, one at a time: two merges in flight would race for the same version.
+concurrency:
+  group: release-publish-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  decide:
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    uses: leinardi/gh-reusable-workflows/.github/workflows/release-on-merge.yaml@589834d473bab1b4ab3d8f92f54404841c6d1a24 # v1.8.0 candidate (feat/base-branch); repin to the v1.8.0 release
+    with:
+      version_command: make -s release-version
+      allowed_files: Cargo.toml Cargo.lock meson.build data/com.leinardi.gx52.metainfo.xml.in.in
+      base_branch: rust-rewrite
+      ci_workflow: ci.yaml
+      # ci.yaml's flatpak and sdk-checks jobs allow 45 minutes each, plus the queue.
+      ci_timeout_minutes: 90
+
+  gate:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-gate.yaml
+
+  publish:
+    needs: [decide, gate]
+    if: needs.decide.outputs.release == 'true'
+    permissions:
+      contents: write
+    uses: leinardi/gh-reusable-workflows/.github/workflows/simple-tag-and-release.yaml@589834d473bab1b4ab3d8f92f54404841c6d1a24 # v1.8.0 candidate (feat/base-branch); repin to the v1.8.0 release
+    with:
+      version: ${{ needs.decide.outputs.tag }}
+      base_branch: rust-rewrite
+      prerelease: ${{ startsWith(needs.decide.outputs.tag, 'v0.') }}
+      artifact_name: gx52-bundles
+
+  flathub:
+    needs: [decide, publish]
+    if: needs.decide.outputs.release == 'true' && startsWith(needs.decide.outputs.tag, 'v0.')
+    permissions:
+      contents: read
+    uses: ./.github/workflows/flathub-pr.yaml
+    with:
+      tag: ${{ needs.decide.outputs.tag }}
+      channel: beta
+      dry_run: false
