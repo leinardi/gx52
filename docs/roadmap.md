@@ -631,12 +631,21 @@ Acceptance:
 3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
+   - **Done (2026-10-28):** closed as not planned, Flathub is the only official channel; recorded
+     in rewrite analysis, section 1 (Distribution) and section 7.2, and in the README.
 4. **Docs and project files**: the `CONTRIBUTING.md` and `README.md` rewrites (including the manual
    `gx52.db` copy for source installs, risk R10), and `SECURITY.md` checked against the final
    `finish-args` and the import/export path
    ([tooling-todo.md](tooling-todo.md#docs-and-project-files)). The `.serena/memories/` item of the
    same section. Metainfo screenshots, which `flatpak-builder-lint repo` requires (S6). Done when:
    `make check` passes and the items are ticked.
+   - **Done (2026-11-15), except the screenshots:** the README rewritten (features, Flathub and
+     beta install, udev, `x52d`, the retired 0.7 options, the storage paths and the `gx52.db` copy),
+     `CONTRIBUTING.md` rewritten for Meson, the Devel Flatpak, the checks and the trunk,
+     `SECURITY.md` checked against the `finish-args` (no `--share=network`) and the portals, and
+     the Serena memories written. The metainfo `<screenshots>` block is on the release branch; the
+     PNGs in `data/screenshots/` are the maintainer's to capture
+     ([release.md](release.md)), and the README gets its screenshot table with them.
 5. **First `0.99.x` on beta.** Done when: the Flathub PR is merged, the beta build installs with
    `flatpak install flathub-beta com.leinardi.gx52`, and an X52 non-Pro call for testers is posted.
 

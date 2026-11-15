@@ -26,7 +26,7 @@ Sources analysed:
 | Identity | Unchanged: app ID `com.leinardi.gx52`, name GX52, existing icons (may be refreshed later). |
 | Language / toolkit | Rust, gtk4-rs + libadwaita. Full rewrite, not a port: feature parity from the user's point of view, plus new features. |
 | Build system | GNOME convention: Meson driving Cargo, installing desktop file, metainfo, icons, GSettings schema and GResource. |
-| Distribution | Flathub is the main (and initially only) channel. |
+| Distribution | Flathub is the only official channel: no `.deb` or Snap packages (GitHub #1, closed as not planned on 2026-10-28); distribution packagers are welcome, the build is standard Meson and Cargo. |
 | Hosting | GitHub (`github.com/leinardi/gx52`, formerly a read-only mirror) is the primary repository: code, issues, PRs, CI, releases, managed through `gh-leinardi-iac`. The GitLab project gets a tombstone explaining the technical reasons and pointing to GitHub, pushed right before the first public `v1.0.0`. See [section 7](#7-hosting-move-to-github-and-gitlab-tombstone). |
 | Branching | Single trunk (`main`), as in the reference repositories. `master` / `release` are retired once the rewrite lands. Work happens on the `rust-rewrite` branch until then. |
 | Versioning | `vX.Y.Z` tags, as in all recent GitHub projects (the legacy `0.7.x` tags stay as history). Development builds are `0.99.x`; `1.0.0` is cut when the rewrite is considered complete. See [section 9.4](#94-versioning). |
@@ -353,8 +353,10 @@ These reasons go in the tombstone, in short form:
   - GitLab #3 "No POV1 LED Control" is now GitHub #3;
   - GitLab #6 "Fix permissions on default flatpak installation for Pop!OS users" is now GitHub #4;
   - GitLab #5 "python strange error" is not carried over (Python-specific);
-  - GitHub #1 "[feature request] Deb Snap ?" (2023) was opened on the mirror and is still open;
-    Flathub is the only planned channel.
+  - GitHub #1 "[feature request] Deb Snap ?" (2023), opened on the mirror, was closed as "not
+    planned" on 2026-10-28: Flathub is the only official channel, it works on Debian-based
+    distributions too, and distribution maintainers are welcome to package the Meson and Cargo
+    build.
 - The Dependabot PR on the mirror (GitHub #2, `requests` bump for the Python app) is closed and its
   branch deleted.
 
@@ -572,9 +574,10 @@ Resolved during the spikes and stage C:
 - Exact TOML schema for profiles and its versioning: [profiles.md](profiles.md).
 - Whether `game-devices-udev` / `steam-devices` already cover the X52 product IDs: no (desk
   research); the app ships its guidance page.
+- GitHub #1 "[feature request] Deb Snap ?", the packaging scope beyond Flathub: Flathub only,
+  closed as not planned on 2026-10-28 (section 7.2).
 
 Still open, each with an owner in [roadmap.md](roadmap.md):
 
 - D-Bus interface definition (1.x), kept stable once published.
-- GitHub #1 "[feature request] Deb Snap ?": the packaging scope beyond Flathub (M8).
 - Whether the MFD lines show dynamic content as GX52 0.7 did (M4).
