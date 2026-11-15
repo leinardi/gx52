@@ -36,9 +36,10 @@ use x52::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
 use x52::input::Mode;
 use x52::state::DeviceState;
 
-use super::access::{self, AccessState, UinputAccess};
+use super::access::{AccessState, UinputAccess};
 use super::id::{DeviceId, Generation};
 use super::monotonic::{Monotonic, SystemMonotonic};
+use super::mouse_loop::{self, VIRTUAL_MOUSE_NAME};
 use super::udev;
 use super::writer::WAKE_INTERVAL;
 use super::{DeviceEvent, DeviceService};
@@ -81,7 +82,7 @@ pub(crate) enum Scenario {
     Midnight,
     /// libx52's `x52d` detected, started and stopped.
     X52d,
-    /// The uinput access state.
+    /// The uinput access: creates the virtual mouse's device and removes it.
     Uinput,
 }
 
@@ -212,7 +213,7 @@ impl Outcome {
 pub(crate) struct Env {
     /// Whether the user may write the USB node at this path (`access(W_OK)`).
     pub(crate) node_writable: fn(&Path) -> bool,
-    /// The uinput access state.
+    /// Creates the virtual mouse's uinput device and removes it again: the access state it shows.
     pub(crate) uinput: fn() -> UinputAccess,
     /// Whether libx52's `x52d` is installed.
     pub(crate) x52d_installed: fn() -> bool,
@@ -229,7 +230,11 @@ impl Env {
     pub(crate) fn system() -> Self {
         Self {
             node_writable: |path| rustix::fs::access(path, rustix::fs::Access::WRITE_OK).is_ok(),
-            uinput: access::check_uinput,
+            uinput: || match mouse_loop::create_virtual_mouse() {
+                // Dropping the device removes it.
+                Ok(_device) => UinputAccess::Available,
+                Err(error) => UinputAccess::from(&error),
+            },
             x52d_installed: || {
                 ["/usr/bin/x52d", "/usr/local/bin/x52d"]
                     .iter()
@@ -488,7 +493,11 @@ impl Session<'_> {
             }
             // The check follows the mode only; held buttons drive no step of it. It never asks
             // for a retry either: it waits for the periodic one.
-            DeviceEvent::Held { .. } | DeviceEvent::Axes { .. } | DeviceEvent::Retried(_) => {}
+            // Nothing turns the virtual mouse on during a check.
+            DeviceEvent::Held { .. }
+            | DeviceEvent::Axes { .. }
+            | DeviceEvent::Retried(_)
+            | DeviceEvent::VirtualMouse(_) => {}
             DeviceEvent::X52dRunning(running) => self.seen.x52d = Some(running),
             DeviceEvent::Error(error) => {
                 self.info(&format!("error: {error}"));
@@ -989,7 +998,9 @@ impl Session<'_> {
     fn uinput(&mut self) {
         let access = (self.env.uinput)();
         if access == UinputAccess::Available {
-            self.pass("uinput: available");
+            self.pass(&format!(
+                "uinput: {VIRTUAL_MOUSE_NAME:?} created and removed"
+            ));
         } else {
             self.info(&format!(
                 "uinput: {access:?} (the virtual mouse needs the second udev rule line)"

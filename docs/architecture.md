@@ -125,10 +125,9 @@ flowchart LR
     watch -- "appeared / gone" --> reader
     watch -- "appeared / gone" --> state
     reader -- "mode, input events" --> state
-    state -- "start / stop" --> mouse
-    state -- "forward mouse input on / off" --> reader
-    reader -- "ministick, mouse buttons, joystick gone (ENODEV)" --> mouse
-    watch -- "gone" --> mouse
+    state -- "enable (tuning) / tune / disable" --> mouse
+    reader -- "present, ministick, mouse buttons, gone" --> mouse
+    mouse -- "status (once per change)" --> state
     tray -- "TrayAction (async_channel)" --> state
     state -- "Handle::update" --> tray
     writer --> usb
@@ -230,18 +229,38 @@ flowchart LR
     stays selected; on `Gone` for its generation it stops reading.
   - Control transfers and evdev reads do not disturb each other (S3), so writer and reader are
     independent.
-- **Virtual-mouse loop.** Its own thread, owned by the main thread: started when the GSettings
-  switch is on (and a joystick is connected), stopped when it is turned off. It drives the uinput
-  device on a 10 ms tick with the S9 values
+- **Virtual-mouse loop.** Its own thread, "virtual-mouse", part of the device service
+  (`src/device/mouse_loop.rs`, the pure mapping in `src/device/mouse.rs`). It drives the uinput
+  pointer "GX52 virtual mouse" with the S9 mapping and the tuning of the five GSettings keys
   ([protocol.md, "Virtual mouse"](protocol.md#virtual-mouse-uinput)).
-  - Input: the reader forwards ministick positions and mouse-button events to the loop only while
-    the main thread has told it the loop is running, so nothing queues up while it is stopped.
-  - "Stop" from the main thread, "joystick gone" from the reader (its read fails with `ENODEV`, as
-    in S9) or "gone" from the device watch all lead to the same step: the loop sends `BTN_LEFT` and
-    `BTN_RIGHT` up followed by `SYN_REPORT`, then stops (on "stop") or waits for the joystick to
-    come back (on "gone"), keeping or destroying the uinput device as M7 decides.
-  - A failure to create the uinput device (no permission) is reported to the main thread, which
-    shows the guidance page.
+  - One FIFO channel: `Enable(tuning)`, `Tune(tuning)` and `Disable` from the main thread, which
+    follows the keys (a tuning change applies to the running pointer, without creating it again),
+    and `Shutdown`, which releases both buttons and removes the device before the thread exits;
+    `Present`, the ministick values, the four mouse buttons and `Gone` from the reader. The reader
+    always forwards them while its node is open, whether or not the switch is on (the kernel queue
+    never fills while the mouse is off), and sends `Present` with the ministick's position on
+    every open and `Gone` on every close. The loop alone decides what to do with them.
+  - Contract: the loop acts on what *arrives* after `Enable`. A click made just before the switch
+    turned on, still queued while the reader was not scheduled, can arrive after `Enable` and is
+    then injected; this window is accepted. Nothing that arrived before `Enable`, or after
+    `Disable`, is emitted, and a button is released only when the loop emitted its press, so no
+    button stays held. Buttons held when the node opens are not pressed for the loop.
+  - The uinput device exists only while the switch is on and a joystick is present: on `Gone` or
+    `Disable` the loop sends `BTN_LEFT` and `BTN_RIGHT` up followed by `SYN_REPORT`, then drops
+    the device, which removes it; a replug creates a new one. A leftover pointer could make GNOME's
+    "disable touchpad while a mouse is connected" turn a laptop's touchpad off.
+  - Failures: a failed creation, or a failed write (motion, a click, a release), releases both
+    buttons as far as it can, drops the device, reports the failure to the main thread once
+    (`DeviceEvent::VirtualMouse`, sent on every status change and logged there) and, while the
+    switch is on and a joystick present, creates the device again every second, so a fixed
+    `/dev/uinput` brings the pointer back without a replug or a toggle. A failed release during
+    `Gone` or `Disable` still drops the device, with nothing to retry. The Preferences warning
+    runs its own access check.
+  - Timing: while the pointer exists and a ministick axis is outside the deadzone, ticks fall
+    every 10 ms on a monotonic deadline that incoming messages do not move, so frequent reports
+    cannot starve motion; missed ticks are skipped, not caught up, so motion never comes in bursts.
+    Centred, without a pointer or failed, the loop blocks on its channel or waits only for the
+    next retry: no 100 Hz wake-ups while idle.
 - **Device watch.** One component, two sources (S4, `src/device/watch.rs`): `nusb::watch_devices`
   when not sandboxed, re-listing the USB devices at start, after every hotplug event (a
   `Disconnected` carries no vendor or product ID) and every 5 s, because the kernel drops hotplug
@@ -424,8 +443,9 @@ settings, defaulting to the S9 values.
   the guidance page explains the rule, including the security note that uinput write access lets the
   user's programs inject input. The USB access state is unaffected.
 - **Releases held buttons:** on joystick disconnect or when the switch is turned off, the loop sends
-  `BTN_LEFT` and `BTN_RIGHT` up followed by `SYN_REPORT`, whether or not the uinput device is kept
-  alive.
+  `BTN_LEFT` and `BTN_RIGHT` up followed by `SYN_REPORT`, then removes the uinput device: it exists
+  only while the switch is on and a joystick is connected (M7 decision, "Virtual-mouse loop"
+  above).
 - The joystick is never grabbed, so games still see the ministick and mouse buttons (S9: no side
   effects in X4: Foundations). Hiding them needs a grab plus a virtual joystick and is not planned.
 
@@ -526,7 +546,8 @@ The Flatpak `finish-args` beyond the display sockets:
   timestamped lines: `STEP` (something the user must do), `CHECK` (something to confirm by
   looking), `PASS` and `FAIL` (what it verified itself), `INFO`, `SEND` for every command the
   writer sends, and a `DONE` summary. The scenarios are `smoke` (no user action), `replug`, `mode`,
-  `permission`, `resume`, `midnight`, `x52d` and `uinput`. The exit code is 0 when everything
+  `permission`, `resume`, `midnight`, `x52d` and `uinput` (which creates the "GX52 virtual mouse"
+  device and removes it). The exit code is 0 when everything
   passed, 1 on a failure, 2 for a command-line error and 3 when a precondition was not met (the
   permission check with a node that stays writable). A release build refuses the option. The
   service runs over a `Backend` (the real system, or fakes), so the tests run every scenario's

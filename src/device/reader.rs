@@ -25,12 +25,17 @@
 //!
 //! The axes other than POV 1 are reported only while the input tester listens
 //! ([`ReaderMessage::ListenToAxes`]), coalesced to one [`ReaderEvent::Axes`] per read.
+//!
+//! The ministick and the four mouse buttons go to the virtual-mouse loop while a node is open,
+//! whether the tester listens or the virtual mouse is on: the loop alone decides what to do with
+//! them (docs/architecture.md, "Virtual-mouse loop"). The loop hears `Present` and the
+//! ministick's position on every open, `Gone` on every close.
 
 use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, TryRecvError};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, TryRecvError};
 use std::time::{Duration, UNIX_EPOCH};
 
 use rustix::event::{PollFd, PollFlags, Timespec};
@@ -41,6 +46,8 @@ use x52::input::{
 
 use super::id::{DeviceId, Generation};
 use super::monotonic::Monotonic;
+use super::mouse::is_mouse_button;
+use super::mouse_loop::{MouseMessage, StickAxis};
 
 /// How often the reader looks for the selected device's evdev node while it has none.
 pub(crate) const DISCOVERY_INTERVAL: Duration = Duration::from_millis(250);
@@ -438,6 +445,57 @@ fn pov1_state(node: &impl InputNode, map: &InputMap) -> io::Result<(i32, i32)> {
     Ok((value(x)?, value(y)?))
 }
 
+/// What `event` tells the virtual-mouse loop: a ministick value, or a press or release of one of
+/// the four mouse buttons (repeats are dropped).
+fn mouse_message(map: &InputMap, event: &InputEvent) -> Option<MouseMessage> {
+    match event.event_type {
+        EV_KEY if event.value != KEY_REPEAT => {
+            let button = map
+                .button(event.code)
+                .filter(|button| is_mouse_button(*button))?;
+            Some(MouseMessage::Button {
+                button,
+                pressed: event.value != 0,
+            })
+        }
+        EV_ABS => Some(MouseMessage::Stick {
+            axis: stick_axis(map.axis(event.code)?)?,
+            value: event.value,
+        }),
+        _ => None,
+    }
+}
+
+/// The ministick axis `axis` is, if it is one.
+const fn stick_axis(axis: Axis) -> Option<StickAxis> {
+    match axis {
+        Axis::MinistickX => Some(StickAxis::Horizontal),
+        Axis::MinistickY => Some(StickAxis::Vertical),
+        Axis::StickX
+        | Axis::StickY
+        | Axis::Twist
+        | Axis::Throttle
+        | Axis::RotaryI
+        | Axis::RotaryE
+        | Axis::Slider
+        | Axis::Pov1X
+        | Axis::Pov1Y => None,
+    }
+}
+
+/// The ministick's position on `node` now, as the loop's messages; empty for a map without it.
+fn ministick_snapshot(node: &impl InputNode, map: &InputMap) -> io::Result<Vec<MouseMessage>> {
+    map.axes()
+        .filter_map(|(code, axis)| Some((code, stick_axis(axis)?)))
+        .map(|(code, axis)| {
+            Ok(MouseMessage::Stick {
+                axis,
+                value: node.abs_info(code)?.value,
+            })
+        })
+        .collect()
+}
+
 /// What ends following one selection.
 #[derive(Debug, PartialEq, Eq)]
 enum Next {
@@ -463,6 +521,8 @@ pub(crate) struct Reader<S, M, E> {
     source: S,
     monotonic: M,
     events: async_channel::Sender<E>,
+    /// The virtual-mouse loop's channel.
+    mouse: Sender<MouseMessage>,
     /// Whether the input tester listens to the axes; kept across nodes and selections.
     axes: Listening,
     /// Whether the open node owes the main thread an axis snapshot: set by every
@@ -481,12 +541,19 @@ enum Listening {
 }
 
 impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
-    /// A reader over `source` reporting to `events`.
-    pub(crate) const fn new(source: S, monotonic: M, events: async_channel::Sender<E>) -> Self {
+    /// A reader over `source` reporting to `events`, and the ministick and the mouse buttons to
+    /// `mouse`.
+    pub(crate) const fn new(
+        source: S,
+        monotonic: M,
+        events: async_channel::Sender<E>,
+        mouse: Sender<MouseMessage>,
+    ) -> Self {
         Self {
             source,
             monotonic,
             events,
+            mouse,
             axes: Listening::Off,
             snapshot_due: false,
         }
@@ -572,7 +639,11 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
         messages: &Receiver<ReaderMessage>,
     ) -> Stop {
         let map = InputMap::for_device(device.device_type);
-        let (Ok(held), Ok(pov1)) = (node.held_keys(), pov1_state(&node, &map)) else {
+        let (Ok(held), Ok(pov1), Ok(ministick)) = (
+            node.held_keys(),
+            pov1_state(&node, &map),
+            ministick_snapshot(&node, &map),
+        ) else {
             return Stop::NodeLost;
         };
         let generation = device.generation;
@@ -584,6 +655,11 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             generation,
             node: path,
         });
+        // Buttons held now are not pressed for the loop: only their changes from here on reach it.
+        self.to_mouse(MouseMessage::Present(device.device_type));
+        for message in ministick {
+            self.to_mouse(message);
+        }
         if let Some(mode) = tracker.active() {
             self.send(ReaderEvent::Mode { generation, mode });
         }
@@ -617,6 +693,9 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
                             if let Some(change) = held_tracker.on_event(event) {
                                 self.send(ReaderEvent::Held { generation, change });
                             }
+                            if let Some(message) = mouse_message(&map, event) {
+                                self.to_mouse(message);
+                            }
                             if self.axes == Listening::On {
                                 axis_tracker.on_event(event);
                             }
@@ -639,6 +718,7 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
             }
         };
         tracing::info!("Stopped reading input");
+        self.to_mouse(MouseMessage::Gone);
         self.send(ReaderEvent::NodeClosed { generation });
         stop
     }
@@ -646,6 +726,11 @@ impl<S: EvdevSource, M: Monotonic, E: From<ReaderEvent>> Reader<S, M, E> {
     fn send(&self, event: ReaderEvent) {
         // An unbounded channel only fails once the main thread has stopped listening.
         let _ = self.events.try_send(event.into());
+    }
+
+    fn to_mouse(&self, message: MouseMessage) {
+        // Fails only once the loop has stopped, at shutdown.
+        let _ = self.mouse.send(message);
     }
 
     /// Starts reporting the axes, with a snapshot first.
@@ -781,6 +866,9 @@ impl InputNode for EvdevNode {
     }
 
     fn read(&mut self) -> io::Result<Vec<InputEvent>> {
+        // The synced fetch: after a SYN_DROPPED (the kernel's buffer overflowed) evdev re-reads
+        // the key and axis state and inserts the changes as events, so a lost release still
+        // arrives and no virtual-mouse button stays held.
         Ok(self
             .device
             .fetch_events()?

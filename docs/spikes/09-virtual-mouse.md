@@ -115,4 +115,9 @@ settings move into 1.0.0, with these values as the defaults.
 
 - X11 session (optional). Other games, especially ones that bind every joystick axis.
 - Whether the X52 (non-Pro) reports the ministick on the same codes (libx52's non-Pro table orders
-  the mouse buttons differently).
+  the mouse buttons differently). Update (M7, 2026-11-15): the app assumes the same ministick codes
+  and the mouse buttons at 718–721, derived from the kernel's HID quirk and libx52's report parser
+  ([protocol.md, "X52 (non-Pro)"](../protocol.md#x52-non-pro)); still not tested on a device.
+- Keeping the uinput device across a replug: decided against in M7. The app removes it when the
+  joystick goes away and creates it again when it comes back
+  ([architecture.md, "Virtual-mouse loop"](../architecture.md#threads-and-data-flow)).

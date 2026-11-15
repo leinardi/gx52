@@ -430,9 +430,14 @@ fn the_x52_map_is_the_unverified_candidate() {
     assert_eq!(map.button(303), Some(Button::Pov2Up));
     assert_eq!(map.button(717), Some(Button::Clutch));
     assert_eq!(map.button(722), None);
-    // No ministick: its codes on the X52 are not known.
-    assert_eq!(map.axis(0x28), None);
-    assert_eq!(map.axis(0x29), None);
+    // The ministick on the Pro's codes, from the kernel's HID quirk for every X52 ID.
+    assert_eq!(map.axis(0x28), Some(Axis::MinistickX));
+    assert_eq!(map.axis(0x29), Some(Axis::MinistickY));
+    // The mouse buttons at bits 30–33 of libx52's non-Pro report: 718–721.
+    assert_eq!(map.button(718), Some(Button::MouseButton));
+    assert_eq!(map.button(719), Some(Button::ScrollPress));
+    assert_eq!(map.button(720), Some(Button::ScrollDown));
+    assert_eq!(map.button(721), Some(Button::ScrollUp));
     assert_eq!(map.axis(0x00), Some(Axis::StickX));
 }
 
@@ -586,9 +591,12 @@ fn code_of_inverts_the_map() {
 }
 
 #[test]
-fn the_ministick_is_only_on_the_pro() {
-    assert!(InputMap::for_device(DeviceType::X52Pro).has_axis(Axis::MinistickX));
-    assert!(!InputMap::for_device(DeviceType::X52).has_axis(Axis::MinistickY));
+fn both_types_have_the_ministick() {
+    for device in DeviceType::ALL {
+        let map = InputMap::for_device(device);
+        assert!(map.has_axis(Axis::MinistickX), "{device}");
+        assert!(map.has_axis(Axis::MinistickY), "{device}");
+    }
     assert!(InputMap::for_device(DeviceType::X52).has_axis(Axis::Slider));
 }
 

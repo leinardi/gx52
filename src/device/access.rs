@@ -57,9 +57,21 @@ pub(crate) fn check_uinput() -> UinputAccess {
 fn check_uinput_at(path: &Path) -> UinputAccess {
     match OpenOptions::new().write(true).open(path) {
         Ok(_) => UinputAccess::Available,
-        Err(error) if error.kind() == io::ErrorKind::PermissionDenied => UinputAccess::NoPermission,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => UinputAccess::Missing,
-        Err(error) => UinputAccess::Failed(error.kind()),
+        Err(error) => UinputAccess::from(&error),
+    }
+}
+
+impl From<&io::Error> for UinputAccess {
+    /// The access an error of opening `/dev/uinput`, or of creating a device on it, shows.
+    fn from(error: &io::Error) -> Self {
+        let kind = error.kind();
+        if kind == io::ErrorKind::PermissionDenied {
+            Self::NoPermission
+        } else if kind == io::ErrorKind::NotFound {
+            Self::Missing
+        } else {
+            Self::Failed(kind)
+        }
     }
 }
 
@@ -87,6 +99,20 @@ mod tests {
         // Root opens it anyway; the check is only meaningful for a normal user.
         if OpenOptions::new().write(true).open(&node).is_err() {
             assert_eq!(check_uinput_at(&node), UinputAccess::NoPermission);
+        }
+    }
+
+    #[test]
+    fn creation_errors_map_like_open_errors() {
+        for (kind, access) in [
+            (io::ErrorKind::PermissionDenied, UinputAccess::NoPermission),
+            (io::ErrorKind::NotFound, UinputAccess::Missing),
+            (
+                io::ErrorKind::InvalidInput,
+                UinputAccess::Failed(io::ErrorKind::InvalidInput),
+            ),
+        ] {
+            assert_eq!(UinputAccess::from(&io::Error::from(kind)), access);
         }
     }
 

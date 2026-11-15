@@ -29,6 +29,8 @@ use x52::transport::RecordingTransport;
 use super::*;
 use crate::device::Backend;
 use crate::device::id::Attachment;
+use crate::device::mouse::RawEvent;
+use crate::device::mouse_loop::{Pointer, PointerFactory};
 use crate::device::reader::{EvdevSource, InputEvent, InputNode, NodeEntry};
 use crate::device::usb::{OpenError, Opener};
 use crate::device::watch::{SelectionChange, ShutdownSignal, WatchEvent};
@@ -199,9 +201,30 @@ impl InputNode for FakeNode {
     }
 }
 
+/// No uinput: nothing turns the virtual mouse on during a check.
+struct NoPointers;
+
+/// The pointer [`NoPointers`] never creates.
+struct NoPointer;
+
+impl Pointer for NoPointer {
+    fn emit(&mut self, _events: &[RawEvent]) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl PointerFactory for NoPointers {
+    type Pointer = NoPointer;
+
+    fn create(&mut self) -> io::Result<NoPointer> {
+        Err(io::Error::from(io::ErrorKind::NotFound))
+    }
+}
+
 impl Backend for FakeBackend {
     type Opener = FakeOpener;
     type Evdev = FakeEvdev;
+    type Pointers = NoPointers;
 
     fn opener(&mut self) -> FakeOpener {
         FakeOpener {
@@ -215,6 +238,10 @@ impl Backend for FakeBackend {
         FakeEvdev {
             keys: self.keys.clone(),
         }
+    }
+
+    fn pointers(&mut self) -> NoPointers {
+        NoPointers
     }
 
     fn local_zone(&self) -> fn() -> TimeZone {
@@ -530,7 +557,10 @@ fn x52d_without_the_daemon_installed_is_reported() {
 fn uinput_is_reported() {
     let (outcome, report) = check(Scenario::Uinput, Vec::new(), Vec::new(), NOON, &test_env());
     assert_eq!(outcome, Outcome::Passed, "{report}");
-    assert!(report.contains("uinput: available"), "{report}");
+    assert!(
+        report.contains("uinput: \"GX52 virtual mouse\" created and removed"),
+        "{report}"
+    );
     let env = Env {
         uinput: || UinputAccess::NoPermission,
         ..test_env()
@@ -888,7 +918,8 @@ fn a_selection_reaches_the_main_thread_before_its_initial_mode() {
                 | DeviceEvent::X52dRunning(_)
                 | DeviceEvent::Error(_)
                 | DeviceEvent::Sent(_)
-                | DeviceEvent::Retried(_) => {}
+                | DeviceEvent::Retried(_)
+                | DeviceEvent::VirtualMouse(_) => {}
             }
         }
         service.shutdown();

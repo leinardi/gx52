@@ -373,3 +373,32 @@ fn variant_like(like: &glib::Variant, value: f64) -> glib::Variant {
         value.to_variant()
     }
 }
+
+#[test]
+fn the_virtual_mouse_follows_its_five_keys() {
+    let (_dir, settings) = test_settings();
+    assert_eq!(virtual_mouse(&settings), None, "off by default");
+    settings.set_boolean(VIRTUAL_MOUSE, true).unwrap();
+    assert_eq!(
+        virtual_mouse(&settings),
+        Some(Tuning::default()),
+        "the schema's defaults are the loop's"
+    );
+    settings.set_double(VIRTUAL_MOUSE_SPEED, 1.5).unwrap();
+    settings.set_double(VIRTUAL_MOUSE_CURVE, 2.0).unwrap();
+    settings.set_uint(VIRTUAL_MOUSE_DEADZONE, 3).unwrap();
+    settings
+        .set_boolean(VIRTUAL_MOUSE_INVERT_WHEEL, true)
+        .unwrap();
+    assert_eq!(
+        virtual_mouse(&settings),
+        Some(Tuning {
+            gain: 1.5,
+            curve: 2.0,
+            deadzone: 3.0,
+            wheel: WheelDirection::Inverted,
+        })
+    );
+    settings.set_boolean(VIRTUAL_MOUSE, false).unwrap();
+    assert_eq!(virtual_mouse(&settings), None);
+}

@@ -566,7 +566,8 @@ Acceptance:
   spike S5. Checked on 2026-11-15.
 - **Tray inside the Flatpak build**: the icon and the menu work in the Devel Flatpak as on the host.
   Done when: checked and recorded in S5.
-- Optional: KDE Plasma (native watcher), if a session is at hand.
+- Optional: KDE Plasma (native watcher), if a session is at hand. Dropped on 2026-11-15: no Plasma
+  session at hand; GNOME is the target desktop.
 
 ## M7: virtual mouse
 
@@ -574,9 +575,38 @@ Acceptance:
    mapping and values ([protocol.md](protocol.md#virtual-mouse-uinput)); decide whether the uinput
    device is kept alive across a replug and record it in architecture.md. Done when: DW, plus the
    acceptance below.
+   - **Decided (2026-11-15):** the uinput device exists only while the switch is on and a joystick
+     is connected; it is removed on unplug (after the release) and created again on replug, so no
+     leftover pointer can turn a laptop's touchpad off. Recorded in
+     [architecture.md, "Threads and data flow"](architecture.md#threads-and-data-flow).
+   - **Code done:** the loop thread (`src/device/mouse_loop.rs`) and the pure mapping
+     (`src/device/mouse.rs`), unit-tested with a fake pointer and clock: release then removal on
+     unplug and switch-off, a new device on replug, the arrival-based ordering, a failed creation
+     or write reported once and retried every second, ticks on a fixed 10 ms grid that frequent
+     axis reports do not starve and a stall does not burst. The reader forwards the ministick and
+     the mouse buttons whether or not the tester listens. A failed release during unplug or
+     switch-off still removes the device, with nothing to retry (no joystick, or the switch off).
+   - **Hands-on, X52 Pro, host build and Devel Flatpak (2026-11-15):** off by default; on, the
+     pointer moves, clicks and scrolls, and Speed, Curve, Deadzone and Invert Wheel change while it
+     runs; with `/dev/uinput` not writable, the warning and How to Fix; unplugging and switching off
+     while holding the mouse button leave nothing held; the device is in
+     `/proc/bus/input/devices` after a replug and gone while unplugged. All as expected.
+   - **Plain X52:** the ministick on the Pro's codes and the mouse buttons at 718–721, derived from
+     the kernel's HID quirk and libx52's report parser
+     ([protocol.md](protocol.md#x52-non-pro)), not tested on a device; the input tester now shows
+     its ministick too.
+   - **`--device-check uinput`** creates the "GX52 virtual mouse" device and removes it: passes on
+     the host and in the Devel Flatpak (2026-11-15).
+   - **Adversarial reviews**, one per implementation step, in fresh subagents: approved. Fixed on
+     the way: a wrong bound in a code comment and this list's own gaps (ui.md's X52 ministick line,
+     `Shutdown` in architecture.md). Kept: the reader ignores `SYN_DROPPED` itself, since evdev's
+     synced fetch re-reads the state and inserts the lost changes.
 2. **(code) Virtual-mouse settings** in Preferences: speed, curve, deadzone and wheel direction,
    with the S9 values as defaults. Done when: DW, plus each setting is a GSettings key bound to its
    row and a change takes effect without turning the switch off and on.
+   - **Done:** the main thread follows the five keys; the switch sends
+     Enable or Disable, a tuning key a Tune that the running pointer applies at once, without being
+     created again. Checked hands-on with task 1 (2026-11-15).
 
 Acceptance:
 
@@ -584,6 +614,7 @@ Acceptance:
 - With `/dev/uinput` not writable, turning it on shows the warning and "How to Fix" in Preferences.
 - No button stays held after unplugging the joystick or turning the switch off while a button is
   held.
+- Checked on 2026-11-15 on the X52 Pro, host build and Devel Flatpak (task 1).
 - Optional: an X11 session ([spike S9](spikes/09-virtual-mouse.md#not-done-yet)); other games,
   especially ones that bind every axis.
 

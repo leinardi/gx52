@@ -317,8 +317,9 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
   squares put the rest value in the middle, the upper of the two middle values of an even range
   (the ministick rests at 8 of 0–15), each half scaled on its own. The raw values keep the width
   of their widest values, so the cards do not change size as they move.
-- **Ministick:** a second square. Not shown on the X52 (non-Pro), whose ministick codes are not
-  known.
+- **Ministick:** a second square, on both models. The X52 (non-Pro)'s codes are derived from the
+  kernel's HID quirk and libx52, not tested on a device
+  ([protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro)).
 - **Toggles:** T1–T6 in pairs. **Mode:** 1 / 2 / 3, the current one highlighted.
 - **Buttons:** one indicator per button, lit while pressed, labelled with the name on the device
   and the button number games show ("Fire · 2"); the full name and the evdev code in the tooltip
