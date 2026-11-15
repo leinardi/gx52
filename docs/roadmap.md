@@ -630,8 +630,8 @@ Acceptance:
      `scripts/release-bump.sh`, `release-policy.sh` and `flathub-manifest.sh` and their meta-tests.
      Before M9 they are dispatched with `--ref rust-rewrite` through stubs on `master`
      ([release.md](release.md#dispatching-before-m9)). The metainfo `<screenshots>` block is in;
-     its PNGs are not captured yet. Open: the gh-reusable-workflows `base_branch` change released
-     as v1.8.0 and the pins moved to it, the master stubs merged, then the dry run on both
+     its PNGs are not captured yet. The gh-reusable-workflows `base_branch` change is released as
+     v1.8.0 and pinned, and the `master` stubs are merged (2026-11-15). Open: the dry run on both
      architectures.
 2. **(code) `scheduled-scan.yaml` and repository settings**, the remaining items of
    [tooling-todo.md, "Needs CI and the release
@@ -642,8 +642,9 @@ Acceptance:
      `cargo deny` on the trunk, and a check that both manifests are on Flathub's newest GNOME
      runtime); gh-leinardi-iac `repo_gx52`: the `rust-rewrite` ruleset with `ci-result` required,
      Actions may create pull requests, the `release` environment deployable from `rust-rewrite`
-     only. Recorded in [release.md](release.md#one-time-setup). Open: `tofu apply`, the
-     `FLATHUB_TOKEN` secret (and which token kind Flathub accepted) and the Flathub `beta` branch.
+     only. Recorded in [release.md](release.md#one-time-setup). Applied with `tofu apply` and the
+     scan merged to `master` (2026-11-15). Open: the `FLATHUB_TOKEN` secret (and which token kind
+     Flathub accepted) and the Flathub `beta` branch.
 3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
