@@ -1,0 +1,33 @@
+name: Release
+
+# A stub on the legacy master, so that `gh workflow run release.yaml --ref rust-rewrite` (or a PR
+# branch, for a dry run) finds the workflow: GitHub registers a workflow_dispatch workflow only
+# from the default branch, and the dispatch then runs the named ref's real release.yaml. Its
+# inputs are the real file's (docs/release.md lists them); the real file is the only one that
+# acts. It goes when the rewrite lands (M9).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version X.Y.Z (empty: derive it with svu, allowed from 1.0.0 on)"
+        type: string
+        required: false
+        default: ""
+      dry_run:
+        description: "Resolve and bump, run the gate and the Flathub dry run on the bumped tree; push and open nothing"
+        type: boolean
+        required: false
+        default: true
+
+permissions: {}
+
+jobs:
+  stub:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Refuse to run on master
+        run: |
+          echo "This is master's stub of release.yaml: dispatch with --ref rust-rewrite (or a branch of it, for a dry run)." >&2
+          exit 1

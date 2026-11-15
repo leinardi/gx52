@@ -1,0 +1,23 @@
+name: CI
+
+# A stub on the legacy master. GitHub registers a workflow_dispatch workflow only from the default
+# branch, and a dispatch then runs the file of the ref it names, so this file only has to exist
+# here: `gh workflow run ci.yaml --ref <branch>` runs that branch's real ci.yaml. The release's
+# version-bump-pr dispatches it on release/vX.Y.Z that way. It has no push or pull_request
+# trigger, so the legacy tree is never built. It goes when the rewrite lands (M9) and the trunk
+# becomes the default branch.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  stub:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Refuse to run on master
+        run: |
+          echo "This is master's stub of ci.yaml: dispatch with --ref rust-rewrite (or a branch of it)." >&2
+          exit 1
