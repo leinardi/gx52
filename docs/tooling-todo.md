@@ -78,9 +78,12 @@ item off, or delete it, in the commit that does it.
 - [x] `scheduled-scan.yaml`: cargo-deny on the trunk every week, and a check that fails when
       Flathub has a newer GNOME runtime than the manifests (rewrite analysis, section 8). On
       `master` until M9 ([release.md](release.md#dispatching-before-m9)).
-- [ ] Repository settings in `gh-leinardi-iac`: required checks once `ci.yaml` exists, the Flathub
-      token secret for the release workflow, private vulnerability reporting (linked from
-      `SECURITY.md` and the issue template config).
+- [ ] Repository settings in `gh-leinardi-iac` (`repo_gx52`, M8): a ruleset on `rust-rewrite`
+      with `ci-result` required (none on the legacy `master`), Actions may create pull requests,
+      the `release` environment deployable from `rust-rewrite`; private vulnerability reporting is
+      already on for public repositories. Written on the IaC branch `feat/gx52-release`; tick when
+      the maintainer applied it. By hand ([release.md](release.md#one-time-setup)): the
+      `FLATHUB_TOKEN` environment secret, and the Flathub `beta` branch.
 
 ## Docs and project files
 
@@ -128,3 +131,6 @@ item off, or delete it, in the commit that does it.
 - [ ] Repository settings: move `ci-result` from the `rust-rewrite` ruleset to
       `default_branch_required_checks` and remove that ruleset, and set the `release`
       environment's deployment branch to `main`.
+- [ ] `scheduled-scan.yaml` on the trunk: give it meta-test coverage like the release workflows'
+      (`release_workflows`); on `master` the trunk's meta-tests cannot read it, so until then its
+      check is the hands-on one in [release.md](release.md#dispatching-before-m9).

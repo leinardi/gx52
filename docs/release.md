@@ -127,8 +127,14 @@ are these; the `release_workflows` meta-test checks that the real files declare 
 | `flathub-pr.yaml` | `channel` | choice `beta`, `master` | yes | none |
 | `flathub-pr.yaml` | `dry_run` | boolean | no | `true` |
 
-A change to these inputs is made on both branches. At M9 the trunk becomes `main`, the default
-branch: the stubs go, `scheduled-scan.yaml` moves to the trunk, and the `base_branch` inputs go
+A change to these inputs is made on both branches. The trunk's meta-tests cannot read `master`, so
+the stubs and `scheduled-scan.yaml` are checked by hand once the bootstrap is merged: `gh workflow
+list` shows CI, Release, Flathub PR and Scheduled scan; a stub dispatched on `master` fails with its
+message; `gh workflow run scheduled-scan.yaml` on `master` passes (or fails only in its
+runtime job, naming a newer GNOME runtime).
+
+At M9 the trunk becomes `main`, the default branch: the stubs go, `scheduled-scan.yaml` moves to
+the trunk, and the `base_branch` inputs go
 ([tooling-todo.md](tooling-todo.md#cleanup-when-the-rewrite-lands)).
 
 ## How to release
