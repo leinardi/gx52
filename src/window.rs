@@ -25,7 +25,7 @@ use gtk::{gio, glib};
 use gettextrs::gettext;
 use x52::device::DeviceType;
 
-use crate::application::{Application, RenameProblem};
+use crate::application::{Application, Refusal, RenameProblem};
 use crate::config;
 use crate::model::{ProfileObject, ProfileState};
 use crate::profile::exchange::{self, ImportPreview, ImportStep};
@@ -69,6 +69,10 @@ mod imp {
         pub content_page: TemplateChild<adw::NavigationPage>,
         #[template_child]
         pub x52d_banner: TemplateChild<adw::Banner>,
+        #[template_child]
+        pub autostart_banner: TemplateChild<adw::Banner>,
+        #[template_child]
+        pub waiting_autostart_banner: TemplateChild<adw::Banner>,
         #[template_child]
         pub content_stack: TemplateChild<gtk::Stack>,
         #[template_child]
@@ -253,6 +257,7 @@ impl Window {
         let Some(app) = self.app() else {
             return;
         };
+        self.show_autostart_notice(app.autostart_notice());
         let imp = self.imp();
         let status = app.device_status();
         if app.shown_device_type().is_none() {
@@ -600,6 +605,26 @@ impl Window {
         imp.switcher_bar.set_visible(editor);
         imp.x52d_banner
             .set_revealed(status.x52d_running && page == "editor");
+    }
+
+    /// Shows the banner of a Start on Login refusal no preferences dialog showed, or hides it.
+    pub(crate) fn show_autostart_notice(&self, refusal: Option<Refusal>) {
+        let imp = self.imp();
+        let title = refusal.map(|refusal| match refusal {
+            Refusal::Denied => gettext(
+                "Start on Login is off: the desktop doesn’t allow GX52 to run in the background",
+            ),
+            Refusal::Unavailable => {
+                gettext("Start on Login is off: the desktop’s Background portal isn’t available")
+            }
+        });
+        // The page with no device has its own header bar, so its own banner.
+        for banner in [&*imp.autostart_banner, &*imp.waiting_autostart_banner] {
+            if let Some(title) = &title {
+                banner.set_title(title);
+            }
+            banner.set_revealed(title.is_some());
+        }
     }
 
     /// Follows the list: a usable profile becomes the active one, a failed one shows why.

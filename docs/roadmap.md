@@ -518,10 +518,52 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
 2. **(code) Background and autostart** through the Background portal (`ashpd` `async-io`). Done
    when: DW, plus the acceptance below.
 
+   Results on 2026-11-15:
+
+   - **Start on Login:** the `autostart` key asks the portal for an entry that runs
+     `gx52 --hidden`, whenever the key changes and once per start while it is on. Requests go one
+     at a time and the one that finishes sends the latest wish if it differs (`AutostartSync`,
+     unit-tested: a delayed enable followed by a disable, coalesced toggles, refusals by cause).
+     A refusal turns the key off and is recorded until the key is on and allowed again, turned
+     off, or "Run in Background" goes off. A request answers within 2 minutes or counts as failed;
+     Quit waits 5 s at most for one.
+   - **Hidden start:** `--hidden` through `HANDLES_COMMAND_LINE`; a pure launch plan over
+     (primary or forwarded, hidden, the two keys), tested for every combination. A hidden start
+     while Start on Login is off removes the stale entry.
+   - **Refusals in the UI**, from the prototype (updated for it, on design system 1.5.0): the
+     switch waits on "Asking the desktop…", a warning row with How to Fix as for uinput, a "Start
+     on Login" subpage with the fix per reason and Try Again, and a window banner for a refusal no
+     Preferences dialog showed (a start at login). These replace the two refusal toasts. The main
+     menu got Quit (Ctrl+Q), which exits with "Run in Background" on too.
+   - **Portal findings** (Ubuntu 26.04, xdg-desktop-portal 1.21, GNOME 50): no permission dialog
+     ever shows, an unset permission is granted and stored as allowed; a permission turned off
+     answers Cancelled, like a dismissed dialog, so Cancelled is a refusal at startup too; with
+     it off, the portal ends any window-less instance of the app id a few seconds after its last
+     window closes, `flatpak-builder`'s test run of the Devel id included (exit 137). The host
+     build registers its app id with the portal registry (xdg-desktop-portal 1.19 and later).
+   - **Dependencies:** `ashpd` 0.13.13 without default features, `async-io` and `background`,
+     sharing `ksni`'s zbus 5 (0.14 moved to zbus 6). zbus's proxy warning on every request is
+     filtered out of the default log.
+   - **Hands-on, X52 Pro, host build (`make meson-run`) and Devel Flatpak:** the entry is written
+     and removed with the switch (`flatpak run … --hidden` in the Flatpak); after logging out and
+     in GX52 runs hidden, applies the profile and shows the tray icon, and a launch shows the
+     window; with the permission set to `no`: the warning row, the subpage, a failed and a working
+     Try Again, the startup banner; Quit from the menu with "Run in Background" on. All as
+     expected.
+   - **Adversarial reviews** in fresh Sonnet subagents. The first, before the refusal UI: a
+     failed request at startup no longer turns the key off, Quit no longer waits for an
+     unanswered portal, the startup normalization's disable is sent (its handler is connected
+     first). The second, approve with nits: the 2-minute request timeout, no hold for a follow-up
+     sent while quitting, the banner goes once Preferences opens, the dialog reads Run in
+     Background from the key, `src/widgets/mod.rs` in POTFILES. Left: `--help` shows the
+     `--hidden` description untranslated, since GTK sets the locale after the options are read.
+
 Acceptance:
 
-- **Background portal**: the first request shows GNOME's permission dialog; after accepting, the app
-  starts hidden after logging out and in. Done when: checked on GNOME and recorded in spike S5.
+- **Background portal**: the first request shows the desktop's permission dialog where it has one
+  (Ubuntu 26.04 GNOME asks nothing and allows); the app starts hidden after logging out and in; a
+  refusal turns Start on Login back off and says why. Done when: checked on GNOME and recorded in
+  spike S5. Checked on 2026-11-15.
 - **Tray inside the Flatpak build**: the icon and the menu work in the Devel Flatpak as on the host.
   Done when: checked and recorded in S5.
 - Optional: KDE Plasma (native watcher), if a session is at hand.

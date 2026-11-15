@@ -164,7 +164,7 @@ impl Application {
     }
 
     /// Whether "Run in Background" is on.
-    fn runs_in_background(&self) -> bool {
+    pub(super) fn runs_in_background(&self) -> bool {
         self.imp()
             .settings
             .get()
@@ -184,12 +184,18 @@ impl Application {
         let imp = self.imp();
         match close_action(self.runs_in_background(), imp.quitting.get()) {
             CloseAction::Background => {
-                if imp.background_hold.borrow().is_none() {
-                    tracing::info!("Window closed: running in the background");
-                    imp.background_hold.replace(Some(self.hold()));
-                }
+                tracing::info!("Window closed: running in the background");
+                self.hold_in_background();
             }
             CloseAction::Quit => {}
+        }
+    }
+
+    /// Keeps the application running with no window, until a window is shown or Quit.
+    pub(super) fn hold_in_background(&self) {
+        let imp = self.imp();
+        if imp.background_hold.borrow().is_none() {
+            imp.background_hold.replace(Some(self.hold()));
         }
     }
 
@@ -206,6 +212,7 @@ impl Application {
             close_window(&window);
         }
         imp.background_hold.take();
+        self.release_portal_on_quit();
     }
 
     /// The user brought GX52 back (a launch, the tray): a quit in progress is called off and the

@@ -563,11 +563,16 @@ body{margin:0}
           </x-import>
         </x-import>
 
-        <x-import component-from-global-scope="Adw.PreferencesDialog" open="{{prefsOpen}}" on-close="{{closePrefs}}" subpages="{{prefsSubpages}}">
+        <x-import component-from-global-scope="Adw.PreferencesDialog" open="{{prefsOpen}}" on-close="{{closePrefs}}" subpages="{{prefsSubpages}}" visible-subpages="{{prefsSub}}" on-subpages-change="{{onPrefsSub}}">
           <x-import component-from-global-scope="Adw.PreferencesPage" name="general" title="General" icon="preferences-system">
-            <x-import component-from-global-scope="Adw.PreferencesGroup" title="Background" suffix="{{prefsBridge}}">
+            <x-import component-from-global-scope="Adw.PreferencesGroup" title="Background">
               <x-import component-from-global-scope="Adw.SwitchRow" title="Run in Background" subtitle="Keep GX52 running and applying profiles when the window is closed" active="{{prefs.runBg}}" on-toggle="{{onRunBg}}"></x-import>
-              <x-import component-from-global-scope="Adw.SwitchRow" title="Start on Login" subtitle="Start hidden when you log in. Needs Run in Background" active="{{prefs.startLogin}}" disabled="{{startLoginDisabled}}" on-toggle="{{onStartLogin}}"></x-import>
+              <x-import component-from-global-scope="Adw.SwitchRow" title="Start on Login" subtitle="{{startLoginSubtitle}}" active="{{prefs.startLogin}}" disabled="{{startLoginDisabled}}" on-toggle="{{onStartLogin}}"></x-import>
+              <sc-if value="{{loginWarn}}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="Adw.ActionRow" icon="dialog-warning" title="Start on Login is off" subtitle="{{loginWarnText}}">
+                  <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" label="How to Fix" valign="center" on-click="{{openLoginHelp}}"></x-import></x-import>
+                </x-import>
+              </sc-if>
             </x-import>
             <x-import component-from-global-scope="Adw.PreferencesGroup" title="Virtual Mouse" description="Move the pointer with the ministick. Games still receive the ministick.">
               <x-import component-from-global-scope="Adw.SwitchRow" title="Use the Ministick as a Mouse" active="{{prefs.mouse}}" on-toggle="{{onMouse}}"></x-import>
@@ -685,6 +690,9 @@ body{margin:0}
       <x-import component-from-global-scope="Adw.PreferencesGroup" title="System">
         <x-import component-from-global-scope="Adw.SwitchRow" title="/dev/uinput Writable" subtitle="Off: the virtual mouse shows its warning" active="{{uinputOk}}" on-toggle="{{onUinput}}"></x-import>
         <x-import component-from-global-scope="Adw.SwitchRow" title="Tray Host Available" subtitle="Off: plain GNOME, Background Apps only" active="{{trayHost}}" on-toggle="{{onTrayHost}}"></x-import>
+        <x-import component-from-global-scope="Adw.ComboRow" title="Background Portal" subtitle="The desktop's answer to Start on Login" items="{{bgPermItems}}" selected="{{bgPermIdx}}" on-select="{{onBgPerm}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Start GX52 Hidden, as at Login" on-activate="{{simulateLoginStart}}"></x-import>
+        <x-import component-from-global-scope="Adw.ButtonRow" title="Turn On Start on Login From gsettings" on-activate="{{turnOnLoginElsewhere}}"></x-import>
       </x-import>
 
       <x-import component-from-global-scope="Adw.PreferencesGroup" title="Appearance">
@@ -866,17 +874,17 @@ class Component extends DCLogic {
       toast: null, removed: null,
       prefs: { runBg: true, startLogin: false, mouse: false, speed: 0.6, curve: 1.6, deadzone: 1, invert: false },
       uinputOk: false, trayHost: true, windowShown: true, running: true,
+      bgPerm: 'allowed', loginPending: false, loginFail: null, loginNotice: false, loginRetryFailed: false, prefsSub: [],
       dragId: null, dropId: null, dropAfter: false
     };
     ['onKey', 'onShowContentChange', 'endDrag', 'cancelLongPress', 'onRenameChange', 'commitRename', 'onRenameKey', 'renameRef',
      'openTest', 'openFullGuide', 'tryAgain', 'copyUdevRule', 'copyUdevCmd', 'copyX52dCmd', 'showFile', 'removeViewed',
      'onEditMode', 'onLedB', 'onBlink', 'closeLedPop', 'onLedPick', 'onMfdClock', 'onMfdB', 'onShift', 'onC1Source', 'onC1H24', 'onDateFormat',
      'onAlertResponse', 'closeDetails', 'closeX52d', 'closeTz', 'closePrefs', 'closeShortcuts', 'closeAbout',
-     'onRunBg', 'onStartLogin', 'onMouse', 'onSpeed', 'onCurve', 'onDeadzone', 'onInvert', 'openUinputHelp',
+     'onRunBg', 'onStartLogin', 'openLoginHelp', 'onPrefsSub', 'turnOnLoginElsewhere', 'onBgPerm', 'simulateLoginStart', 'retryLogin', 'onMouse', 'onSpeed', 'onCurve', 'onDeadzone', 'onInvert', 'openUinputHelp',
      'onToastAction', 'dismissToast', 'showWindow', 'onDevice', 'onPermission', 'onX52d', 'forgetDevice', 'onStickMode', 'onHoldPick', 'onHolding', 'onMoveAxes',
      'import07Ok', 'import07Problems', 'import07Deferred', 'addDamaged', 'addNewer', 'startImport', 'importWrongType', 'importNewer', 'onUinput', 'onTrayHost', 'onTheme', 'onNarrow',
      'onTzQuery'].forEach(function (n) { self[n] = self[n].bind(self); });
-    this._PrefsBridge = function GxPrefsBridge() { self._pd = window.Adw.usePreferencesDialog(); return null; };
     this._lastFocused = null;
   }
 
@@ -1170,18 +1178,56 @@ class Component extends DCLogic {
   /* ---------- dialogs ---------- */
   closeDetails() { this.setState({ detailsOpen: false }); }
   closeX52d() { this.setState({ x52dOpen: false }); }
-  closePrefs() { this.setState({ prefsOpen: false }); }
+  closePrefs() { this.setState({ prefsOpen: false, prefsSub: [] }); }
   closeShortcuts() { this.setState({ shortcutsOpen: false }); }
   closeAbout() { this.setState({ aboutOpen: false }); }
-  setPref(k, v) { this.setState(function (s) { var p = Object.assign({}, s.prefs); p[k] = v; if (k === 'runBg' && !v) p.startLogin = false; return { prefs: p }; }); }
+  setPref(k, v) { this.setState(function (s) { var p = Object.assign({}, s.prefs); p[k] = v; var r = { prefs: p }; if (k === 'runBg' && !v) { p.startLogin = false; r.loginFail = null; r.loginNotice = false; } return r; }); }
   onRunBg(v) { this.setPref('runBg', v); }
-  onStartLogin(v) { this.setPref('startLogin', v); }
+  onStartLogin(v) {
+    if (!v) { clearTimeout(this._loginT); this.setPref('startLogin', false); this.setState({ loginPending: false, loginFail: null, loginNotice: false }); return; }
+    this.requestLogin(false);
+  }
+  /* Ask the Background portal to start GX52 hidden at login. The answer comes a moment later; a refusal turns the switch back off. */
+  requestLogin(fromRetry) {
+    var self = this; clearTimeout(this._loginT);
+    this.setPref('startLogin', true); this.setState({ loginPending: true, loginRetryFailed: false });
+    this._loginT = setTimeout(function () {
+      var perm = self.state.bgPerm, ok = perm === 'allowed';
+      self.setPref('startLogin', ok);
+      /* A refusal with Preferences closed (startup, gsettings, …) is announced by the banner; with Preferences open, its warning row says it. */
+      var r = { loginPending: false, loginFail: ok ? null : perm, loginNotice: ok ? false : (self.state.loginNotice || !self.state.prefsOpen) };
+      if (fromRetry) { if (ok) r.prefsSub = []; else r.loginRetryFailed = true; }
+      self.setState(r);
+    }, 900);
+  }
+  retryLogin() { this.requestLogin(true); }
+  openLoginHelp() {
+    var self = this;
+    this.setState({ loginNotice: false, loginRetryFailed: false });
+    if (this.state.prefsOpen) { this.setState({ prefsSub: ['login'] }); return; }
+    /* Open Preferences at its root first: the dialog measures its height once, when it is presented. */
+    this.setState({ prefsOpen: true, windowShown: true, prefsSub: [] });
+    setTimeout(function () { self.setState({ prefsSub: ['login'] }); }, 300);
+  }
+  onBgPerm(i) { this.setState({ bgPerm: ['allowed', 'denied', 'noportal'][i] }); }
+  simulateLoginStart() {
+    /* Started hidden at login: GX52 renews the request with no window open. */
+    this.setState({ running: true, windowShown: false, prefsOpen: false, prefsSub: [] });
+    this.requestLogin(false);
+  }
+  turnOnLoginElsewhere() {
+    /* The key turned on outside Preferences (gsettings, another tool): GX52 sends the request on its own. */
+    this.setState({ prefsOpen: false, prefsSub: [] });
+    if (!this.state.prefs.runBg) this.setPref('runBg', true);
+    this.requestLogin(false);
+  }
   onMouse(v) { this.setPref('mouse', v); }
   onSpeed(v) { this.setPref('speed', v); }
   onCurve(v) { this.setPref('curve', v); }
   onDeadzone(v) { this.setPref('deadzone', v); }
   onInvert(v) { this.setPref('invert', v); }
-  openUinputHelp() { if (this._pd && this._pd.pushSubpage) this._pd.pushSubpage('uinput'); }
+  openUinputHelp() { this.setState({ prefsSub: ['uinput'] }); }
+  onPrefsSub(tags) { this.setState({ prefsSub: Array.isArray(tags) ? tags : [] }); }
 
   /* ---------- prototype controls ---------- */
   onDevice(i) {
@@ -1230,9 +1276,10 @@ class Component extends DCLogic {
     /* main menu and + menu */
     var mainMenu = { type: 'MenuButton', icon: 'open-menu', tooltip: 'Main Menu', primary: true,
       menu: [{ section: [{ label: 'Import Profile…', action: 'win.import', accel: '<Control>o' }] },
-             { section: [{ label: 'Preferences', action: 'app.preferences', accel: '<Control>comma' }, { label: 'Keyboard Shortcuts', action: 'win.shortcuts', accel: '<Control>question' }, { label: 'About GX52', action: 'app.about' }] }],
+             { section: [{ label: 'Preferences', action: 'app.preferences', accel: '<Control>comma' }, { label: 'Keyboard Shortcuts', action: 'win.shortcuts', accel: '<Control>question' }, { label: 'About GX52', action: 'app.about' }] },
+             { section: [{ label: 'Quit', action: 'app.quit', accel: '<Control>q' }] }],
       actions: { 'win.import': { enabled: !!ty, activate: function () { self.startImport(); } }, 'app.preferences': { activate: function () { self.setState({ prefsOpen: true }); } },
-                 'win.shortcuts': { activate: function () { self.setState({ shortcutsOpen: true }); } }, 'app.about': { activate: function () { self.setState({ aboutOpen: true }); } } } };
+                 'win.shortcuts': { activate: function () { self.setState({ shortcutsOpen: true }); } }, 'app.about': { activate: function () { self.setState({ aboutOpen: true }); } }, 'app.quit': { activate: function () { self.quit(); } } } };
     var plusMenu = { type: 'MenuButton', icon: 'list-add', tooltip: 'New Profile',
       menu: [{ section: [{ label: 'New Single Profile', action: 'win.new-single', accel: '<Control>n' }, { label: 'New Per-Mode Profile', action: 'win.new-per-mode' }] }],
       actions: { 'win.new-single': { activate: function () { self.newProfile('single'); } }, 'win.new-per-mode': { activate: function () { self.newProfile('per_mode'); } } } };
@@ -1305,6 +1352,8 @@ class Component extends DCLogic {
     if (!s.narrow) hdr.titleWidget = { type: 'ViewSwitcher', policy: 'wide', pages: vpages, selected: s.view, onSelect: onView, label: 'Editor views' };
     else hdr.title = view ? view.name : 'GX52';
     var editorTop = [hdr];
+    var loginBanner = (s.loginNotice && s.loginFail) ? { type: 'Banner', title: s.loginFail === 'denied' ? 'Start on Login is off: the desktop doesn’t allow GX52 to run in the background' : 'Start on Login is off: the desktop’s Background portal isn’t available', buttonLabel: 'How to Fix', onButtonClick: function () { self.openLoginHelp(); } } : null;
+    if (loginBanner) editorTop.push(loginBanner);
     if (s.x52d && s.connected) editorTop.push({ type: 'Banner', title: 'x52d is running and may overwrite these settings', buttonLabel: 'Learn More', onButtonClick: function () { self.setState({ x52dOpen: true }); } });
     var editorBottom = s.narrow ? [{ type: 'ViewSwitcherBar', reveal: true, pages: vpages, selected: s.view, onSelect: onView, label: 'Editor views' }] : [];
 
@@ -1461,6 +1510,20 @@ class Component extends DCLogic {
         { type: 'PreferencesGroup', title: 'Load the Rule', description: 'No need to log out or replug anything.', children: [{ type: 'ActionRow', title: UDEV_CMD, className: 'monospace', suffix: [{ type: 'Button', icon: 'edit-copy', variant: 'flat', tooltip: 'Copy Command', valign: 'center', onClick: function () { self.copy(UDEV_CMD); } }] }] },
         { type: 'PreferencesGroup', title: 'Security', children: [{ type: 'ActionRow', icon: 'dialog-warning', title: 'Write access to uinput lets any program you run inject keyboard and mouse input' }] }
       ] } } })];
+      var denied = s.loginFail !== 'noportal';
+      var loginGroups = denied ? [
+        { type: 'PreferencesGroup', title: 'On GNOME', children: [{ type: 'ActionRow', icon: 'preferences-system', title: 'Open Settings → Apps → GX52', subtitle: 'Turn background running back on' }] },
+        { type: 'PreferencesGroup', title: 'Other Desktops', children: [{ type: 'ActionRow', title: 'Turn it on in the desktop’s app permission settings' }] },
+        { type: 'PreferencesGroup', title: 'In a Terminal', children: [{ type: 'ActionRow', title: BG_PERM_CMD, className: 'monospace', suffix: [{ type: 'Button', icon: 'edit-copy', variant: 'flat', tooltip: 'Copy Command', valign: 'center', onClick: function () { self.copy(BG_PERM_CMD); } }] }] }
+      ] : [
+        { type: 'PreferencesGroup', title: 'Install the Portal', children: [{ type: 'ActionRow', title: 'Install and run xdg-desktop-portal with your desktop’s backend', subtitle: 'For example xdg-desktop-portal-gnome or xdg-desktop-portal-kde. Builds outside Flatpak need xdg-desktop-portal 1.19 or newer.' }] }
+      ];
+      loginGroups.push({ type: 'PreferencesGroup', description: 'GX52 can’t tell when this is fixed. After fixing it, try again.', children: (s.loginRetryFailed && !s.loginPending ? [{ type: 'ActionRow', icon: 'dialog-warning', title: denied ? 'Still not allowed by the desktop' : 'The Background portal is still not available' }] : []).concat([{ type: 'ButtonRow', title: s.loginPending ? 'Asking the Desktop…' : 'Try Again', variant: 'suggested', disabled: s.loginPending, onActivate: function () { self.retryLogin(); } }]) });
+      subpages.push(window.Adw.fromSpec({ type: 'NavigationPage', tag: 'login', title: 'Start on Login', children: { type: 'ToolbarView', scroll: false, top: [{ type: 'HeaderBar' }], children: { type: 'PreferencesPage',
+        description: denied
+          ? 'The desktop doesn’t allow GX52 to run in the background, so GX52 won’t start when you log in. The same permission keeps GX52 running with its window closed: without it, the desktop closes GX52 a few seconds after its last window closes, even with Run in Background on, and your profiles stop being applied.'
+          : 'The desktop has no working Background portal, so GX52 can’t ask to be started when you log in.',
+        children: loginGroups } } }));
     } catch (e) { subpages = []; }
 
     var hidden = !s.windowShown || !s.running;
@@ -1476,9 +1539,9 @@ class Component extends DCLogic {
       devName: devName, isPro: isPro, status: status,
       showFull: !ty, showSplit: !!ty, fullStatus: !ty && !s.fullGuide, fullGuide: !ty && s.fullGuide,
       fullCanFix: s.connected && !s.permission, fullDesc: s.connected && !s.permission ? 'A device is connected, but GX52 is not allowed to open it.' : 'GX52 shows your profiles once the joystick is plugged in.',
-      fullTop: [{ type: 'HeaderBar', title: 'GX52', start: s.fullGuide && !ty ? [{ type: 'Button', icon: 'go-previous', tooltip: 'Back', onClick: function () { self.setState({ fullGuide: false }); } }, mainMenu] : [mainMenu] }],
+      fullTop: [{ type: 'HeaderBar', title: 'GX52', start: s.fullGuide && !ty ? [{ type: 'Button', icon: 'go-previous', tooltip: 'Back', onClick: function () { self.setState({ fullGuide: false }); } }, mainMenu] : [mainMenu] }].concat(loginBanner ? [loginBanner] : []),
       sidebarTop: [{ type: 'HeaderBar', start: [mainMenu], end: [plusMenu], windowControls: s.narrow ? ['close'] : [] }],
-      plainTop: [{ type: 'HeaderBar' }], dlgTop: [{ type: 'HeaderBar' }],
+      plainTop: loginBanner ? [{ type: 'HeaderBar' }, loginBanner] : [{ type: 'HeaderBar' }], dlgTop: [{ type: 'HeaderBar' }],
       rows: rows, renameValue: s.renameValue, renameStatus: renameError ? 'error' : undefined, renameError: renameError, renameHasError: !!renameError && !!s.renaming,
       testRowCls: 'gx-prow' + (s.page === 'test' ? ' is-selected' : ''), testAriaCurrent: s.page === 'test' ? 'page' : 'false',
       contentTitle: contentTitle, cPerm: cPerm, cFailed: cFailed, cTest: cTest, cEditor: cEditor, failed: failed,
@@ -1501,8 +1564,12 @@ class Component extends DCLogic {
       alert: s.alert, alertOpen: s.alertOpen,
       details: s.details, detailsOpen: s.detailsOpen, x52dOpen: s.x52dOpen,
       tzOpen: s.tzOpen, tzTop: tzTop, tzRows: tzRows, tzEmpty: tzRows.length === 0, tzHasResults: tzRows.length > 0,
-      prefsOpen: s.prefsOpen, prefs: s.prefs, startLoginDisabled: !s.prefs.runBg, mouseOff: !s.prefs.mouse, uinputWarn: s.prefs.mouse && !s.uinputOk,
-      prefsSubpages: subpages, prefsBridge: window.React ? window.React.createElement(this._PrefsBridge) : null,
+      prefsOpen: s.prefsOpen, prefs: s.prefs, startLoginDisabled: !s.prefs.runBg || s.loginPending,
+      startLoginSubtitle: s.loginPending ? 'Asking the desktop…' : 'Start hidden when you log in. Needs Run in Background',
+      loginWarn: !!s.loginFail && s.prefs.runBg && !s.loginPending,
+      loginWarnText: s.loginFail === 'noportal' ? 'The desktop’s Background portal isn’t available' : 'The desktop doesn’t allow GX52 to run in the background, so it also closes soon after its window closes',
+      bgPermItems: ['Allows background', 'Refuses (permission off)', 'Not available (no portal)'], bgPermIdx: ['allowed', 'denied', 'noportal'].indexOf(s.bgPerm), mouseOff: !s.prefs.mouse, uinputWarn: s.prefs.mouse && !s.uinputOk,
+      prefsSubpages: subpages, prefsSub: s.prefsSub, onPrefsSub: this.onPrefsSub,
       shortcutsOpen: s.shortcutsOpen, aboutOpen: s.aboutOpen, appIcon: GX_ICON,
       acc: { newp: '<Control>n', imp: '<Control>o', exp: '<Shift><Control>e', v1: '<Control>1', v2: '<Control>2', v3: '<Control>3', prefs: '<Control>comma', keys: '<Control>question', close: '<Control>w', quit: '<Control>q' },
       releaseNotes: '<p>GX52 is rewritten for GNOME, in Rust with GTK 4 and libadwaita.</p><ul><li>Single and per-mode profiles: the mode selector on the stick can switch LEDs, MFD and brightness</li><li>A live simulated MFD and an input tester</li><li>Clocks in any time zone, with daylight saving time</li><li>Use the ministick as a mouse</li><li>Profiles from GX52 0.7 are imported automatically</li></ul>',
@@ -1521,7 +1588,7 @@ class Component extends DCLogic {
       onC1Source: this.onC1Source, onC1H24: this.onC1H24, onDateFormat: this.onDateFormat,
       onAlertResponse: this.onAlertResponse, closeDetails: this.closeDetails, closeX52d: this.closeX52d, closeTz: this.closeTz, closePrefs: this.closePrefs,
       closeShortcuts: this.closeShortcuts, closeAbout: this.closeAbout, onRunBg: this.onRunBg, onStartLogin: this.onStartLogin, onMouse: this.onMouse,
-      onSpeed: this.onSpeed, onCurve: this.onCurve, onDeadzone: this.onDeadzone, onInvert: this.onInvert, openUinputHelp: this.openUinputHelp,
+      onSpeed: this.onSpeed, onCurve: this.onCurve, onDeadzone: this.onDeadzone, onInvert: this.onInvert, openUinputHelp: this.openUinputHelp, openLoginHelp: this.openLoginHelp, onBgPerm: this.onBgPerm, simulateLoginStart: this.simulateLoginStart, turnOnLoginElsewhere: this.turnOnLoginElsewhere,
       onToastAction: this.onToastAction, dismissToast: this.dismissToast, showWindow: this.showWindow,
       onDevice: this.onDevice, onPermission: this.onPermission, onX52d: this.onX52d, forgetDevice: this.forgetDevice, onStickMode: this.onStickMode,
       onHoldPick: this.onHoldPick, onHolding: this.onHolding, onMoveAxes: this.onMoveAxes, import07Ok: this.import07Ok, import07Problems: this.import07Problems,
@@ -1532,6 +1599,7 @@ class Component extends DCLogic {
 }
 var UDEV_RULE = 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="06a3", ATTR{idProduct}=="0762|0255|075c", TAG+="uaccess"';
 var UINPUT_RULE = 'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"';
+var BG_PERM_CMD = 'flatpak permission-set background background com.leinardi.gx52 yes';
 var UDEV_CMD = 'sudo udevadm control --reload && sudo udevadm trigger';
 </script>
 </body>

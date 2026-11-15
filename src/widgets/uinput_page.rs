@@ -16,11 +16,7 @@
 //! The uinput guidance (docs/ui.md, "Guidance pages"): a subpage of the preferences dialog with
 //! the rule line the virtual mouse needs and its security note.
 
-use adw::prelude::*;
-use gettextrs::gettext;
 use gtk::glib;
-
-use crate::window;
 
 mod imp {
     use adw::prelude::*;
@@ -76,7 +72,7 @@ mod imp {
                 (&*self.copy_rule, udev::UINPUT_RULE),
                 (&*self.copy_command, udev::LOAD_COMMAND),
             ] {
-                button.connect_clicked(move |button| super::copy(button, text));
+                button.connect_clicked(move |button| super::super::copy_in_dialog(button, text));
             }
         }
     }
@@ -95,16 +91,5 @@ impl UinputPage {
     /// A new page, to push onto the preferences dialog.
     pub(crate) fn new() -> Self {
         glib::Object::new()
-    }
-}
-
-/// Copies `text` and says so in the preferences dialog's toast.
-fn copy(button: &gtk::Button, text: &str) {
-    button.clipboard().set_text(text);
-    if let Some(dialog) = button
-        .ancestor(adw::PreferencesDialog::static_type())
-        .and_downcast::<adw::PreferencesDialog>()
-    {
-        dialog.add_toast(window::plain_toast(&gettext("Copied to clipboard")));
     }
 }

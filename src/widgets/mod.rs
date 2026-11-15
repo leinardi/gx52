@@ -15,6 +15,7 @@
 
 //! The widgets of the main window.
 
+mod autostart_page;
 mod axis_figures;
 mod clock_editor;
 mod device_footer;
@@ -32,9 +33,10 @@ mod uinput_page;
 mod zone_clock_group;
 mod zone_dialog;
 
-use gtk::prelude::*;
+use adw::prelude::*;
 use x52::command::Brightness;
 
+pub(crate) use self::autostart_page::AutostartPage;
 pub(crate) use self::axis_figures::{AxisBar, AxisPad};
 pub(crate) use self::clock_editor::ClockEditor;
 pub(crate) use self::device_footer::DeviceFooter;
@@ -56,6 +58,19 @@ use crate::window::Window;
 /// The application of the window `widget` is in.
 fn app_of(widget: &impl IsA<gtk::Widget>) -> Option<Application> {
     widget.root().and_downcast::<Window>()?.app()
+}
+
+/// Copies `text` and says so in the toast of the preferences dialog `button` is in.
+fn copy_in_dialog(button: &gtk::Button, text: &str) {
+    button.clipboard().set_text(text);
+    if let Some(dialog) = button
+        .ancestor(adw::PreferencesDialog::static_type())
+        .and_downcast::<adw::PreferencesDialog>()
+    {
+        dialog.add_toast(crate::window::plain_toast(&gettextrs::gettext(
+            "Copied to clipboard",
+        )));
+    }
 }
 
 /// The level of a brightness scale at `value`.

@@ -46,11 +46,13 @@ use crate::profile::{
 use crate::widgets::PreferencesDialog;
 use crate::window::{self, Window};
 
+mod autostart;
 mod background;
 mod clocks;
 mod editing;
 mod persistence;
 
+pub(crate) use self::autostart::{AutostartStatus, Refusal};
 pub(crate) use self::persistence::RenameProblem;
 
 /// The settings key that records the one-time GX52 0.7 import as done.
@@ -102,6 +104,7 @@ mod imp {
     use gtk::{gio, glib};
     use x52::input::{AxisValues, HeldInputs, Mode};
 
+    use super::autostart::{AutostartSync, HIDDEN, Instance, Launch};
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
@@ -195,6 +198,16 @@ mod imp {
         /// The activation token of the tray click that asked for the window, for its next
         /// presentation.
         pub(crate) startup_id: RefCell<Option<String>>,
+        /// The autostart entry requests to the Background portal.
+        pub(crate) autostart: RefCell<AutostartSync>,
+        /// Holds the application while a Background portal request runs.
+        pub(crate) portal_hold: RefCell<Option<gio::ApplicationHoldGuard>>,
+        /// Whether the host build registered its app id with the portals.
+        pub(crate) portal_registered: Cell<bool>,
+        /// Why the last Start on Login enable was refused, until something turns it off.
+        pub(crate) autostart_failure: Cell<Option<super::Refusal>>,
+        /// Whether the refusal waits for the window's banner: no preferences showed it.
+        pub(crate) autostart_notice: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -218,9 +231,23 @@ mod imp {
             app.setup_actions();
             app.setup_settings();
             app.setup_background();
+            app.refresh_autostart();
             app.connect_query_end(super::Application::on_query_end);
             app.start_device_service();
             app.load_profiles();
+        }
+
+        // Runs in the primary instance for every command-line launch, its own and the ones a
+        // second launch forwards; a D-Bus activation goes to `activate` directly.
+        fn command_line(&self, command_line: &gio::ApplicationCommandLine) -> glib::ExitCode {
+            let instance = if command_line.is_remote() {
+                Instance::Forwarded
+            } else {
+                Instance::Primary
+            };
+            let hidden = command_line.options_dict().contains(HIDDEN);
+            self.obj().launch(Launch { instance, hidden });
+            glib::ExitCode::SUCCESS
         }
 
         // Runs on every launch, including a second launch of the single instance:
@@ -270,12 +297,24 @@ glib::wrapper! {
 
 impl Application {
     pub fn new() -> Self {
-        glib::Object::builder()
+        let app: Self = glib::Object::builder()
             .property("application-id", config::APP_ID)
             // Without this, a .Devel app id would make libadwaita look for style.css,
             // icons and shortcuts-dialog.ui under the wrong resource path.
             .property("resource-base-path", config::RESOURCE_BASE_PATH)
-            .build()
+            // For --hidden, which `activate` alone cannot tell apart.
+            .property("flags", gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+            .build();
+        app.add_main_option(
+            autostart::HIDDEN,
+            glib::Char::from(0),
+            glib::OptionFlags::NONE,
+            glib::OptionArg::None,
+            // Looked up before GTK sets the locale in `startup`, so --help shows it untranslated.
+            &gettext("Start in the background, without a window"),
+            None,
+        );
+        app
     }
 
     fn setup_actions(&self) {
@@ -295,7 +334,10 @@ impl Application {
                 }
             })
             .build();
-        self.add_action_entries([quit, about, preferences, retry_device]);
+        let autostart_help = gio::ActionEntry::builder("autostart-help")
+            .activate(|app: &Self, _, _| app.show_autostart_help())
+            .build();
+        self.add_action_entries([quit, about, preferences, retry_device, autostart_help]);
 
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("app.preferences", &["<Control>comma"]);
@@ -338,6 +380,8 @@ impl Application {
                 ),
             );
         }
+        // Before the background rule, which may turn the key off now.
+        self.follow_autostart(&settings);
         preferences::follow_background(&settings);
         // Set once, in startup.
         let _ = self.imp().settings.set(settings);
@@ -999,6 +1043,9 @@ impl Application {
             dialog
         });
         dialog.present(self.active_window().as_ref());
+        // The dialog shows the refusal now: the window's banner has told about it.
+        self.imp().autostart_notice.set(false);
+        self.show_autostart_status();
     }
 
     fn show_about_dialog(&self) {

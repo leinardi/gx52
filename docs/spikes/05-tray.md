@@ -76,8 +76,26 @@ the app's own symbolic icon (`com.leinardi.gx52.Devel-symbolic`), also in the Fl
 - **Dialogs:** closing a window with a dialog open closes only the dialog, so Hide and Quit
   close the dialogs first.
 
+## Background portal (2026-11-15)
+
+M6 task 2, X52 Pro, Ubuntu GNOME 50 (xdg-desktop-portal 1.21, xdg-desktop-portal-gnome 50), host
+build and Devel Flatpak:
+
+- **No dialog:** neither the first request nor one after `flatpak permission-reset` shows a
+  permission dialog; the portal grants an unset permission and stores `yes`
+  (`flatpak permission-show`). Start on Login works: the portal writes
+  `~/.config/autostart/com.leinardi.gx52.Devel.desktop` with a `flatpak run … --hidden` line, and
+  after logging out and in GX52 runs hidden, applies the profile and shows the tray icon.
+  Turning it off removes the entry.
+- **Deny path:** only through the permission store
+  (`flatpak permission-set background background <app id> no`, or GNOME Settings → Apps). The
+  portal then answers Cancelled, as for a dismissed dialog, and GX52 shows the refusal
+  (ui.md, "Guidance pages").
+- **Permission off ends the app:** the portal kills an instance of the app id with no window a few
+  seconds after its last window closes, whether "Run in Background" is on or not. A
+  `flatpak-builder` test run of the Devel id is killed the same way (exit 137), so the permission
+  must be `yes` while building.
+
 ## Not done yet
 
-- Background portal (`ashpd` `request_background` with autostart): the first request shows a
-  permission dialog on GNOME, so it needs a human.
-- KDE Plasma (native watcher).
+- KDE Plasma (native watcher, and the Background portal's dialog there).
