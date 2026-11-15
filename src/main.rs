@@ -37,9 +37,14 @@ use tracing_subscriber::EnvFilter;
 use self::application::Application;
 
 fn main() -> glib::ExitCode {
-    // INFO for this crate and WARN for everything else; override with RUST_LOG.
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(concat!(env!("CARGO_CRATE_NAME"), "=info,warn")));
+    // INFO for this crate and WARN for everything else; override with RUST_LOG. zbus's proxies
+    // warn on every Background portal request (ashpd's request object is gone once it answered).
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new(concat!(
+            env!("CARGO_CRATE_NAME"),
+            "=info,zbus::proxy=error,warn"
+        ))
+    });
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         // Logs go to stderr, so stdout carries only the device check's report.

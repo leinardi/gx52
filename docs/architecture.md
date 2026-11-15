@@ -317,8 +317,43 @@ flowchart LR
     the tray goes with it.
 - **Background and autostart:** the Background portal through `ashpd` (`request_background` with
   autostart), with `default-features = false` and the `async-io` and `background` features (ashpd
-  0.13), awaited on the main context, so the app adds no tokio runtime. While no window is there
-  the app holds an `ApplicationHoldGuard`; re-activating the app drops it (S5).
+  0.13, which shares ksni's zbus 5; 0.14 moves to zbus 6), awaited on the main context, so the app
+  adds no tokio runtime. While no window is there the app holds an `ApplicationHoldGuard`;
+  re-activating the app drops it (S5). `src/application/autostart.rs`:
+  - **Hidden start:** `gx52 --hidden`, the command of the autostart entry. The application handles
+    its command line (`HANDLES_COMMAND_LINE`), in the primary instance: without `--hidden` it shows
+    the window, as `activate` does; with it, the primary runs in the background with no window
+    while "Run in Background" is on, and shows the window otherwise, since no tray would lead back
+    to it. A hidden launch forwarded to a running instance changes nothing. A hidden start while
+    "Start on Login" is off comes from a stale entry, which is removed.
+  - **Requests:** the `autostart` key asks for the entry on or off whenever it changes (any
+    writer, "Run in Background" turned off included, also by the startup normalization, so its
+    handler is connected before it), and on at every start while it is on, so the entry follows
+    an updated GX52. A request has a side effect, so a stale reply cannot be dropped: requests go
+    one at a time, and the one that finishes sends the latest wish if it differs, so the last
+    request to finish is always the latest wish. An enable the portal refuses turns the key back
+    off and records why (not allowed, or no portal) until the key turns on and the portal agrees,
+    the user turns it off, or "Run in Background" goes off; nothing more is asked then. A refusal
+    shows as a warning in Preferences, or, with no Preferences dialog showing (a start at login
+    has no window), as a banner the next window shows until Preferences opens
+    ([ui.md](ui.md#preferences)). A permission
+    turned off answers Cancelled, like a dismissed dialog, so Cancelled is a refusal also for the
+    start's own request; that request only logs a failure: at login the portal may not be ready,
+    and turning the key off would remove the entry at the next hidden start. A request holds the
+    application, so one sent just before Quit still arrives; Quit waits 5 s for it at most, and a
+    follow-up sent while quitting holds nothing. A request the portal leaves unanswered for 2
+    minutes counts as failed, so a hung portal does not leave the switch waiting.
+  - **Background permission:** GX52 cannot read it, only learn it from a request's answer. With
+    it off, xdg-desktop-portal ends any instance of the app id with no window a few seconds after
+    the last one closes, "Run in Background" or not, and the same for a `flatpak-builder` test
+    run of the Devel id. On Ubuntu 26.04 (xdg-desktop-portal 1.21, GNOME 50) no dialog asks: an
+    unset permission is granted and stored as allowed.
+  - **Host build:** the app registers its id with `org.freedesktop.host.portal.Registry` before
+    the first request (xdg-desktop-portal 1.19 and later; a no-op in the sandbox). On the host the
+    entry's `Exec` is `gx52 --hidden`, so `gx52` must be on `PATH`; in the Flatpak the portal
+    writes a `flatpak run` line.
+  - **Logging:** zbus's proxies warn on every request (ashpd's request object is gone once it
+    answered), so the default filter keeps `zbus::proxy` at errors.
 
 ## State model
 

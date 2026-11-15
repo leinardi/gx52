@@ -15,9 +15,32 @@ template $GX52PreferencesDialog: Adw.PreferencesDialog {
         subtitle: _("Keep GX52 running and applying profiles when the window is closed");
       }
 
+      // The subtitle and the sensitivity follow a pending request (preferences_dialog.rs).
       Adw.SwitchRow autostart {
         title: _("Start on Login");
-        subtitle: _("Start hidden when you log in. Needs Run in Background");
+      }
+
+      // Shown while the desktop refused Start on Login and Run in Background is on.
+      Adw.ActionRow autostart_warning {
+        visible: false;
+        title: _("Start on Login is off");
+
+        [prefix]
+        Image {
+          icon-name: "dialog-warning-symbolic";
+
+          styles [
+            "warning",
+          ]
+        }
+
+        [suffix]
+        Button {
+          label: _("_How to Fix");
+          use-underline: true;
+          valign: center;
+          action-name: "preferences.autostart-help";
+        }
       }
     }
 

@@ -1,0 +1,101 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52AutostartPage: Adw.NavigationPage {
+  title: _("Start on Login");
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    // The description and the groups shown follow the reason (autostart_page.rs).
+    content: Adw.PreferencesPage page {
+      Adw.PreferencesGroup gnome_group {
+        title: _("On GNOME");
+
+        Adw.ActionRow {
+          title: _("Open Settings → Apps → GX52");
+          subtitle: _("Turn background running back on");
+
+          [prefix]
+          Image {
+            icon-name: "preferences-system-symbolic";
+          }
+        }
+      }
+
+      Adw.PreferencesGroup other_desktops_group {
+        title: _("Other Desktops");
+
+        Adw.ActionRow {
+          title: _("Turn it on in the desktop’s app permission settings");
+        }
+      }
+
+      Adw.PreferencesGroup terminal_group {
+        title: _("In a Terminal");
+
+        Adw.ActionRow command_row {
+          use-markup: false;
+          title-selectable: true;
+
+          styles [
+            "monospace",
+          ]
+
+          [suffix]
+          Button copy_command {
+            icon-name: "edit-copy-symbolic";
+            tooltip-text: _("Copy Command");
+            valign: center;
+
+            accessibility {
+              label: _("Copy Command");
+            }
+
+            styles [
+              "flat",
+            ]
+          }
+        }
+      }
+
+      Adw.PreferencesGroup portal_group {
+        title: _("Install the Portal");
+
+        Adw.ActionRow {
+          title: _("Install and run xdg-desktop-portal with your desktop’s backend");
+          subtitle: _(
+            "For example xdg-desktop-portal-gnome or xdg-desktop-portal-kde. Builds outside Flatpak need xdg-desktop-portal 1.19 or newer."
+          );
+        }
+      }
+
+      Adw.PreferencesGroup {
+        description: _("GX52 can’t tell when this is fixed. After fixing it, try again.");
+        // Shown when Try Again was refused again.
+        Adw.ActionRow retry_failed {
+          visible: false;
+
+          [prefix]
+          Image {
+            icon-name: "dialog-warning-symbolic";
+
+            styles [
+              "warning",
+            ]
+          }
+        }
+
+        Adw.ButtonRow try_again {
+          title: _("_Try Again");
+          use-underline: true;
+
+          styles [
+            "suggested-action",
+          ]
+        }
+      }
+    };
+  };
+}

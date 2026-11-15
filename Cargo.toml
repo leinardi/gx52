@@ -100,6 +100,9 @@ ksni = { version = "0.3.7", default-features = false, features = ["async-io"] }
 # src/tray/launch.rs): GTK sends it only without xdg-activation. The pure-Rust backend, no libwayland.
 wayland-client = "0.31.15"
 wayland-scanner = "0.31.11"
+# Start on Login through the Background portal (docs/architecture.md, "Background and autostart").
+# 0.13 shares ksni's zbus 5; async-io like ksni, no tokio.
+ashpd = { version = "0.13.13", default-features = false, features = ["async-io", "background"] }
 # The joystick's input events: the mode selector (spike S3).
 evdev = "0.13"
 # poll(2) on the evdev node with a timeout.

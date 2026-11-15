@@ -107,7 +107,9 @@ and **Remove** (Delete).
 
 ### Main menu
 
-Import Profile… (Ctrl+O), Preferences (Ctrl+,), Keyboard Shortcuts (Ctrl+?), About GX52.
+Import Profile… (Ctrl+O), Preferences (Ctrl+,), Keyboard Shortcuts (Ctrl+?), About GX52, and in
+a section of its own Quit (Ctrl+Q), which exits even with "Run in Background" on, as the tray's
+Quit does.
 
 **Import Profile…** opens the file chooser, then one of
 ([profiles.md](profiles.md#import-and-export)):
@@ -374,6 +376,7 @@ reads the whole line.
 | No device now, one was connected before | The last device type's profiles, editable; the footer says "Not connected" |
 | Device present, no permission (USB) | The content area is replaced by the [udev guidance](#guidance-pages) until access works; the sidebar stays |
 | `x52d` running | An `adw::Banner` over the editor: "x52d is running and may overwrite these settings", with "Learn More", which opens an `adw::Dialog` "x52d Is Running": what x52d is, that GX52 does not stop it, and the command `sudo systemctl disable --now x52d` with a copy button ([protocol.md](protocol.md#libx52s-x52d)) |
+| Start on Login refused with no Preferences dialog showing (as at login) | An `adw::Banner` over the content, also on the page with no device: "Start on Login is off: the desktop doesn’t allow GX52 to run in the background" (or "…: the desktop’s Background portal isn’t available"), with "How to Fix", which opens Preferences on the [Start on Login page](#guidance-pages). It goes once Preferences opens, which shows the refusal, or when the refusal ends |
 | A different supported model connected | The sidebar switches to that type's profiles |
 
 ## Guidance pages
@@ -396,6 +399,20 @@ reads the whole line.
   command) and **Security** ("Write access to uinput lets any program you run inject keyboard and
   mouse input"). The access is checked again every second while the row shows, so it goes away by
   itself after `udevadm trigger`.
+- **Start on Login (refused by the desktop):** in Preferences, as the uinput row. While the
+  desktop refused Start on Login and "Run in Background" is on, a row "Start on Login is off"
+  shows under the switch with the reason, "The desktop doesn’t allow GX52 to run in the
+  background, so it also closes soon after its window closes" or "The desktop’s Background portal
+  isn’t available", and "How to Fix", which pushes the subpage "Start on Login". Not allowed: why
+  (GX52 won't start at login, and the same permission keeps it running with its window closed),
+  **On GNOME** (Settings → Apps → GX52, turn background running back on), **Other Desktops** and
+  **In a Terminal** (`flatpak permission-set background background <app id> yes`, with a copy
+  button). Not available: **Install the Portal** (xdg-desktop-portal with the desktop's backend;
+  1.19 or newer outside Flatpak). Both end with "GX52 can’t tell when this is fixed. After fixing
+  it, try again." and **Try Again**, which turns Start on Login on: while the desktop answers it
+  reads "Asking the Desktop…"; allowed, the subpage closes with the switch on; refused again, a
+  row says "Still not allowed by the desktop" or "The Background portal is still not available".
+  Unlike uinput, the row does not go away by itself: GX52 cannot read the permission, only ask.
 
 ## Preferences
 
@@ -412,10 +429,15 @@ change applies at once and a change made elsewhere (the tray, `gsettings`) shows
     away with it.
   - **Start on Login** (`adw::SwitchRow`, subtitle "Start hidden when you log in. Needs Run in
     Background"; key `autostart`, off by default): starts hidden, through the Background portal
-    (works in the Flatpak). Only sensitive while "Run in Background" is on, since starting hidden
-    needs it. Turning "Run in Background" off also turns it off; the application enforces this for
-    every writer of the key, and at startup for values stored inconsistent while it was not
-    running.
+    (works in the Flatpak), with the reason "Apply joystick profiles when you log in". Only
+    sensitive while "Run in Background" is on, since starting hidden needs it. Turning "Run in
+    Background" off also turns it off; the application enforces this for every writer of the key,
+    and at startup for values stored inconsistent while it was not running. While the desktop answers
+    an enable, the switch is insensitive and its subtitle reads "Asking the desktop…". Refused by
+    the user or the stored permission, or without a working portal, it turns back off with the
+    [Start on Login warning](#guidance-pages) under it.
+  - A start with `--hidden` (the autostart entry's command) shows no window while "Run in
+    Background" is on, and the window otherwise.
 - **Virtual Mouse**, description "Move the pointer with the ministick. Games still receive the
   ministick."
   - **Use the Ministick as a Mouse** (`adw::SwitchRow`; key `virtual-mouse`, off by default); the

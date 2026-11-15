@@ -14,15 +14,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The preferences dialog (docs/ui.md, "Preferences"): every row bound to its `GSettings`
-//! key, and the uinput warning while the virtual mouse cannot work.
+//! key, the Start on Login warning while the desktop refuses it, and the uinput warning while the
+//! virtual mouse cannot work.
 
 use std::time::Duration;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use gettextrs::gettext;
 use gtk::{gio, glib};
 
-use super::UinputPage;
+use super::{AutostartPage, UinputPage};
+use crate::application::{AutostartStatus, Refusal};
 use crate::device::access::{self, UinputAccess};
 use crate::preferences::{
     self, AUTOSTART, RUN_IN_BACKGROUND, VIRTUAL_MOUSE, VIRTUAL_MOUSE_CURVE, VIRTUAL_MOUSE_DEADZONE,
@@ -86,13 +89,16 @@ impl UinputChecks {
 }
 
 mod imp {
-    use std::cell::{Cell, RefCell};
+    use std::cell::{Cell, OnceCell, RefCell};
 
     use adw::prelude::*;
     use adw::subclass::prelude::*;
-    use gtk::glib;
+    use gtk::{gio, glib};
 
+    use crate::application::AutostartStatus;
     use crate::device::access::UinputAccess;
+    use crate::preferences::AUTOSTART;
+    use crate::widgets::AutostartPage;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/preferences-dialog.ui")]
@@ -113,6 +119,16 @@ mod imp {
         pub(super) invert_wheel: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub(super) uinput_warning: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub(super) autostart_warning: TemplateChild<adw::ActionRow>,
+        /// The settings the rows are bound to.
+        pub(super) settings: OnceCell<gio::Settings>,
+        /// The handler that follows Run in Background, disconnected with the dialog.
+        pub(super) run_in_background_handler: RefCell<Option<glib::SignalHandlerId>>,
+        /// Start on Login as the application last showed it.
+        pub(super) autostart_status: Cell<AutostartStatus>,
+        /// The Start on Login page, while pushed.
+        pub(super) autostart_page: glib::WeakRef<AutostartPage>,
         /// The next uinput check, while the warning shows.
         pub(super) uinput_recheck: RefCell<Option<glib::SourceId>>,
         /// The uinput checks, running and requested.
@@ -131,6 +147,16 @@ mod imp {
             klass.bind_template();
             klass.install_action("preferences.uinput-help", None, |dialog, _, _| {
                 dialog.push_subpage(&super::UinputPage::new());
+            });
+            klass.install_action("preferences.autostart-help", None, |dialog, _, _| {
+                dialog.show_autostart_help();
+            });
+            klass.install_action("preferences.autostart-retry", None, |dialog, _, _| {
+                if let Some(settings) = dialog.imp().settings.get()
+                    && let Err(error) = settings.set_boolean(AUTOSTART, true)
+                {
+                    tracing::warn!("Cannot turn on {AUTOSTART}: {error}");
+                }
             });
         }
 
@@ -154,6 +180,11 @@ mod imp {
 
         fn dispose(&self) {
             self.obj().stop_uinput_recheck();
+            if let (Some(settings), Some(handler)) =
+                (self.settings.get(), self.run_in_background_handler.take())
+            {
+                settings.disconnect(handler);
+            }
         }
     }
 
@@ -250,6 +281,59 @@ impl PreferencesDialog {
         dialog
     }
 
+    /// Shows Start on Login as `status` says: a pending request, a refusal.
+    pub(crate) fn show_autostart(&self, status: AutostartStatus) {
+        let imp = self.imp();
+        imp.autostart_status.set(status);
+        self.update_autostart();
+        if let Some(page) = imp.autostart_page.upgrade() {
+            page.show(status);
+        }
+    }
+
+    /// Pushes the Start on Login page, for the refusal shown.
+    pub(crate) fn show_autostart_help(&self) {
+        let imp = self.imp();
+        if imp.autostart_page.upgrade().is_some() {
+            return;
+        }
+        let page = AutostartPage::new(imp.autostart_status.get());
+        imp.autostart_page.set(Some(&page));
+        self.push_subpage(&page);
+    }
+
+    /// The Start on Login row and its warning, from the status and Run in Background.
+    fn update_autostart(&self) {
+        let imp = self.imp();
+        let status = imp.autostart_status.get();
+        // The key, not the row: the row follows it through a handler of its own.
+        let run_in_background = imp
+            .settings
+            .get()
+            .is_some_and(|settings| settings.boolean(RUN_IN_BACKGROUND));
+        // Starting hidden needs running in the background (preferences::follow_background turns
+        // it off with it); a pending enable waits for its answer.
+        imp.autostart
+            .set_sensitive(run_in_background && !status.pending);
+        imp.autostart.set_subtitle(&if status.pending {
+            gettext("Asking the desktop…")
+        } else {
+            gettext("Start hidden when you log in. Needs Run in Background")
+        });
+        let failure = status
+            .failure
+            .filter(|_| run_in_background && !status.pending);
+        imp.autostart_warning.set_visible(failure.is_some());
+        if let Some(failure) = failure {
+            imp.autostart_warning.set_subtitle(&match failure {
+                Refusal::Denied => gettext(
+                    "The desktop doesn’t allow GX52 to run in the background, so it also closes soon after its window closes",
+                ),
+                Refusal::Unavailable => gettext("The desktop’s Background portal isn’t available"),
+            });
+        }
+    }
+
     /// Binds each row to its key; the bindings go with the rows.
     fn bind(&self, settings: &gio::Settings) {
         let imp = self.imp();
@@ -261,12 +345,17 @@ impl PreferencesDialog {
         ] {
             settings.bind(key, row, "active").build();
         }
-        // Starting hidden needs running in the background (preferences::follow_background turns
-        // it off with it).
-        settings
-            .bind(RUN_IN_BACKGROUND, &*imp.autostart, "sensitive")
-            .get_only()
-            .build();
+        let handler = settings.connect_changed(
+            Some(RUN_IN_BACKGROUND),
+            glib::clone!(
+                #[weak(rename_to = dialog)]
+                self,
+                move |_, _| dialog.update_autostart()
+            ),
+        );
+        imp.run_in_background_handler.replace(Some(handler));
+        imp.settings.get_or_init(|| settings.clone());
+        self.update_autostart();
 
         let schema = settings.settings_schema();
         for (key, row) in [

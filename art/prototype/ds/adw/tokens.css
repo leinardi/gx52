@@ -1,6 +1,7 @@
 /* Adwaita Design System — tokens.css, generated from tokens.json by validation/tools/write-tokens-css.js.
    Load it before components/bundle.css. Light is the default; data-theme="dark" on any element (usually <html>)
-   switches that subtree to the dark appearance. Fonts load from fonts/ next to this file. */
+   switches that subtree to the dark appearance. Fonts load from fonts/ next to this file. The optional Adwaita Mono
+   Bold, Italic and Bold Italic are declared in tokens-mono-styles.css, so a project without them requests nothing. */
 :root, [data-theme="light"] {
   --window-bg-color: #fafafb;
   --window-fg-color: rgba(0, 0, 6, 0.8);
@@ -334,6 +335,3 @@
 @font-face { font-family: 'Adwaita Sans'; src: url('fonts/AdwaitaSans-Regular.woff2'); font-weight: 100 900; font-style: normal; }
 @font-face { font-family: 'Adwaita Sans'; src: url('fonts/AdwaitaSans-Italic.woff2'); font-weight: 100 900; font-style: italic; }
 @font-face { font-family: 'Adwaita Mono'; src: url('fonts/AdwaitaMono-Regular.woff2'); font-weight: 400; font-style: normal; }
-@font-face { font-family: 'Adwaita Mono'; src: url('fonts/AdwaitaMono-Italic.woff2'); font-weight: 400; font-style: italic; }
-@font-face { font-family: 'Adwaita Mono'; src: url('fonts/AdwaitaMono-Bold.woff2'); font-weight: 700; font-style: normal; }
-@font-face { font-family: 'Adwaita Mono'; src: url('fonts/AdwaitaMono-BoldItalic.woff2'); font-weight: 700; font-style: italic; }

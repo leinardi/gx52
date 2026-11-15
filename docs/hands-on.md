@@ -44,8 +44,9 @@ Results go to [spikes/04-flatpak-sandbox.md](spikes/04-flatpak-sandbox.md).
 - [x] Run `spikes/s5-tray`: icon visible in the panel, menu looks right, click opens/hides the window.
       (2026-11-02: single left-click opens the menu on GNOME, double-click toggles; see S5.)
 - [x] Same in the Flatpak build, with the real app (2026-11-13, M6 task 1; see S5).
-- [ ] Background portal: first request shows GNOME's permission dialog; accept, then check autostart
-      after logging out and in.
+- [x] Background portal: first request shows GNOME's permission dialog; accept, then check autostart
+      after logging out and in. (2026-11-15, M6 task 2: Ubuntu 26.04 shows no dialog and allows;
+      autostart and the deny path through the permission store work; see S5.)
 - [ ] Optional: KDE Plasma (native watcher), if a session is at hand.
 
 Results go to [spikes/05-tray.md](spikes/05-tray.md).

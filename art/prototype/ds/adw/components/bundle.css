@@ -804,7 +804,7 @@ textarea.adw-textview { border: 0; margin: 0; width: 100%; resize: none; overflo
 /* GtkLabel: the paragraph direction follows the text (pango auto-dir), the alignment follows the widget direction */
 .adw-menu-item__label:dir(rtl), .adw-choice-list__label:dir(rtl) { text-align: right; }
 .adw-menu-item--title .adw-menu-item__label { text-align: center; }
-.adw-menu-item__accel { margin-inline-start: 12px; color: color-mix(in srgb, currentColor var(--dim-opacity), transparent); }
+.adw-menu-item__accel { margin-inline-start: 12px; color: color-mix(in srgb, currentColor calc(var(--dim-opacity) * 100%), transparent); }
 .adw-menu-item__indicator-slot { flex: none; width: 18px; height: 18px; margin-inline-start: -2px; margin-inline-end: 6px; display: flex; align-items: center; justify-content: center; }
 .adw-menu-item__check, .adw-menu-item__radio { box-sizing: border-box; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
 .adw-menu-item__radio { border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 100%; }
