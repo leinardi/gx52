@@ -27,11 +27,11 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gdk, gio, glib};
 use jiff::tz::TimeZone;
-use x52::clock::{Clock, SystemClock};
 
 use crate::application::Application;
 use crate::profile::IanaZone;
 use crate::profile::clocks::{self, ZoneTarget};
+use crate::time;
 use crate::widgets::ticker::{Ticker, Ticking};
 use crate::zones::{self, ZoneEntry, ZoneTime};
 
@@ -288,7 +288,7 @@ impl ZoneDialog {
             #[weak(rename_to = dialog)]
             self,
             async move {
-                let now = SystemClock.now();
+                let now = time::now();
                 let times = gio::spawn_blocking(move || {
                     entries
                         .iter()

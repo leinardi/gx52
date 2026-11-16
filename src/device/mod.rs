@@ -106,7 +106,7 @@ impl Backend for SystemBackend {
     }
 
     fn local_zone(&self) -> fn() -> TimeZone {
-        TimeZone::system
+        crate::time::local_zone_source()
     }
 
     fn watch(self, shutdown: &ShutdownSignal, notify: impl FnMut(WatchEvent)) {

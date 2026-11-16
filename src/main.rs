@@ -24,6 +24,7 @@ mod device;
 mod model;
 mod preferences;
 mod profile;
+mod time;
 mod tray;
 mod widgets;
 mod window;

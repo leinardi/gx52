@@ -26,7 +26,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
-use x52::clock::SystemClock;
+
 use x52::device::DeviceType;
 use x52::input::{AxisValues, HeldInputs, Mode};
 use x52::state::DeviceState;
@@ -44,6 +44,7 @@ use crate::profile::store::{Entry, LoadReport, ProfileStore};
 use crate::profile::{
     self, LiveValues, MfdLineSource, Profile, ProfileId, ProfileKind, active, list, order,
 };
+use crate::time::AppClock;
 use crate::widgets::PreferencesDialog;
 use crate::window::{self, Window};
 
@@ -397,7 +398,7 @@ impl Application {
 
     /// Starts the device service and follows its events on the main loop.
     fn start_device_service(&self) {
-        match DeviceService::start(SystemClock) {
+        match DeviceService::start(AppClock) {
             Ok((device, events)) => {
                 self.imp().device.replace(Some(device));
                 glib::spawn_future_local(glib::clone!(

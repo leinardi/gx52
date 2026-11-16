@@ -21,11 +21,12 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 use jiff::Timestamp;
-use x52::clock::{Clock, FixedOffset, SystemClock};
+use x52::clock::FixedOffset;
 use x52::command::OffsetClock;
 
 use crate::profile::clocks::{self, ClocksPreview, ZoneTarget};
 use crate::profile::{ProfileId, ZoneClock, ZoneSpec};
+use crate::time;
 use crate::widgets::ZoneDialog;
 use crate::zones;
 
@@ -205,7 +206,7 @@ impl ZoneClockGroup {
             return;
         };
         match name {
-            FIXED => app.switch_zone_clock_to_fixed(clock, SystemClock.now()),
+            FIXED => app.switch_zone_clock_to_fixed(clock, time::now()),
             // With no zone kept for this profile and clock, the toggle goes back to the fixed
             // offset (the edit changed nothing) and the dialog asks for one.
             ZONE => {

@@ -23,11 +23,11 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 use jiff::tz::TimeZone;
-use x52::clock::{Clock, SystemClock};
 
 use crate::profile::editor::EditorState;
 use crate::profile::mfd::{self, LineSource, ShownClock, TextInfo};
 use crate::profile::{MfdLineSource, ProfileKind};
+use crate::time;
 use crate::widgets::brightness_at;
 use crate::widgets::mfd_display::DateArea;
 use crate::widgets::ticker::{Ticker, Ticking};
@@ -358,7 +358,7 @@ impl MfdEditor {
         } else {
             DateArea::Date
         };
-        if let Some(preview) = app.mfd_preview(imp.clock.get(), SystemClock.now(), &zone) {
+        if let Some(preview) = app.mfd_preview(imp.clock.get(), time::now(), &zone) {
             imp.display.show(&preview, date_area);
         }
     }
