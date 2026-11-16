@@ -200,9 +200,12 @@ A failure stops the run before the tag: nothing is published, and the version is
 - `cargo-sources.json` is generated from the tree's `Cargo.lock` with the pinned generator.
 
 `flatpak-builder-lint manifest` checks the manifest, and its diff against the Flathub branch is
-printed for review. Both files become release assets. The check builds nothing of its own: before
-the tag exists the manifest can only be built from a `dir` source, which is exactly what the gate
-builds. It pushes nothing and reaches no secret.
+printed for review. When the two differ in more than the app source's tag and commit (a runtime
+bump, a new finish-arg), which the update workflow does not carry, the check warns and says so in
+the run summary: that release needs a hand pull request on Flathub. Before the tag, the release also
+checks that its merged assets are exactly the four files. Both files become release assets. The
+check builds nothing of its own: before the tag exists the manifest can only be built from a `dir`
+source, which is exactly what the gate builds. It pushes nothing and reaches no secret.
 
 ## The Flathub update workflow
 

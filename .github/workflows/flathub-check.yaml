@@ -38,6 +38,9 @@ permissions: {}
 env:
   FLATHUB_REPO: flathub/com.leinardi.gx52
   APP_ID: com.leinardi.gx52
+  # Relative to the workspace, inside _flatpak (ignored, and skipped by the stable manifest's dir
+  # source).
+  FILES: _flatpak/flathub-files
 
 jobs:
   prepare:
@@ -89,28 +92,31 @@ jobs:
           make cargo-sources
 
       # The commit the tag will name: the merge commit on a release, the dispatched commit on a dry
-      # run (no tag exists for it; the manifest is for the diff and the asset preview only).
+      # run (no tag exists for it; the manifest is for the diff and the asset preview only). Under
+      # the workspace, not runner.temp: in a container job ${{ runner.temp }} names a host path,
+      # while the steps see the container's $RUNNER_TEMP.
       - name: Write the Flathub files
         env:
           TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          mkdir -p "${RUNNER_TEMP}/flathub-files"
-          scripts/flathub-manifest.sh "build-aux/$APP_ID.json" "$TAG" "$GITHUB_SHA" \
-            >"${RUNNER_TEMP}/flathub-files/$APP_ID.json"
-          cp build-aux/cargo-sources.json "${RUNNER_TEMP}/flathub-files/cargo-sources.json"
+          mkdir -p "$FILES"
+          scripts/flathub-manifest.sh "build-aux/$APP_ID.json" "$TAG" "$GITHUB_SHA" >"$FILES/$APP_ID.json"
+          cp build-aux/cargo-sources.json "$FILES/cargo-sources.json"
           echo "The Flathub manifest of $TAG:"
-          cat "${RUNNER_TEMP}/flathub-files/$APP_ID.json"
+          cat "$FILES/$APP_ID.json"
 
       - name: Lint the Flathub manifest
-        run: flatpak-builder-lint manifest "${RUNNER_TEMP}/flathub-files/$APP_ID.json"
+        run: flatpak-builder-lint manifest "$FILES/$APP_ID.json"
 
-      # For review only: what the update workflow (tag, commit, cargo-sources.json) or a hand pull
-      # request (anything else) changes on the Flathub branch. beta until 1.0.0; before the beta
-      # branch exists, master's legacy manifest.
+      # What the update workflow (tag, commit, cargo-sources.json) or a hand pull request (anything
+      # else) changes on the Flathub branch: beta until 1.0.0; before the beta branch exists,
+      # master's legacy manifest. Any change beyond the tag and the commit of the app source is one
+      # the update workflow will not carry, so it is raised as a warning and in the summary.
       - name: Diff against the Flathub branch
         env:
           TAG: ${{ inputs.tag }}
+          BRANCH_DIR: _flatpak/flathub-branch
         run: |
           set -euo pipefail
           url="https://github.com/$FLATHUB_REPO.git"
@@ -122,7 +128,7 @@ jobs:
             echo "::notice::$FLATHUB_REPO has no $branch branch yet: the diff is against master."
             branch=master
           fi
-          git clone --quiet --depth 1 --branch "$branch" "$url" "${RUNNER_TEMP}/flathub"
+          git clone --quiet --depth 1 --branch "$branch" "$url" "$BRANCH_DIR"
           # git diff --no-index exits 1 when the files differ, which is expected; above 1 is an error.
           review_diff() {
             local status=0
@@ -130,18 +136,31 @@ jobs:
             [ "$status" -le 1 ]
           }
           echo "The Flathub manifest against $FLATHUB_REPO $branch:"
-          review_diff -- "${RUNNER_TEMP}/flathub/$APP_ID.json" "${RUNNER_TEMP}/flathub-files/$APP_ID.json"
-          if [ -f "${RUNNER_TEMP}/flathub/cargo-sources.json" ]; then
-            review_diff --stat -- "${RUNNER_TEMP}/flathub/cargo-sources.json" \
-              "${RUNNER_TEMP}/flathub-files/cargo-sources.json"
+          review_diff -- "$BRANCH_DIR/$APP_ID.json" "$FILES/$APP_ID.json"
+          if [ -f "$BRANCH_DIR/cargo-sources.json" ]; then
+            review_diff --stat -- "$BRANCH_DIR/cargo-sources.json" "$FILES/cargo-sources.json"
           fi
+          # Both manifests without the app source's tag and commit, which the update workflow moves.
+          # A manifest jq cannot read (none on the branch) counts as a difference.
+          strip='del(.modules[]? | select(type == "object" and .name == "gx52")
+            | .sources[]? | select(type == "object" and .type == "git") | (.tag, .commit))'
+          if cmp -s <(jq -S "$strip" "$BRANCH_DIR/$APP_ID.json" 2>/dev/null) \
+            <(jq -S "$strip" "$FILES/$APP_ID.json"); then
+            verdict="Flathub $branch differs only in the tag and the commit: update.yml carries it"
+          else
+            verdict="Flathub $branch differs beyond the tag and the commit, which update.yml does not carry"
+            verdict="$verdict: open a hand pull request from the com.leinardi.gx52.json release asset"
+            verdict="$verdict (docs/release.md, \"The Flathub update workflow\")"
+            echo "::warning::$verdict"
+          fi
+          echo "- Flathub check: $verdict." >>"$GITHUB_STEP_SUMMARY"
 
       - name: Upload the Flathub files
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: flathub-files
           path: |
-            ${{ runner.temp }}/flathub-files/${{ env.APP_ID }}.json
-            ${{ runner.temp }}/flathub-files/cargo-sources.json
+            ${{ env.FILES }}/${{ env.APP_ID }}.json
+            ${{ env.FILES }}/cargo-sources.json
           if-no-files-found: error
           retention-days: 7

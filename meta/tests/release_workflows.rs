@@ -278,7 +278,19 @@ fn order_problems(workflows: &Workflows) -> Vec<String> {
             ));
         }
     }
-    problems.extend(asset_problems(publish));
+    problems.extend(asset_problems(publish, &workflows.flathub));
+    let given: Vec<&str> = job(publish, "flathub")["with"]
+        .as_mapping()
+        .into_iter()
+        .flatten()
+        .filter_map(|(key, _)| key.as_str())
+        .collect();
+    if given != ["tag"] {
+        problems.push(format!(
+            "release-publish.yaml's Flathub check takes {given:?}: the merge commit, as it is, \
+             takes only the tag"
+        ));
+    }
     if text(&job(publish, "publish")["with"]["prerelease"])
         != "${{ startsWith(needs.decide.outputs.tag, 'v0.') }}"
     {
@@ -287,10 +299,40 @@ fn order_problems(workflows: &Workflows) -> Vec<String> {
     problems
 }
 
+/// The four files the release attaches.
+const ASSETS: [&str; 4] = [
+    "cargo-sources.json",
+    "com.leinardi.gx52.json",
+    "gx52-aarch64.flatpak",
+    "gx52-x86_64.flatpak",
+];
+
 /// The release attaches the bundles and both Flathub files: the merged artifact the publish job
-/// names takes the per-architecture bundles and flathub-check's `flathub-files`.
-fn asset_problems(publish: &Value) -> Vec<String> {
+/// names takes the per-architecture bundles and flathub-check's `flathub-files`, which holds both
+/// files, and the merged list is checked before the tag.
+fn asset_problems(publish: &Value, flathub: &Value) -> Vec<String> {
     let mut problems = Vec::new();
+    let upload = job(flathub, "prepare")["steps"]
+        .as_sequence()
+        .into_iter()
+        .flatten()
+        .find(|step| text(&step["uses"]).starts_with("actions/upload-artifact@"));
+    let uploads_both = upload.is_some_and(|step| {
+        let paths = text(&step["with"]["path"]);
+        text(&step["with"]["name"]) == "flathub-files"
+            && paths.contains("/${{ env.APP_ID }}.json")
+            && paths.contains("/cargo-sources.json")
+            && text(&step["with"]["if-no-files-found"]) == "error"
+    });
+    if !uploads_both {
+        problems.push(
+            "flathub-check.yaml does not upload both Flathub files as flathub-files".to_owned(),
+        );
+    }
+    let checked = runs(job(publish, "assets"));
+    if !ASSETS.iter().all(|asset| checked.contains(asset)) {
+        problems.push("release-publish.yaml does not check the four release assets".to_owned());
+    }
     let merge = job(publish, "assets")["steps"]
         .as_sequence()
         .into_iter()
@@ -349,7 +391,16 @@ fn token_problems(workflows: &Workflows) -> Vec<String> {
                 "flathub-check.yaml {name}: it pushes or opens something"
             ));
         }
-        let lints = script.contains("flatpak-builder-lint manifest");
+        let lints = job["steps"]
+            .as_sequence()
+            .into_iter()
+            .flatten()
+            .any(|step| {
+                let run = text(&step["run"]);
+                run.contains("flatpak-builder-lint manifest")
+                    && !run.contains("|| true")
+                    && step["continue-on-error"].is_null()
+            });
         if name == "prepare" && !lints {
             problems.push("flathub-check.yaml does not lint the Flathub manifest".to_owned());
         }
@@ -601,8 +652,17 @@ fn value_breaks() -> Vec<Break> {
     ]
 }
 
-/// Breaks of the Flathub rules: the release without the Flathub files, a token or an environment
-/// anywhere, and a Flathub check that writes or skips its lint.
+/// flathub-check's prepare steps, each passed through `change`.
+fn prepare_steps(change: &dyn Fn(&mut Value)) -> Value {
+    let mut steps = job(&workflows().flathub, "prepare")["steps"].clone();
+    for step in steps.as_sequence_mut().into_iter().flatten() {
+        change(step);
+    }
+    steps
+}
+
+/// Breaks of the Flathub file rules: the release without the Flathub files, or a Flathub check
+/// that skips its lint.
 fn flathub_breaks() -> Vec<Break> {
     vec![
         (
@@ -629,6 +689,68 @@ fn flathub_breaks() -> Vec<Break> {
             vec!["release", "jobs", "flathub", "with", "tag"],
             "v0.0.0".into(),
         ),
+        (
+            "the Flathub files renamed",
+            vec!["flathub", "jobs", "prepare", "steps"],
+            prepare_steps(&|step| {
+                if text(&step["name"]) == "Upload the Flathub files" {
+                    step["with"]["name"] = "flathub".into();
+                }
+            }),
+        ),
+        (
+            "one Flathub file uploaded",
+            vec!["flathub", "jobs", "prepare", "steps"],
+            prepare_steps(&|step| {
+                if text(&step["name"]) == "Upload the Flathub files" {
+                    step["with"]["path"] = "${{ env.FILES }}/cargo-sources.json".into();
+                }
+            }),
+        ),
+        (
+            "a lint that cannot fail",
+            vec!["flathub", "jobs", "prepare", "steps"],
+            prepare_steps(&|step| {
+                if text(&step["name"]) == "Lint the Flathub manifest" {
+                    step["continue-on-error"] = true.into();
+                }
+            }),
+        ),
+        (
+            "a lint that ignores its status",
+            vec!["flathub", "jobs", "prepare", "steps"],
+            prepare_steps(&|step| {
+                if text(&step["name"]) == "Lint the Flathub manifest" {
+                    let run = format!("{} || true", text(&step["run"]));
+                    step["run"] = run.into();
+                }
+            }),
+        ),
+        (
+            "the asset list unchecked",
+            vec!["publish", "jobs", "assets", "steps"],
+            Value::Sequence(
+                job(&workflows().publish, "assets")["steps"]
+                    .as_sequence()
+                    .into_iter()
+                    .flatten()
+                    .filter(|step| text(&step["name"]) != "Check the release assets")
+                    .cloned()
+                    .collect(),
+            ),
+        ),
+        (
+            "the bump's patch on the publish run",
+            vec!["publish", "jobs", "flathub", "with", "patch_artifact"],
+            "version-bump-pr-patch".into(),
+        ),
+    ]
+}
+
+/// Breaks of the no-token rules (a secret, an environment or write access anywhere, and a
+/// dispatchable Flathub check), and a Flathub check with no lint step at all.
+fn token_breaks() -> Vec<Break> {
+    vec![
         (
             "a token in the Flathub check",
             vec!["flathub", "jobs", "prepare", "env"],
@@ -715,6 +837,7 @@ fn the_checks_catch_each_break() {
     for (name, path, value) in value_breaks()
         .into_iter()
         .chain(flathub_breaks())
+        .chain(token_breaks())
         .chain(guard_breaks())
     {
         let mut broken = good.clone();

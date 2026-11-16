@@ -28,8 +28,9 @@
 # in the same place. The x-checker-data is what the Flathub repository's update workflow
 # (flatpak-external-data-checker) follows to move the tag and the commit to the next release.
 # Everything else (the cargo-sources.json entry, the inline .cargo/config.toml that vendors the
-# crates, the runtime, the SDK extensions and the finish-args) is the tagged manifest's, unchanged. It fails unless the manifest has exactly one `gx52` module with exactly
-# one `dir` source, and leaves no `dir` source anywhere.
+# crates, the runtime, the SDK extensions and the finish-args) is the tagged manifest's, unchanged.
+# It fails unless the manifest has exactly one `gx52` module with exactly one `dir` source, and
+# leaves no `dir` source anywhere.
 #
 # A dry run builds the result before a tag exists: with --source-dir PATH the `dir` source stays
 # as it is (its `skip` list included) but points at PATH (the checkout of the tree being released,

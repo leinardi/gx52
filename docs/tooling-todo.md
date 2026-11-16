@@ -137,8 +137,7 @@ item off, or delete it, in the commit that does it.
       release workflows (the trunk is then the default branch); point the metainfo screenshot
       URLs at `main`.
 - [ ] Repository settings: move `ci-result` from the `rust-rewrite` ruleset to
-      `default_branch_required_checks` and remove that ruleset, and set the `release`
-      environment's deployment branch to `main`.
+      `default_branch_required_checks` and remove that ruleset.
 - [ ] `scheduled-scan.yaml` on the trunk: give it meta-test coverage like the release workflows'
       (`release_workflows`); on `master` the trunk's meta-tests cannot read it, so until then its
       check is the hands-on one in [release.md](release.md#dispatching-before-m9).
