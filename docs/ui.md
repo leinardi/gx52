@@ -51,6 +51,27 @@ on the right.
 └───────────────────────┴─────────────────────────────────────────────────┘
 ```
 
+### Start-up
+
+A new GX52 process opens on the **active profile's editor**: the selected row is the profile on
+the device, so the first screen is one where the selection and the device agree, and the usual
+reason to open the window, changing a LED colour or an MFD line before a game, takes no click.
+The editor shows the view used last, LEDs, MFD or Clocks (GSettings `last-view`), so someone who
+only edits the MFD does not press Ctrl+2 each time. The input tester is never restored across
+launches: it is a check made now, not a habit, and it selects no profile. A per-mode profile's
+[mode bar](#mode-bar) starts on the selector's position.
+
+- The [problem states](#problem-states) come first: with no device ever seen, the full-window
+  status page; with a device GX52 has no permission for, the udev guidance; with `x52d` running,
+  the editor and its banner.
+- **Narrow:** the collapsed split view starts on the sidebar page, the profile list, with the
+  editor one tap away.
+- **Reopening a background instance** (a second launch, "Show GX52" in the tray) is not a start:
+  the new window shows what the closed one showed, the input tester or a profile that failed to
+  load included, and on a narrow window the same page of the split view. Only a new process
+  follows the rules above. Start on Login starts hidden ([Preferences](#preferences)), so its
+  first window also follows them.
+
 ### Sidebar
 
 - **Header bar:** the main menu button (☰) on the left, the window title "GX52", and a "+" menu
@@ -74,8 +95,9 @@ on the right.
     file has no readable name, so its row shows the file name; a newer-schema profile shows its
     name when the file can be read.
 - **"Test input"** row below the profiles, opening the [input tester](#input-tester) in the
-  content area. Selecting it does not change the active profile; the sidebar keeps a marker on the
-  active profile while the tester is open.
+  content area when it is clicked or activated with Enter; keyboard focus alone, which a list box
+  turns into a selection, does not open it. Opening it does not change the active profile; the
+  sidebar keeps a marker on the active profile while the tester is open.
 - **Footer**, always visible: the [device status](#device-status).
 
 ### "+" menu

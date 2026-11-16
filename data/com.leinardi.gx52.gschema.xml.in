@@ -13,6 +13,16 @@
       <default>false</default>
       <summary>Window maximized state</summary>
     </key>
+    <key name="last-view" type="s">
+      <choices>
+        <choice value="leds"/>
+        <choice value="mfd"/>
+        <choice value="clocks"/>
+      </choices>
+      <default>'leds'</default>
+      <summary>Last editor view</summary>
+      <description>The view of the profile editor shown last, LEDs, MFD or clocks; a new window opens on it.</description>
+    </key>
     <key name="active-profile-x52-pro" type="s">
       <default>'x52-pro-default'</default>
       <summary>Active X52 Pro profile</summary>

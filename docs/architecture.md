@@ -452,10 +452,10 @@ settings, defaulting to the S9 values.
 ## Persistence
 
 - **GSettings** (schema id and path from the app ID; the Devel build has its own): app settings
-  (run in background, autostart, the virtual mouse switch and settings, window state, the
-  legacy-import-done flag, the last device type) and, per device type, the **active profile** and
-  the **profile order** ([profiles.md](profiles.md#active-profile)). One `gio::Settings` instance,
-  held by the application.
+  (run in background, autostart, the virtual mouse switch and settings, window state and the
+  last editor view, the legacy-import-done flag, the last device type) and, per device type, the
+  **active profile** and the **profile order** ([profiles.md](profiles.md#active-profile)). One
+  `gio::Settings` instance, held by the application.
 - **Profile store:** one TOML file per profile in the user config directory, atomic writes; the
   format, defaults, validation and recovery rules are in [profiles.md](profiles.md). The code is
   in `src/profile/`: plain Rust with no GObject, whose file operations block (`files.rs`: the

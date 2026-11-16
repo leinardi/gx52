@@ -31,7 +31,7 @@ use crate::tray::{
     self, Gx52Tray, ProfileChoices, TrayAction, TrayGeneration, TrayHandle, TrayMessage, TrayModel,
     WatcherReport,
 };
-use crate::window::Window;
+use crate::window::{Placement, Window};
 
 /// What closing the window does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -176,6 +176,11 @@ impl Application {
         self.windows()
             .into_iter()
             .find_map(|window| window.downcast::<Window>().ok())
+    }
+
+    /// Keeps what the closing window shows, for the window the next launch or the tray opens.
+    pub(crate) fn keep_placement(&self, placement: Placement) {
+        self.imp().window_placement.replace(Some(placement));
     }
 
     /// The window is closing: keeps the application running without it when it runs in the
