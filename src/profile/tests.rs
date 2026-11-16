@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use x52::clock::{Clock1Source, FixedOffset};
 use x52::device::{BiColourLed, LedColour};
@@ -249,4 +250,23 @@ fn line_text_keeps_both_limits() {
         line_text("ABCDEFGHIJKLMNOPQ"),
         Err(LineTextError::TooLong(_))
     ));
+}
+
+#[test]
+fn a_set_config_dir_replaces_the_default() {
+    let cell = OnceLock::new();
+    assert_eq!(cell.set(PathBuf::from("/fixture")), Ok(()));
+    let dir = config_dir_in(&cell, || PathBuf::from("/home/user/.config/gx52"));
+    assert_eq!(dir, Path::new("/fixture"));
+}
+
+#[test]
+fn the_config_dir_cannot_be_set_once_read() {
+    let cell = OnceLock::new();
+    let first = config_dir_in(&cell, || PathBuf::from("/home/user/.config/gx52"));
+    assert_eq!(
+        cell.set(PathBuf::from("/fixture")),
+        Err(PathBuf::from("/fixture"))
+    );
+    assert_eq!(config_dir_in(&cell, || PathBuf::from("/other")), first);
 }
