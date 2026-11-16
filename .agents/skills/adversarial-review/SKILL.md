@@ -182,13 +182,14 @@ actually have (under adversarial-review-loop, `verification.txt` when supplied, 
 implementer's claim and not proof; when invoked directly, the CI status or gate output in the PR or
 session) and what is missing, such as a manifest or `Cargo.lock` change with no `make rust-deny`
 result (it needs network), or a change under `meta/**`, `scripts/check-*.sh`, `.github/**`,
-`.pre-commit-config.yaml`, `.mk/**` or `Makefile` with no `meta` test result. A failure in that
-evidence caused by the change is a confirmed finding. Never say that a check you did not see passed,
-and a skipped test is not a pass. Judge whether the change's tests prove it: a behaviour change
-needs a test that fails on the old code. When invoked directly, one focused test (`cargo test
---locked -p <crate> <module>::tests::<name>`) may be run to confirm a single suspected finding,
-never a full suite or gate. A candidate that is neither reproduced nor traced end to end is dropped:
-a vague "consider" is not a finding.
+`.pre-commit-config.yaml`, `.mk/**` or `Makefile` with no `meta` test result. Judge what is missing
+against `AGENTS.md`'s *Validation matrix*: every changed path owes the checks its row names. A
+failure in that evidence caused by the change is a confirmed finding. Never say that a check you did
+not see passed, and a skipped test is not a pass. Judge whether the change's tests prove it: a
+behaviour change needs a test that fails on the old code. When invoked directly, one focused test
+(`cargo test --locked -p <crate> <module>::tests::<name>`) may be run to confirm a single suspected
+finding, never a full suite or gate. A candidate that is neither reproduced nor traced end to end is
+dropped: a vague "consider" is not a finding.
 
 A change to the `x52` crate's device paths gets the hands-on check on a real X52 Pro
 (`docs/hands-on.md`) when one is available. Hardware is never something you run: give the human
