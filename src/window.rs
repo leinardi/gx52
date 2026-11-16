@@ -177,7 +177,8 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
-            if config::is_devel() {
+            // The screenshots look like a release build's.
+            if config::is_devel() && !crate::screenshots::active() {
                 obj.add_css_class("devel");
             }
             obj.setup_actions();

@@ -24,13 +24,18 @@ mod device;
 mod model;
 mod preferences;
 mod profile;
+mod screenshots;
 mod time;
 mod tray;
 mod widgets;
 mod window;
 mod zones;
 
-use std::{env, io, io::Write, path::PathBuf};
+use std::{
+    env, io,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use gtk::{gio, glib, prelude::*};
 use tracing_subscriber::EnvFilter;
@@ -65,7 +70,32 @@ fn main() -> glib::ExitCode {
         }
     }
 
-    init_i18n();
+    // The screenshot mode (Devel builds only) replaces the config root, the clock and the
+    // settings before the application reads them.
+    let (session, app_args) = match screenshots::parse_args(&args, config::is_devel()) {
+        Ok(Some(request)) => {
+            let backend = env::var_os("GSETTINGS_BACKEND");
+            match screenshots::prepare(&request, backend.as_deref()) {
+                Ok(session) => (Some(session), request.remaining),
+                Err(error) => {
+                    let _ = writeln!(io::stderr(), "gx52: {error}");
+                    return glib::ExitCode::FAILURE;
+                }
+            }
+        }
+        Ok(None) => (None, args),
+        Err(error) => {
+            let _ = writeln!(io::stderr(), "gx52: {error}");
+            return glib::ExitCode::from(2);
+        }
+    };
+
+    // Screenshots bind the domain to an empty directory, so the strings stay untranslated.
+    let locale_dir = session.as_ref().map_or_else(
+        || PathBuf::from(config::LOCALEDIR),
+        screenshots::Session::locale_dir,
+    );
+    init_i18n(&locale_dir);
 
     let path = match resources_path() {
         Ok(path) => path,
@@ -85,15 +115,22 @@ fn main() -> glib::ExitCode {
         }
     }
 
-    Application::new().run()
+    let program = env::args()
+        .next()
+        .unwrap_or_else(|| env!("CARGO_PKG_NAME").to_owned());
+    let command_line: Vec<String> = std::iter::once(program).chain(app_args).collect();
+    let code = Application::new().run_with_args(&command_line);
+    // The temporary config root goes only once the application is done with it.
+    drop(session);
+    screenshots::exit_code(code)
 }
 
 /// Selects the translation domain.
 ///
 /// The locale itself is set by GTK: `gtk_init`, which runs in the application's `startup`, calls
 /// `setlocale(LC_ALL, "")` before any string is translated.
-fn init_i18n() {
-    if let Err(err) = gettextrs::bindtextdomain(config::GETTEXT_PACKAGE, config::LOCALEDIR) {
+fn init_i18n(locale_dir: &Path) {
+    if let Err(err) = gettextrs::bindtextdomain(config::GETTEXT_PACKAGE, locale_dir) {
         tracing::warn!("Unable to bind the text domain: {err}");
     }
     if let Err(err) = gettextrs::textdomain(config::GETTEXT_PACKAGE) {

@@ -21,7 +21,7 @@ use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use x52::clock::{Clock, SystemClock};
 
-/// The clock and local zone; the system's.
+/// The clock and local zone, fixed by the first read or by [`set`].
 static SOURCES: OnceLock<TimeSources> = OnceLock::new();
 
 /// Where the application reads the time and the local time zone from.
@@ -40,12 +40,29 @@ impl std::fmt::Debug for TimeSources {
     }
 }
 
-/// The application's sources: the system's clock and local zone.
+/// The application's sources: the system's clock and local zone, unless [`set`] replaced them
+/// before the first read.
 fn sources() -> &'static TimeSources {
-    SOURCES.get_or_init(|| TimeSources {
+    sources_in(&SOURCES)
+}
+
+/// The sources in `cell`, fixed to the system's by the first read.
+fn sources_in(cell: &OnceLock<TimeSources>) -> &TimeSources {
+    cell.get_or_init(|| TimeSources {
         clock: Box::new(SystemClock),
         local_zone: TimeZone::system,
     })
+}
+
+/// Replaces the application's clock and local zone for the whole process, for a mode that shows
+/// a fixed time.
+///
+/// # Errors
+///
+/// `sources` back, when the sources were already set or read: a reader may already have shown
+/// the system's time.
+pub(crate) fn set(sources: TimeSources) -> Result<(), TimeSources> {
+    SOURCES.set(sources)
 }
 
 /// The application's current time.
@@ -65,5 +82,35 @@ pub(crate) struct AppClock;
 impl Clock for AppClock {
     fn now(&self) -> Timestamp {
         now()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const FIXED: &str = "2026-06-15T10:09:00Z";
+
+    fn fixed() -> TimeSources {
+        TimeSources {
+            clock: Box::new(|| FIXED.parse::<Timestamp>().expect("a valid instant")),
+            local_zone: || TimeZone::UTC,
+        }
+    }
+
+    #[test]
+    fn set_sources_replace_the_system_ones() {
+        let cell = OnceLock::new();
+        assert!(cell.set(fixed()).is_ok());
+        let sources = sources_in(&cell);
+        assert_eq!(sources.clock.now().to_string(), FIXED);
+        assert_eq!((sources.local_zone)(), TimeZone::UTC);
+    }
+
+    #[test]
+    fn the_sources_cannot_be_set_once_read() {
+        let cell = OnceLock::new();
+        let _ = sources_in(&cell);
+        assert!(cell.set(fixed()).is_err());
     }
 }

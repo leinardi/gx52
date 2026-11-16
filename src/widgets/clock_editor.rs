@@ -231,6 +231,20 @@ impl ClockEditor {
         imp.clock3_group.close_dialog();
     }
 
+    /// Whether the time zone was read and every clock shows its time: what a screenshot checks
+    /// before it is taken.
+    pub(crate) fn times_shown(&self) -> bool {
+        let imp = self.imp();
+        imp.ticker.zone().is_some()
+            && [
+                imp.clock1_group.description(),
+                imp.clock2_group.description(),
+                imp.clock3_group.description(),
+            ]
+            .iter()
+            .all(|description| description.as_ref().is_some_and(|text| !text.is_empty()))
+    }
+
     /// Shows the times and the date again.
     fn refresh_times(&self) {
         let imp = self.imp();

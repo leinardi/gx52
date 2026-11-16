@@ -482,10 +482,6 @@ pub(crate) fn config_dir() -> PathBuf {
 ///
 /// `dir` back, when the directory was already set or read: a caller may already hold the
 /// user's directory.
-#[expect(
-    dead_code,
-    reason = "the screenshot mode, added next, is its only caller"
-)]
 pub(crate) fn set_config_dir(dir: PathBuf) -> Result<(), PathBuf> {
     CONFIG_DIR.set(dir)
 }

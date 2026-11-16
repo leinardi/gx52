@@ -28,9 +28,9 @@ use crate::profile::editor::EditorState;
 use crate::profile::mfd::{self, LineSource, ShownClock, TextInfo};
 use crate::profile::{MfdLineSource, ProfileKind};
 use crate::time;
-use crate::widgets::brightness_at;
 use crate::widgets::mfd_display::DateArea;
 use crate::widgets::ticker::{Ticker, Ticking};
+use crate::widgets::{MfdDisplay, brightness_at};
 
 /// How long the date area shows the number of a clock just picked, as the device does.
 const CLOCK_FLASH: Duration = Duration::from_secs(3);
@@ -341,6 +341,11 @@ impl MfdEditor {
         imp.brightness_value.set_label(&level.to_string());
         imp.shift_row.set_visible(state.device_type.has_shift());
         self.refresh_display();
+    }
+
+    /// The MFD preview.
+    pub(crate) fn display(&self) -> MfdDisplay {
+        self.imp().display.get()
     }
 
     /// Shows the display again: the dynamic lines and the time follow the device and the clock.

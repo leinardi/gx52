@@ -154,6 +154,18 @@ impl MfdDisplay {
         imp.cells.replace(cells);
     }
 
+    /// The lines shown, one per line, and the time: what a screenshot checks before it is taken.
+    pub(crate) fn shown_text(&self) -> (Vec<String>, String) {
+        let imp = self.imp();
+        let lines = imp
+            .cells
+            .borrow()
+            .iter()
+            .map(|cells| cells.iter().map(|cell| cell.label().to_string()).collect())
+            .collect();
+        (lines, imp.time.label().into())
+    }
+
     /// Shows `preview`, with `date_area` in the date area.
     pub(crate) fn show(&self, preview: &MfdPreview, date_area: DateArea) {
         let imp = self.imp();
