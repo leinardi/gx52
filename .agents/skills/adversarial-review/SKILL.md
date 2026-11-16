@@ -18,54 +18,24 @@ bug, breaks an invariant, or drifts from a contract. Your job is to find the spe
 input, state, or path where it fails — not to praise it, not to restyle it. A review that
 finds nothing is only credible after you have actively tried to break the code and failed.
 
-This skill is the **entry point for reviewing any change in this repo, in any language**.
-It does not replace the domain skills — it routes to them. The domain skills own the rules;
-this skill owns the mindset, the routing, and the report.
+This skill routes to the domain skills rather than replacing them: they own the rules. Read
+`AGENTS.md` first.
 
-Copy this checklist and tick items as you go:
+## Scope
 
-```text
-Review progress:
-- [ ] 1. Scope chosen; diff, stated intent and every changed file read in full
-- [ ] 2. Domain skills from §2 loaded for every changed path
-- [ ] 3. Repo invariants checked
-- [ ] 4. Adversarial passes run; every candidate confirmed or dropped
-- [ ] 5. Always-on passes (a)–(d) run
-- [ ] 6. Gates run; `git status` checked for hook rewrites; skipped gates marked unverified
-- [ ] 7. Report written: findings, open questions, verdict, gates run and not run
-```
+When invoked directly: review the scope the user gives (`gh pr view <n>` for intent, then `gh pr
+diff <n>`); with none, the uncommitted work (`git diff HEAD` plus untracked files, which no diff
+shows); on a clean tree, `git diff rust-rewrite...HEAD` (`rust-rewrite` is the integration
+branch, `AGENTS.md`). Never review from memory or from the user's description of the change.
 
----
+Read the stated **intent** (`git log --oneline` for the range, any linked issue or PR body): a
+change that works but does something other than what it claims is a finding. Read every commit
+subject in the range, not only the PR title. Read every changed file in full, not just the
+hunks, and for non-trivial changes the callers, implementations, tests and docs of what changed,
+found with a reference search, not assumed from the diff: a signature or behavior change is only
+safe if every call site agrees.
 
-## 1. Establish the diff (what am I reviewing?)
-
-Never review from memory or from the user's description of the change — read the actual
-diff. Find the default branch with `git symbolic-ref --short refs/remotes/origin/HEAD`
-(`<default>` below), then pick the scope from what the user said:
-
-| User intent | Command |
-| --- | --- |
-| "my work" / "before I commit" / uncommitted | `git status --short`, then `git diff HEAD`; read untracked files too, which no diff shows |
-| staged changes only | `git diff --staged` |
-| a branch / "this PR" / "ready to merge" | `git diff <default>...HEAD` (merge-base diff) |
-| a specific commit range | `git diff <base>..<head>` |
-| a GitHub PR number | `gh pr view <n>` for intent, then `gh pr diff <n>` |
-
-If the user names no scope, review the uncommitted work (first row); if the tree is
-clean, review the branch against `<default>` (third row).
-
-Also read `git log --oneline` for the range and any linked issue/PR body — the stated
-**intent** is what you check the code against. A change that works but does something other
-than what it claims is a finding, and so is a commit type that ships the wrong version (§3,
-*Release bump*): read every commit subject in the range, not only the PR title.
-
-Read every changed file in full, not just the hunks. A hunk looks correct in isolation and
-wrong against the 40 lines above it that git didn't show you. For non-trivial changes, also
-read the callers, implementations, tests and docs of what changed — found with a reference
-search, not assumed from the diff: a signature or behavior change is only safe if every call
-site agrees.
-
-## 2. Route to the domain skills (path → authority)
+## Authority (path → domain skill)
 
 For each changed path, load the matching skill **before** judging that file — the skill is
 the source of truth for the rules, and violations there are findings even when lint is
@@ -78,15 +48,16 @@ green. Load only what the diff touches.
 | the `x52` crate (protocol, device model, key maps, MFD charset) | `rust-review` + `docs/protocol.md` once it exists, the spike results in `docs/spikes/` until then | the bytes sent to the device; no GTK dependency |
 | `meta/**` | `AGENTS.md`; the comment heading each test | a meta-test that can skip or pass on nothing is a finding |
 | `scripts/check-*.sh` | the script's header comment (and its meta-test once it exists) | the check still fails on what it exists to stop |
-| `.pre-commit-config.yaml`, `[workspace.lints]`, `clippy.toml` | `AGENTS.md` (coding rules) | no lint disabled or narrowed, no hook dropped; §5 (c) |
+| `.pre-commit-config.yaml`, `[workspace.lints]`, `clippy.toml` | `AGENTS.md` (coding rules) | no lint disabled or narrowed, no hook dropped; see *A new suppression has to show its work* below |
 
 No skill matches (bash, Makefile, `.mk/**`, plain YAML, Markdown, workflows)? Fall back to the
-passes in §4 plus the invariants in §3. **Same rigor** — an unmatched language is not a lighter
+adversarial passes plus the invariants below. **Same rigor** — an unmatched language is not a lighter
 review.
 
-## 3. Repo invariants — check these on every review, whatever changed
+## Repo invariants
 
-These are the ways this codebase breaks that generic reviewers miss. Read `AGENTS.md` and
+Check these on every review, whatever changed. These are the ways this codebase breaks that
+generic reviewers miss. Read `AGENTS.md` and
 `docs/rewrite-analysis.md` (section 1, decisions taken) for the full statements.
 
 - **Only known commands to known devices.** A USB control transfer goes only to a device whose
@@ -128,33 +99,22 @@ These are the ways this codebase breaks that generic reviewers miss. Read `AGENT
   a file reused from another project adds the provenance line below it. A pasted MIT or
   Apache-2.0 block, or a provenance line missing its commit, is a finding.
 
-## 4. Adversarial passes — language-agnostic
+## Adversarial passes
 
-Do not skim for style. Run these passes, each with a "how would I make this fail" framing:
+Beyond the generic passes (logic, boundaries and empty input, aliasing, error handling,
+concurrency, resources, security), run these with a "how would I make this fail" framing, and
+name one concrete failing input per candidate rather than asserting "looks fine".
 
-- **Generic passes**: correctness and logic, boundaries and empty input, aliasing, error
-  handling, concurrency, resources and security. For each, name one concrete failing input and
-  trace it end to end rather than asserting "looks fine".
 - **Device lifecycle**: unplug in the middle of a transfer, replug, two devices at once, suspend
   and resume, the udev rule missing. Each must end in a defined UI state, never a panic or a
   silently stale device handle.
-- **Contract drift**: does the code do what the commit message / PR / issue claims? A setting,
-  profile field, CLI option or documented behaviour changed without updating every consumer and
-  the docs.
-- **Tests**: does the diff add or change a test for the behavior it introduces? A test that
-  passes against the *old* code (asserts nothing new), that asserts on a fake's recorded calls
-  instead of the behavior they produced, or that was weakened/deleted to make the change pass —
-  all findings. A bug fix with no regression test is a gap worth flagging.
+- **Contract drift**: a setting, profile field, CLI option or documented behaviour changed
+  without updating every consumer and the docs.
+- **Tests**: a test that passes against the *old* code (asserts nothing new), that asserts on a
+  fake's recorded calls instead of the behavior they produced, or that was weakened/deleted to
+  make the change pass is a finding. A bug fix with no regression test is a gap worth flagging.
 
-For each candidate defect:
-
-1. Reproduce it with a focused test, or trace one concrete input through the code to the wrong
-   result.
-2. Confirmed: it is a finding. Record the input and the wrong behavior.
-3. Not confirmed: dig once more (callers, tests, config path). Still not confirmed: drop it.
-   A vague "consider" is not a finding.
-
-## 5. Always-on passes
+## Always-on passes
 
 The passes above are shaped by the diff. These run on **every** review, whatever changed.
 
@@ -213,27 +173,28 @@ Before accepting a new helper, search for the one that already exists in the wor
 store, the error-to-toast path, test helpers. Two implementations of the same rule drift apart,
 and the one the reviewer did not read is the one that keeps the bug.
 
-## 6. Verify before you trust (don't hand-wave the gates)
+## Gates
 
-Static reading misses things. Use focused tests while investigating
-(`cargo test --locked -p <crate> <module>::tests::<name>`), then run the gates the change owes and
-treat a failure it caused as a confirmed finding with the output attached:
+Do not re-run the repository's gates (`make verify`, `make rust-deny`, `make check`, `cargo test
+--locked -p meta`, `pre-commit run actionlint --all-files`). The implementer is expected to run them
+and CI runs them again, but do not assume either happened: report the verification evidence you
+actually have (under adversarial-review-loop, `verification.txt` when supplied, which is the
+implementer's claim and not proof; when invoked directly, the CI status or gate output in the PR or
+session) and what is missing, such as a manifest or `Cargo.lock` change with no `make rust-deny`
+result (it needs network), or a change under `meta/**`, `scripts/check-*.sh`, `.github/**`,
+`.pre-commit-config.yaml`, `.mk/**` or `Makefile` with no `meta` test result. A failure in that
+evidence caused by the change is a confirmed finding. Never say that a check you did not see passed,
+and a skipped test is not a pass. Judge whether the change's tests prove it: a behaviour change
+needs a test that fails on the old code. When invoked directly, one focused test (`cargo test
+--locked -p <crate> <module>::tests::<name>`) may be run to confirm a single suspected finding,
+never a full suite or gate. A candidate that is neither reproduced nor traced end to end is dropped:
+a vague "consider" is not a finding.
 
-| Diff touched | Run |
-| --- | --- |
-| any `**/*.rs`, a Cargo manifest or lock, `clippy.toml`, `rustfmt.toml`, `rust-toolchain.toml`, `deny.toml` | `make verify` (build, fmt check, clippy with `-D warnings`, tests, docs), `make rust-deny` when a manifest or `Cargo.lock` changed (network required), then `make check` |
-| the `x52` crate's device paths | also the hands-on check on a real X52 Pro, when one is available (`docs/hands-on.md`) |
-| `meta/**`, `scripts/check-*.sh`, `.github/**`, `.pre-commit-config.yaml`, `.mk/**`, `Makefile` | `cargo test --locked -p meta` (docs links, license headers, toolchain pins, vacuous flags, workspace lints, version), `pre-commit run actionlint --all-files` |
-| `meson.build`, the metainfo, any Markdown | `cargo test --locked -p meta --test version --test docs` |
-| anything else | `make check` (pre-commit on all files) |
+A change to the `x52` crate's device paths gets the hands-on check on a real X52 Pro
+(`docs/hands-on.md`) when one is available. Hardware is never something you run: give the human
+the exact command and mark the finding unresolved.
 
-Several hooks rewrite files (prettier, markdownlint, rustfmt through `cargo fmt` when run by
-hand): check `git status` afterwards and report a rewrite as a finding instead of reviewing the
-rewritten tree. A skipped test is not a pass. If a gate is impractical here (no device, no
-display for widget tests, no network for cargo-deny), say so explicitly and mark that risk
-unverified rather than implying it passed.
-
-## 7. Report
+## Report
 
 Rank by severity, worst first. Nothing is more important than a genuine correctness break or
 a wrong command sent to the device: those are normally **critical**. Skip pure formatting the
@@ -245,8 +206,8 @@ linters already catch unless it changes meaning or breaks a required gate. For e
   Fix: <the specific change>
 ```
 
-Findings first, then open questions or assumptions, then a one-line verdict: **block**,
-**approve with nits**, or **approve** — plus which verification gates you actually ran and which
-you couldn't. If you found nothing, state what you tried to break so the "no findings" is
+Findings first, then open questions or assumptions, then a one-line verdict (**block**,
+**approve with nits** or **approve**) and one line: `Verification evidence: seen … / missing …`.
+If you found nothing, state what you tried to break so the "no findings" is
 credible. Be blunt; do not soften a real defect to be polite, and do not invent findings to look
 thorough.
