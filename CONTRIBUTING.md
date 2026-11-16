@@ -27,6 +27,8 @@ Security issues go through private reporting, not a public issue: see [SECURITY.
 - [`pre-commit`](https://pre-commit.com/): install the hooks once with `make pre-commit-install`
   (it installs both the `pre-commit` and the `commit-msg` hook).
 - For the Flatpak builds: `flatpak` with the `org.flatpak.Builder` Flatpak from Flathub.
+- For `make screenshots`: `weston` (`sudo apt install weston`) and `python3`, next to the Flatpak
+  prerequisites.
 
 To reach the joystick from a development build, the host needs the udev rule the application
 shows when it cannot open the device; the rule is explained in
