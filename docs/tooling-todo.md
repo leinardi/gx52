@@ -75,9 +75,13 @@ item off, or delete it, in the commit that does it.
 - [ ] `.github/workflows/release.yaml`, implementing [release.md](release.md).
 - [ ] `scheduled-scan.yaml` (dependency audit only) and, possibly, a check for a newer GNOME
       runtime on Flathub (rewrite analysis, section 8).
-- [ ] Repository settings in `gh-leinardi-iac`: required checks once `ci.yaml` exists, the Flathub
-      token secret for the release workflow, private vulnerability reporting (linked from
-      `SECURITY.md` and the issue template config).
+- [ ] Repository settings in `gh-leinardi-iac`: required checks once `ci.yaml` exists, private
+      vulnerability reporting (linked from `SECURITY.md` and the issue template config). No Flathub
+      token secret: the Flathub PR is opened by the Flathub repository's own workflow (next item).
+- [ ] Flathub side ([release.md, "The Flathub update
+      workflow"](release.md#the-flathub-update-workflow)): the `beta` migration PR, `update.yml` on
+      the Flathub `master`, and "Allow GitHub Actions to create and approve pull requests" on
+      `flathub/com.leinardi.gx52`, with the outcome recorded in release.md.
 
 ## Docs and project files
 

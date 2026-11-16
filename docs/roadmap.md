@@ -626,8 +626,9 @@ Acceptance:
 2. **(code) `scheduled-scan.yaml` and repository settings**, the remaining items of
    [tooling-todo.md, "Needs CI and the release
    flow"](tooling-todo.md#needs-ci-and-the-release-flow), plus the one-time setup of
-   [release.md](release.md#one-time-setup) (release identity, Flathub token, the Flathub `beta`
-   branch). Done when: the items are ticked and the setup is recorded.
+   [release.md](release.md#one-time-setup) (release identity, the Flathub `beta` branch and
+   migration PR, the Flathub `update.yml` and the Actions PR setting on the Flathub repository; no
+   Flathub token). Done when: the items are ticked and the setup is recorded.
 3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
@@ -680,6 +681,8 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 - [ ] X52 non-Pro support is documented as "best effort": tested by a user and recorded in
       protocol.md, or explicitly unverified in the README and the release notes.
 - [ ] Released explicitly as `1.0.0` to `master` ([release.md](release.md#versions-and-channels)).
+- [ ] The `1.0.0` migration PR to the Flathub `master` is merged: the Rust manifest with its
+      `x-checker-data`, and the legacy files removed ([release.md](release.md#one-time-setup)).
 
 ## `1.x`
 
