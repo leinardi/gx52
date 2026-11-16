@@ -1,0 +1,147 @@
+name: Flathub check
+
+# The Flathub side of a release, checked here and pushed nowhere (docs/release.md, "The Flathub
+# check"). The pull request on flathub/com.leinardi.gx52 is opened by that repository's own update
+# workflow with its own GITHUB_TOKEN (docs/release.md, "The Flathub update workflow"), so this
+# repository holds no token for Flathub and this workflow writes nothing outside its own run.
+#
+#   prepare  the tree's stable manifest put through scripts/flathub-manifest.sh: the app's dir
+#            source becomes the git source of the tag, with the x-checker-data the update workflow
+#            follows; cargo-sources.json generated from the tree's Cargo.lock with the pinned
+#            generator. flatpak-builder-lint checks the manifest, and its diff against the Flathub
+#            branch is printed. Both files are uploaded as `flathub-files`, which the release
+#            attaches.
+#
+# No build of its own: the tag does not exist yet when this runs, so the only buildable form of the
+# manifest is the dir source at the checkout, which is exactly what release-gate.yaml builds
+# (offline, from the same cargo-sources.json, on both architectures). The first build from the git
+# tag is the one of Flathub's bot on the update pull request.
+#
+# Called by release-publish.yaml before the tag (the commit is the merge commit, which the tag
+# will name), and by release.yaml's dry run with the bump's patch applied to the dispatched commit,
+# so the manifest, the Cargo.lock behind cargo-sources.json and the build come from the bumped tree.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "The release tag the manifest names, vX.Y.Z"
+        type: string
+        required: true
+      patch_artifact:
+        description: "An artifact of the calling run holding bump.patch, applied to the tree (empty: the commit as it is)"
+        type: string
+        required: false
+        default: ""
+
+permissions: {}
+
+env:
+  FLATHUB_REPO: flathub/com.leinardi.gx52
+  APP_ID: com.leinardi.gx52
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+
+    steps:
+      - name: Check the tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "The tag must be vX.Y.Z, got '$TAG'." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download the bump patch
+        if: inputs.patch_artifact != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.patch_artifact }}
+          path: ${{ runner.temp }}/bump
+
+      - name: Apply the bump patch
+        if: inputs.patch_artifact != ''
+        env:
+          PATCH: ${{ runner.temp }}/bump/bump.patch
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          git apply --index "${PATCH}"
+
+      # The container's root owns nothing in the checkout; the generator runs as root.
+      - name: Generate cargo-sources.json from the tree's Cargo.lock
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          make cargo-sources
+
+      # The commit the tag will name: the merge commit on a release, the dispatched commit on a dry
+      # run (no tag exists for it; the manifest is for the diff and the asset preview only).
+      - name: Write the Flathub files
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/flathub-files"
+          scripts/flathub-manifest.sh "build-aux/$APP_ID.json" "$TAG" "$GITHUB_SHA" \
+            >"${RUNNER_TEMP}/flathub-files/$APP_ID.json"
+          cp build-aux/cargo-sources.json "${RUNNER_TEMP}/flathub-files/cargo-sources.json"
+          echo "The Flathub manifest of $TAG:"
+          cat "${RUNNER_TEMP}/flathub-files/$APP_ID.json"
+
+      - name: Lint the Flathub manifest
+        run: flatpak-builder-lint manifest "${RUNNER_TEMP}/flathub-files/$APP_ID.json"
+
+      # For review only: what the update workflow (tag, commit, cargo-sources.json) or a hand pull
+      # request (anything else) changes on the Flathub branch. beta until 1.0.0; before the beta
+      # branch exists, master's legacy manifest.
+      - name: Diff against the Flathub branch
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          url="https://github.com/$FLATHUB_REPO.git"
+          branch=beta
+          if [[ "$TAG" != v0.* ]]; then
+            branch=master
+          fi
+          if ! git ls-remote --exit-code --heads "$url" "refs/heads/$branch" >/dev/null; then
+            echo "::notice::$FLATHUB_REPO has no $branch branch yet: the diff is against master."
+            branch=master
+          fi
+          git clone --quiet --depth 1 --branch "$branch" "$url" "${RUNNER_TEMP}/flathub"
+          # git diff --no-index exits 1 when the files differ, which is expected; above 1 is an error.
+          review_diff() {
+            local status=0
+            git --no-pager diff --no-index "$@" || status=$?
+            [ "$status" -le 1 ]
+          }
+          echo "The Flathub manifest against $FLATHUB_REPO $branch:"
+          review_diff -- "${RUNNER_TEMP}/flathub/$APP_ID.json" "${RUNNER_TEMP}/flathub-files/$APP_ID.json"
+          if [ -f "${RUNNER_TEMP}/flathub/cargo-sources.json" ]; then
+            review_diff --stat -- "${RUNNER_TEMP}/flathub/cargo-sources.json" \
+              "${RUNNER_TEMP}/flathub-files/cargo-sources.json"
+          fi
+
+      - name: Upload the Flathub files
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: flathub-files
+          path: |
+            ${{ runner.temp }}/flathub-files/${{ env.APP_ID }}.json
+            ${{ runner.temp }}/flathub-files/cargo-sources.json
+          if-no-files-found: error
+          retention-days: 7

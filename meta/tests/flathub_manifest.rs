@@ -109,17 +109,30 @@ fn dir_sources(value: &Value) -> usize {
     }
 }
 
-fn git_source() -> Value {
+fn mapping(entries: &[(&str, Value)]) -> Value {
     let mut map = Mapping::new();
-    for (key, value) in [
-        ("type", "git"),
-        ("url", "https://github.com/leinardi/gx52.git"),
-        ("tag", TAG),
-        ("commit", COMMIT),
-    ] {
-        map.insert(key.into(), value.into());
+    for (key, value) in entries {
+        map.insert((*key).into(), value.clone());
     }
     Value::Mapping(map)
+}
+
+/// The data flatpak-external-data-checker follows on the Flathub side: every strict release tag.
+fn checker_data() -> Value {
+    mapping(&[
+        ("type", "git".into()),
+        ("tag-pattern", r"^v([0-9]+\.[0-9]+\.[0-9]+)$".into()),
+    ])
+}
+
+fn git_source() -> Value {
+    mapping(&[
+        ("type", "git".into()),
+        ("url", "https://github.com/leinardi/gx52.git".into()),
+        ("tag", TAG.into()),
+        ("commit", COMMIT.into()),
+        ("x-checker-data", checker_data()),
+    ])
 }
 
 /// The stable manifest with its `dir` source replaced by `source`: what the script must produce.
@@ -152,8 +165,13 @@ fn the_stable_manifest_is_migrated_to_the_tag() {
         expected(git_source()),
         "anything but the app source changed"
     );
-    // Spelled out, the parts Flathub's build depends on.
+    // Spelled out, the parts Flathub's build and update workflow depend on.
     assert_eq!(sources(&output)[0], git_source());
+    assert_eq!(
+        sources(&output)[0]["x-checker-data"],
+        checker_data(),
+        "the update workflow cannot follow the next tag"
+    );
     assert!(
         sources(&output).contains(&Value::from("cargo-sources.json")),
         "the cargo-sources.json entry is gone"
@@ -289,6 +307,40 @@ fn ambiguous_manifests_and_malformed_inputs_are_refused() {
             result.text.contains(reason),
             "{case}: want '{reason}', got:\n{}",
             result.text
+        );
+    }
+}
+
+#[test]
+fn the_checker_tag_pattern_matches_the_release_tags_only() {
+    let data = checker_data();
+    let source = data["tag-pattern"]
+        .as_str()
+        .unwrap_or_else(|| panic!("the checker data has a tag pattern"));
+    let pattern = regex::Regex::new(source)
+        .unwrap_or_else(|error| panic!("the tag pattern {source} compiles: {error}"));
+    for (tag, version) in [
+        ("v0.99.0", "0.99.0"),
+        ("v1.0.0", "1.0.0"),
+        ("v12.3.45", "12.3.45"),
+    ] {
+        let captured = pattern
+            .captures(tag)
+            .and_then(|captures| captures.get(1))
+            .map(|group| group.as_str());
+        assert_eq!(captured, Some(version), "{tag}");
+    }
+    for tag in [
+        "0.7.6",
+        "0.7.0-flathub",
+        "v1.0",
+        "v1.0.0-rc.1",
+        "v1.0.0.1",
+        "release-v1.0.0",
+    ] {
+        assert!(
+            !pattern.is_match(tag),
+            "{tag} matched, but it is not a release tag"
         );
     }
 }

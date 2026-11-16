@@ -17,21 +17,22 @@
 //! version command and the allowed files, which are the four files of the version and the paths
 //! that start the publish run; every reusable workflow of gh-reusable-workflows is pinned to one
 //! commit and given the trunk; the publish jobs run in their order, each only after the one before;
-//! the dry run gates and diffs the bumped tree; the Flathub token is reached by one job, which runs
-//! no repository code; and the dispatch inputs are those of master's stubs, which a meta-test on
-//! the trunk cannot read (docs/release.md lists them). Every rule has a negative control.
+//! the dry run gates and checks the bumped tree; the release attaches the Flathub files; no release
+//! workflow reaches a secret or an environment, as the Flathub pull request is opened on the
+//! Flathub side; and the dispatch inputs are those of master's stubs, which a meta-test on the
+//! trunk cannot read (docs/release.md lists them). Every rule has a negative control.
 
 use std::collections::BTreeSet;
 use std::sync::LazyLock;
 
 use meta::repo;
 use regex::Regex;
-use serde_yaml_ng::Value;
+use serde_yaml_ng::{Mapping, Value};
 
 const RELEASE: &str = ".github/workflows/release.yaml";
 const PUBLISH: &str = ".github/workflows/release-publish.yaml";
 const GATE: &str = ".github/workflows/release-gate.yaml";
-const FLATHUB: &str = ".github/workflows/flathub-pr.yaml";
+const FLATHUB: &str = ".github/workflows/flathub-check.yaml";
 const TRUNK: &str = "rust-rewrite";
 const VERSION_FILES: [&str; 4] = [
     "Cargo.toml",
@@ -228,21 +229,18 @@ fn order(workflow: &Value, name: &str, want_needs: &[&str], want_if: &[&str]) ->
     problems
 }
 
-/// The publish run decides, gates, tags and ships in that order; the dispatch checks the policy
-/// first, and its dry run gates and diffs the bumped tree.
+/// The publish run decides, then gates and checks the Flathub files, then merges the assets and
+/// tags in that order; the dispatch checks the policy first, and its dry run gates and checks the
+/// bumped tree.
 fn order_problems(workflows: &Workflows) -> Vec<String> {
     let released = "needs.decide.outputs.release == 'true'";
     let publish = &workflows.publish;
     let release = &workflows.release;
     let mut problems = [
         order(publish, "gate", &["decide"], &[released]),
-        order(publish, "publish", &["decide", "gate"], &[released]),
-        order(
-            publish,
-            "flathub",
-            &["decide", "publish"],
-            &[released, "startsWith(needs.decide.outputs.tag, 'v0.')"],
-        ),
+        order(publish, "flathub", &["decide"], &[released]),
+        order(publish, "assets", &["gate", "flathub"], &[released]),
+        order(publish, "publish", &["decide", "assets"], &[released]),
         order(release, "bump", &["policy"], &[]),
         order(release, "gate", &["bump"], &["inputs.dry_run"]),
         order(release, "flathub", &["bump"], &["inputs.dry_run"]),
@@ -263,12 +261,24 @@ fn order_problems(workflows: &Workflows) -> Vec<String> {
             ));
         }
     }
-    let flathub = &job(publish, "flathub")["with"];
-    if text(&flathub["channel"]) != "beta" || flathub["dry_run"] != Value::Bool(false) {
-        problems.push(
-            "release-publish.yaml's Flathub pull request is not a real run to beta".to_owned(),
-        );
+    for (name, workflow, tag) in [
+        (
+            "release-publish.yaml",
+            publish,
+            "${{ needs.decide.outputs.tag }}",
+        ),
+        ("release.yaml", release, "${{ needs.bump.outputs.tag }}"),
+    ] {
+        let flathub = job(workflow, "flathub");
+        if text(&flathub["uses"]) != "./.github/workflows/flathub-check.yaml"
+            || text(&flathub["with"]["tag"]) != tag
+        {
+            problems.push(format!(
+                "{name}'s flathub job does not check the Flathub files of the release's tag"
+            ));
+        }
     }
+    problems.extend(asset_problems(publish));
     if text(&job(publish, "publish")["with"]["prerelease"])
         != "${{ startsWith(needs.decide.outputs.tag, 'v0.') }}"
     {
@@ -277,48 +287,76 @@ fn order_problems(workflows: &Workflows) -> Vec<String> {
     problems
 }
 
-/// Only the push job reaches the Flathub token, in the `release` environment, and it runs no
-/// repository code; a 0.x tag to master is refused before anything is generated.
-fn secret_problems(workflows: &Workflows) -> Vec<String> {
+/// The release attaches the bundles and both Flathub files: the merged artifact the publish job
+/// names takes the per-architecture bundles and flathub-check's `flathub-files`.
+fn asset_problems(publish: &Value) -> Vec<String> {
     let mut problems = Vec::new();
-    for (name, job) in jobs(&workflows.flathub) {
-        let rendered = serde_yaml_ng::to_string(job).unwrap_or_default();
-        let is_push = name == "push";
-        if rendered.contains("secrets.") != is_push {
-            problems.push(format!(
-                "flathub-pr.yaml {name}: the Flathub token is reached by the wrong job"
-            ));
-        }
-        if (text(&job["environment"]) == "release") != is_push {
-            problems.push(format!(
-                "flathub-pr.yaml {name}: the release environment is on the wrong job"
-            ));
-        }
-        if is_push {
-            let runs_code = job["steps"]
-                .as_sequence()
-                .into_iter()
-                .flatten()
-                .any(|step| {
-                    text(&step["uses"]).starts_with("actions/checkout@")
-                        || text(&step["run"]).contains("scripts/")
-                        || text(&step["run"]).contains("make ")
-                });
-            if runs_code {
-                problems.push(
-                    "flathub-pr.yaml push: it runs repository code next to the token".to_owned(),
-                );
+    let merge = job(publish, "assets")["steps"]
+        .as_sequence()
+        .into_iter()
+        .flatten()
+        .find(|step| text(&step["uses"]).starts_with("actions/upload-artifact/merge@"));
+    let Some(merge) = merge else {
+        return vec!["release-publish.yaml's assets job merges no artifact".to_owned()];
+    };
+    let name = text(&merge["with"]["name"]);
+    if text(&job(publish, "publish")["with"]["artifact_name"]) != name || name.is_empty() {
+        problems.push("the release does not attach the merged assets".to_owned());
+    }
+    if text(&merge["with"]["pattern"]) != "{gx52-bundle-*,flathub-files}" {
+        problems.push(format!(
+            "the release assets are {:?}, not the bundles and the Flathub files",
+            merge["with"]["pattern"]
+        ));
+    }
+    problems
+}
+
+/// No release workflow reaches a secret or an environment, and the Flathub check writes nothing
+/// outside its run: the Flathub pull request is opened by the Flathub repository's own workflow
+/// (docs/release.md, "The Flathub update workflow"). The check is a called workflow only, so
+/// master needs no stub of it.
+fn token_problems(workflows: &Workflows) -> Vec<String> {
+    let mut problems = Vec::new();
+    for (file, workflow) in [
+        (RELEASE, &workflows.release),
+        (PUBLISH, &workflows.publish),
+        (GATE, &workflows.gate),
+        (FLATHUB, &workflows.flathub),
+    ] {
+        for (name, job) in jobs(workflow) {
+            let rendered = serde_yaml_ng::to_string(job).unwrap_or_default();
+            if rendered.contains("secrets.") || rendered.contains("secrets: inherit") {
+                problems.push(format!("{file} {name}: it reaches a secret"));
             }
-            if text(&job["if"]) != "${{ !inputs.dry_run }}" {
-                problems.push("flathub-pr.yaml push: it runs on a dry run".to_owned());
+            if !job["environment"].is_null() {
+                problems.push(format!("{file} {name}: it runs in an environment"));
             }
         }
     }
-    let refuses = job(&workflows.flathub, "prepare")["steps"][0]["run"]
-        .as_str()
-        .is_some_and(|run| run.contains("[[ \"$TAG\" == v0.* ]] && [ \"$CHANNEL\" = master ]"));
-    if !refuses {
-        problems.push("flathub-pr.yaml does not refuse a 0.x tag to master first".to_owned());
+    for (name, job) in jobs(&workflows.flathub) {
+        if job["permissions"] != parse("permissions", "contents: read") {
+            problems.push(format!(
+                "flathub-check.yaml {name}: its permissions are not contents: read"
+            ));
+        }
+        let script = runs(job);
+        if ["git push", "gh pr", "gh api"]
+            .iter()
+            .any(|write| script.contains(write))
+        {
+            problems.push(format!(
+                "flathub-check.yaml {name}: it pushes or opens something"
+            ));
+        }
+        let lints = script.contains("flatpak-builder-lint manifest");
+        if name == "prepare" && !lints {
+            problems.push("flathub-check.yaml does not lint the Flathub manifest".to_owned());
+        }
+    }
+    let on = &workflows.flathub["on"];
+    if on.as_mapping().map(Mapping::len) != Some(1) || on["workflow_call"].is_null() {
+        problems.push("flathub-check.yaml runs on more than workflow_call".to_owned());
     }
     problems
 }
@@ -334,23 +372,13 @@ type StubInput = (
 );
 
 /// The dispatch inputs of each workflow master carries a stub of.
-const STUB_INPUTS: &[(&str, &[StubInput])] = &[
-    (
-        RELEASE,
-        &[
-            ("version", "string", false, "", &[]),
-            ("dry_run", "boolean", false, "true", &[]),
-        ],
-    ),
-    (
-        FLATHUB,
-        &[
-            ("tag", "string", true, "~", &[]),
-            ("channel", "choice", true, "~", &["beta", "master"]),
-            ("dry_run", "boolean", false, "true", &[]),
-        ],
-    ),
-];
+const STUB_INPUTS: &[(&str, &[StubInput])] = &[(
+    RELEASE,
+    &[
+        ("version", "string", false, "", &[]),
+        ("dry_run", "boolean", false, "true", &[]),
+    ],
+)];
 
 fn scalar(value: &Value) -> String {
     match value {
@@ -365,10 +393,9 @@ fn scalar(value: &Value) -> String {
 fn input_problems(workflows: &Workflows) -> Vec<String> {
     let mut problems = Vec::new();
     for (file, want) in STUB_INPUTS {
-        let workflow = if *file == RELEASE {
-            &workflows.release
-        } else {
-            &workflows.flathub
+        let workflow = match *file {
+            RELEASE => &workflows.release,
+            other => panic!("master carries no stub of {other}"),
         };
         let inputs = &workflow["on"]["workflow_dispatch"]["inputs"];
         let names: Vec<&str> = inputs
@@ -414,8 +441,8 @@ fn runs(job: &Value) -> String {
         .join("\n")
 }
 
-/// A real run comes from the trunk only, in release.yaml and flathub-pr.yaml; the gate builds the
-/// copy with the tests on and lints both the manifest and the repository.
+/// A real run comes from the trunk only (release.yaml; the publish run is pushed there); the gate
+/// builds the copy with the tests on and lints both the manifest and the repository.
 fn guard_problems(workflows: &Workflows) -> Vec<String> {
     let mut problems = Vec::new();
     let policy = runs(job(&workflows.release, "policy"));
@@ -423,10 +450,6 @@ fn guard_problems(workflows: &Workflows) -> Vec<String> {
         .contains("[ \"$DRY_RUN\" != \"true\" ] && [ \"$REF\" != \"refs/heads/rust-rewrite\" ]")
     {
         problems.push("release.yaml's policy job lets a real run off the trunk".to_owned());
-    }
-    let prepare = runs(job(&workflows.flathub, "prepare"));
-    if !prepare.contains("[ \"$DRY_RUN\" != true ] && [ \"$REF\" != refs/heads/rust-rewrite ]") {
-        problems.push("flathub-pr.yaml lets a real run off the trunk".to_owned());
     }
     let build = job(&workflows.gate, "build");
     let gate_runs = runs(build);
@@ -475,7 +498,7 @@ fn all_problems(workflows: &Workflows) -> Vec<String> {
         version_problems(workflows),
         pin_problems(workflows),
         order_problems(workflows),
-        secret_problems(workflows),
+        token_problems(workflows),
         input_problems(workflows),
         guard_problems(workflows),
     ]
@@ -549,36 +572,9 @@ fn value_breaks() -> Vec<Break> {
             "decide".into(),
         ),
         (
-            "Flathub for 1.x on push",
-            vec!["publish", "jobs", "flathub", "if"],
-            "needs.decide.outputs.release == 'true'".into(),
-        ),
-        (
             "the dry run gates the unbumped tree",
             vec!["release", "jobs", "gate", "with"],
             Value::Null,
-        ),
-        (
-            "the token in prepare",
-            vec!["flathub", "jobs", "prepare", "env"],
-            parse("env", "T: ${{ secrets.FLATHUB_TOKEN }}"),
-        ),
-        (
-            "the push job on a dry run",
-            vec!["flathub", "jobs", "push", "if"],
-            Value::Null,
-        ),
-        (
-            "a default channel",
-            vec![
-                "flathub",
-                "on",
-                "workflow_dispatch",
-                "inputs",
-                "channel",
-                "default",
-            ],
-            "beta".into(),
         ),
         (
             "a real run by default",
@@ -605,6 +601,67 @@ fn value_breaks() -> Vec<Break> {
     ]
 }
 
+/// Breaks of the Flathub rules: the release without the Flathub files, a token or an environment
+/// anywhere, and a Flathub check that writes or skips its lint.
+fn flathub_breaks() -> Vec<Break> {
+    vec![
+        (
+            "the tag before the Flathub check",
+            vec!["publish", "jobs", "assets", "needs"],
+            parse("needs", "[decide, gate]"),
+        ),
+        (
+            "the bundles only",
+            vec!["publish", "jobs", "publish", "with", "artifact_name"],
+            "gx52-bundles".into(),
+        ),
+        (
+            "the Flathub files left out",
+            vec!["publish", "jobs", "assets", "steps"],
+            parse(
+                "steps",
+                "- uses: actions/upload-artifact/merge@cf430e030ddbb5b0abf93d22962f4752f3646cd9\n  \
+                 with: {name: release-assets, pattern: gx52-bundle-*}",
+            ),
+        ),
+        (
+            "the Flathub check of another tag",
+            vec!["release", "jobs", "flathub", "with", "tag"],
+            "v0.0.0".into(),
+        ),
+        (
+            "a token in the Flathub check",
+            vec!["flathub", "jobs", "prepare", "env"],
+            parse("env", "T: ${{ secrets.FLATHUB_TOKEN }}"),
+        ),
+        (
+            "an environment on the publish",
+            vec!["publish", "jobs", "assets", "environment"],
+            "release".into(),
+        ),
+        (
+            "inherited secrets",
+            vec!["publish", "jobs", "flathub", "secrets"],
+            "inherit".into(),
+        ),
+        (
+            "write access in the Flathub check",
+            vec!["flathub", "jobs", "prepare", "permissions"],
+            parse("permissions", "contents: write"),
+        ),
+        (
+            "a dispatchable Flathub check",
+            vec!["flathub", "on", "workflow_dispatch"],
+            Value::Mapping(Mapping::new()),
+        ),
+        (
+            "no lint of the Flathub manifest",
+            vec!["flathub", "jobs", "prepare", "steps"],
+            Value::Sequence(Vec::new()),
+        ),
+    ]
+}
+
 /// Breaks of the guards: a real run off the trunk, the gate without its tests or linters.
 fn guard_breaks() -> Vec<Break> {
     let gate_steps = |drop: &str| {
@@ -619,14 +676,9 @@ fn guard_breaks() -> Vec<Break> {
                 .collect(),
         )
     };
-    let without_first_step = |file: &str, name: &str| {
+    let without_first_step = |name: &str| {
         let workflows = workflows();
-        let workflow = if file == "release" {
-            &workflows.release
-        } else {
-            &workflows.flathub
-        };
-        let steps = job(workflow, name)["steps"]
+        let steps = job(&workflows.release, name)["steps"]
             .as_sequence()
             .cloned()
             .unwrap_or_default();
@@ -636,7 +688,7 @@ fn guard_breaks() -> Vec<Break> {
         (
             "a real release off the trunk",
             vec!["release", "jobs", "policy", "steps"],
-            without_first_step("release", "policy"),
+            without_first_step("policy"),
         ),
         (
             "the gate without its tests",
@@ -659,16 +711,12 @@ fn guard_breaks() -> Vec<Break> {
 /// Each mutation breaks one rule, and the checks see it.
 #[test]
 fn the_checks_catch_each_break() {
-    let mut flathub_guard = workflows();
-    let check = &mut flathub_guard.flathub["jobs"]["prepare"]["steps"][0]["run"];
-    *check = Value::from(text(check).replace("[ \"$DRY_RUN\" != true ] && ", ""));
-    assert!(
-        !all_problems(&flathub_guard).is_empty(),
-        "a real Flathub run off the trunk: not caught"
-    );
-
     let good = workflows();
-    for (name, path, value) in value_breaks().into_iter().chain(guard_breaks()) {
+    for (name, path, value) in value_breaks()
+        .into_iter()
+        .chain(flathub_breaks())
+        .chain(guard_breaks())
+    {
         let mut broken = good.clone();
         set(&mut broken, &path, value);
         assert!(!all_problems(&broken).is_empty(), "{name}: not caught");

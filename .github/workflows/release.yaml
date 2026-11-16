@@ -1,8 +1,9 @@
 name: Release
 
 # The first half of a release (docs/release.md): resolve the version and open the bump pull request
-# against the trunk. Merging it is the release: release-publish.yaml then gates, tags, publishes
-# and, for 0.x, opens the Flathub pull request. No tag is created here.
+# against the trunk. Merging it is the release: release-publish.yaml then gates, tags and publishes
+# it; the Flathub pull request comes from the Flathub repository's own update workflow. No tag is
+# created here.
 #
 #   policy  the version rules svu cannot know (scripts/release-policy.sh): before v1.0.0 the
 #           version is explicit, 0.99.x or 1.0.0. A real run only from the trunk.
@@ -11,8 +12,8 @@ name: Release
 #           allowed files, then (real run) the release/vX.Y.Z branch, the pull request and CI on it.
 #   A dry run, from any ref, stops version-bump-pr before it pushes, then builds the bumped tree:
 #   gate    release-gate.yaml with the bump's patch applied, both architectures;
-#   flathub flathub-pr.yaml in dry run on the same patched tree: the Flathub change, its diff and
-#           its build, nothing pushed.
+#   flathub flathub-check.yaml on the same patched tree: the Flathub manifest and cargo-sources.json
+#           the release would attach, linted and diffed against the Flathub branch.
 #
 # GitHub registers a dispatch workflow from the default branch only, so until M9 master carries a
 # stub of this file with the same inputs; `gh workflow run release.yaml --ref rust-rewrite` (or a
@@ -26,7 +27,7 @@ on:
         required: false
         default: ""
       dry_run:
-        description: "Resolve and bump, run the gate and the Flathub dry run on the bumped tree; push and open nothing"
+        description: "Resolve and bump, run the gate and the Flathub check on the bumped tree; push and open nothing"
         type: boolean
         required: false
         default: true
@@ -103,11 +104,9 @@ jobs:
     if: inputs.dry_run
     permissions:
       contents: read
-    uses: ./.github/workflows/flathub-pr.yaml
+    uses: ./.github/workflows/flathub-check.yaml
     with:
       tag: ${{ needs.bump.outputs.tag }}
-      channel: ${{ startsWith(needs.bump.outputs.tag, 'v0.') && 'beta' || 'master' }}
-      dry_run: true
       patch_artifact: version-bump-pr-patch
 
   summary:
@@ -131,6 +130,6 @@ jobs:
             echo
             echo "- Version: $VERSION (the bump job prints the metainfo entry)"
             echo "- Gate on the bumped tree: $GATE"
-            echo "- Flathub dry run (diff and build): $FLATHUB"
+            echo "- Flathub check (manifest, cargo-sources.json, diff): $FLATHUB"
           } >> "$GITHUB_STEP_SUMMARY"
           [ "$GATE" = success ] && [ "$FLATHUB" = success ]

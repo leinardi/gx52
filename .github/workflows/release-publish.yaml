@@ -8,11 +8,15 @@ name: Release publish
 #   gate     release-gate.yaml on the merge commit: the Flathub-style build, meson test and the
 #            linters on x86_64 and aarch64. A failure stops here: no tag exists yet, so the version
 #            is never published and the next bump drops its metainfo entry.
+#   flathub  flathub-check.yaml, next to the gate: the Flathub manifest of the tag (git source,
+#            x-checker-data) and cargo-sources.json, linted; pushed nowhere.
+#   assets   the bundles and the two Flathub files merged into the one flat artifact the release
+#            attaches.
 #   publish  gh-reusable-workflows' simple-tag-and-release: the vX.Y.Z tag on the merge commit,
-#            created by publishing the release with both bundles; a 0.x release is a pre-release.
-#   flathub  for 0.x only, flathub-pr.yaml on the tag to the beta channel, its one valid channel.
-#            From 1.0.0 on no Flathub pull request is opened here: the maintainer dispatches
-#            flathub-pr.yaml with the channel (beta first, master to promote the same tag).
+#            created by publishing the release with its assets; a 0.x release is a pre-release.
+#
+# No Flathub pull request is opened here: flathub/com.leinardi.gx52's own update workflow opens it
+# from the release (docs/release.md, "The Flathub update workflow").
 #
 # Every step is re-runnable ("Re-run failed jobs"): each reusable workflow finishes what exists.
 on:
@@ -56,8 +60,33 @@ jobs:
       contents: read
     uses: ./.github/workflows/release-gate.yaml
 
+  flathub:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/flathub-check.yaml
+    with:
+      tag: ${{ needs.decide.outputs.tag }}
+
+  # simple-tag-and-release attaches the files of one artifact.
+  assets:
+    needs: [decide, gate, flathub]
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {}
+
+    steps:
+      - name: Merge the release assets
+        uses: actions/upload-artifact/merge@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-assets
+          pattern: "{gx52-bundle-*,flathub-files}"
+          retention-days: 7
+
   publish:
-    needs: [decide, gate]
+    needs: [decide, assets]
     if: needs.decide.outputs.release == 'true'
     permissions:
       contents: write
@@ -66,15 +95,4 @@ jobs:
       version: ${{ needs.decide.outputs.tag }}
       base_branch: rust-rewrite
       prerelease: ${{ startsWith(needs.decide.outputs.tag, 'v0.') }}
-      artifact_name: gx52-bundles
-
-  flathub:
-    needs: [decide, publish]
-    if: needs.decide.outputs.release == 'true' && startsWith(needs.decide.outputs.tag, 'v0.')
-    permissions:
-      contents: read
-    uses: ./.github/workflows/flathub-pr.yaml
-    with:
-      tag: ${{ needs.decide.outputs.tag }}
-      channel: beta
-      dry_run: false
+      artifact_name: release-assets
