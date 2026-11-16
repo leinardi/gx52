@@ -3,14 +3,16 @@
 How a GX52 release is versioned, built and published to Flathub, what to do when one fails halfway,
 and what has to be set up by hand. The decisions are in [rewrite-analysis.md](rewrite-analysis.md)
 sections 8 and 9; what the build and CI jobs were proven to do is in [spike
-S6](spikes/06-build-and-release.md). The pipeline is four workflows:
+S6](spikes/06-build-and-release.md). The pipeline is four workflows here, and one in the Flathub
+repository:
 
 | Workflow | Runs on | Does |
 | --- | --- | --- |
 | `.github/workflows/release.yaml` | dispatch | the version policy, then the bump pull request; a dry run gates the bumped tree |
-| `.github/workflows/release-publish.yaml` | push of the version files to the trunk | decides that the push is a release, gates it, tags and publishes it, opens the beta Flathub pull request for `0.x` |
+| `.github/workflows/release-publish.yaml` | push of the version files to the trunk | decides that the push is a release, gates it, checks the Flathub files, tags and publishes it |
 | `.github/workflows/release-gate.yaml` | called by both | the Flathub-style build, `meson test` and the linters on both architectures |
-| `.github/workflows/flathub-pr.yaml` | dispatch, and called by both | the Flathub pull request of a tag to a channel |
+| `.github/workflows/flathub-check.yaml` | called by both | the Flathub manifest of the tag and `cargo-sources.json`, linted and diffed; pushes nothing |
+| `update.yml` in `flathub/com.leinardi.gx52` | weekly, and dispatch | the Flathub pull request of a new tag, per channel branch ([The Flathub update workflow](#the-flathub-update-workflow)) |
 
 The shared logic is in `leinardi/gh-reusable-workflows` (`version-bump-pr`, `release-on-merge`,
 `simple-tag-and-release`), the same pattern as `rust-common` and `gtk-rs-skills`.
@@ -24,12 +26,15 @@ Python application, which goes with the legacy tree in M9
 - A merged pull request `chore(release): bump version to X.Y.Z` with one commit, which changes the
   version in `Cargo.toml`, `Cargo.lock`, `meson.build` and the metainfo.
 - A `vX.Y.Z` tag on the merge commit, created only after the gate passed.
-- A GitHub release with the notes (the merged pull requests) and two Flatpak bundles,
-  `gx52-x86_64.flatpak` and `gx52-aarch64.flatpak`, built from the merge commit. A `0.x` release
-  is a pre-release.
-- A pull request on [flathub/com.leinardi.gx52](https://github.com/flathub/com.leinardi.gx52)
-  against a channel branch (`beta` or `master`), from the branch `release/<channel>/vX.Y.Z`. The
-  maintainer merges it by hand; Flathub then builds and publishes.
+- A GitHub release with the notes (the merged pull requests) and four assets built from the merge
+  commit: two Flatpak bundles, `gx52-x86_64.flatpak` and `gx52-aarch64.flatpak`, plus
+  `cargo-sources.json` (generated from the tagged `Cargo.lock`) and `com.leinardi.gx52.json` (the
+  generated Flathub manifest). A `0.x` release is a pre-release.
+- A pull request on [flathub/com.leinardi.gx52](https://github.com/flathub/com.leinardi.gx52) for
+  each channel branch that follows the tag ([Versions and channels](#versions-and-channels)), from
+  the branch `updates/<channel>`, with the new tag and commit and the release's
+  `cargo-sources.json`. It is opened by the Flathub repository's own update workflow, not by this
+  repository. The maintainer merges it by hand; Flathub then builds and publishes.
 
 ## Versions and channels
 
@@ -46,13 +51,21 @@ Python application, which goes with the legacy tree in M9
 - **Higher than every release:** the version must be higher than every `vX.Y.Z` tag, than the
   legacy tags `0.7.0` … `0.7.6` (never below `0.7.6`, even without them) and than the version the
   tree carries. Only strict `vMAJOR.MINOR.PATCH` tags count (no suffixes, no leading zeros).
-- **Channels:** Flathub has two branches, `master` (stable) and `beta`. A `0.x` tag goes to `beta`
-  only, so `0.99.x` cannot replace `0.7.6` on stable before `1.0.0` (rewrite analysis, section
-  12.1); `flathub-pr.yaml` refuses a `0.x` tag to `master`. For `0.x`, `release-publish.yaml` opens
-  the `beta` pull request itself, since it is the only valid channel. From `1.0.0` on it opens none:
-  the maintainer dispatches `flathub-pr.yaml` with an explicit `channel` (no default), `beta` first
-  for a release that goes through beta, `master` later to promote the same tag. A beta and a master
-  pull request of one tag can coexist, as they come from different branches.
+- **Channels:** Flathub has two branches, `master` (stable) and `beta`. No workflow here has a
+  channel input: the channel is decided on the Flathub side, by the `x-checker-data` of each
+  branch's manifest, which the update workflow follows (rewrite analysis, section 9.4):
+  - `beta` follows every `vX.Y.Z` tag;
+  - `master` keeps the legacy `0.7.6` manifest, with no `x-checker-data`, until the `1.0.0`
+    migration pull request ([One-time setup](#one-time-setup)), so it gets no update pull request
+    and `0.99.x` cannot replace `0.7.6` on stable (rewrite analysis, section 12.1). From then on
+    every tag is `1.0.0` or higher, and the checker takes the highest tag, so `master` needs no
+    version constraint of its own.
+- **Beta first, and holding a release:** from `1.0.0` on, a release gets a pull request on both
+  branches. The `master` one is opened as a draft. Promoting a release to stable means marking that
+  draft ready and merging it once beta is good. Holding it back means **leaving the draft open,
+  never closing it**: the update workflow does not remember a closed pull request, and its next run
+  opens the same update again. A held version is not rejected for good: the next tag updates the
+  same `master` pull request in place and supersedes it.
 
 Users of the beta channel opt in once (desk research, Flathub beta channel):
 
@@ -89,7 +102,7 @@ on a scratch clone: `make release-bump VERSION=0.99.0`.
 ## CI jobs
 
 `ci.yaml`'s Flatpak jobs come from the S6 reference workflow, which passed on GitHub Actions on
-2026-10-28; `release-gate.yaml` and `flathub-pr.yaml` reuse them. The lessons S6 paid for:
+2026-10-28; `release-gate.yaml` reuses them. The lessons S6 paid for:
 
 - **Native arm runner.** The Flatpak build is a matrix of `x86_64` on `ubuntu-24.04` and `aarch64`
   on the free `ubuntu-24.04-arm` runner; no QEMU.
@@ -104,14 +117,14 @@ on a scratch clone: `make release-bump VERSION=0.99.0`.
 
 GitHub registers a `workflow_dispatch` workflow only from the default branch, and runs a schedule
 only from it. Until the rewrite lands (M9) the default branch is the legacy `master`, while releases
-are cut from `rust-rewrite`. So `master` carries stubs of `ci.yaml`, `release.yaml` and
-`flathub-pr.yaml`, with the real files' dispatch inputs and a dispatch trigger only, and the real
-`scheduled-scan.yaml`. A dispatch then runs the file of the ref it names:
+are cut from `rust-rewrite`. So `master` carries stubs of `ci.yaml` and `release.yaml`, with the
+real files' dispatch inputs and a dispatch trigger only, and the real `scheduled-scan.yaml`.
+`flathub-check.yaml` is only called, never dispatched, so it needs no stub. A dispatch then runs
+the file of the ref it names:
 
 ```bash
 gh workflow run release.yaml --ref rust-rewrite -f version=0.99.0 -f dry_run=false
 gh workflow run release.yaml --ref m8/release -f version=0.99.0    # dry run, the default
-gh workflow run flathub-pr.yaml --ref rust-rewrite -f tag=v1.0.0 -f channel=beta -f dry_run=false
 ```
 
 A stub dispatched on `master` itself fails with "dispatch with --ref rust-rewrite". version-bump-pr
@@ -123,13 +136,10 @@ are these; the `release_workflows` meta-test checks that the real files declare 
 | --- | --- | --- | --- | --- |
 | `release.yaml` | `version` | string | no | `""` |
 | `release.yaml` | `dry_run` | boolean | no | `true` |
-| `flathub-pr.yaml` | `tag` | string | yes | none |
-| `flathub-pr.yaml` | `channel` | choice `beta`, `master` | yes | none |
-| `flathub-pr.yaml` | `dry_run` | boolean | no | `true` |
 
 A change to these inputs is made on both branches. The trunk's meta-tests cannot read `master`, so
 the stubs and `scheduled-scan.yaml` are checked by hand once the bootstrap is merged: `gh workflow
-list` shows CI, Release, Flathub PR and Scheduled scan; a stub dispatched on `master` fails with its
+list` shows CI, Release and Scheduled scan; a stub dispatched on `master` fails with its
 message; `gh workflow run scheduled-scan.yaml` on `master` passes (or fails only in its
 runtime job, naming a newer GNOME runtime).
 
@@ -141,19 +151,22 @@ the trunk, and the `base_branch` inputs go
 
 1. **Dry run first**, from the trunk or a branch: `gh workflow run release.yaml --ref <branch> -f
    version=X.Y.Z`. Check the resolved version, the metainfo entry the bump job prints, the gate on
-   both architectures and the Flathub diff.
+   both architectures and the Flathub check's manifest and diff.
 2. **Dispatch the real run** on the trunk with `dry_run=false`. It opens the pull request
    `chore(release): bump version to X.Y.Z` from `release/vX.Y.Z` and dispatches CI on it.
 3. **Merge it with a merge commit** once CI is green. Do not push to the branch or use "Update
    branch": to refresh it, dispatch the release again.
 4. **The merge push runs `release-publish.yaml`:** release-on-merge checks that the push is the
    merge of exactly that one bump commit and waits for CI on the merge commit (up to 90 minutes),
-   the gate builds and tests the merge commit, then simple-tag-and-release creates the tag by
-   publishing the release with both bundles, and for `0.x` the beta Flathub pull request is
-   opened.
-5. **Merge the Flathub pull request** once Flathub's bot built it (it can be installed from the
-   bot's test repository). Automating this merge was rejected (rewrite analysis, section 9.2).
-6. **From `1.0.0` on**, dispatch `flathub-pr.yaml` with the tag and the channel.
+   the gate builds and tests the merge commit and the Flathub check writes and lints the Flathub
+   files, then simple-tag-and-release creates the tag by publishing the release with its four
+   assets.
+5. **Dispatch `update.yml` on the Flathub repository** (Actions, "Update", Run workflow), or wait
+   for its weekly run. It opens the pull request of each channel that follows the tag.
+6. **Merge the Flathub pull request** once Flathub's bot built it (it can be installed from the
+   bot's test repository). Automating this merge was rejected (rewrite analysis, section 9.2). A
+   `master` pull request is a draft until it is promoted
+   ([Versions and channels](#versions-and-channels)).
 
 Only one bump runs at a time (version-bump-pr's concurrency group). A newer dispatch of
 `release.yaml` that queues behind a running one replaces an older pending one, as GitHub keeps one
@@ -174,27 +187,57 @@ pending run per group; dispatch it again if that was the real run.
 
 A failure stops the run before the tag: nothing is published, and the version is never used.
 
-## The Flathub pull request
+## The Flathub check
 
-`flathub-pr.yaml` replaces the channel branch's tree instead of patching it:
+`flathub-check.yaml` writes the files the Flathub side needs, next to the gate and before the tag:
 
-- every file goes except `README.md`: the legacy Python modules, `pypi-dependencies.json`, the
-  `shared-modules` and `flatpak-builder-tools` submodules and the script that refreshed them;
-- the manifest is the tagged tree's `build-aux/com.leinardi.gx52.json` put through
+- the manifest is the tree's `build-aux/com.leinardi.gx52.json` put through
   `scripts/flathub-manifest.sh`: the app's `dir` source becomes `{"type": "git", "url":
-  "https://github.com/leinardi/gx52.git", "tag", "commit"}`, and everything else (the
-  `cargo-sources.json` entry, the inline `.cargo/config.toml` that vendors the crates, the runtime,
-  the SDK extension, the finish-args) is the tagged manifest's, so the legacy `--share=network` and
-  `--talk-name=org.freedesktop.Flatpak` go;
-- `cargo-sources.json` is generated from the tagged `Cargo.lock` with the pinned generator;
-- `flathub.json` becomes `{"only-arches": ["x86_64", "aarch64"]}`.
+  "https://github.com/leinardi/gx52.git", "tag", "commit", "x-checker-data": {"type": "git",
+  "tag-pattern": "^v([0-9]+\\.[0-9]+\\.[0-9]+)$"}}`, with the merge commit the tag will name, and
+  everything else (the `cargo-sources.json` entry, the inline `.cargo/config.toml` that vendors the
+  crates, the runtime, the SDK extension, the finish-args) is the tree's manifest's;
+- `cargo-sources.json` is generated from the tree's `Cargo.lock` with the pinned generator.
 
-`flatpak-builder-lint manifest` checks the result, the full diff is printed, and the generated
-manifest is built on `x86_64` and `aarch64` from the git tag, offline, as Flathub's bot will build
-it. Only then does the `push` job, the one job with the Flathub token, push the commit to
-`release/<channel>/vX.Y.Z` (under a lease, after checking that the channel has not moved) and open
-the pull request against `<channel>`, or leave an open one as it is. When the channel already holds
-exactly this change, nothing is built or pushed.
+`flatpak-builder-lint manifest` checks the manifest, and its diff against the Flathub branch is
+printed for review. Both files become release assets. The check builds nothing of its own: before
+the tag exists the manifest can only be built from a `dir` source, which is exactly what the gate
+builds. It pushes nothing and reaches no secret.
+
+## The Flathub update workflow
+
+`.github/workflows/update.yml` lives in `flathub/com.leinardi.gx52`, on its default branch
+`master`, because scheduled and dispatch workflows only register from the default branch. It follows
+the custom-workflow pattern of the Flathub documentation ("Automating updates") and of
+`flatpak-external-data-checker`, and it opens the pull request with that repository's own
+`GITHUB_TOKEN`. This repository holds no token for Flathub: a fine-grained personal access token
+cannot write to a public repository of an organisation its owner is not a member of, and a classic
+token's `public_repo` scope would grant write access to every public repository the account can
+write to (rewrite analysis, section 9.1).
+
+- **Triggers:** `schedule`, weekly at most (Flathub's guidance), and `workflow_dispatch`.
+- **Matrix** over `beta` and `master`, one job per branch, in an `update-<branch>` concurrency
+  group with `cancel-in-progress: false`, so overlapping runs queue instead of racing on the same
+  head branch. A branch whose manifest has no `x-checker-data` is a no-op.
+- **Check:** check out the branch, run `flatpak-external-data-checker --edit-only` on the manifest.
+  It only edits the working tree; `--commit-only` checks out a branch of its own and plain
+  `--update` opens a pull request itself, so neither is used. The checker moves the app source's
+  `tag` and `commit` to the newest tag the `x-checker-data` matches.
+- **Cargo sources:** if the tag changed, download the release's `cargo-sources.json` asset from
+  `https://github.com/leinardi/gx52/releases/download/<tag>/` into the working tree. It is the file
+  the release gate built with, so the generator stays pinned in one place (`.mk/flatpak.mk`).
+- **Pull request:** `peter-evans/create-pull-request`, pinned by SHA, with `permissions: contents:
+  write, pull-requests: write` and explicit inputs: `base` the matrix branch, a stable head branch
+  `updates/<branch>` (never the shared default `create-pull-request/patch`), `draft` on `master`,
+  and the tag in the title and commit message. Each channel has at most one open update pull
+  request, and a repeat run updates it in place.
+- **No automerge** (rewrite analysis, section 9.2), and Flathub's global checker is disabled with
+  `"disable-external-data-checker": true` in `flathub.json`: it only runs on the default branch and
+  does not refresh `cargo-sources.json`.
+- **What it does not do:** it changes only the source `tag` and `commit` and `cargo-sources.json`. A
+  runtime bump (twice a year), a finish-args change or any other manifest change goes to the
+  Flathub repository as a hand pull request, made from the release's `com.leinardi.gx52.json`
+  asset.
 
 ## Dry runs
 
@@ -203,15 +246,13 @@ exactly this change, nothing is built or pushed.
 - **`release.yaml`:** the policy job and version-bump-pr run exactly as in a real run: the version
   is resolved (`svu` included after `1.0.0`, so "nothing to bump" fails the same way), the bump
   command runs, and its patch is uploaded; nothing is pushed or opened. Then the gate runs on the
-  dispatched commit with the patch applied, and `flathub-pr.yaml` runs in dry run on that same
-  patched tree: its manifest, the `Cargo.lock` behind `cargo-sources.json` and its build all come
-  from the bumped tree. The summary lists the version and both results.
-- **`flathub-pr.yaml` alone:** the dispatched commit as it is, which checks the packaging of the
-  current tree without a bump.
+  dispatched commit with the patch applied, and the Flathub check on that same patched tree: its
+  manifest and the `Cargo.lock` behind `cargo-sources.json` come from the bumped tree, and the
+  manifest names the dispatched commit (no tag exists for it). The summary lists the version and
+  both results.
 
-A Flathub dry run prints the full diff, removed files included, and builds the generated manifest
-from a `dir` source in place of the tag (no tag exists yet). Before the `beta` branch exists, it
-diffs against `master` and says so.
+The diff of a dry run is against `beta` for a `0.x` version, `master` from `1.0.0` on; before the
+`beta` branch exists it is against `master`, and says so.
 
 ## Screenshots
 
@@ -248,9 +289,10 @@ what exists and fails with "needs a human" on anything that disagrees with it.
 | `release-publish.yaml` cancelled while pending | Bump merged, nothing tagged | A third push of a version file replaced it in release-on-merge's group: "Re-run all jobs" on it |
 | `release-publish.yaml` decide | Bump merged, nothing tagged | A transient failure (API, CI timeout): re-run. A refusal (not the one bump commit): revert the change and dispatch a release |
 | The gate | Bump merged, **no tag** | A transient failure (runner, network): re-run. If the code is wrong, fix it on the trunk and release the next patch version; the next bump drops the never-published `<release>` entry |
-| publish (tag, release, bundles) | Gate passed | Re-run; a draft or a published release is finished, never replaced |
-| The Flathub pull request | GitHub release exists | Re-run, or dispatch `flathub-pr.yaml` with the tag; the branch is updated, the open pull request kept |
-| Flathub's build bot | PR open | Fix in the Flathub PR if the fix is packaging-only; otherwise release the next patch version and close the PR |
+| The Flathub check | Bump merged, **no tag** | As the gate: re-run a transient failure, release the next patch version for a wrong manifest |
+| publish (tag, release, assets) | Gate and check passed | Re-run; a draft or a published release is finished, never replaced |
+| Flathub `update.yml` | GitHub release exists | Dispatch it again; the existing `updates/<branch>` pull request is updated, not duplicated |
+| Flathub's build bot | PR open | Fix in the Flathub PR if the fix is packaging-only; otherwise release the next patch version, which updates the same PR |
 
 A tag is created only after the gate and is never deleted or moved ("Immutable tags" ruleset), so
 a version number is never reused for different code.
@@ -262,18 +304,39 @@ a version number is never reused for different code.
 - **Repository settings** (`gh-leinardi-iac`, `repo_gx52`): GitHub Actions may create pull
   requests (the bump PR); a ruleset on `rust-rewrite` until M9 (pull request, review, no deletion
   or force-push) with `ci-result` required; no required checks on the legacy `master`, whose
-  `ci.yaml` stub never runs on a pull request; the `release` environment, deployable from
-  `rust-rewrite` only.
-- **Flathub token:** stored as the `FLATHUB_TOKEN` secret of the `release` environment, read only
-  by `flathub-pr.yaml`'s push job. A fine-grained personal access token of the maintainer limited
-  to `flathub/com.leinardi.gx52` ("Contents: read and write", "Pull requests: read and write"),
-  if the `flathub` organisation accepts fine-grained tokens; otherwise a classic token with
-  `public_repo`. Which one was possible is recorded here when it is created. Renewal date in the
-  maintainer's calendar.
-- **Flathub `beta` branch, before the first beta release:** it does not exist yet, and no workflow
-  creates it. The maintainer creates it from `master` following Flathub's documented flow; it holds
-  the legacy manifest until the first `flathub-pr.yaml` pull request migrates it. If that flow does
-  not let a maintainer push a new branch, the flow it prescribes is followed and recorded here.
+  `ci.yaml` stub never runs on a pull request. No environment and no secret: the `release`
+  environment, applied for the Flathub token of the earlier design, is unused and is removed from
+  the IaC.
+- **No Flathub token.** The Flathub pull request is opened from the Flathub side
+  ([The Flathub update workflow](#the-flathub-update-workflow)).
+- **Flathub `beta` branch and migration pull request, before the first beta release:** `beta`
+  does not exist yet, and no workflow creates it. The maintainer creates it with their own `gh`
+  login after `v0.99.0` is released, following Flathub's documented flow (a pull request against
+  `master` for the test build, then `beta` created from `master` with the branch merged in; desk
+  research). That pull request migrates the tree: the manifest is the `v0.99.0` release asset
+  `com.leinardi.gx52.json`, `cargo-sources.json` its asset, `flathub.json` becomes
+  `{"only-arches": ["x86_64", "aarch64"], "disable-external-data-checker": true}`, and every other
+  file goes except `README.md` (the Python modules, `pypi-dependencies.json`, the `shared-modules`
+  and `flatpak-builder-tools` submodules and the script that refreshed them). If the flow does not
+  let a maintainer push a new branch, the flow it prescribes is followed and recorded here.
+- **`update.yml` on the Flathub `master`**, committed by hand. Before relying on it, check and
+  record here:
+  - that merging it to `master` does not trigger an unwanted republish of `0.7.6`, and that
+    Flathub's linter accepts it;
+  - whether a pull request opened with `GITHUB_TOKEN` triggers Flathub's build bot; if it does not,
+    the maintainer comments `bot, build` on the pull request.
+- **Actions may open pull requests on the Flathub repository.** The workflow's permissions are not
+  enough: the repository needs "Allow GitHub Actions to create and approve pull requests"
+  (Settings, Actions, General, Workflow permissions), and the `flathub` organisation policy must
+  not block it. The `gh-leinardi-iac` setting of the same name covers `leinardi/gx52` only. If a
+  collaborator cannot change it, the maintainer asks the Flathub admins (an issue or the Matrix
+  channel). Until it is enabled, `update.yml` pushes `updates/<branch>` and the maintainer opens the
+  pull request from it by hand. The outcome is recorded here.
+- **`1.0.0` migration pull request to `master`:** `master` keeps the legacy manifest without
+  `x-checker-data` until this pull request replaces it, so the update workflow cannot reach it
+  before. When `v1.0.0` is released, the maintainer opens it by hand against `master`, with the
+  same content as the `beta` migration, from the `v1.0.0` assets. From then on `update.yml` covers
+  `master` too.
 - **Private vulnerability reporting** on `leinardi/gx52`, as [SECURITY.md](../SECURITY.md) links to
   it: enabled by the IaC, checked once.
 - **Dependabot:** production Cargo dependencies are committed as `fix(deps)` and so trigger a patch

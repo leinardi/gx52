@@ -73,17 +73,22 @@ item off, or delete it, in the commit that does it.
       meta-tests run in their own bare-runner job, `meta`.
 - [x] `docs/release.md`: the release specification (rewrite analysis, section 9).
 - [x] `.github/workflows/release.yaml`, implementing [release.md](release.md): `release.yaml`,
-      `release-publish.yaml`, `release-gate.yaml` and `flathub-pr.yaml`, on gh-reusable-workflows'
+      `release-publish.yaml`, `release-gate.yaml` and `flathub-check.yaml`, on gh-reusable-workflows'
       version-bump-pr, release-on-merge and simple-tag-and-release (M8).
 - [x] `scheduled-scan.yaml`: cargo-deny on the trunk every week, and a check that fails when
       Flathub has a newer GNOME runtime than the manifests (rewrite analysis, section 8). On
       `master` until M9 ([release.md](release.md#dispatching-before-m9)).
 - [ ] Repository settings in `gh-leinardi-iac` (`repo_gx52`, M8): a ruleset on `rust-rewrite`
-      with `ci-result` required (none on the legacy `master`), Actions may create pull requests,
-      the `release` environment deployable from `rust-rewrite`; private vulnerability reporting is
-      already on for public repositories. Written on the IaC branch `feat/gx52-release`; tick when
-      the maintainer applied it. By hand ([release.md](release.md#one-time-setup)): the
-      `FLATHUB_TOKEN` environment secret, and the Flathub `beta` branch.
+      with `ci-result` required (none on the legacy `master`), Actions may create pull requests;
+      private vulnerability reporting is already on for public repositories. Applied
+      (2026-11-15). Tick when the unused `release` environment is removed: no Flathub token
+      secret, the Flathub PR is opened by the Flathub repository's own workflow (next item).
+- [ ] Flathub side ([release.md, "The Flathub update
+      workflow"](release.md#the-flathub-update-workflow)): the `beta` migration PR, `update.yml` on
+      the Flathub `master`, and "Allow GitHub Actions to create and approve pull requests" on
+      `flathub/com.leinardi.gx52`, with the outcome recorded in release.md.
+- [ ] `master`: remove the `flathub-pr.yaml` stub, which no workflow on the trunk matches any
+      more.
 
 ## Docs and project files
 

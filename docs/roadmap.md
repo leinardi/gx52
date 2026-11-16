@@ -625,8 +625,9 @@ Acceptance:
    passes on both architectures and the tooling-todo item is ticked.
    - **Code done, dry run pending (2026-11-15):** `release.yaml` (policy, bump PR through
      gh-reusable-workflows' `version-bump-pr` with `base_branch: rust-rewrite`, gate and Flathub
-     dry runs), `release-publish.yaml` (release-on-merge, the gate, tag and GitHub pre-release for
-     `0.x`, the Flathub PR to `beta`), `release-gate.yaml` and `flathub-pr.yaml`, with
+     dry runs), `release-publish.yaml` (release-on-merge, the gate and the Flathub check, tag and
+     GitHub pre-release for `0.x` with the bundles and the Flathub files), `release-gate.yaml` and
+     `flathub-check.yaml` (which replaced `flathub-pr.yaml` on 2026-11-16), with
      `scripts/release-bump.sh`, `release-policy.sh` and `flathub-manifest.sh` and their meta-tests.
      Before M9 they are dispatched with `--ref rust-rewrite` through stubs on `master`
      ([release.md](release.md#dispatching-before-m9)). The metainfo `<screenshots>` block is in;
@@ -636,15 +637,20 @@ Acceptance:
 2. **(code) `scheduled-scan.yaml` and repository settings**, the remaining items of
    [tooling-todo.md, "Needs CI and the release
    flow"](tooling-todo.md#needs-ci-and-the-release-flow), plus the one-time setup of
-   [release.md](release.md#one-time-setup) (release identity, Flathub token, the Flathub `beta`
-   branch). Done when: the items are ticked and the setup is recorded.
+   [release.md](release.md#one-time-setup) (release identity, the Flathub `beta` branch and
+   migration PR, the Flathub `update.yml` and the Actions PR setting on the Flathub repository; no
+   Flathub token). Done when: the items are ticked and the setup is recorded.
    - **Applied (2026-11-15):** `scheduled-scan.yaml` on `master` (weekly
      `cargo deny` on the trunk, and a check that both manifests are on Flathub's newest GNOME
      runtime); gh-leinardi-iac `repo_gx52`: the `rust-rewrite` ruleset with `ci-result` required,
-     Actions may create pull requests, the `release` environment deployable from `rust-rewrite`
+     Actions may create pull requests, and a `release` environment deployable from `rust-rewrite`
      only. Recorded in [release.md](release.md#one-time-setup). Applied with `tofu apply` and the
-     scan merged to `master` (2026-11-15). Open: the `FLATHUB_TOKEN` secret (and which token kind
-     Flathub accepted) and the Flathub `beta` branch.
+     scan merged to `master` (2026-11-15).
+   - **Changed (2026-11-16):** no Flathub token (a fine-grained one cannot write to the `flathub`
+     organisation's repository, a classic one is too wide): the Flathub pull request is opened by
+     the Flathub repository's own `update.yml`. The `release` environment is unused and goes from
+     the IaC; the `master` stub of `flathub-pr.yaml` goes. Open: the Flathub side (the Actions PR
+     setting, the `beta` migration PR after `v0.99.0`, `update.yml`).
 3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
@@ -703,6 +709,8 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 - [ ] X52 non-Pro support is documented as "best effort": tested by a user and recorded in
       protocol.md, or explicitly unverified in the README and the release notes.
 - [ ] Released explicitly as `1.0.0` to `master` ([release.md](release.md#versions-and-channels)).
+- [ ] The `1.0.0` migration PR to the Flathub `master` is merged: the Rust manifest with its
+      `x-checker-data`, and the legacy files removed ([release.md](release.md#one-time-setup)).
 
 ## `1.x`
 
