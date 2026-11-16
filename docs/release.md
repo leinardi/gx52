@@ -331,10 +331,17 @@ a version number is never reused for different code.
 - **Actions may open pull requests on the Flathub repository.** The workflow's permissions are not
   enough: the repository needs "Allow GitHub Actions to create and approve pull requests"
   (Settings, Actions, General, Workflow permissions), and the `flathub` organisation policy must
-  not block it. The `gh-leinardi-iac` setting of the same name covers `leinardi/gx52` only. If a
-  collaborator cannot change it, the maintainer asks the Flathub admins (an issue or the Matrix
-  channel). Until it is enabled, `update.yml` pushes `updates/<branch>` and the maintainer opens the
-  pull request from it by hand. The outcome is recorded here.
+  not block it. The `gh-leinardi-iac` setting of the same name covers `leinardi/gx52` only. The
+  maintainer is not an admin of the Flathub repository: its settings page shows them only the
+  Actions secrets and variables (checked on 2026-11-16), so the setting can neither be read nor
+  changed from this side. It is found out by the first run of `update.yml` instead:
+  - if `create-pull-request` opens the pull request, nothing more is needed;
+  - if it fails with "GitHub Actions is not permitted to create or approve pull requests", the
+    branch `updates/<branch>` is already pushed: the maintainer opens the pull request from it by
+    hand (one click on the compare page), still with no token, and asks the Flathub admins to
+    enable the setting (an issue on `flathub/flathub` or the Matrix channel).
+
+  The outcome is recorded here.
 - **`1.0.0` migration pull request to `master`:** `master` keeps the legacy manifest without
   `x-checker-data` until this pull request replaces it, so the update workflow cannot reach it
   before. When `v1.0.0` is released, the maintainer opens it by hand against `master`, with the

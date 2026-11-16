@@ -85,8 +85,9 @@ item off, or delete it, in the commit that does it.
       secret, the Flathub PR is opened by the Flathub repository's own workflow (next item).
 - [ ] Flathub side ([release.md, "The Flathub update
       workflow"](release.md#the-flathub-update-workflow)): the `beta` migration PR, `update.yml` on
-      the Flathub `master`, and "Allow GitHub Actions to create and approve pull requests" on
-      `flathub/com.leinardi.gx52`, with the outcome recorded in release.md.
+      the Flathub `master`, and whether its first run may open pull requests ("Allow GitHub
+      Actions to create and approve pull requests" on `flathub/com.leinardi.gx52` is admin-only,
+      so it is found out by that run), with the outcome recorded in release.md.
 - [ ] `master`: remove the `flathub-pr.yaml` stub, which no workflow on the trunk matches any
       more.
 
