@@ -103,12 +103,14 @@ for ((try = 0; try < WESTON_TRIES; try++)); do
 done
 $ready || weston_failed "weston did not accept a client in $((WESTON_TRIES / 10)) s"
 
-# Every variable the app reads is set here, over anything the sandbox would pass on.
+# Every variable the app reads is set or unset here, over anything the sandbox would pass on. An
+# empty GTK_THEME is not the same as none: it drops the libadwaita and app stylesheets.
 env -i "${base_env[@]}" WAYLAND_DISPLAY="$SOCKET" \
     timeout --kill-after=10 180 flatpak run \
-    --env=LC_ALL=C.UTF-8 --env=LANG=C.UTF-8 --env=LANGUAGE= \
+    --env=LC_ALL=C.UTF-8 --env=LANG=C.UTF-8 --unset-env=LANGUAGE \
     --env=GSETTINGS_BACKEND=memory --env=GDK_BACKEND=wayland --env=GSK_RENDERER=cairo \
-    --env=GTK_THEME= --env=GDK_SCALE= --env=GDK_DPI_SCALE= --env=GTK_DEBUG= \
+    --unset-env=GTK_THEME --unset-env=GDK_SCALE --unset-env=GDK_DPI_SCALE \
+    --unset-env=GTK_DEBUG \
     --env=ADW_DEBUG_COLOR_SCHEME=prefer-light --env=ADW_DEBUG_HIGH_CONTRAST=0 \
     --env=ADW_DEBUG_ACCENT_COLOR=blue \
     --nosocket=x11 --nosocket=fallback-x11 --nodevice=all --filesystem="$capture" \

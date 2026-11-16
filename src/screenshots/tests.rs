@@ -163,3 +163,19 @@ fn the_fake_x52_pro_is_selected_open_and_in_mode_1() {
 fn the_fixed_time_is_the_documented_instant() {
     assert_eq!(FIXED_TIME.to_string(), "2026-06-15T10:09:00Z");
 }
+
+#[test]
+fn the_shots_are_the_metainfo_screenshots_in_order() {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("data/com.leinardi.gx52.metainfo.xml.in.in");
+    let metainfo = fs::read_to_string(&path).unwrap();
+    let named: Vec<&str> = metainfo
+        .split("<image>")
+        .skip(1)
+        .filter_map(|image| image.split("</image>").next())
+        .filter_map(|url| url.rsplit('/').next())
+        .filter_map(|file| file.strip_suffix(".png"))
+        .collect();
+    let shots: Vec<&str> = capture::shot_names().collect();
+    assert_eq!(shots, named);
+}

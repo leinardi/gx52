@@ -163,6 +163,12 @@ const SHOTS: [Shot; 5] = [
     },
 ];
 
+/// The names of the shots, in order: the PNG file names without the extension.
+#[cfg(test)]
+pub(crate) fn shot_names() -> impl Iterator<Item = &'static str> {
+    SHOTS.iter().map(|shot| shot.name)
+}
+
 /// `Ok` when `condition` holds, else `name`.
 fn check(condition: bool, name: &'static str) -> Readiness {
     if condition { Ok(()) } else { Err(name) }

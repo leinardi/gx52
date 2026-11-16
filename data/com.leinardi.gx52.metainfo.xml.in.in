@@ -32,8 +32,9 @@
     <color type="primary" scheme_preference="light">#99c1f1</color>
     <color type="primary" scheme_preference="dark">#1a5fb4</color>
   </branding>
-  <!-- Captured from the Devel app with an X52 Pro (docs/release.md, "Screenshots"). The URLs follow
-       the trunk, not the tag: the release gate mirrors them before the tag exists. -->
+  <!-- Regenerated with make screenshots, in the order of src/screenshots/capture.rs (docs/release.md,
+       "Screenshots"). The URLs follow the trunk, not the tag: the release gate mirrors them before
+       the tag exists. -->
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/leds.png</image>
@@ -41,7 +42,11 @@
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/mfd.png</image>
-      <caption>Write the multi-function display text and set its clocks</caption>
+      <caption>Write the text of the multi-function display</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/clocks.png</image>
+      <caption>Show three clocks in real time zones</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/profiles.png</image>
