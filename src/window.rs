@@ -196,6 +196,7 @@ mod imp {
             // Pending saves start now and pending removals are carried out; the application
             // holds itself until they are written.
             if let Some(app) = self.obj().app() {
+                app.keep_placement(self.obj().placement());
                 app.drain();
                 // With "Run in Background" on, the application keeps running without the window.
                 app.window_closing();
@@ -215,6 +216,19 @@ pub(crate) fn plain_toast(message: &str) -> adw::Toast {
         .title(message)
         .use_markup(false)
         .build()
+}
+
+/// What a closed window showed beyond the active profile and the view, which follow the
+/// application and `GSettings`: a window reopened from the background shows it again, while a
+/// new process starts on the active profile's editor (docs/ui.md, "Start-up").
+#[derive(Debug, Default, Clone)]
+pub(crate) struct Placement {
+    /// Whether the input tester was shown.
+    tester_open: bool,
+    /// The profile that failed to load and was selected to show why.
+    selected_failed: Option<String>,
+    /// Whether the collapsed split view showed the content page instead of the sidebar.
+    show_content: bool,
 }
 
 /// The filter of the import and export dialogs: profile files.
@@ -657,26 +671,55 @@ impl Window {
             ));
         }
         imp.profile_list.add_controller(shortcuts);
+        // The tester opens when its row is activated (a click, Enter), never on selection
+        // alone: a list box also selects the row that gets the keyboard focus, which the first
+        // focus of a new window does while the profile list is still empty.
         imp.test_list.connect_row_selected(glib::clone!(
             #[weak(rename_to = window)]
             self,
             move |_, row| {
-                if row.is_none() || window.imp().syncing.get() {
+                let imp = window.imp();
+                if row.is_none() || imp.syncing.get() || imp.tester_open.get() {
                     return;
                 }
-                window.open_tester();
+                window.select_current();
             }
         ));
         imp.test_list.connect_row_activated(glib::clone!(
             #[weak(rename_to = window)]
             self,
-            move |_, _| window.imp().split_view.set_show_content(true)
+            move |_, _| {
+                window.open_tester();
+                window.imp().split_view.set_show_content(true);
+            }
         ));
+    }
+
+    /// What the window shows, for the next window of this process.
+    pub(crate) fn placement(&self) -> Placement {
+        let imp = self.imp();
+        Placement {
+            tester_open: imp.tester_open.get(),
+            selected_failed: imp.selected_failed.borrow().clone(),
+            show_content: imp.split_view.shows_content(),
+        }
+    }
+
+    /// Shows what an earlier window of this process showed when it closed; called before
+    /// [`Self::set_profiles`], whose refresh shows it.
+    pub(crate) fn restore(&self, placement: Placement) {
+        let imp = self.imp();
+        imp.tester_open.set(placement.tester_open);
+        imp.selected_failed.replace(placement.selected_failed);
+        imp.split_view.set_show_content(placement.show_content);
     }
 
     /// Shows the input tester in place of the selected profile.
     fn open_tester(&self) {
         let imp = self.imp();
+        if imp.tester_open.get() {
+            return;
+        }
         imp.tester_open.set(true);
         imp.selected_failed.replace(None);
         self.select_current();
@@ -980,6 +1023,12 @@ impl Window {
         if settings.boolean("is-maximized") {
             self.maximize();
         }
+        // The editor's view is a habit kept across launches; the input tester is not a view.
+        settings
+            .bind("last-view", &*self.imp().view_stack, "visible-child-name")
+            // A locked key must not make the whole editor insensitive.
+            .no_sensitivity()
+            .build();
     }
 
     fn save_window_state(&self) -> Result<(), glib::BoolError> {

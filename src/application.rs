@@ -106,6 +106,7 @@ mod imp {
     use x52::input::{AxisValues, HeldInputs, Mode};
 
     use super::autostart::{AutostartSync, HIDDEN, Instance, Launch};
+    use crate::config;
     use crate::device::status::DeviceStatus;
     use crate::device::{CurrentSelection, DeviceService};
     use crate::profile::ProfileId;
@@ -118,8 +119,8 @@ mod imp {
     use crate::profile::writes::WriteQueue;
     use crate::tray::{ModelSlot, TrayHandle, TrayLifecycle, TrayMessage, TrayModel};
     use crate::widgets::PreferencesDialog;
+    use crate::window::{Placement, Window};
     use crate::zones::ZoneEntry;
-    use crate::{config, window::Window};
 
     #[derive(Debug, Default)]
     pub struct Application {
@@ -209,6 +210,9 @@ mod imp {
         pub(crate) autostart_failure: Cell<Option<super::Refusal>>,
         /// Whether the refusal waits for the window's banner: no preferences showed it.
         pub(crate) autostart_notice: Cell<bool>,
+        /// What the last window showed when it closed, for the next one: a window reopened from
+        /// the background shows it again (docs/ui.md, "Start-up").
+        pub(crate) window_placement: RefCell<Option<Placement>>,
     }
 
     #[glib::object_subclass]
@@ -258,6 +262,9 @@ mod imp {
             let app = self.obj();
             let window = app.active_window().unwrap_or_else(|| {
                 let window = Window::new(&app);
+                if let Some(placement) = app.imp().window_placement.take() {
+                    window.restore(placement);
+                }
                 window.set_profiles(&app.profile_list());
                 window.upcast()
             });
