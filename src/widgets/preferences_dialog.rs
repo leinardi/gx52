@@ -31,6 +31,7 @@ use crate::preferences::{
     self, AUTOSTART, RUN_IN_BACKGROUND, VIRTUAL_MOUSE, VIRTUAL_MOUSE_CURVE, VIRTUAL_MOUSE_DEADZONE,
     VIRTUAL_MOUSE_INVERT_WHEEL, VIRTUAL_MOUSE_SPEED,
 };
+use crate::screenshots;
 
 /// How often the uinput access is checked again while the warning shows, so it goes away by
 /// itself once the rule is loaded, as the udev page does.
@@ -200,6 +201,11 @@ glib::wrapper! {
 }
 
 impl PreferencesDialog {
+    /// Whether the virtual mouse switch is on.
+    pub(crate) fn virtual_mouse_active(&self) -> bool {
+        self.imp().virtual_mouse.is_active()
+    }
+
     /// Whether the uinput warning applies: the dialog shows and the virtual mouse is on.
     fn wants_uinput(&self) -> bool {
         self.is_mapped() && self.imp().virtual_mouse.is_active()
@@ -223,7 +229,7 @@ impl PreferencesDialog {
             #[weak(rename_to = dialog)]
             self,
             async move {
-                let result = gio::spawn_blocking(access::check_uinput).await;
+                let result = gio::spawn_blocking(uinput_access).await;
                 dialog.finish_uinput(ticket, result.ok());
             }
         ));
@@ -387,6 +393,16 @@ impl PreferencesDialog {
             .bind(VIRTUAL_MOUSE, &*imp.invert_wheel, "sensitive")
             .get_only()
             .build();
+    }
+}
+
+/// The uinput access: the system's, or always available in screenshot mode, whose virtual mouse
+/// creates no device.
+fn uinput_access() -> UinputAccess {
+    if screenshots::active() {
+        UinputAccess::Available
+    } else {
+        access::check_uinput()
     }
 }
 

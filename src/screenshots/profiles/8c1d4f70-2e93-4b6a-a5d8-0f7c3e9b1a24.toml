@@ -1,0 +1,43 @@
+schema_version = 1
+device_type = "x52-pro"
+name = "Space Trading"
+kind = "single"
+date_format = "dd-mm-yy"
+
+[clock_1]
+source = "local"
+use_24h = true
+
+[clock_2]
+source = { iana = "Europe/London" }
+use_24h = true
+
+[clock_3]
+source = { iana = "America/Los_Angeles" }
+use_24h = false
+
+[settings]
+led_brightness = 96
+mfd_brightness = 96
+shift = false
+blink = false
+
+[settings.leds]
+fire = "on"
+throttle = "on"
+a = "amber"
+b = "amber"
+d = "green"
+e = "green"
+t1_t2 = "amber"
+t3_t4 = "amber"
+t5_t6 = "amber"
+pov_2 = "green"
+i = "green"
+
+[settings.mfd]
+lines = [
+  { source = "text", text = "CARGO 128 T" },
+  { source = "text", text = "JUMP READY" },
+  { source = "profile_name" },
+]

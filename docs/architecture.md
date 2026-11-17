@@ -553,6 +553,17 @@ The Flatpak `finish-args` beyond the display sockets:
   service runs over a `Backend` (the real system, or fakes), so the tests run every scenario's
   automatic verifications against the real threads over a scripted watch, opener and evdev
   source.
+- **Screenshot mode** (Devel builds only, `src/screenshots/`): `gx52 --screenshots <dir>` takes the
+  metainfo screenshots and exits; `make screenshots` runs it in the Devel Flatpak on a headless
+  weston ([release.md](release.md#screenshots)). It refuses to start unless
+  `GSETTINGS_BACKEND=memory`, then points the config root at a temporary directory holding fixture
+  profiles, installs a fixed clock and local zone (the `src/time.rs` seam every UI time read goes
+  through), runs the device service over a fake X52 Pro backend that opens, holds mode 1 and drops
+  every transfer, pins the fonts, DPI, animations and light style, and leaves the strings
+  untranslated. A pure `Driver` sequences the shots (set up, poll the readiness checks, wait two
+  frames, capture), with a timeout per shot and for the whole run; a shot that never gets ready
+  exits 1 naming the condition. Unit tests cover the arguments, the memory-backend refusal, the
+  fixtures, the fake backend and the driver's timeouts.
 - Repository checks: `make verify` and `make check` (AGENTS.md), and the `meta` crate once it
   exists.
 

@@ -19,10 +19,11 @@
 
 //! Repository meta-tests: checks on the repository itself rather than on the application. The
 //! tests live under `tests/`; this library holds what they share: the repository's files, an
-//! isolated git environment, and the Markdown reader. Every meta-test fails rather than skips when
-//! something it needs is missing, and carries a negative control: a case proving the rule fails on
-//! the input it exists to stop.
+//! isolated git environment, scratch repositories for the script tests, and the Markdown reader.
+//! Every meta-test fails rather than skips when something it needs is missing, and carries a
+//! negative control: a case proving the rule fails on the input it exists to stop.
 
 pub mod gitenv;
 pub mod links;
 pub mod repo;
+pub mod scratch;

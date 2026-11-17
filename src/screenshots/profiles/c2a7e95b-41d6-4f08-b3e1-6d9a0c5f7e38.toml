@@ -1,0 +1,43 @@
+schema_version = 1
+device_type = "x52-pro"
+name = "Airliner"
+kind = "single"
+date_format = "dd-mm-yy"
+
+[clock_1]
+source = "local"
+use_24h = true
+
+[clock_2]
+source = { iana = "Europe/London" }
+use_24h = true
+
+[clock_3]
+source = { iana = "America/Los_Angeles" }
+use_24h = false
+
+[settings]
+led_brightness = 64
+mfd_brightness = 96
+shift = false
+blink = false
+
+[settings.leds]
+fire = "on"
+throttle = "on"
+a = "green"
+b = "green"
+d = "green"
+e = "green"
+t1_t2 = "green"
+t3_t4 = "green"
+t5_t6 = "green"
+pov_2 = "green"
+i = "off"
+
+[settings.mfd]
+lines = [
+  { source = "text", text = "AP HDG 270" },
+  { source = "text", text = "FL350" },
+  { source = "profile_name" },
+]

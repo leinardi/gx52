@@ -298,7 +298,7 @@ Differences specific to a GNOME application, following `gtk-rs-skills`
   the action was archived in 2025) in the `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51`
   container with `--privileged`. Builds the Devel manifest, runs `meson test` (cargo test plus the
   desktop / metainfo / schema lint suite) and uploads an installable bundle, so a PR can be tested
-  by installing the artifact. Matrix `x86_64` on `ubuntu-24.04` and `aarch64` on `ubuntu-24.04-arm`
+  by installing the artifact. Matrix `x86_64` on `ubuntu-26.04` and `aarch64` on `ubuntu-26.04-arm`
   (free for public repositories).
 - **Clippy inside the SDK**: runner images ship older GTK / libadwaita, so `gtk4-sys` fails its
   pkg-config check on the bare runner. The job builds the manifest with `--stop-at=gx52`, enables
@@ -405,18 +405,22 @@ that opens an issue when a newer GNOME runtime exists on Flathub is a possible l
 
 ### 9.1 Target flow
 
-1. `release.yaml` run manually (`workflow_dispatch`) on `main` with optional `version` and `dry_run`
-   inputs, in a `release` concurrency group (same contract as `awtrix-controller`'s
-   `docs/release.md`).
+1. `release.yaml` run manually (`workflow_dispatch`) on the trunk with optional `version` and
+   `dry_run` inputs (same contract as `awtrix-controller`'s `docs/release.md`; the workflows are
+   specified in [release.md](release.md)).
 2. Version computed by `svu` from Conventional Commits (or taken from the `version` input), checked
    to be higher than every existing release (see 9.4 for the legacy tags).
 3. Bump the version in `Cargo.toml` / `Cargo.lock` / `meson.build`, add a `<release>` entry to the
-   metainfo (generated from the commits), commit, tag `vX.Y.Z`, push.
-4. Build and lint the Flatpak from the tag (both architectures) before anything is published.
-5. Generate the Flathub manifest from the tagged `build-aux/com.leinardi.gx52.json` (a git source
-   at the tag instead of the `dir` source) and `cargo-sources.json` from the tagged `Cargo.lock`
-   with `flatpak-cargo-generator.py`, run `flatpak-builder-lint` and build it on both
-   architectures. This repository pushes nothing to Flathub.
+   metainfo (generated from the commits), and open the bump pull request; merging it is the
+   release. The tag `vX.Y.Z` is created on the merge commit only after steps 4 and 5 passed.
+4. Build and lint the Flatpak from the merge commit (both architectures) before anything is
+   published.
+5. Generate the Flathub manifest from the tree's `build-aux/com.leinardi.gx52.json` (a git source
+   at the tag and the merge commit instead of the `dir` source) and `cargo-sources.json` from its
+   `Cargo.lock` with `flatpak-cargo-generator.py`, and run `flatpak-builder-lint` on the manifest.
+   It is not built from the git source here, as the tag does not exist yet; step 4 builds the same
+   tree from the `dir` source, and the first build from the git source is Flathub's bot's. This
+   repository pushes nothing to Flathub.
 6. Create the GitHub release with the notes, the bundles and the two files of step 5 as assets.
 7. The update workflow of `github.com/flathub/com.leinardi.gx52` (`update.yml`, dispatched by the
    maintainer or weekly) runs `flatpak-external-data-checker` on each channel branch. It updates
@@ -449,7 +453,8 @@ repository, and a polling workflow adds moving parts for little gain.
 - The update workflow changes only the source `tag` and `commit` and `cargo-sources.json`. A
   runtime bump, a finish-args change or any other manifest change goes to the Flathub repository as
   a hand PR, made from the generated manifest of the release (a release asset), which step 5 has
-  already built.
+  linted; step 5 also warns when the Flathub branch differs in anything the update workflow does
+  not carry.
 - The `flatpak/` submodule is removed from this repository.
 - The manifest source URL changes from GitLab to GitHub with the first release from GitHub.
 - `flathub.json`: allow `x86_64` and `aarch64`.
@@ -471,9 +476,10 @@ repository, and a polling workflow adds moving parts for little gain.
 - `0.99.x` builds go to the Flathub **beta** channel: a `beta` branch in the Flathub repository,
   users opt in with the `flathub-beta` remote. This lets X52 non-Pro owners test before `1.0.0`
   replaces `0.7.6` on stable. The channel is decided on the Flathub side, by each branch's
-  `x-checker-data`: `beta` follows every `v` tag, `master` only tags `>= 1.0.0` (a `versions`
-  constraint), so a `0.x` version is never proposed to stable. `master` keeps the legacy manifest,
-  with no `x-checker-data`, until the `1.0.0` migration PR replaces it by hand. After `1.0.0`, a
+  `x-checker-data`, which both branches share: every `vX.Y.Z` tag. `master` keeps the legacy
+  manifest, with no `x-checker-data`, until the `1.0.0` migration PR replaces it by hand, so a `0.x`
+  version is never proposed to stable; after that every new tag is `1.0.0` or higher and the
+  checker takes the highest one, so no `versions` constraint is needed. After `1.0.0`, a
   release gets a PR on both branches: going through `beta` first means merging the `beta` PR and
   leaving the `master` draft open until beta is good. A held version is superseded by the next tag,
   which updates the same `master` PR.

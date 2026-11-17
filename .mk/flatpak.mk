@@ -69,10 +69,11 @@ flatpak-lint-manifest: $(CARGO_SOURCES) ## Lint the stable and Devel manifests w
 		$(FLATPAK_BUILDER_LINT) manifest "$$manifest"; \
 	done
 
-# Not a gate before M8: the repository check also wants the screenshots the metainfo only gets
-# with the first Flathub release (docs/roadmap.md, M8), so it is expected to report them missing.
+# A release gate from M8 on (release-gate.yaml runs the same check on the stable build). The
+# repository check wants the metainfo screenshots mirrored, which a local Devel build does not do,
+# so locally it may still report them.
 .PHONY: flatpak-lint-repo
-flatpak-lint-repo: ## Lint the repository flatpak-build exported (expected to report the missing screenshots until M8)
+flatpak-lint-repo: ## Lint the repository flatpak-build exported (a release gate; locally the screenshots may be reported unmirrored)
 	@test -d $(FLATPAK_REPO) || { echo "$(FLATPAK_REPO) does not exist; run make flatpak-build first" >&2; exit 1; }
 	$(FLATPAK_BUILDER_LINT) repo $(FLATPAK_REPO)
 

@@ -1,0 +1,116 @@
+name: Release publish
+
+# The second half of a release (docs/release.md): on the push that merges release.yaml's bump pull
+# request into the trunk, in this order, each job only when the one before succeeded:
+#
+#   decide   gh-reusable-workflows' release-on-merge: the push is the merge of the one bump commit
+#            of version-bump-pr's pull request, and CI passed on the merge commit.
+#   gate     release-gate.yaml on the merge commit: the Flathub-style build, meson test and the
+#            linters on x86_64 and aarch64. A failure stops here: no tag exists yet, so the version
+#            is never published and the next bump drops its metainfo entry.
+#   flathub  flathub-check.yaml, next to the gate: the Flathub manifest of the tag (git source,
+#            x-checker-data) and cargo-sources.json, linted; pushed nowhere.
+#   assets   the bundles and the two Flathub files merged into the one flat artifact the release
+#            attaches.
+#   publish  gh-reusable-workflows' simple-tag-and-release: the vX.Y.Z tag on the merge commit,
+#            created by publishing the release with its assets; a 0.x release is a pre-release.
+#
+# No Flathub pull request is opened here: flathub/com.leinardi.gx52's own update workflow opens it
+# from the release (docs/release.md, "The Flathub update workflow").
+#
+# Every step is re-runnable ("Re-run failed jobs"): each reusable workflow finishes what exists.
+on:
+  push:
+    branches:
+      - rust-rewrite
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - meson.build
+      - data/com.leinardi.gx52.metainfo.xml.in.in
+
+# No concurrency group of its own: GitHub keeps one pending run per group, so a later push of a
+# version file (a Dependabot lock update) would cancel a release run waiting for CI. The reusable
+# workflows serialise what must not race: release-on-merge and simple-tag-and-release each run in
+# a group of their own per repository, never cancelled once running. One window remains: a
+# release push pending behind another run of release-on-merge is replaced by a third version-file
+# push. That run then shows as cancelled; re-run it (docs/release.md, "Recovering a failed run").
+
+permissions: {}
+
+jobs:
+  decide:
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    uses: leinardi/gh-reusable-workflows/.github/workflows/release-on-merge.yaml@2635363c6cdbba761accc2a3d4a756787d1f911d # v1.8.0
+    with:
+      version_command: make -s release-version
+      allowed_files: Cargo.toml Cargo.lock meson.build data/com.leinardi.gx52.metainfo.xml.in.in
+      base_branch: rust-rewrite
+      ci_workflow: ci.yaml
+      # ci.yaml's flatpak and sdk-checks jobs allow 45 minutes each, plus the queue.
+      ci_timeout_minutes: 90
+
+  gate:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-gate.yaml
+
+  flathub:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/flathub-check.yaml
+    with:
+      tag: ${{ needs.decide.outputs.tag }}
+
+  # simple-tag-and-release attaches the files of one artifact.
+  assets:
+    needs: [decide, gate, flathub]
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions: {}
+
+    steps:
+      - name: Merge the release assets
+        uses: actions/upload-artifact/merge@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-assets
+          pattern: "{gx52-bundle-*,flathub-files}"
+          retention-days: 7
+
+      # The merge only fails when nothing matches: a renamed or shrunk upload would still publish,
+      # with a missing asset under a tag that can never move. So the merged list is checked.
+      - name: Download the release assets
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-assets
+          path: release-assets
+
+      - name: Check the release assets
+        run: |
+          set -euo pipefail
+          want=$(printf '%s\n' cargo-sources.json com.leinardi.gx52.json gx52-aarch64.flatpak gx52-x86_64.flatpak)
+          have=$(find release-assets -mindepth 1 -printf '%P\n' | sort)
+          if [ "$have" != "$want" ]; then
+            printf 'The release assets are:\n%s\nwant:\n%s\n' "$have" "$want" >&2
+            exit 1
+          fi
+
+  publish:
+    needs: [decide, assets]
+    if: needs.decide.outputs.release == 'true'
+    permissions:
+      contents: write
+    uses: leinardi/gh-reusable-workflows/.github/workflows/simple-tag-and-release.yaml@2635363c6cdbba761accc2a3d4a756787d1f911d # v1.8.0
+    with:
+      version: ${{ needs.decide.outputs.tag }}
+      base_branch: rust-rewrite
+      prerelease: ${{ startsWith(needs.decide.outputs.tag, 'v0.') }}
+      artifact_name: release-assets

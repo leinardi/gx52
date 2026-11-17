@@ -26,7 +26,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
-use x52::clock::SystemClock;
+
 use x52::device::DeviceType;
 use x52::input::{AxisValues, HeldInputs, Mode};
 use x52::state::DeviceState;
@@ -44,6 +44,8 @@ use crate::profile::store::{Entry, LoadReport, ProfileStore};
 use crate::profile::{
     self, LiveValues, MfdLineSource, Profile, ProfileId, ProfileKind, active, list, order,
 };
+use crate::screenshots::{self, ScreenshotBackend};
+use crate::time::{self, AppClock};
 use crate::widgets::PreferencesDialog;
 use crate::window::{self, Window};
 
@@ -238,6 +240,9 @@ mod imp {
             app.setup_background();
             app.refresh_autostart();
             app.connect_query_end(super::Application::on_query_end);
+            if crate::screenshots::active() {
+                crate::screenshots::pin_look();
+            }
             app.start_device_service();
             app.load_profiles();
         }
@@ -276,6 +281,11 @@ mod imp {
             window.present();
             app.back_from_background();
             app.show_pending_toasts();
+            if crate::screenshots::active()
+                && let Some(window) = window.downcast_ref::<Window>()
+            {
+                crate::screenshots::capture::start(&app, window);
+            }
         }
 
         fn shutdown(&self) {
@@ -305,13 +315,18 @@ glib::wrapper! {
 
 impl Application {
     pub fn new() -> Self {
+        let mut flags = gio::ApplicationFlags::HANDLES_COMMAND_LINE;
+        if screenshots::active() {
+            // A running GX52 Devel neither takes the run's command line nor sees its window.
+            flags |= gio::ApplicationFlags::NON_UNIQUE;
+        }
         let app: Self = glib::Object::builder()
             .property("application-id", config::APP_ID)
             // Without this, a .Devel app id would make libadwaita look for style.css,
             // icons and shortcuts-dialog.ui under the wrong resource path.
             .property("resource-base-path", config::RESOURCE_BASE_PATH)
             // For --hidden, which `activate` alone cannot tell apart.
-            .property("flags", gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+            .property("flags", flags)
             .build();
         app.add_main_option(
             autostart::HIDDEN,
@@ -397,7 +412,17 @@ impl Application {
 
     /// Starts the device service and follows its events on the main loop.
     fn start_device_service(&self) {
-        match DeviceService::start(SystemClock) {
+        let started = if screenshots::active() {
+            DeviceService::start_with(
+                AppClock,
+                ScreenshotBackend {
+                    local_zone: time::local_zone_source(),
+                },
+            )
+        } else {
+            DeviceService::start(AppClock)
+        };
+        match started {
             Ok((device, events)) => {
                 self.imp().device.replace(Some(device));
                 glib::spawn_future_local(glib::clone!(
@@ -601,6 +626,11 @@ impl Application {
         } else {
             Some(ImportGuard(self.downgrade()))
         }
+    }
+
+    /// The preferences dialog, while it is open.
+    pub(crate) fn preferences_dialog(&self) -> Option<PreferencesDialog> {
+        self.imp().preferences_dialog.upgrade()
     }
 
     /// The device status the windows show.

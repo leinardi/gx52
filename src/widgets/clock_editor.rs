@@ -21,13 +21,14 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 use jiff::tz::TimeZone;
-use x52::clock::{Clock, Clock1Source, SystemClock, ZoneSource};
+use x52::clock::{Clock1Source, ZoneSource};
 use x52::command::OffsetClock;
 
 use crate::profile::ZoneSpec;
 use crate::profile::clocks::{self, DATE_FORMATS};
 use crate::profile::editor::EditorState;
 use crate::profile::mfd;
+use crate::time;
 use crate::widgets::ticker::{TickSources, Ticker, Ticking};
 
 /// The toggle of clock 1 on local time.
@@ -230,6 +231,20 @@ impl ClockEditor {
         imp.clock3_group.close_dialog();
     }
 
+    /// Whether the time zone was read and every clock shows its time: what a screenshot checks
+    /// before it is taken.
+    pub(crate) fn times_shown(&self) -> bool {
+        let imp = self.imp();
+        imp.ticker.zone().is_some()
+            && [
+                imp.clock1_group.description(),
+                imp.clock2_group.description(),
+                imp.clock3_group.description(),
+            ]
+            .iter()
+            .all(|description| description.as_ref().is_some_and(|text| !text.is_empty()))
+    }
+
     /// Shows the times and the date again.
     fn refresh_times(&self) {
         let imp = self.imp();
@@ -248,7 +263,7 @@ impl ClockEditor {
         else {
             return;
         };
-        let now = SystemClock.now();
+        let now = time::now();
         if let Some(preview) = app.clocks_preview(now, &zone) {
             let description = match source {
                 // Translators: under clock 1: {time} is its time now, {date} the date the MFD

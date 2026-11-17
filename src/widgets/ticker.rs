@@ -24,7 +24,9 @@ use gtk::prelude::*;
 use gtk::{gio, glib};
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
-use x52::clock::{self, Clock, Clock1Source, SystemClock, ZoneSource};
+use x52::clock::{self, Clock1Source, ZoneSource};
+
+use crate::time;
 
 /// How long after a minute boundary a view ticks, so the system clock is surely past it.
 const TICK_SLACK: Duration = Duration::from_millis(50);
@@ -101,8 +103,8 @@ impl Ticker {
     pub(crate) fn tick<W: Ticking>(view: &W) {
         let weak = view.downgrade();
         glib::spawn_future_local(async move {
-            // TimeZone::system may read /etc/localtime.
-            let Ok(zone) = gio::spawn_blocking(TimeZone::system).await else {
+            // The local zone may read /etc/localtime.
+            let Ok(zone) = gio::spawn_blocking(time::local_zone_source()).await else {
                 tracing::error!("The task reading the system time zone panicked");
                 return;
             };
@@ -140,7 +142,7 @@ impl Ticker {
     /// Ticks `view` again just after the next minute boundary or time zone change.
     fn schedule<W: Ticking>(view: &W, zone: &TimeZone) {
         let sources = view.tick_sources();
-        let delay = sources.delay(SystemClock.now(), zone);
+        let delay = sources.delay(time::now(), zone);
         let ticker = view.ticker();
         ticker.sources.replace(Some(sources));
         let number = ticker.scheduled.get().wrapping_add(1);

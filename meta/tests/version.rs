@@ -13,10 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! One version source (docs/release.md): the root package's version in `Cargo.toml` and the Meson
-//! project version always agree, and once the release workflow has set a real version, the newest
-//! `<release>` of the metainfo names it too. Until then both stay `0.0.0`, which has no
-//! `<release>`: the metainfo only holds the history of the legacy `0.7.x` application.
+//! One version source (docs/release.md): the root package's version in `Cargo.toml`, its
+//! `Cargo.lock` entry and the Meson project version always agree, and once the release workflow
+//! has set a real version, the newest `<release>` of the metainfo names it too. Until then they
+//! stay `0.0.0`, which has no `<release>`: the metainfo only holds the history of the legacy
+//! `0.7.x` application.
 
 use std::sync::LazyLock;
 
@@ -24,6 +25,7 @@ use meta::repo;
 use regex::Regex;
 
 const CARGO_MANIFEST: &str = "Cargo.toml";
+const CARGO_LOCK: &str = "Cargo.lock";
 const MESON_BUILD: &str = "meson.build";
 const METAINFO: &str = "data/com.leinardi.gx52.metainfo.xml.in.in";
 
@@ -56,6 +58,28 @@ fn cargo_version(manifest: &str) -> Result<String, String> {
         .ok_or_else(|| format!("{CARGO_MANIFEST} has no [package] version"))
 }
 
+/// The version of the `gx52` entry of Cargo.lock, or a problem.
+fn lock_version(lock: &str) -> Result<String, String> {
+    let table: toml::Table = lock
+        .parse()
+        .map_err(|error| format!("parse {CARGO_LOCK}: {error}"))?;
+    let versions: Vec<&str> = table
+        .get("package")
+        .and_then(toml::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|package| package.get("name").and_then(toml::Value::as_str) == Some("gx52"))
+        .filter_map(|package| package.get("version").and_then(toml::Value::as_str))
+        .collect();
+    match versions.as_slice() {
+        [version] => Ok((*version).to_owned()),
+        found => Err(format!(
+            "{CARGO_LOCK} has {} gx52 entries with a version, expected 1",
+            found.len()
+        )),
+    }
+}
+
 /// The version of meson.build's `project()` call, or a problem.
 fn meson_version(build: &str) -> Result<String, String> {
     let arguments = MESON_VERSION
@@ -84,12 +108,26 @@ fn newest_release(metainfo: &str) -> Option<String> {
         .map(|captures| captures[1].to_owned())
 }
 
-/// Every disagreement between the three files' versions.
-fn version_problems(manifest: &str, build: &str, metainfo: &str) -> Vec<String> {
-    let (cargo, meson) = match (cargo_version(manifest), meson_version(build)) {
-        (Ok(cargo), Ok(meson)) => (cargo, meson),
-        (cargo, meson) => return [cargo.err(), meson.err()].into_iter().flatten().collect(),
+/// Every disagreement between the four files' versions.
+fn version_problems(manifest: &str, lock: &str, build: &str, metainfo: &str) -> Vec<String> {
+    let (cargo, locked, meson) = match (
+        cargo_version(manifest),
+        lock_version(lock),
+        meson_version(build),
+    ) {
+        (Ok(cargo), Ok(locked), Ok(meson)) => (cargo, locked, meson),
+        (cargo, locked, meson) => {
+            return [cargo.err(), locked.err(), meson.err()]
+                .into_iter()
+                .flatten()
+                .collect();
+        }
     };
+    if cargo != locked {
+        return vec![format!(
+            "{CARGO_MANIFEST} says {cargo}, but {CARGO_LOCK}'s gx52 entry says {locked}"
+        )];
+    }
     if cargo != meson {
         return vec![format!(
             "{CARGO_MANIFEST} says {cargo}, but {MESON_BUILD} says {meson}"
@@ -113,6 +151,7 @@ fn version_problems(manifest: &str, build: &str, metainfo: &str) -> Vec<String> 
 fn the_version_has_one_source() {
     let problems = version_problems(
         &repo::read(CARGO_MANIFEST),
+        &repo::read(CARGO_LOCK),
         &repo::read(MESON_BUILD),
         &repo::read(METAINFO),
     );
@@ -128,6 +167,10 @@ fn the_readings_find_the_versions() {
         "{CARGO_MANIFEST}: no version read"
     );
     assert!(
+        lock_version(&repo::read(CARGO_LOCK)).is_ok(),
+        "{CARGO_LOCK}: no gx52 version read"
+    );
+    assert!(
         meson_version(&repo::read(MESON_BUILD)).is_ok(),
         "{MESON_BUILD}: no version read"
     );
@@ -137,43 +180,63 @@ fn the_readings_find_the_versions() {
     );
 }
 
-/// The negative control: a Meson version that differs, at `0.0.0` or not, a newest release that
-/// lags or is missing once the version is real, and a `project()` without a version are each
-/// refused; `0.0.0` with only older releases, and a release whose attributes are in another order,
-/// are accepted.
-#[test]
-fn version_rules() {
-    let manifest = |version: &str| {
-        format!(
-            "[workspace]\nmembers = [\".\"]\n\n[package]\nname = \"gx52\"\n\
-             version = \"{version}\"\n"
-        )
-    };
-    let build = |version: &str| {
-        format!(
-            "project(\n    'gx52',\n    'rust',\n    version: '{version}',\n    \
-             meson_version: '>= 1.1',\n)\n\ndependency('gtk4', version: '>= 4.22')\n"
-        )
-    };
-    let metainfo = |releases: &[&str]| {
-        let entries: Vec<String> = releases
-            .iter()
-            .map(|version| format!("    <release version=\"{version}\" date=\"2026-11-02\"/>\n"))
-            .collect();
-        let entries = entries.concat();
-        format!("<component>\n  <releases>\n{entries}  </releases>\n</component>\n")
-    };
-    let legacy = metainfo(&["0.7.6", "0.7.5"]);
+/// A root manifest at `version`.
+fn manifest(version: &str) -> String {
+    format!(
+        "[workspace]\nmembers = [\".\"]\n\n[package]\nname = \"gx52\"\n\
+         version = \"{version}\"\n"
+    )
+}
 
+/// A Cargo.lock whose gx52 entry is at `version`, next to a member at `0.0.0`.
+fn lock(version: &str) -> String {
+    format!(
+        "version = 4\n\n[[package]]\nname = \"gx52\"\nversion = \"{version}\"\n\n\
+         [[package]]\nname = \"x52\"\nversion = \"0.0.0\"\n"
+    )
+}
+
+/// A meson.build whose `project()` is at `version`.
+fn build(version: &str) -> String {
+    format!(
+        "project(\n    'gx52',\n    'rust',\n    version: '{version}',\n    \
+         meson_version: '>= 1.1',\n)\n\ndependency('gtk4', version: '>= 4.22')\n"
+    )
+}
+
+/// A metainfo with these `<release>` entries, in this order.
+fn metainfo(releases: &[&str]) -> String {
+    let entries: Vec<String> = releases
+        .iter()
+        .map(|version| format!("    <release version=\"{version}\" date=\"2026-11-02\"/>\n"))
+        .collect();
+    let entries = entries.concat();
+    format!("<component>\n  <releases>\n{entries}  </releases>\n</component>\n")
+}
+
+fn legacy() -> String {
+    metainfo(&["0.7.6", "0.7.5"])
+}
+
+/// `0.0.0` with only older releases, a released version with its entry on top, and a release
+/// whose attributes are in another order are accepted.
+#[test]
+fn version_rules_accept() {
     for (name, problems) in [
         (
             "unreleased, only the legacy history",
-            version_problems(&manifest("0.0.0"), &build("0.0.0"), &legacy),
+            version_problems(
+                &manifest("0.0.0"),
+                &lock("0.0.0"),
+                &build("0.0.0"),
+                &legacy(),
+            ),
         ),
         (
             "released, newest entry first",
             version_problems(
                 &manifest("1.0.0"),
+                &lock("1.0.0"),
                 &build("1.0.0"),
                 &metainfo(&["1.0.0", "0.7.6"]),
             ),
@@ -182,6 +245,7 @@ fn version_rules() {
             "released, date before version",
             version_problems(
                 &manifest("1.0.0"),
+                &lock("1.0.0"),
                 &build("1.0.0"),
                 "<releases>\n  <release date=\"2026-11-02\" version=\"1.0.0\">\n</releases>\n",
             ),
@@ -189,39 +253,80 @@ fn version_rules() {
     ] {
         assert_eq!(problems, Vec::<String>::new(), "{name}");
     }
+}
 
+/// The negative control: a Cargo.lock entry or a Meson version that differs, at `0.0.0` or not,
+/// a newest release that lags or is missing once the version is real, a `project()` without a
+/// version, and a manifest or lock without the version are each refused.
+#[test]
+fn version_rules_refuse() {
     for (name, problems) in [
         (
             "meson differs while unreleased",
-            version_problems(&manifest("0.0.0"), &build("0.99.0"), &legacy),
+            version_problems(
+                &manifest("0.0.0"),
+                &lock("0.0.0"),
+                &build("0.99.0"),
+                &legacy(),
+            ),
         ),
         (
             "meson differs once released",
-            version_problems(&manifest("1.0.0"), &build("1.0.1"), &metainfo(&["1.0.0"])),
+            version_problems(
+                &manifest("1.0.0"),
+                &lock("1.0.0"),
+                &build("1.0.1"),
+                &metainfo(&["1.0.0"]),
+            ),
         ),
         (
             "the newest release lags",
             version_problems(
                 &manifest("1.0.1"),
+                &lock("1.0.1"),
                 &build("1.0.1"),
                 &metainfo(&["1.0.0", "1.0.1"]),
             ),
         ),
         (
             "no release for a real version",
-            version_problems(&manifest("1.0.0"), &build("1.0.0"), "<component/>\n"),
+            version_problems(
+                &manifest("1.0.0"),
+                &lock("1.0.0"),
+                &build("1.0.0"),
+                "<component/>\n",
+            ),
         ),
         (
             "a project() without a version",
             version_problems(
                 &manifest("0.0.0"),
+                &lock("0.0.0"),
                 "project(\n    'gx52',\n    'rust',\n)\n\ndependency('gtk4', version: '>= 4.22')\n",
-                &legacy,
+                &legacy(),
+            ),
+        ),
+        (
+            "the Cargo.lock entry lags",
+            version_problems(
+                &manifest("1.0.1"),
+                &lock("1.0.0"),
+                &build("1.0.1"),
+                &metainfo(&["1.0.1"]),
+            ),
+        ),
+        (
+            "no gx52 entry in Cargo.lock",
+            version_problems(
+                &manifest("0.0.0"),
+                "version = 4\n\n[[package]]\nname = \"x52\"\nversion = \"0.0.0\"\n",
+                &build("0.0.0"),
+                &legacy(),
             ),
         ),
         (
             "no package version",
-            version_problems("[workspace]\n", &build("0.0.0"), &legacy),
+            version_problems("[workspace]\n", &lock("0.0.0"), &build("0.0.0"), &legacy()),
         ),
     ] {
         assert_eq!(problems.len(), 1, "{name}: {problems:#?}");

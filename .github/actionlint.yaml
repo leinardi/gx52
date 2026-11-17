@@ -1,0 +1,6 @@
+# GitHub-hosted labels that actionlint v1.7.12 (the latest release) does not know yet. Drop an
+# entry once the pinned actionlint lists it in rule_runner_label.go.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - ubuntu-26.04-arm

@@ -41,6 +41,7 @@ pub(crate) mod writes;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use gettextrs::gettext;
 use gtk::glib;
@@ -462,9 +463,36 @@ impl ZoneClock {
     }
 }
 
+/// The directory of the app's own files, fixed by the first [`config_dir`] or
+/// [`set_config_dir`].
+static CONFIG_DIR: OnceLock<PathBuf> = OnceLock::new();
+
 /// The directory of the app's own files: `gx52`, or `gx52-devel` for a Devel build so a host
-/// Devel build never shares a production build's profiles (docs/profiles.md, "Files").
+/// Devel build never shares a production build's profiles (docs/profiles.md, "Files"), unless
+/// [`set_config_dir`] replaced it before the first read. It never changes after that read.
 pub(crate) fn config_dir() -> PathBuf {
+    config_dir_in(&CONFIG_DIR, default_config_dir)
+}
+
+/// Replaces [`config_dir`] for the whole process, for a mode that must never touch the user's
+/// files. It does not cover GX52 0.7's database ([`legacy::database_path`]): such a mode skips
+/// the import instead.
+///
+/// # Errors
+///
+/// `dir` back, when the directory was already set or read: a caller may already hold the
+/// user's directory.
+pub(crate) fn set_config_dir(dir: PathBuf) -> Result<(), PathBuf> {
+    CONFIG_DIR.set(dir)
+}
+
+/// The directory in `cell`, fixed to `default()` by the first read.
+fn config_dir_in(cell: &OnceLock<PathBuf>, default: impl FnOnce() -> PathBuf) -> PathBuf {
+    cell.get_or_init(default).clone()
+}
+
+/// The user's directory for this build profile.
+fn default_config_dir() -> PathBuf {
     let name = if config::is_devel() {
         "gx52-devel"
     } else {

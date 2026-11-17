@@ -1,0 +1,145 @@
+name: Release gate
+
+# The gate of a release (docs/release.md, "The release workflow"): the stable manifest built the way
+# Flathub builds it, offline from a cargo-sources.json generated from the tree's own Cargo.lock,
+# with meson test run inside the build, on x86_64 and aarch64 natively, on the runners and container
+# of ci.yaml's flatpak job; then flatpak-builder-lint on the manifest and on the exported repository.
+# Nothing is published unless it passes. Each architecture's bundle is uploaded, and the bundles job
+# merges them into one artifact, `gx52-bundles`, which the release attaches.
+#
+# Called by release-publish.yaml on the merge of a bump pull request (the merged commit), and by
+# release.yaml's dry run with the bump's patch, applied to the dispatched commit, so a dry run gates
+# exactly the tree its bump would merge.
+on:
+  workflow_call:
+    inputs:
+      patch_artifact:
+        description: "An artifact of the calling run holding bump.patch, applied before the build (empty: build the commit as it is)"
+        type: string
+        required: false
+        default: ""
+
+permissions: {}
+
+jobs:
+  # The volume on /var/lib/flatpak keeps the runtime update off the overlay: see ci.yaml's flatpak.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-26.04
+          - arch: aarch64
+            runner: ubuntu-26.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged --volume /var/lib/flatpak
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download the bump patch
+        if: inputs.patch_artifact != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.patch_artifact }}
+          path: ${{ runner.temp }}/bump
+
+      # The patch is version-bump-pr's, checked there against its allowed files; applied to the
+      # index, so the tree built is the one the bump commit holds.
+      - name: Apply the bump patch
+        if: inputs.patch_artifact != ''
+        env:
+          PATCH: ${{ runner.temp }}/bump/bump.patch
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          git apply --index "${PATCH}"
+          git --no-pager diff --cached --stat
+
+      # The container's root owns nothing in the checkout; the generator runs as root.
+      - name: Generate cargo-sources.json from the tree's Cargo.lock
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          make cargo-sources
+
+      # The metainfo's screenshot URLs follow the trunk, which a run from another ref (a dry run of a
+      # pull request branch) may not hold yet: there they name the dispatched commit, so its own
+      # screenshots are mirrored. A run on the trunk builds the metainfo as Flathub will.
+      - name: Point the screenshots at the commit off the trunk
+        if: github.ref != 'refs/heads/rust-rewrite'
+        env:
+          METAINFO: data/com.leinardi.gx52.metainfo.xml.in.in
+          TRUNK_URL: https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/
+        run: |
+          set -euo pipefail
+          grep -qF "$TRUNK_URL" "$METAINFO"
+          sed -i "s|$TRUNK_URL|https://raw.githubusercontent.com/leinardi/gx52/$GITHUB_SHA/|g" "$METAINFO"
+          if grep -qF "$TRUNK_URL" "$METAINFO"; then
+            echo "A screenshot URL still names the trunk." >&2
+            exit 1
+          fi
+          grep -F "<image>" "$METAINFO"
+
+      # Flathub runs the tests of the app module; the stable manifest leaves them off for a plain
+      # local build, so the gate builds a copy that turns them on.
+      - name: Write the gate manifest
+        run: |
+          set -euo pipefail
+          jq '.modules |= map(if .name == "gx52" then . + {"run-tests": true} else . end)' \
+            build-aux/com.leinardi.gx52.json >build-aux/com.leinardi.gx52.gate.json
+          jq -e '[.modules[] | select(.name == "gx52" and ."run-tests" == true)] | length == 1' \
+            build-aux/com.leinardi.gx52.gate.json >/dev/null
+
+      - name: Build the stable Flatpak and run meson test
+        uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          manifest-path: build-aux/com.leinardi.gx52.gate.json
+          arch: ${{ matrix.arch }}
+          bundle: gx52-${{ matrix.arch }}.flatpak
+          run-tests: true
+          repo-dir: repo
+          # As Flathub's builds do, so the repository lint sees mirrored screenshots.
+          mirror-screenshots-url: https://dl.flathub.org/media
+          upload-artifact: false
+          cache-key: release-gate-${{ matrix.arch }}-cargo-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+
+      - name: Lint the manifest and the repository
+        run: |
+          set -euo pipefail
+          flatpak-builder-lint manifest build-aux/com.leinardi.gx52.json
+          flatpak-builder-lint repo repo
+
+      - name: Upload the bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gx52-bundle-${{ matrix.arch }}
+          path: gx52-${{ matrix.arch }}.flatpak
+          if-no-files-found: error
+          retention-days: 7
+
+  # One artifact with both bundles, the flat list of files the release attaches.
+  bundles:
+    needs: build
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Merge the bundles
+        uses: actions/upload-artifact/merge@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gx52-bundles
+          pattern: gx52-bundle-*
+          retention-days: 7

@@ -23,15 +23,13 @@
 //! Every case that must be refused is the negative control of one that must pass: a missing
 //! header, another licence, another holder, a header past the window, an incomplete provenance
 //! comment and a pasted MIT or Apache-2.0 block. The scratch repositories run git and the script
-//! with an isolated git environment (`meta::gitenv`), so under the commit hook they never touch the
-//! index being committed.
+//! with an isolated git environment (`meta::scratch`), so under the commit hook they never touch
+//! the index being committed.
 
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Command;
 
-use meta::{gitenv, repo};
+use meta::repo;
+use meta::scratch::Scratch;
 
 const SCRIPT_PATH: &str = "scripts/check-license-headers.sh";
 
@@ -131,56 +129,25 @@ const MAKEFILE_WITH_HEADER: &str = concat!(
     "MK_COMMON_FILES := help.mk pre-commit.mk\n"
 );
 
-fn run_git(directory: &Path, args: &[&str]) {
-    let output = gitenv::isolate(Command::new("git").args(args).current_dir(directory))
-        .output()
-        .unwrap_or_else(|error| panic!("run git {args:?}: {error}"));
-    assert!(
-        output.status.success(),
-        "git {args:?}: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-}
-
 /// A git repository holding the checker, a Makefile (unless the case brings its own) and `files`,
 /// every one of them added except those under [`UNTRACKED_PREFIX`].
-fn scratch_repo(files: &[(&str, String)]) -> tempfile::TempDir {
-    let scratch = tempfile::tempdir().unwrap_or_else(|error| panic!("scratch directory: {error}"));
-    let directory = scratch.path();
+fn scratch_repo(files: &[(&str, String)]) -> Scratch {
+    let scratch = Scratch::new();
     let mut files = files.to_vec();
-    files.push((SCRIPT_PATH, repo::read(SCRIPT_PATH)));
     if !files.iter().any(|(name, _)| *name == "Makefile") {
         files.push(("Makefile", MAKEFILE_WITH_HEADER.to_owned()));
     }
-
     for (name, content) in &files {
-        let path = directory.join(name);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .unwrap_or_else(|error| panic!("create the directory of {name}: {error}"));
-        }
-        fs::write(&path, content).unwrap_or_else(|error| panic!("write {name}: {error}"));
+        scratch.write(name, content);
     }
-    fs::set_permissions(
-        directory.join(SCRIPT_PATH),
-        fs::Permissions::from_mode(0o700),
-    )
-    .unwrap_or_else(|error| panic!("make the checker executable: {error}"));
-
-    run_git(directory, &["init", "--quiet"]);
+    scratch.copy_script(SCRIPT_PATH);
+    scratch.git(&["add", "--", SCRIPT_PATH]);
     for (name, _) in &files {
         if !name.starts_with(UNTRACKED_PREFIX) {
-            run_git(directory, &["add", "--", name]);
+            scratch.git(&["add", "--", name]);
         }
     }
     scratch
-}
-
-/// Runs the checker kept at [`SCRIPT_PATH`] inside the repository at `directory`.
-fn run_checker(directory: &Path) -> Output {
-    gitenv::isolate(Command::new(directory.join(SCRIPT_PATH)).current_dir(directory))
-        .output()
-        .unwrap_or_else(|error| panic!("run the checker: {error}"))
 }
 
 /// The repository passes its own check. Run with the repository's own git environment: under the
@@ -221,16 +188,12 @@ fn run_cases(cases: Vec<HeaderCase>) {
     let mut failures = Vec::new();
     for HeaderCase { name, files, pass } in cases {
         let scratch = scratch_repo(&files);
-        let output = run_checker(scratch.path());
-        let text = format!(
-            "{}{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-        if pass && !output.status.success() {
+        let run = scratch.run(SCRIPT_PATH, &[], &[]);
+        let text = run.text;
+        if pass && !run.success {
             failures.push(format!("{name}: rejected, want accepted:\n{text}"));
         }
-        if !pass && output.status.success() {
+        if !pass && run.success {
             failures.push(format!("{name}: accepted, want rejected:\n{text}"));
         }
     }

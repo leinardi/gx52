@@ -23,14 +23,14 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 use jiff::tz::TimeZone;
-use x52::clock::{Clock, SystemClock};
 
 use crate::profile::editor::EditorState;
 use crate::profile::mfd::{self, LineSource, ShownClock, TextInfo};
 use crate::profile::{MfdLineSource, ProfileKind};
-use crate::widgets::brightness_at;
+use crate::time;
 use crate::widgets::mfd_display::DateArea;
 use crate::widgets::ticker::{Ticker, Ticking};
+use crate::widgets::{MfdDisplay, brightness_at};
 
 /// How long the date area shows the number of a clock just picked, as the device does.
 const CLOCK_FLASH: Duration = Duration::from_secs(3);
@@ -343,6 +343,11 @@ impl MfdEditor {
         self.refresh_display();
     }
 
+    /// The MFD preview.
+    pub(crate) fn display(&self) -> MfdDisplay {
+        self.imp().display.get()
+    }
+
     /// Shows the display again: the dynamic lines and the time follow the device and the clock.
     pub(crate) fn refresh_display(&self) {
         let imp = self.imp();
@@ -358,7 +363,7 @@ impl MfdEditor {
         } else {
             DateArea::Date
         };
-        if let Some(preview) = app.mfd_preview(imp.clock.get(), SystemClock.now(), &zone) {
+        if let Some(preview) = app.mfd_preview(imp.clock.get(), time::now(), &zone) {
             imp.display.show(&preview, date_area);
         }
     }

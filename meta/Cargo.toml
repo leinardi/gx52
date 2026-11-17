@@ -31,13 +31,13 @@ publish = false
 [lints]
 workspace = true
 
-# The Markdown reader of the library, and the source scans of the tests.
+# The Markdown reader of the library and the source scans of the tests (regex), and the library's
+# scratch repositories of the script tests (tempfile).
 [dependencies]
 regex = "1.13.1"
+tempfile = "3.27.0"
 
-# The pre-commit configuration and the workflows (YAML), the scratch repositories of the script
-# tests, and the workspace manifests (TOML).
+# The pre-commit configuration and the workflows (YAML), and the workspace manifests (TOML).
 [dev-dependencies]
 serde_yaml_ng = "0.10"
-tempfile = "3.27.0"
 toml = "1.1.8"

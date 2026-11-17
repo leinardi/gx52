@@ -1,0 +1,135 @@
+name: Release
+
+# The first half of a release (docs/release.md): resolve the version and open the bump pull request
+# against the trunk. Merging it is the release: release-publish.yaml then gates, tags and publishes
+# it; the Flathub pull request comes from the Flathub repository's own update workflow. No tag is
+# created here.
+#
+#   policy  the version rules svu cannot know (scripts/release-policy.sh): before v1.0.0 the
+#           version is explicit, 0.99.x or 1.0.0. A real run only from the trunk.
+#   bump    gh-reusable-workflows' version-bump-pr: the version resolved (svu after 1.0.0),
+#           `make release-bump` run with a read-only token, the patch checked against the four
+#           allowed files, then (real run) the release/vX.Y.Z branch, the pull request and CI on it.
+#   A dry run, from any ref, stops version-bump-pr before it pushes, then builds the bumped tree:
+#   gate    release-gate.yaml with the bump's patch applied, both architectures;
+#   flathub flathub-check.yaml on the same patched tree: the Flathub manifest and cargo-sources.json
+#           the release would attach, linted and diffed against the Flathub branch.
+#
+# GitHub registers a dispatch workflow from the default branch only, so until M9 master carries a
+# stub of this file with the same inputs; `gh workflow run release.yaml --ref rust-rewrite` (or a
+# branch, for a dry run) runs this one.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version X.Y.Z (empty: derive it with svu, allowed from 1.0.0 on)"
+        type: string
+        required: false
+        default: ""
+      dry_run:
+        description: "Resolve and bump, run the gate and the Flathub check on the bumped tree; push and open nothing"
+        type: boolean
+        required: false
+        default: true
+
+# One release dispatch at a time; version-bump-pr has a group of its own inside. GitHub keeps one
+# pending run per group: a dispatch that queues behind a running one replaces an older pending one
+# (docs/release.md, "How to release").
+concurrency:
+  group: release-dispatch-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  policy:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      # A dry run may run from any ref; a real one opens a pull request against the trunk, so it
+      # must be cut from it.
+      - name: Refuse a real run off the trunk
+        env:
+          REF: ${{ github.ref }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" != "true" ] && [ "$REF" != "refs/heads/rust-rewrite" ]; then
+            echo "A release is cut from rust-rewrite, got $REF; only a dry run may run elsewhere. Nothing was changed." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Check the version policy
+        env:
+          VERSION: ${{ inputs.version }}
+        run: scripts/release-policy.sh "$VERSION"
+
+  bump:
+    needs: policy
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    uses: leinardi/gh-reusable-workflows/.github/workflows/version-bump-pr.yaml@2635363c6cdbba761accc2a3d4a756787d1f911d # v1.8.0
+    with:
+      version: ${{ inputs.version }}
+      dry_run: ${{ inputs.dry_run }}
+      version_command: make -s release-version
+      bump_command: make release-bump VERSION="$RELEASE_VERSION"
+      allowed_files: Cargo.toml Cargo.lock meson.build data/com.leinardi.gx52.metainfo.xml.in.in
+      base_branch: rust-rewrite
+      ci_workflow: ci.yaml
+
+  gate:
+    needs: bump
+    if: inputs.dry_run
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-gate.yaml
+    with:
+      patch_artifact: version-bump-pr-patch
+
+  flathub:
+    needs: bump
+    if: inputs.dry_run
+    permissions:
+      contents: read
+    uses: ./.github/workflows/flathub-check.yaml
+    with:
+      tag: ${{ needs.bump.outputs.tag }}
+      patch_artifact: version-bump-pr-patch
+
+  summary:
+    needs: [bump, gate, flathub]
+    if: always() && inputs.dry_run && needs.bump.result == 'success'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions: {}
+
+    steps:
+      - name: Summarize the dry run
+        env:
+          VERSION: ${{ needs.bump.outputs.version }}
+          TAG: ${{ needs.bump.outputs.tag }}
+          GATE: ${{ needs.gate.result }}
+          FLATHUB: ${{ needs.flathub.result }}
+        run: |
+          set -euo pipefail
+          {
+            echo "# Dry run: $TAG"
+            echo
+            echo "- Version: $VERSION (the bump job prints the metainfo entry)"
+            echo "- Gate on the bumped tree: $GATE"
+            echo "- Flathub check (manifest, cargo-sources.json, diff): $FLATHUB"
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$GATE" = success ] && [ "$FLATHUB" = success ]

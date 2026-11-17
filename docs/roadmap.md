@@ -623,12 +623,34 @@ Acceptance:
 1. **(code) `release.yaml`** implementing [release.md](release.md), including the decision on how
    the workflow is dispatched before the trunk is the default branch. Done when: DW, plus a dry run
    passes on both architectures and the tooling-todo item is ticked.
+   - **Code done, dry run pending (2026-11-15):** `release.yaml` (policy, bump PR through
+     gh-reusable-workflows' `version-bump-pr` with `base_branch: rust-rewrite`, gate and Flathub
+     dry runs), `release-publish.yaml` (release-on-merge, the gate and the Flathub check, tag and
+     GitHub pre-release for `0.x` with the bundles and the Flathub files), `release-gate.yaml` and
+     `flathub-check.yaml` (which replaced `flathub-pr.yaml` on 2026-11-16), with
+     `scripts/release-bump.sh`, `release-policy.sh` and `flathub-manifest.sh` and their meta-tests.
+     Before M9 they are dispatched with `--ref rust-rewrite` through stubs on `master`
+     ([release.md](release.md#dispatching-before-m9)). The metainfo `<screenshots>` block is in;
+     its PNGs are not captured yet. The gh-reusable-workflows `base_branch` change is released as
+     v1.8.0 and pinned, and the `master` stubs are merged (2026-11-15). Open: the dry run on both
+     architectures.
 2. **(code) `scheduled-scan.yaml` and repository settings**, the remaining items of
    [tooling-todo.md, "Needs CI and the release
    flow"](tooling-todo.md#needs-ci-and-the-release-flow), plus the one-time setup of
    [release.md](release.md#one-time-setup) (release identity, the Flathub `beta` branch and
    migration PR, the Flathub `update.yml` and the Actions PR setting on the Flathub repository; no
    Flathub token). Done when: the items are ticked and the setup is recorded.
+   - **Applied (2026-11-15):** `scheduled-scan.yaml` on `master` (weekly
+     `cargo deny` on the trunk, and a check that both manifests are on Flathub's newest GNOME
+     runtime); gh-leinardi-iac `repo_gx52`: the `rust-rewrite` ruleset with `ci-result` required,
+     Actions may create pull requests, and a `release` environment deployable from `rust-rewrite`
+     only. Recorded in [release.md](release.md#one-time-setup). Applied with `tofu apply` and the
+     scan merged to `master` (2026-11-15).
+   - **Changed (2026-11-16):** no Flathub token (a fine-grained one cannot write to the `flathub`
+     organisation's repository, a classic one is too wide): the Flathub pull request is opened by
+     the Flathub repository's own `update.yml`. The `release` environment is unused and goes from
+     the IaC; the `master` stub of `flathub-pr.yaml` goes. Open: the Flathub side (the Actions PR
+     setting, the `beta` migration PR after `v0.99.0`, `update.yml`).
 3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
@@ -644,11 +666,17 @@ Acceptance:
      beta install, udev, `x52d`, the retired 0.7 options, the storage paths and the `gx52.db` copy),
      `CONTRIBUTING.md` rewritten for Meson, the Devel Flatpak, the checks and the trunk,
      `SECURITY.md` checked against the `finish-args` (no `--share=network`) and the portals, and
-     the Serena memories written. The metainfo `<screenshots>` block is on the release branch; the
+     the Serena memories written. The metainfo `<screenshots>` block came with task 1; the
      PNGs in `data/screenshots/` are the maintainer's to capture
      ([release.md](release.md)), and the README gets its screenshot table with them.
 5. **First `0.99.x` on beta.** Done when: the Flathub PR is merged, the beta build installs with
    `flatpak install flathub-beta com.leinardi.gx52`, and an X52 non-Pro call for testers is posted.
+   - **Prepared (2026-11-15):** the call for testers is drafted in
+     [x52-call-for-testers.md](x52-call-for-testers.md) (the input tester map, the mode selector,
+     the MFD, the character set, the clocks and the virtual mouse), for the maintainer to post as a
+     GitHub issue or discussion once the beta installs. Its results go here and in
+     [protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro). The dispatch, the bump PR merge, the
+     Flathub `beta` branch and the Flathub PR merge are the maintainer's.
 
 ## M9: the rewrite lands
 

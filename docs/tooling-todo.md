@@ -72,25 +72,34 @@ item off, or delete it, in the commit that does it.
       there: `cargo-deny` (the `deny` job) and `flatpak-builder-lint` (the `flatpak` job); the
       meta-tests run in their own bare-runner job, `meta`.
 - [x] `docs/release.md`: the release specification (rewrite analysis, section 9).
-- [ ] `.github/workflows/release.yaml`, implementing [release.md](release.md).
-- [ ] `scheduled-scan.yaml` (dependency audit only) and, possibly, a check for a newer GNOME
-      runtime on Flathub (rewrite analysis, section 8).
-- [ ] Repository settings in `gh-leinardi-iac`: required checks once `ci.yaml` exists, private
-      vulnerability reporting (linked from `SECURITY.md` and the issue template config). No Flathub
-      token secret: the Flathub PR is opened by the Flathub repository's own workflow (next item).
+- [x] `.github/workflows/release.yaml`, implementing [release.md](release.md): `release.yaml`,
+      `release-publish.yaml`, `release-gate.yaml` and `flathub-check.yaml`, on gh-reusable-workflows'
+      version-bump-pr, release-on-merge and simple-tag-and-release (M8).
+- [x] `scheduled-scan.yaml`: cargo-deny on the trunk every week, and a check that fails when
+      Flathub has a newer GNOME runtime than the manifests (rewrite analysis, section 8). On
+      `master` until M9 ([release.md](release.md#dispatching-before-m9)).
+- [ ] Repository settings in `gh-leinardi-iac` (`repo_gx52`, M8): a ruleset on `rust-rewrite`
+      with `ci-result` required (none on the legacy `master`), Actions may create pull requests;
+      private vulnerability reporting is already on for public repositories. Applied
+      (2026-11-15). Tick when the unused `release` environment is removed: no Flathub token
+      secret, the Flathub PR is opened by the Flathub repository's own workflow (next item).
 - [ ] Flathub side ([release.md, "The Flathub update
       workflow"](release.md#the-flathub-update-workflow)): the `beta` migration PR, `update.yml` on
-      the Flathub `master`, and "Allow GitHub Actions to create and approve pull requests" on
-      `flathub/com.leinardi.gx52`, with the outcome recorded in release.md.
+      the Flathub `master`, and whether its first run may open pull requests ("Allow GitHub
+      Actions to create and approve pull requests" on `flathub/com.leinardi.gx52` is admin-only,
+      so it is found out by that run), with the outcome recorded in release.md.
+- [ ] `master`: remove the `flathub-pr.yaml` stub, which no workflow on the trunk matches any
+      more.
 
 ## Docs and project files
 
 - [x] `CONTRIBUTING.md`: rewrite for the Rust project (build from source with Meson, Flatpak
       Devel build, `make check`, commit conventions), adapted from `swarm-device-access`.
-- [ ] `RELEASING.md`: replace with `docs/release.md`.
+- [x] `RELEASING.md`: replaced by `docs/release.md`; the file goes with the legacy tree in M9
+      (below).
 - [x] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
-- [ ] `README.md`: the screenshot table (LEDs, MFD, profiles, Preferences), in the commit that adds
-      the PNGs in `data/screenshots/` the metainfo points at.
+- [x] `README.md`: the screenshot table (LEDs, MFD, clocks, profiles, Preferences), from the PNGs
+      `make screenshots` writes into `data/screenshots/`.
 - [x] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists.
 - [x] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
 - [x] `.agents/skills/`: decide whether gx52 needs a domain skill like `swarm-device-access`'s
@@ -121,3 +130,15 @@ item off, or delete it, in the commit that does it.
       it.
 - [ ] Remove `.gitlab/` with the GitLab tombstone (rewrite analysis, section 7.4).
 - [ ] Rename the trunk to `main` (rewrite analysis, section 1, Branching).
+- [ ] Remove `RELEASING.md`, the legacy manual release procedure.
+- [ ] Release workflows ([release.md](release.md#dispatching-before-m9)): remove the `ci.yaml`,
+      `release.yaml` and `flathub-pr.yaml` stubs from the old `master`; move
+      `scheduled-scan.yaml` to the trunk and drop its explicit `rust-rewrite` checkout; drop the
+      `base_branch` inputs of the gh-reusable-workflows calls and every `rust-rewrite` ref in the
+      release workflows (the trunk is then the default branch); point the metainfo screenshot
+      URLs at `main`.
+- [ ] Repository settings: move `ci-result` from the `rust-rewrite` ruleset to
+      `default_branch_required_checks` and remove that ruleset.
+- [ ] `scheduled-scan.yaml` on the trunk: give it meta-test coverage like the release workflows'
+      (`release_workflows`); on `master` the trunk's meta-tests cannot read it, so until then its
+      check is the hands-on one in [release.md](release.md#dispatching-before-m9).
