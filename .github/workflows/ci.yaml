@@ -27,7 +27,7 @@ jobs:
   # cargo-deny runs in deny (it needs the network), and flatpak-builder-lint in flatpak, where the
   # linter is.
   pre-commit-all:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -82,7 +82,7 @@ jobs:
   # (git ls-files, scratch repositories), which a Flatpak build does not have. The cache is saved
   # only on a pull request, as in pre-commit-all.
   meta:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -107,7 +107,7 @@ jobs:
   # cargo-deny over the whole workspace: advisories (the database needs the network), licences,
   # bans and sources.
   deny:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -143,9 +143,9 @@ jobs:
       matrix:
         include:
           - arch: x86_64
-            runner: ubuntu-24.04
+            runner: ubuntu-26.04
           - arch: aarch64
-            runner: ubuntu-24.04-arm
+            runner: ubuntu-26.04-arm
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     permissions:
@@ -177,7 +177,7 @@ jobs:
   # flatpak job's meson test. Cargo's target directory and home are in the checkout, so they are
   # cached between runs, keyed on the architecture, Cargo.lock and the toolchain pin.
   sdk-checks:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     permissions:
       contents: read
@@ -227,7 +227,7 @@ jobs:
     # Reports inline PR review comments over a diff range; a manual dispatch has
     # neither a pull request to comment on nor a base ref to diff against.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # reviewdog posts findings as pull request review comments
     # (-reporter=github-pr-review), not as checks.
     permissions:
@@ -251,7 +251,7 @@ jobs:
     # Reports inline PR review comments over a diff range; a manual dispatch has
     # neither a pull request to comment on nor a base ref to diff against.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # reviewdog posts findings as pull request review comments
     # (-reporter=github-pr-review), not as checks.
     permissions:
@@ -284,7 +284,7 @@ jobs:
     # Reports inline PR review comments over a diff range; a manual dispatch has
     # neither a pull request to comment on nor a base ref to diff against.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # reviewdog posts findings as pull request review comments
     # (-reporter=github-pr-review), not as checks.
     permissions:
@@ -308,7 +308,7 @@ jobs:
     # Reports inline PR review comments over a diff range; a manual dispatch has
     # neither a pull request to comment on nor a base ref to diff against.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # reviewdog posts findings as pull request review comments
     # (-reporter=github-pr-review), not as checks.
     permissions:
@@ -332,7 +332,7 @@ jobs:
     # Reports inline PR review comments over a diff range; a manual dispatch has
     # neither a pull request to comment on nor a base ref to diff against.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # reviewdog posts findings as pull request review comments
     # (-reporter=github-pr-review), not as checks.
     permissions:
@@ -361,7 +361,7 @@ jobs:
     # skips merge commits. Pull requests land as merge commits (AGENTS.md), so
     # every commit counts and the pull-request title never becomes one.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # The action takes no token and only prints annotations.
     permissions:
       contents: read
@@ -393,7 +393,7 @@ jobs:
       - flatpak
       - sdk-checks
       - conventional-commits
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions: {}
 

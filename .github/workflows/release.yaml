@@ -43,7 +43,7 @@ permissions: {}
 
 jobs:
   policy:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -112,7 +112,7 @@ jobs:
   summary:
     needs: [bump, gate, flathub]
     if: always() && inputs.dry_run && needs.bump.result == 'success'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions: {}
 

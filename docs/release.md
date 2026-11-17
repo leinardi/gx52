@@ -104,8 +104,8 @@ on a scratch clone: `make release-bump VERSION=0.99.0`.
 `ci.yaml`'s Flatpak jobs come from the S6 reference workflow, which passed on GitHub Actions on
 2026-10-28; `release-gate.yaml` reuses them. The lessons S6 paid for:
 
-- **Native arm runner.** The Flatpak build is a matrix of `x86_64` on `ubuntu-24.04` and `aarch64`
-  on the free `ubuntu-24.04-arm` runner; no QEMU.
+- **Native arm runner.** The Flatpak build is a matrix of `x86_64` on `ubuntu-26.04` and `aarch64`
+  on the free `ubuntu-26.04-arm` runner; no QEMU.
 - **Container:** `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51` with `--privileged`, and
   `flatpak/flatpak-github-actions/flatpak-builder`. The image ships the GNOME SDK, `uv` and the
   linters, but not the `rust-stable` SDK extension and no `flathub` remote.

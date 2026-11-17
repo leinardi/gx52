@@ -298,7 +298,7 @@ Differences specific to a GNOME application, following `gtk-rs-skills`
   the action was archived in 2025) in the `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51`
   container with `--privileged`. Builds the Devel manifest, runs `meson test` (cargo test plus the
   desktop / metainfo / schema lint suite) and uploads an installable bundle, so a PR can be tested
-  by installing the artifact. Matrix `x86_64` on `ubuntu-24.04` and `aarch64` on `ubuntu-24.04-arm`
+  by installing the artifact. Matrix `x86_64` on `ubuntu-26.04` and `aarch64` on `ubuntu-26.04-arm`
   (free for public repositories).
 - **Clippy inside the SDK**: runner images ship older GTK / libadwaita, so `gtk4-sys` fails its
   pkg-config check on the bare runner. The job builds the manifest with `--stop-at=gx52`, enables
