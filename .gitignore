@@ -36,6 +36,8 @@ desktop.ini
 # --- Flatpak ---
 .flatpak-builder/
 /_flatpak/
+# The clone of flathub/com.leinardi.gx52 that scripts/flathub-release.sh works in.
+/_flathub/
 # Generated from Cargo.lock for the offline Flathub build; the release workflow regenerates it.
 /build-aux/cargo-sources.json
 /flatpak-build/

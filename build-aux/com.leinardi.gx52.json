@@ -22,7 +22,7 @@
             "buildsystem": "meson",
             "builddir": true,
             "sources": [
-                { "type": "dir", "path": "..", "skip": ["_build", "_flatpak", "target"] },
+                { "type": "dir", "path": "..", "skip": ["_build", "_flathub", "_flatpak", "target"] },
                 "cargo-sources.json",
                 {
                     "type": "inline",

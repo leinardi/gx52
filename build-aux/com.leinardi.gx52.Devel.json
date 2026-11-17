@@ -45,6 +45,7 @@
                     "path": "..",
                     "skip": [
                         "_build",
+                        "_flathub",
                         "_flatpak",
                         "target"
                     ]

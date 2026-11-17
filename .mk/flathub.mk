@@ -19,15 +19,15 @@ MK_LOCAL_FLATHUB_INCLUDED := 1
 
 # Local snippet (NOT part of make-common): the maintainer's pull requests to
 # flathub/com.leinardi.gx52 (scripts/flathub-release.sh, docs/release.md "Flathub by hand"). The
-# clone lives in FLATHUB_DIR, next to the other Flathub clones; each target pushes a branch with
-# the maintainer's git login and prints the link that opens the pull request filled in. VERSION
+# clone lives in FLATHUB_DIR (_flathub, ignored and cloned on demand); each target pushes a branch
+# with the maintainer's git login and opens or updates its pull request with gh. VERSION
 # defaults to the version the tree carries, which after a release's merge is the released one.
 
-FLATHUB_DIR ?= $(abspath $(REPO_ROOT)/../flathub)
+FLATHUB_DIR ?= $(REPO_ROOT)/_flathub
 FLATHUB_BASE ?= beta
 
 .PHONY: flathub-pr
-flathub-pr: ## Push the Flathub branch of release VERSION into FLATHUB_BASE (beta; master) and print its PR link
+flathub-pr: ## Push the Flathub branch of release VERSION into FLATHUB_BASE (beta; master) and open its PR
 	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh pr \
 		"$(or $(VERSION),$(shell $(MAKE) -s --no-print-directory release-version))" "$(FLATHUB_BASE)"
 
@@ -37,7 +37,7 @@ flathub-beta: ## Create the Flathub beta branch from the passed test build of VE
 		"$(or $(VERSION),$(shell $(MAKE) -s --no-print-directory release-version))"
 
 .PHONY: flathub-workflow
-flathub-workflow: ## Push the branch adding update.yml to the Flathub master and print its PR link
+flathub-workflow: ## Push the branch adding update.yml to the Flathub master and open its PR
 	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh workflow
 
 endif  # MK_LOCAL_FLATHUB_INCLUDED

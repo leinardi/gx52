@@ -67,9 +67,9 @@ make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (ne
 
 make -s release-version           # the version the tree carries (Cargo.toml [package] version)
 make release-bump VERSION=X.Y.Z   # write it into the four version files, no commit (docs/release.md)
-make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # push the Flathub branch of a release, print its PR link
+make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # push the Flathub branch of a release, open its PR
 make flathub-beta [VERSION=X.Y.Z] # create the Flathub beta branch from the passed test build (once)
-make flathub-workflow             # push the branch adding update.yml to the Flathub master
+make flathub-workflow             # push the branch adding update.yml to the Flathub master, open its PR
 ```
 
 The cargo and Meson targets need the GTK 4, libadwaita and SQLite development files on the host,
@@ -84,7 +84,8 @@ sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler
     appstream
 ```
 
-The `flathub-*` targets need `jq`, `curl` and a git login that can push to the Flathub repository.
+The `flathub-*` targets need `jq`, `curl`, and git and `gh` logins that can push to the Flathub
+repository.
 The Flatpak targets need `flatpak` with the `org.flatpak.Builder` Flatpak from Flathub;
 `cargo-sources` needs `uv` and `curl`; `screenshots` needs `weston` (`sudo apt install weston`)
 and `python3` too.

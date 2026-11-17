@@ -252,17 +252,17 @@ write to (rewrite analysis, section 9.1).
 
 ## Flathub by hand
 
-`scripts/flathub-release.sh`, through three make targets, prepares what the maintainer pushes to
-`flathub/com.leinardi.gx52` with their own git login: it keeps a clone in `FLATHUB_DIR` (default
-`../flathub/com.leinardi.gx52`, next to the maintainer's other Flathub clones), builds a branch
-there, pushes it, and prints the link that opens the pull request with its title and body filled
-in. Nothing is downloaded by hand, and no token is involved. `VERSION` defaults to the version the
-tree carries, which after a release's merge is the released one.
+`scripts/flathub-release.sh`, through three make targets, does what the maintainer pushes to
+`flathub/com.leinardi.gx52` with their own logins: it keeps a clone in `_flathub/com.leinardi.gx52`
+(ignored, skipped by the manifests' `dir` source, cloned on first use; `FLATHUB_DIR` moves it),
+builds a branch there, pushes it with git, and opens its pull request with `gh` (or updates the
+one already open). Nothing is downloaded by hand, and no token is stored anywhere. `VERSION`
+defaults to the version the tree carries, which after a release's merge is the released one.
 
 | Target | Branch, into | Use |
 | --- | --- | --- |
 | `make flathub-pr FLATHUB_BASE=master` | `gx52/vX.Y.Z-master`, into `master` | before `1.0.0`: the test build that creates `beta` (never merged); at `1.0.0`: the stable migration |
-| `make flathub-beta` | creates `beta` | once, after the test build of `gx52/vX.Y.Z-master` passed |
+| `make flathub-beta` | creates `beta` | once, after the test build of `gx52/vX.Y.Z-master` passed; closes that pull request |
 | `make flathub-pr` | `gx52/vX.Y.Z-beta`, into `beta` | a hand update: a runtime or finish-args change, or when `update.yml` cannot open its pull request |
 | `make flathub-workflow` | `gx52/update-workflow`, into `master` | adds or updates `update.yml` |
 
@@ -272,8 +272,9 @@ A `flathub-pr` branch is one commit on the base whose tree is exactly the releas
 migrates the legacy tree (the Python modules, `pypi-dependencies.json`, the submodules). The assets
 are downloaded and checked before the clone is touched: the manifest must name the tag and the
 commit the tag points at, so a refused release leaves the clone as it was. A re-run rebuilds the
-branch from the base and force-pushes it with a lease, which also refreshes its open pull request;
-a release the base already has changes nothing and pushes nothing. The script never pushes to
+branch from the base and force-pushes it with a lease, and updates the title and body of its open
+pull request instead of opening a second one; a release the base already has changes nothing and
+pushes nothing. The script never pushes to
 `master`, and pushes `beta` only to create it: after that first push Flathub protects it.
 
 `build-aux/flathub/` holds the files of the Flathub repository that this repository owns:
@@ -367,8 +368,8 @@ a version number is never reused for different code.
   does not exist yet, and no workflow creates it. The maintainer creates it after `v0.99.0` is
   released, following Flathub's documented flow (a pull request against `master` for the test
   build, then `beta` created from `master` with the branch merged in): `make flathub-pr
-  VERSION=0.99.0 FLATHUB_BASE=master`, open the pull request from the printed link, and once the
-  bot's test build passes, `make flathub-beta VERSION=0.99.0` and close the pull request. The
+  VERSION=0.99.0 FLATHUB_BASE=master` opens the pull request, and once the bot's test build
+  passes, `make flathub-beta VERSION=0.99.0` creates `beta` and closes it. The
   branch migrates the tree ([Flathub by hand](#flathub-by-hand)): `flathub.json` becomes
   `{"only-arches": ["x86_64", "aarch64"], "disable-external-data-checker": true}` and every file
   but `README.md` is replaced (the Python modules, `pypi-dependencies.json`, the `shared-modules`
