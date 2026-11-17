@@ -26,6 +26,16 @@ effort basis: its individual LEDs cannot be set, GX52 leaves out the LED blinkin
 indicator until they are verified on one, and its input codes come from the documentation, not from
 a device on the desk. Reports from X52 owners are welcome.
 
+## Screenshots
+
+| LEDs | MFD | Clocks |
+| --- | --- | --- |
+| ![The LEDs of a per-mode profile](data/screenshots/leds.png) | ![The text of the multi-function display](data/screenshots/mfd.png) | ![Three clocks in real time zones](data/screenshots/clocks.png) |
+
+| Profiles | Preferences |
+| --- | --- |
+| ![The profile list](data/screenshots/profiles.png) | ![Running in the background and the virtual mouse](data/screenshots/preferences.png) |
+
 ## Install
 
 ### Flathub

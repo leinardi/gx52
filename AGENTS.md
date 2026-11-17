@@ -157,6 +157,7 @@ Run before considering an edit done. `make check` applies to every row.
 | `.pre-commit-config.yaml`, `Makefile`, `.mk/**` | `make check`, `cargo test --locked -p meta` (vacuous flags, whole-tree hooks), `make help` |
 | `.github/workflows/**` | `pre-commit run actionlint --all-files`, `cargo test --locked -p meta` (Rust pins, vacuous flags, required gates and skipped hooks) |
 | `scripts/hooks/rustfmt-on-edit.sh` | shellcheck (in `make check`); run it once by editing a `.rs` file in Claude Code |
+| `src/screenshots/**` (fixtures included), `scripts/screenshots.sh`, `.mk/screenshots.mk`, the metainfo `<screenshots>` | `make verify`, `make screenshots`, then look at every changed PNG in `data/screenshots/` and `cargo test --locked -p meta --test screenshots` |
 | `README.md`, `docs/**/*.md`, other Markdown | `cargo test --locked -p meta --test docs` (the `docs-links` hook); prose wraps at 100 columns (markdownlint in `make check`) |
 | `.agents/skills/**` | the Markdown row |
 
