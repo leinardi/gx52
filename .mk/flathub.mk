@@ -36,8 +36,14 @@ flathub-beta: ## Create the Flathub beta branch from the passed test build of VE
 	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh beta \
 		"$(or $(VERSION),$(shell $(MAKE) -s --no-print-directory release-version))"
 
-.PHONY: flathub-workflow
-flathub-workflow: ## Push the branch adding update.yml to the Flathub master and open its PR
-	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh workflow
+.PHONY: flathub-promote
+flathub-promote: ## Open the Flathub master PR of release VERSION, 1.0.0 or later (promotion to stable)
+	@version="$(or $(VERSION),$(shell $(MAKE) -s --no-print-directory release-version))"; \
+	case "$$version" in 0.*) echo "$$version is a 0.x release: it goes to beta only" >&2; exit 1 ;; esac; \
+	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh pr "$$version" master
+
+.PHONY: flathub-merge
+flathub-merge: ## Wait for Flathub's test build of the open FLATHUB_BASE PR, then merge it on confirmation
+	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh merge "$(FLATHUB_BASE)"
 
 endif  # MK_LOCAL_FLATHUB_INCLUDED

@@ -82,12 +82,11 @@ item off, or delete it, in the commit that does it.
       with `ci-result` required (none on the legacy `master`), Actions may create pull requests;
       private vulnerability reporting is already on for public repositories. Applied
       (2026-11-15). Tick when the unused `release` environment is removed: no Flathub token
-      secret, the Flathub PR is opened by the Flathub repository's own workflow (next item).
-- [ ] Flathub side ([release.md, "The Flathub update
-      workflow"](release.md#the-flathub-update-workflow)): the `beta` migration PR, `update.yml` on
-      the Flathub `master`, and whether its first run may open pull requests ("Allow GitHub
-      Actions to create and approve pull requests" on `flathub/com.leinardi.gx52` is admin-only,
-      so it is found out by that run), with the outcome recorded in release.md.
+      secret, the Flathub PR is opened with the maintainer's `gh` login (next item).
+- [ ] Flathub side ([release.md, "The Flathub pull
+      requests"](release.md#the-flathub-pull-requests)): the `beta` migration PR (`make flathub-pr
+      VERSION=0.99.0 FLATHUB_BASE=master`, then `make flathub-beta`), with the outcome recorded in
+      release.md.
 - [ ] `master`: remove the `flathub-pr.yaml` stub, which no workflow on the trunk matches any
       more.
 

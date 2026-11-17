@@ -28,46 +28,53 @@ use meta::repo;
 use meta::scratch::{Run, Scratch};
 
 const SCRIPT: &str = "scripts/flathub-release.sh";
-const FILES: [&str; 2] = [
-    "build-aux/flathub/flathub.json",
-    "build-aux/flathub/update.yml",
-];
+const FLATHUB_JSON: &str = "build-aux/flathub/flathub.json";
 const MANIFEST: &str = "com.leinardi.gx52.json";
 
-/// The legacy Python manifest: no x-checker-data.
+/// The legacy Python manifest: no gx52 module vendoring cargo-sources.json.
 const LEGACY_MANIFEST: &str =
     r#"{"id": "com.leinardi.gx52", "modules": ["python3-setuptools.json"]}"#;
 
-/// A gh that knows `pr list`, `pr create`, `pr edit` and `pr close`: each call is a line of
-/// `GH_STATE/log` (`action|url|head|base|title`), an open pull request is `GH_STATE/open/N`
-/// (holding `head base`), and its body is `GH_STATE/body-N`.
+/// A gh that knows `pr list`, `pr create`, `pr edit`, `pr close`, `pr checks`, `pr view` and
+/// `pr merge`: each call is a line of `GH_STATE/log` (`action|url|head|base|title`), an open pull
+/// request is `GH_STATE/open/N` (holding `head base`), its body `GH_STATE/body-N`, its checks
+/// `GH_STATE/checks-N` (`bucket name` lines) and its comments `GH_STATE/comments-N`.
 const FAKE_GH: &str = r#"#!/usr/bin/env bash
 set -euo pipefail
 state="${GH_STATE:?}"
-mkdir -p "$state/open" "$state/closed"
+mkdir -p "$state/open" "$state/closed" "$state/merged"
 action="$1 $2"
 shift 2
 url="" head="" base="" title="" body=""
-if [[ "$action" == "pr edit" || "$action" == "pr close" ]]; then
+case "$action" in
+"pr list" | "pr create") ;;
+*)
 	url="$1"
 	shift
-fi
+	;;
+esac
 while (($#)); do
 	case "$1" in
 	--head) head="$2" ;;
 	--base) base="$2" ;;
 	--title) title="$2" ;;
 	--body) body="$2" ;;
+	--merge) shift && continue ;;
 	esac
 	shift 2
 done
 echo "$action|$url|$head|$base|$title" >>"$state/log"
 prefix=https://github.com/flathub/com.leinardi.gx52/pull
+number="${url##*/}"
 case "$action" in
 "pr list")
 	for file in "$state"/open/*; do
-		if [[ -f "$file" && "$(cat "$file")" == "$head $base" ]]; then
+		[[ -f "$file" ]] || continue
+		read -r open_head open_base <"$file"
+		if [[ -n "$head" && "$open_head $open_base" == "$head $base" ]]; then
 			echo "$prefix/${file##*/}"
+		elif [[ -z "$head" && "$open_base" == "$base" ]]; then
+			echo "$prefix/${file##*/} $open_head"
 		fi
 	done
 	;;
@@ -78,15 +85,17 @@ case "$action" in
 	printf '%s' "$body" >"$state/body-$number"
 	echo "$prefix/$number"
 	;;
-"pr edit") printf '%s' "$body" >"$state/body-${url##*/}" ;;
-"pr close") mv "$state/open/${url##*/}" "$state/closed/" ;;
+"pr edit") printf '%s' "$body" >"$state/body-$number" ;;
+"pr close") mv "$state/open/$number" "$state/closed/" ;;
+"pr checks") cat "$state/checks-$number" 2>/dev/null || true ;;
+"pr view") cat "$state/comments-$number" 2>/dev/null || true ;;
+"pr merge") mv "$state/open/$number" "$state/merged/" ;;
 *) exit 2 ;;
 esac
 "#;
 
 /// The release tree's files, in `git ls-files` order.
-const RELEASE_TREE: [&str; 5] = [
-    ".github/workflows/update.yml",
+const RELEASE_TREE: [&str; 4] = [
     "README.md",
     "cargo-sources.json",
     "com.leinardi.gx52.json",
@@ -107,9 +116,7 @@ impl Setup {
     fn new() -> Self {
         let gx52 = Scratch::new();
         gx52.copy_script(SCRIPT);
-        for file in FILES {
-            gx52.write(file, &repo::read(file));
-        }
+        gx52.write(FLATHUB_JSON, &repo::read(FLATHUB_JSON));
 
         let legacy = Scratch::new();
         legacy.git(&["switch", "--quiet", "--create", "master"]);
@@ -154,7 +161,7 @@ impl Setup {
         let manifest = format!(
             r#"{{"id": "com.leinardi.gx52", "modules": [{{"name": "gx52", "sources": [
                 {{"type": "git", "url": "https://github.com/leinardi/gx52.git", "tag": "{tag}",
-                  "commit": "{}", "x-checker-data": {{"type": "git"}}}},
+                  "commit": "{}"}},
                 "cargo-sources.json"]}}]}}"#,
             commit.unwrap_or(&head)
         );
@@ -173,23 +180,31 @@ impl Setup {
     }
 
     fn run(&self, args: &[&str]) -> Run {
+        self.run_with(args, &[])
+    }
+
+    fn run_with(&self, args: &[&str], extra: &[(&str, &str)]) -> Run {
         let releases = format!("file://{}", self.outside("releases"));
-        self.gx52.run(
-            SCRIPT,
-            args,
-            &[
-                ("FLATHUB_DIR", &self.outside("clones")),
-                ("FLATHUB_URL", &self.remote()),
-                ("UPSTREAM_URL", &self.upstream.path().display().to_string()),
-                ("RELEASES_URL", &releases),
-                ("GH", &self.outside("gh")),
-                ("GH_STATE", &self.outside("gh-state")),
-                ("GIT_AUTHOR_NAME", "Maintainer"),
-                ("GIT_AUTHOR_EMAIL", "maintainer@example.com"),
-                ("GIT_COMMITTER_NAME", "Maintainer"),
-                ("GIT_COMMITTER_EMAIL", "maintainer@example.com"),
-            ],
-        )
+        let clones = self.outside("clones");
+        let remote = self.remote();
+        let upstream = self.upstream.path().display().to_string();
+        let gh = self.outside("gh");
+        let gh_state = self.outside("gh-state");
+        let mut env: Vec<(&str, &str)> = vec![
+            ("FLATHUB_DIR", clones.as_str()),
+            ("FLATHUB_URL", remote.as_str()),
+            ("UPSTREAM_URL", upstream.as_str()),
+            ("RELEASES_URL", releases.as_str()),
+            ("GH", gh.as_str()),
+            ("GH_STATE", gh_state.as_str()),
+            ("GIT_AUTHOR_NAME", "Maintainer"),
+            ("GIT_AUTHOR_EMAIL", "maintainer@example.com"),
+            ("GIT_COMMITTER_NAME", "Maintainer"),
+            ("GIT_COMMITTER_EMAIL", "maintainer@example.com"),
+            ("POLL_SECONDS", "1"),
+        ];
+        env.extend_from_slice(extra);
+        self.gx52.run(SCRIPT, args, &env)
     }
 
     fn succeeds(&self, args: &[&str]) -> String {
@@ -277,16 +292,11 @@ fn the_migration_branch_carries_exactly_the_release() {
         let want = std::fs::read_to_string(&want).unwrap_or_else(|error| panic!("{want}: {error}"));
         assert_eq!(setup.show(branch, file), want.trim_end(), "{file}");
     }
-    for (file, source) in [
-        ("flathub.json", FILES[0]),
-        (".github/workflows/update.yml", FILES[1]),
-    ] {
-        assert_eq!(
-            setup.show(branch, file),
-            repo::read(source).trim_end(),
-            "{file}"
-        );
-    }
+    assert_eq!(
+        setup.show(branch, "flathub.json"),
+        repo::read(FLATHUB_JSON).trim_end(),
+        "flathub.json"
+    );
     assert_eq!(
         setup.show(branch, "README.md"),
         "Flathub packaging of GX52.",
@@ -388,16 +398,50 @@ fn beta_is_created_once_from_the_test_build() {
 }
 
 #[test]
-fn the_workflow_branch_adds_only_update_yml() {
+fn a_built_pull_request_is_merged_on_confirmation_only() {
     let setup = Setup::new();
-    setup.succeeds(&["workflow"]);
-    let mut want: Vec<String> = setup.files("master");
-    want.insert(0, ".github/workflows/update.yml".to_owned());
-    assert_eq!(setup.files("gx52/update-workflow"), want);
-    assert_eq!(
-        setup.gh_calls(),
-        ["pr create||gx52/update-workflow|master|Add the update workflow"]
+    setup.release("v0.99.0", None);
+    setup.refused(&["merge", "beta"], "no open gx52/* pull request into beta");
+    setup.succeeds(&["pr", "0.99.0", "master"]);
+    setup.refused(&["merge", "master"], "the test build of the beta branch");
+    setup.succeeds(&["beta", "0.99.0"]);
+    setup.release("v0.99.1", None);
+    setup.succeeds(&["pr", "0.99.1", "beta"]);
+    let state = setup.outside("gh-state");
+    let write = |file: &str, content: &str| {
+        fs::write(format!("{state}/{file}"), content).unwrap_or_else(|error| panic!("{error}"));
+    };
+
+    write("checks-2", "pass builds/x86_64\nfail builds/aarch64\n");
+    setup.refused(&["merge", "beta"], "fail builds/aarch64");
+
+    write("checks-2", "pass builds/x86_64\npass builds/aarch64\n");
+    write(
+        "comments-2",
+        "Test build succeeded. To test this build, install it from the testing repository:\n\n```\nflatpak install --user https://dl.flathub.org/build-repo/12345/com.leinardi.gx52.flatpakref\n```\n",
     );
+    let declined = setup.run(&["merge", "beta"]);
+    assert!(
+        !declined.success,
+        "merged without a confirmation:\n{}",
+        declined.text
+    );
+    assert!(
+        declined.text.contains(
+            "flatpak install --user https://dl.flathub.org/build-repo/12345/com.leinardi.gx52.flatpakref"
+        ),
+        "no test build install command:\n{}",
+        declined.text
+    );
+    assert_eq!(setup.open_pull_requests(), 1, "declined, but merged");
+
+    let merged = setup.run_with(&["merge", "beta"], &[("ASSUME_YES", "1")]);
+    assert!(merged.success, "{}", merged.text);
+    assert_eq!(
+        setup.gh_calls().last().map(String::as_str),
+        Some("pr merge|https://github.com/flathub/com.leinardi.gx52/pull/2|||")
+    );
+    assert_eq!(setup.open_pull_requests(), 0);
 }
 
 #[test]

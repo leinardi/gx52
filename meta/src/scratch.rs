@@ -18,9 +18,12 @@
 //! under the commit hook nothing reaches the repository being committed.
 
 use std::fs;
+use std::io::ErrorKind;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::thread;
+use std::time::Duration;
 
 use crate::{gitenv, repo};
 
@@ -169,9 +172,19 @@ impl Scratch {
         for (name, value) in env {
             command.env(name, value);
         }
-        let output: Output = gitenv::isolate(&mut command)
-            .output()
-            .unwrap_or_else(|error| panic!("run {relative}: {error}"));
+        // A script written just now can still be open for writing in a child that another test
+        // thread forked meanwhile (it inherits the descriptor until its exec), and the kernel
+        // refuses to run a file open for writing: retried until that child has exec'd.
+        let mut attempts = 0;
+        let output: Output = loop {
+            match gitenv::isolate(&mut command).output() {
+                Err(error) if error.kind() == ErrorKind::ExecutableFileBusy && attempts < 100 => {
+                    attempts += 1;
+                    thread::sleep(Duration::from_millis(10));
+                }
+                result => break result.unwrap_or_else(|error| panic!("run {relative}: {error}")),
+            }
+        };
         Run {
             success: output.status.success(),
             text: format!(

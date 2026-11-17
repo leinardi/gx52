@@ -36,12 +36,12 @@ repos:
     hooks:
       - id: actionlint
         name: actionlint
-        files: ^(\.github/workflows/.*\.(yml|yaml)|build-aux/flathub/update\.yml)$
+        files: ^\.github/workflows/.*\.(yml|yaml)$
         args: ["-shellcheck", "shellcheck -S error"]
       - id: actionlint
         alias: actionlint-oneline
         name: actionlint (one line per one error)
-        files: ^(\.github/workflows/.*\.(yml|yaml)|build-aux/flathub/update\.yml)$
+        files: ^\.github/workflows/.*\.(yml|yaml)$
         args: ["-oneline", "-shellcheck", "shellcheck -S error"]
         stages: [manual]
   - repo: https://github.com/DavidAnson/markdownlint-cli2

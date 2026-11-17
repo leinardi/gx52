@@ -16,19 +16,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # Turns the stable manifest of a tagged tree (build-aux/com.leinardi.gx52.json) into the manifest
-# of the Flathub repository (docs/release.md, "The Flathub check"). The release attaches it; the
-# migration pull requests of the Flathub branches replace the legacy Python manifest with it, and
-# hand pull requests (a runtime bump) start from it.
+# of the Flathub repository (docs/release.md, "The Flathub check"). The release attaches it, and
+# every Flathub pull request (scripts/flathub-release.sh) carries it.
 #
 # Only the app's own source changes: the one `dir` source of the `gx52` module becomes
 #
-#   {"type": "git", "url": "https://github.com/leinardi/gx52.git", "tag": TAG, "commit": COMMIT,
-#    "x-checker-data": {"type": "git", "tag-pattern": "^v([0-9]+\\.[0-9]+\\.[0-9]+)$"}}
+#   {"type": "git", "url": "https://github.com/leinardi/gx52.git", "tag": TAG, "commit": COMMIT}
 #
-# in the same place. The x-checker-data is what the Flathub repository's update workflow
-# (flatpak-external-data-checker) follows to move the tag and the commit to the next release.
-# Everything else (the cargo-sources.json entry, the inline .cargo/config.toml that vendors the
-# crates, the runtime, the SDK extensions and the finish-args) is the tagged manifest's, unchanged.
+# in the same place. Everything else (the cargo-sources.json entry, the inline .cargo/config.toml
+# that vendors the crates, the runtime, the SDK extensions and the finish-args) is the tagged
+# manifest's, unchanged.
 # It fails unless the manifest has exactly one `gx52` module with exactly one `dir` source, and
 # leaves no `dir` source anywhere.
 #
@@ -48,8 +45,6 @@ die() {
 }
 
 REPOSITORY_URL=https://github.com/leinardi/gx52.git
-# The strict vMAJOR.MINOR.PATCH release tags, as the release workflow creates them.
-TAG_PATTERN='^v([0-9]+\.[0-9]+\.[0-9]+)$'
 
 [[ $# -eq 3 ]] || die "usage: flathub-manifest.sh MANIFEST TAG COMMIT | MANIFEST --source-dir PATH"
 MANIFEST="$1"
@@ -66,9 +61,7 @@ else
 		die "the tag must be vX.Y.Z (got '${TAG}')"
 	[[ "${COMMIT}" =~ ^[0-9a-f]{40}$ ]] || die "the commit must be a full 40-hex SHA (got '${COMMIT}')"
 	SOURCE="$(jq -n --arg url "${REPOSITORY_URL}" --arg tag "${TAG}" --arg commit "${COMMIT}" \
-		--arg pattern "${TAG_PATTERN}" \
-		'{type: "git", url: $url, tag: $tag, commit: $commit,
-		  "x-checker-data": {type: "git", "tag-pattern": $pattern}}')"
+		'{type: "git", url: $url, tag: $tag, commit: $commit}')"
 fi
 
 jq --indent 4 --argjson source "${SOURCE}" '

@@ -148,9 +148,8 @@ fn sample_hits(sample: &str) -> Vec<VacuousHit> {
 }
 
 /// Scans the files that define gates: the Makefile and its fragments,
-/// the pre-commit configuration, every YAML file under .github, the workflows included, and the
-/// Flathub repository's update workflow kept in build-aux/flathub. An exception that matches nothing
-/// is reported too.
+/// the pre-commit configuration and every YAML file under .github, the workflows included. An
+/// exception that matches nothing is reported too.
 #[test]
 fn no_vacuous_flags() {
     let fragments = repo::files_under(".mk", &[".mk"]);
@@ -166,7 +165,6 @@ fn no_vacuous_flags() {
     let mut files = vec!["Makefile".to_owned(), ".pre-commit-config.yaml".to_owned()];
     files.extend(fragments);
     files.extend(workflows);
-    files.push("build-aux/flathub/update.yml".to_owned());
 
     let mut used = vec![false; ALLOWED_FRAGMENTS.len()];
     let mut problems = Vec::new();

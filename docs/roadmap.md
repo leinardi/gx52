@@ -638,8 +638,7 @@ Acceptance:
    [tooling-todo.md, "Needs CI and the release
    flow"](tooling-todo.md#needs-ci-and-the-release-flow), plus the one-time setup of
    [release.md](release.md#one-time-setup) (release identity, the Flathub `beta` branch and
-   migration PR, the Flathub `update.yml` and the Actions PR setting on the Flathub repository; no
-   Flathub token). Done when: the items are ticked and the setup is recorded.
+   migration PR; no Flathub token). Done when: the items are ticked and the setup is recorded.
    - **Applied (2026-11-15):** `scheduled-scan.yaml` on `master` (weekly
      `cargo deny` on the trunk, and a check that both manifests are on Flathub's newest GNOME
      runtime); gh-leinardi-iac `repo_gx52`: the `rust-rewrite` ruleset with `ci-result` required,
@@ -651,6 +650,12 @@ Acceptance:
      the Flathub repository's own `update.yml`. The `release` environment is unused and goes from
      the IaC; the `master` stub of `flathub-pr.yaml` goes. Open: the Flathub side (the Actions PR
      setting, the `beta` migration PR after `v0.99.0`, `update.yml`).
+   - **Changed (2026-11-17):** `update.yml` is dropped: `make release` drives the whole release
+     with the maintainer's `gh` login, resumes where a failed run stopped, and opens the Flathub
+     pull request itself (`scripts/release.sh`, `scripts/flathub-release.sh`); `make
+     flathub-merge` merges it after Flathub's test build, and `make flathub-promote` takes a
+     `1.0.x` release from beta to stable. Open: the `beta` migration PR after `v0.99.0`
+     ([release.md](release.md#one-time-setup)).
 3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
@@ -709,8 +714,8 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 - [ ] X52 non-Pro support is documented as "best effort": tested by a user and recorded in
       protocol.md, or explicitly unverified in the README and the release notes.
 - [ ] Released explicitly as `1.0.0` to `master` ([release.md](release.md#versions-and-channels)).
-- [ ] The `1.0.0` migration PR to the Flathub `master` is merged: the Rust manifest with its
-      `x-checker-data`, and the legacy files removed ([release.md](release.md#one-time-setup)).
+- [ ] The `1.0.0` PR to the Flathub `master` is merged: the Rust manifest and the legacy files
+      removed ([release.md](release.md#one-time-setup)).
 
 ## `1.x`
 

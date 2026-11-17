@@ -2,8 +2,8 @@ name: Release
 
 # The first half of a release (docs/release.md): resolve the version and open the bump pull request
 # against the trunk. Merging it is the release: release-publish.yaml then gates, tags and publishes
-# it; the Flathub pull request comes from the Flathub repository's own update workflow. No tag is
-# created here.
+# it; the Flathub pull request is opened by the maintainer's `make release` (docs/release.md, "The
+# Flathub pull requests"). No tag is created here.
 #
 #   policy  the version rules svu cannot know (scripts/release-policy.sh): before v1.0.0 the
 #           version is explicit, 0.99.x or 1.0.0. A real run only from the trunk.

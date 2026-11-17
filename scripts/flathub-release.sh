@@ -22,23 +22,23 @@
 #
 #   pr VERSION BASE   a branch gx52/vVERSION-BASE from BASE (beta or master) whose tree is the
 #                     release vVERSION: its com.leinardi.gx52.json and cargo-sources.json assets,
-#                     build-aux/flathub/flathub.json and update.yml, BASE's README.md, and nothing
-#                     else. Against master before 1.0.0 it is the test build of the beta branch
-#                     (never merged); from 1.0.0 on, the stable migration.
+#                     build-aux/flathub/flathub.json, BASE's README.md, and nothing else. Against
+#                     master before 1.0.0 it is the test build of the beta branch (never merged).
 #   beta VERSION      creates `beta` from master with gx52/vVERSION-master merged in, once the
 #                     bot's test build of that pull request passed, and closes that pull request.
-#   workflow          a branch gx52/update-workflow from master adding .github/workflows/update.yml,
-#                     which only runs from the default branch.
+#   merge BASE        waits for the checks of the open gx52/* pull request into BASE (Flathub's
+#                     test build), prints the test build's install command, and merges it on
+#                     confirmation (ASSUME_YES=1 answers yes, ASSUME_YES=0 no). A master test build is refused.
 #
 # The assets are downloaded from the release, and the manifest must name the tag and the commit
 # the tag points at. Re-running a command rebuilds its branch from the base and force-pushes it
 # (with a lease), so it also refreshes an open pull request.
 #
-# Usage: scripts/flathub-release.sh pr VERSION BASE | beta VERSION | workflow
+# Usage: scripts/flathub-release.sh pr VERSION BASE | beta VERSION | merge BASE
 #
 # Environment: FLATHUB_DIR (the directory holding the Flathub clone, required), and for the tests
 # FLATHUB_URL, UPSTREAM_URL, RELEASES_URL (default: the GitHub repositories and their release
-# downloads) and GH (default: gh).
+# downloads), GH (default: gh) and POLL_SECONDS (default 30).
 
 set -euo pipefail
 
@@ -54,12 +54,13 @@ UPSTREAM_URL="${UPSTREAM_URL:-https://github.com/leinardi/gx52.git}"
 RELEASE_PAGES=https://github.com/leinardi/gx52/releases
 RELEASES_URL="${RELEASES_URL:-${RELEASE_PAGES}}"
 GH="${GH:-gh}"
+POLL_SECONDS="${POLL_SECONDS:-30}"
 FILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../build-aux/flathub" && pwd)"
 APP_SOURCE='.modules[] | select(type == "object" and .name == "gx52") | .sources[]
 	| select(type == "object" and .type == "git")'
 
 usage() {
-	die "usage: flathub-release.sh pr VERSION BASE | beta VERSION | workflow"
+	die "usage: flathub-release.sh pr VERSION BASE | beta VERSION | merge BASE"
 }
 
 check_version() {
@@ -142,7 +143,7 @@ publish_pull_request() {
 pr() {
 	local version="$1" base="$2"
 	check_version "${version}"
-	[[ "${base}" == beta || "${base}" == master ]] || die "the base must be beta or master (got '${base}')"
+	check_base "${base}"
 	local tag="v${version}" branch="gx52/v${version}-${base}"
 	local commit
 	commit="$(tag_commit "${tag}")"
@@ -162,7 +163,10 @@ pr() {
 	open_clone
 	has_branch "${base}" || die "${FLATHUB_REPO} has no ${base} branch yet: run 'pr ${version} master' and 'beta ${version}' first"
 	local legacy=true
-	if git show "origin/${base}:${APP_ID}.json" 2>/dev/null | jq -e '[.. | objects | select(has("x-checker-data"))] | length > 0' >/dev/null 2>&1; then
+	# The Rust manifest vendors the crates from cargo-sources.json; the legacy Python one does not.
+	if git show "origin/${base}:${APP_ID}.json" 2>/dev/null |
+		jq -e '[.modules[]? | select(type == "object" and .name == "gx52") | .sources[]?
+			| select(. == "cargo-sources.json")] | length > 0' >/dev/null 2>&1; then
 		legacy=false
 	fi
 
@@ -173,8 +177,6 @@ pr() {
 	fi
 	cp "${ASSETS}/${APP_ID}.json" "${ASSETS}/cargo-sources.json" .
 	cp "${FILES_DIR}/flathub.json" flathub.json
-	mkdir -p .github/workflows
-	cp "${FILES_DIR}/update.yml" .github/workflows/update.yml
 
 	local title body
 	if [[ "${legacy}" == true ]]; then
@@ -184,7 +186,7 @@ pr() {
 	fi
 	body="Release: ${RELEASE_PAGES}/tag/${tag}
 
-The manifest and cargo-sources.json are the release's assets; flathub.json and .github/workflows/update.yml come from build-aux/flathub in leinardi/gx52."
+The manifest and cargo-sources.json are the release's assets; flathub.json comes from build-aux/flathub in leinardi/gx52."
 	if [[ "${legacy}" == true ]]; then
 		body="${body}
 
@@ -226,18 +228,76 @@ beta() {
 	fi
 }
 
-workflow() {
-	local branch=gx52/update-workflow
-	open_clone
-	git switch --quiet --force-create "${branch}" origin/master
-	mkdir -p .github/workflows
-	cp "${FILES_DIR}/update.yml" .github/workflows/update.yml
-	local title="Add the update workflow"
-	local body="Adds .github/workflows/update.yml (from build-aux/flathub in leinardi/gx52). It runs flatpak-external-data-checker on the beta and master branches, weekly and on dispatch, and opens one pull request per branch with this repository's GITHUB_TOKEN when a new leinardi/gx52 release tag is out, with that release's cargo-sources.json. A branch whose manifest has no x-checker-data is skipped, so master is untouched until it is migrated.
+check_base() {
+	[[ "$1" == beta || "$1" == master ]] || die "the base must be beta or master (got '$1')"
+}
 
-Scheduled workflows only run from the default branch, hence master."
-	commit_and_push "${branch}" master "${title}"
-	publish_pull_request "${branch}" master "${title}" "${body}"
+# Asks $1; yes only on an explicit y. ASSUME_YES=1 answers yes and ASSUME_YES=0 no, unasked.
+confirm() {
+	if [[ "${ASSUME_YES:-}" == 1 ]]; then
+		echo "$1 [y/N] y (ASSUME_YES)"
+		return 0
+	fi
+	if [[ "${ASSUME_YES:-}" == 0 ]]; then
+		echo "$1 [y/N] n (ASSUME_YES)"
+		return 1
+	fi
+	local answer=""
+	if ! { exec 3</dev/tty; } 2>/dev/null; then
+		echo "$1 [y/N] n (no terminal)"
+		return 1
+	fi
+	read -r -u 3 -p "$1 [y/N] " answer || true
+	exec 3<&-
+	[[ "${answer}" == [yY] || "${answer}" == [yY][eE][sS] ]]
+}
+
+merge() {
+	local base="$1"
+	check_base "${base}"
+	local found
+	found="$("${GH}" pr list --repo "${FLATHUB_REPO}" --base "${base}" --state open \
+		--json url,headRefName --jq '.[] | select(.headRefName | startswith("gx52/")) | "\(.url) \(.headRefName)"')"
+	[[ -n "${found}" ]] || die "no open gx52/* pull request into ${base}: run make release or make flathub-pr first"
+	[[ "$(wc -l <<<"${found}")" -eq 1 ]] || die "more than one open gx52/* pull request into ${base}:
+${found}"
+	local url head
+	read -r url head <<<"${found}"
+	[[ ! "${head}" =~ ^gx52/v0\..*-master$ ]] ||
+		die "${url} is the test build of the beta branch: create beta with make flathub-beta instead"
+
+	# Flathub's bot reports its test build as checks; until it has, there are none.
+	local checks pending failed waited=0
+	while :; do
+		checks="$("${GH}" pr checks "${url}" --repo "${FLATHUB_REPO}" --json name,bucket \
+			--jq '.[] | "\(.bucket) \(.name)"' 2>/dev/null || true)"
+		pending="$(grep -c '^pending ' <<<"${checks}" || true)"
+		failed="$(grep -E '^(fail|cancel) ' <<<"${checks}" || true)"
+		[[ -z "${failed}" ]] || die "the checks of ${url} failed:
+${failed}"
+		if [[ -n "${checks}" && "${pending}" -eq 0 ]]; then
+			break
+		fi
+		((waited < 7200)) || die "the checks of ${url} did not finish in 2 hours"
+		((waited == 0)) && echo "Waiting for the checks of ${url} (Flathub's test build)."
+		sleep "${POLL_SECONDS}"
+		((waited += POLL_SECONDS))
+	done
+	echo "The checks of ${url} passed:"
+	local line
+	while read -r line; do
+		echo "  ${line}"
+	done <<<"${checks}"
+	local ref
+	ref="$("${GH}" pr view "${url}" --repo "${FLATHUB_REPO}" --json comments --jq '.comments[].body' |
+		grep -oE 'https://dl\.flathub\.org/build-repo/[0-9]+/[^ )>"]+\.flatpakref' | tail -n 1 || true)"
+	if [[ -n "${ref}" ]]; then
+		echo "Try the test build: flatpak install --user ${ref}"
+	fi
+	confirm "Merge ${url} into ${base}, publishing it on Flathub?" ||
+		die "not merged: run make flathub-merge again to merge it"
+	"${GH}" pr merge "${url}" --repo "${FLATHUB_REPO}" --merge
+	echo "Merged: Flathub's official build of ${base} starts now, and publishes it within a few hours."
 }
 
 command -v jq >/dev/null || die "jq is not on PATH"
@@ -252,9 +312,9 @@ beta)
 	[[ $# -eq 2 ]] || usage
 	beta "$2"
 	;;
-workflow)
-	[[ $# -eq 1 ]] || usage
-	workflow
+merge)
+	[[ $# -eq 2 ]] || usage
+	merge "$2"
 	;;
 *) usage ;;
 esac
