@@ -8,15 +8,15 @@ name: Release publish
 #   gate     release-gate.yaml on the merge commit: the Flathub-style build, meson test and the
 #            linters on x86_64 and aarch64. A failure stops here: no tag exists yet, so the version
 #            is never published and the next bump drops its metainfo entry.
-#   flathub  flathub-check.yaml, next to the gate: the Flathub manifest of the tag (git source,
-#            x-checker-data) and cargo-sources.json, linted; pushed nowhere.
+#   flathub  flathub-check.yaml, next to the gate: the Flathub manifest of the tag (git source)
+#            and cargo-sources.json, linted; pushed nowhere.
 #   assets   the bundles and the two Flathub files merged into the one flat artifact the release
 #            attaches.
 #   publish  gh-reusable-workflows' simple-tag-and-release: the vX.Y.Z tag on the merge commit,
 #            created by publishing the release with its assets; a 0.x release is a pre-release.
 #
-# No Flathub pull request is opened here: flathub/com.leinardi.gx52's own update workflow opens it
-# from the release (docs/release.md, "The Flathub update workflow").
+# No Flathub pull request is opened here: the maintainer opens it from the release with their own
+# login (`make release` or `make flathub-pr`; docs/release.md, "Flathub by hand").
 #
 # Every step is re-runnable ("Re-run failed jobs"): each reusable workflow finishes what exists.
 on:

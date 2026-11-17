@@ -35,4 +35,19 @@ release-bump: ## Write VERSION=X.Y.Z into Cargo.toml, Cargo.lock, meson.build an
 	@test -n "$(VERSION)" || { echo "usage: make release-bump VERSION=X.Y.Z" >&2; exit 1; }
 	scripts/release-bump.sh "$(VERSION)"
 
+# release drives a whole release with the maintainer's gh login (scripts/release.sh): it resumes
+# where a previous run stopped, so after a failure it is run again, unchanged, once the cause is
+# fixed. FLATHUB_BASE (.mk/flathub.mk) picks the Flathub branches: beta (the default), master
+# (1.0.0 or later), or "beta master". release-dry-run dispatches the dry run of the current branch.
+
+.PHONY: release
+release: ## Release VERSION=X.Y.Z end to end and open its Flathub PR into FLATHUB_BASE (resumable)
+	@test -n "$(VERSION)" || { echo "usage: make release VERSION=X.Y.Z [FLATHUB_BASE=beta|master|'beta master']" >&2; exit 1; }
+	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/release.sh "$(VERSION)" "$(FLATHUB_BASE)"
+
+.PHONY: release-dry-run
+release-dry-run: ## Dispatch the release dry run of VERSION=X.Y.Z on the current branch and watch it
+	@test -n "$(VERSION)" || { echo "usage: make release-dry-run VERSION=X.Y.Z" >&2; exit 1; }
+	scripts/release.sh "$(VERSION)" --dry-run
+
 endif  # MK_LOCAL_RELEASE_INCLUDED

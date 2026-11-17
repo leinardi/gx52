@@ -82,12 +82,11 @@ item off, or delete it, in the commit that does it.
       with `ci-result` required (none on the legacy `master`), Actions may create pull requests;
       private vulnerability reporting is already on for public repositories. Applied
       (2026-11-15). Tick when the unused `release` environment is removed: no Flathub token
-      secret, the Flathub PR is opened by the Flathub repository's own workflow (next item).
-- [ ] Flathub side ([release.md, "The Flathub update
-      workflow"](release.md#the-flathub-update-workflow)): the `beta` migration PR, `update.yml` on
-      the Flathub `master`, and whether its first run may open pull requests ("Allow GitHub
-      Actions to create and approve pull requests" on `flathub/com.leinardi.gx52` is admin-only,
-      so it is found out by that run), with the outcome recorded in release.md.
+      secret, the Flathub PR is opened with the maintainer's `gh` login (next item).
+- [ ] Flathub side ([release.md, "The Flathub pull
+      requests"](release.md#the-flathub-pull-requests)): the `beta` migration PR (`make flathub-pr
+      VERSION=0.99.0 FLATHUB_BASE=master`, then `make flathub-beta`), with the outcome recorded in
+      release.md.
 - [ ] `master`: remove the `flathub-pr.yaml` stub, which no workflow on the trunk matches any
       more.
 
@@ -95,8 +94,8 @@ item off, or delete it, in the commit that does it.
 
 - [x] `CONTRIBUTING.md`: rewrite for the Rust project (build from source with Meson, Flatpak
       Devel build, `make check`, commit conventions), adapted from `swarm-device-access`.
-- [x] `RELEASING.md`: replaced by `docs/release.md`; the file goes with the legacy tree in M9
-      (below).
+- [x] `RELEASING.md`: the short version of `docs/release.md` (the `make release` commands, to
+      beta and to stable, and the recovery).
 - [x] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
 - [x] `README.md`: the screenshot table (LEDs, MFD, clocks, profiles, Preferences), from the PNGs
       `make screenshots` writes into `data/screenshots/`.
@@ -130,7 +129,8 @@ item off, or delete it, in the commit that does it.
       it.
 - [ ] Remove `.gitlab/` with the GitLab tombstone (rewrite analysis, section 7.4).
 - [ ] Rename the trunk to `main` (rewrite analysis, section 1, Branching).
-- [ ] Remove `RELEASING.md`, the legacy manual release procedure.
+- [ ] Point the release tooling at `main`: `TRUNK` in `scripts/release.sh` and the trunk named in
+      `RELEASING.md`.
 - [ ] Release workflows ([release.md](release.md#dispatching-before-m9)): remove the `ci.yaml`,
       `release.yaml` and `flathub-pr.yaml` stubs from the old `master`; move
       `scheduled-scan.yaml` to the trunk and drop its explicit `rust-rewrite` checkout; drop the

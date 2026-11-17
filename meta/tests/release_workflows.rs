@@ -355,8 +355,8 @@ fn asset_problems(publish: &Value, flathub: &Value) -> Vec<String> {
 }
 
 /// No release workflow reaches a secret or an environment, and the Flathub check writes nothing
-/// outside its run: the Flathub pull request is opened by the Flathub repository's own workflow
-/// (docs/release.md, "The Flathub update workflow"). The check is a called workflow only, so
+/// outside its run: the Flathub pull request is opened with the maintainer's own login
+/// (docs/release.md, "The Flathub pull requests"). The check is a called workflow only, so
 /// master needs no stub of it.
 fn token_problems(workflows: &Workflows) -> Vec<String> {
     let mut problems = Vec::new();

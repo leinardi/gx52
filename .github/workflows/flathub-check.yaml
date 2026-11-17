@@ -1,13 +1,13 @@
 name: Flathub check
 
 # The Flathub side of a release, checked here and pushed nowhere (docs/release.md, "The Flathub
-# check"). The pull request on flathub/com.leinardi.gx52 is opened by that repository's own update
-# workflow with its own GITHUB_TOKEN (docs/release.md, "The Flathub update workflow"), so this
-# repository holds no token for Flathub and this workflow writes nothing outside its own run.
+# check"). The pull request on flathub/com.leinardi.gx52 is opened from the release by the
+# maintainer, with their own login (docs/release.md, "Flathub by hand"), so this repository holds
+# no token for Flathub and this workflow writes nothing outside its own run.
 #
 #   prepare  the tree's stable manifest put through scripts/flathub-manifest.sh: the app's dir
-#            source becomes the git source of the tag, with the x-checker-data the update workflow
-#            follows; cargo-sources.json generated from the tree's Cargo.lock with the pinned
+#            source becomes the git source of the tag and its commit; cargo-sources.json generated
+#            from the tree's Cargo.lock with the pinned
 #            generator. flatpak-builder-lint checks the manifest, and its diff against the Flathub
 #            branch is printed. Both files are uploaded as `flathub-files`, which the release
 #            attaches.
@@ -15,7 +15,7 @@ name: Flathub check
 # No build of its own: the tag does not exist yet when this runs, so the only buildable form of the
 # manifest is the dir source at the checkout, which is exactly what release-gate.yaml builds
 # (offline, from the same cargo-sources.json, on both architectures). The first build from the git
-# tag is the one of Flathub's bot on the update pull request.
+# tag is the one of Flathub's bot on the Flathub pull request.
 #
 # Called by release-publish.yaml before the tag (the commit is the merge commit, which the tag
 # will name), and by release.yaml's dry run with the bump's patch applied to the dispatched commit,
@@ -109,10 +109,10 @@ jobs:
       - name: Lint the Flathub manifest
         run: flatpak-builder-lint manifest "$FILES/$APP_ID.json"
 
-      # What the update workflow (tag, commit, cargo-sources.json) or a hand pull request (anything
-      # else) changes on the Flathub branch: beta until 1.0.0; before the beta branch exists,
-      # master's legacy manifest. Any change beyond the tag and the commit of the app source is one
-      # the update workflow will not carry, so it is raised as a warning and in the summary.
+      # What the Flathub pull request of this release changes on the Flathub branch, for review:
+      # beta until 1.0.0; before the beta branch exists, master's legacy manifest. Any change
+      # beyond the tag and the commit of the app source (a runtime bump, new finish-args) is named
+      # in the summary, so it is looked at before the pull request is merged.
       - name: Diff against the Flathub branch
         env:
           TAG: ${{ inputs.tag }}
@@ -140,18 +140,17 @@ jobs:
           if [ -f "$BRANCH_DIR/cargo-sources.json" ]; then
             review_diff --stat -- "$BRANCH_DIR/cargo-sources.json" "$FILES/cargo-sources.json"
           fi
-          # Both manifests without the app source's tag and commit, which the update workflow moves.
-          # A manifest jq cannot read (none on the branch) counts as a difference.
+          # Both manifests without the app source's tag and commit, which every release moves. A
+          # manifest jq cannot read (none on the branch) counts as a difference.
           strip='del(.modules[]? | select(type == "object" and .name == "gx52")
             | .sources[]? | select(type == "object" and .type == "git") | (.tag, .commit))'
           if cmp -s <(jq -S "$strip" "$BRANCH_DIR/$APP_ID.json" 2>/dev/null) \
             <(jq -S "$strip" "$FILES/$APP_ID.json"); then
-            verdict="Flathub $branch differs only in the tag and the commit: update.yml carries it"
+            verdict="Flathub $branch differs only in the app source's tag and commit"
           else
-            verdict="Flathub $branch differs beyond the tag and the commit, which update.yml does not carry"
-            verdict="$verdict: open a hand pull request from the com.leinardi.gx52.json release asset"
-            verdict="$verdict (docs/release.md, \"The Flathub update workflow\")"
-            echo "::warning::$verdict"
+            verdict="Flathub $branch differs beyond the app source's tag and commit: review the"
+            verdict="$verdict manifest diff above before merging the Flathub pull request"
+            echo "::notice::$verdict"
           fi
           echo "- Flathub check: $verdict." >>"$GITHUB_STEP_SUMMARY"
 
