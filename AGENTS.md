@@ -67,6 +67,9 @@ make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (ne
 
 make -s release-version           # the version the tree carries (Cargo.toml [package] version)
 make release-bump VERSION=X.Y.Z   # write it into the four version files, no commit (docs/release.md)
+make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # push the Flathub branch of a release, print its PR link
+make flathub-beta [VERSION=X.Y.Z] # create the Flathub beta branch from the passed test build (once)
+make flathub-workflow             # push the branch adding update.yml to the Flathub master
 ```
 
 The cargo and Meson targets need the GTK 4, libadwaita and SQLite development files on the host,
@@ -81,6 +84,7 @@ sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler
     appstream
 ```
 
+The `flathub-*` targets need `jq`, `curl` and a git login that can push to the Flathub repository.
 The Flatpak targets need `flatpak` with the `org.flatpak.Builder` Flatpak from Flathub;
 `cargo-sources` needs `uv` and `curl`; `screenshots` needs `weston` (`sudo apt install weston`)
 and `python3` too.
@@ -152,6 +156,7 @@ Run before considering an edit done. `make check` applies to every row.
 | `.mk/meson.mk`, `.mk/flatpak.mk` | `make help`, and the targets the edit touched |
 | `scripts/check-license-headers.sh` | `cargo test --locked -p meta --test license_headers` |
 | `scripts/release-bump.sh`, `scripts/release-policy.sh`, `scripts/flathub-manifest.sh` | `cargo test --locked -p meta --test release_bump --test release_policy --test flathub_manifest`; `make release-bump VERSION=X.Y.Z` on a scratch clone |
+| `scripts/flathub-release.sh`, `build-aux/flathub/**` | `cargo test --locked -p meta --test flathub_release --test vacuous_flags`, `pre-commit run actionlint --all-files`; once against a bare mirror of the Flathub repository (`FLATHUB_URL=<mirror.git> FLATHUB_DIR=<scratch> scripts/flathub-release.sh pr X.Y.Z master`) |
 | `meta/**` | `make verify` |
 | `meson.build`, `data/com.leinardi.gx52.metainfo.xml.in.in` (the version) | `cargo test --locked -p meta --test version` |
 | `.pre-commit-config.yaml`, `Makefile`, `.mk/**` | `make check`, `cargo test --locked -p meta` (vacuous flags, whole-tree hooks), `make help` |

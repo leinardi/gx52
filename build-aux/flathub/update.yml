@@ -1,0 +1,121 @@
+name: Update
+
+# Moves the app source of com.leinardi.gx52.json to the newest leinardi/gx52 release tag and opens
+# (or updates) one pull request per branch, with this repository's own GITHUB_TOKEN. Contract:
+# https://github.com/leinardi/gx52/blob/rust-rewrite/docs/release.md#the-flathub-update-workflow
+#
+# Kept in leinardi/gx52 as build-aux/flathub/update.yml: change it there, then push it with
+# `make flathub-workflow` (master) and the next `make flathub-pr` (the branch it updates).
+#
+# A branch whose manifest has no x-checker-data (master until the 1.0.0 migration) is a no-op.
+# Holding a release back means leaving its pull request open (master's is a draft): a closed one is
+# opened again by the next run.
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [beta, master]
+    concurrency:
+      group: update-${{ matrix.branch }}
+      cancel-in-progress: false
+    env:
+      MANIFEST: com.leinardi.gx52.json
+      APP_TAG: '.modules[] | select(type == "object" and .name == "gx52") | .sources[]
+        | select(type == "object" and .type == "git") | .tag'
+
+    steps:
+      - name: Check whether the branch exists
+        id: branch
+        env:
+          BRANCH: ${{ matrix.branch }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$BRANCH" >/dev/null; then
+            echo "exists=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "::notice::No $BRANCH branch: nothing to update."
+            echo "exists=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.branch.outputs.exists == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.branch }}
+          persist-credentials: false
+
+      - name: Check whether the manifest has checker data
+        if: steps.branch.outputs.exists == 'true'
+        id: follow
+        run: |
+          set -euo pipefail
+          if jq -e '[.. | objects | select(has("x-checker-data"))] | length > 0' "$MANIFEST" >/dev/null; then
+            echo "follow=true" >>"$GITHUB_OUTPUT"
+            echo "tag=$(jq -r "$APP_TAG" "$MANIFEST")" >>"$GITHUB_OUTPUT"
+          else
+            echo "::notice::$MANIFEST on ${{ matrix.branch }} has no x-checker-data: nothing to update."
+            echo "follow=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      # Edits the working tree only: --commit-only checks out a branch of its own and --update
+      # opens a pull request itself.
+      - name: Move the app source to the newest tag
+        if: steps.follow.outputs.follow == 'true'
+        uses: docker://ghcr.io/flathub-infra/flatpak-external-data-checker@sha256:aaaded67f68b3a6198b4fec818b30ad39b96a19c803fa966b0441000636a7ded
+        with:
+          args: --edit-only com.leinardi.gx52.json
+
+      - name: Fetch the release's cargo-sources.json
+        if: steps.follow.outputs.follow == 'true'
+        id: tag
+        env:
+          OLD_TAG: ${{ steps.follow.outputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="$(jq -r "$APP_TAG" "$MANIFEST")"
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "The app source's tag is '$tag', not vX.Y.Z." >&2
+            exit 1
+          fi
+          echo "tag=$tag" >>"$GITHUB_OUTPUT"
+          if [ "$tag" = "$OLD_TAG" ]; then
+            echo "Already at $tag."
+            exit 0
+          fi
+          curl -fsSL --retry 3 -o cargo-sources.json \
+            "https://github.com/leinardi/gx52/releases/download/$tag/cargo-sources.json"
+          jq -e 'type == "array" and length > 0' cargo-sources.json >/dev/null
+          git status --short
+
+      # No change (already at the newest tag): no commit, no pull request, an open one untouched.
+      - name: Open or update the pull request
+        if: steps.follow.outputs.follow == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ matrix.branch }}
+          branch: updates/${{ matrix.branch }}
+          draft: ${{ matrix.branch == 'master' }}
+          add-paths: |
+            com.leinardi.gx52.json
+            cargo-sources.json
+          commit-message: Update to ${{ steps.tag.outputs.tag }}
+          title: Update to ${{ steps.tag.outputs.tag }}
+          body: |
+            Moves the app source to `${{ steps.tag.outputs.tag }}` and replaces `cargo-sources.json` with that release's asset (https://github.com/leinardi/gx52/releases/tag/${{ steps.tag.outputs.tag }}).
+
+            Opened by `update.yml`; merged by hand. On `master` this is a draft: to hold the release back, leave it open (a closed one is opened again by the next run).
+          delete-branch: true

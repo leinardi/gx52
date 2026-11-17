@@ -14,6 +14,10 @@ repository:
 | `.github/workflows/flathub-check.yaml` | called by both | the Flathub manifest of the tag and `cargo-sources.json`, linted and diffed; pushes nothing |
 | `update.yml` in `flathub/com.leinardi.gx52` | weekly, and dispatch | the Flathub pull request of a new tag, per channel branch ([The Flathub update workflow](#the-flathub-update-workflow)) |
 
+What only the maintainer can push to the Flathub repository (the migrations, `beta`, `update.yml`
+itself, a hand pull request) is prepared by `make flathub-pr`, `make flathub-beta` and `make
+flathub-workflow` ([Flathub by hand](#flathub-by-hand)).
+
 The shared logic is in `leinardi/gh-reusable-workflows` (`version-bump-pr`, `release-on-merge`,
 `simple-tag-and-release`), the same pattern as `rust-common` and `gtk-rs-skills`.
 
@@ -246,6 +250,37 @@ write to (rewrite analysis, section 9.1).
   Flathub repository as a hand pull request, made from the release's `com.leinardi.gx52.json`
   asset.
 
+## Flathub by hand
+
+`scripts/flathub-release.sh`, through three make targets, prepares what the maintainer pushes to
+`flathub/com.leinardi.gx52` with their own git login: it keeps a clone in `FLATHUB_DIR` (default
+`../flathub/com.leinardi.gx52`, next to the maintainer's other Flathub clones), builds a branch
+there, pushes it, and prints the link that opens the pull request with its title and body filled
+in. Nothing is downloaded by hand, and no token is involved. `VERSION` defaults to the version the
+tree carries, which after a release's merge is the released one.
+
+| Target | Branch, into | Use |
+| --- | --- | --- |
+| `make flathub-pr FLATHUB_BASE=master` | `gx52/vX.Y.Z-master`, into `master` | before `1.0.0`: the test build that creates `beta` (never merged); at `1.0.0`: the stable migration |
+| `make flathub-beta` | creates `beta` | once, after the test build of `gx52/vX.Y.Z-master` passed |
+| `make flathub-pr` | `gx52/vX.Y.Z-beta`, into `beta` | a hand update: a runtime or finish-args change, or when `update.yml` cannot open its pull request |
+| `make flathub-workflow` | `gx52/update-workflow`, into `master` | adds or updates `update.yml` |
+
+A `flathub-pr` branch is one commit on the base whose tree is exactly the release: the release's
+`com.leinardi.gx52.json` and `cargo-sources.json` assets, `build-aux/flathub/flathub.json` and
+`build-aux/flathub/update.yml`, and the base's `README.md`. Everything else goes, which is what
+migrates the legacy tree (the Python modules, `pypi-dependencies.json`, the submodules). The assets
+are downloaded and checked before the clone is touched: the manifest must name the tag and the
+commit the tag points at, so a refused release leaves the clone as it was. A re-run rebuilds the
+branch from the base and force-pushes it with a lease, which also refreshes its open pull request;
+a release the base already has changes nothing and pushes nothing. The script never pushes to
+`master`, and pushes `beta` only to create it: after that first push Flathub protects it.
+
+`build-aux/flathub/` holds the files of the Flathub repository that this repository owns:
+`flathub.json` and `update.yml`, which the `actionlint` hook and the `vacuous_flags` meta-test
+check like the workflows here. A change to them reaches Flathub through the next `flathub-pr` and
+`flathub-workflow`.
+
 ## Dry runs
 
 `dry_run` is the default of both dispatch workflows, and a dry run may run from any ref.
@@ -329,17 +364,18 @@ a version number is never reused for different code.
 - **No Flathub token.** The Flathub pull request is opened from the Flathub side
   ([The Flathub update workflow](#the-flathub-update-workflow)).
 - **Flathub `beta` branch and migration pull request, before the first beta release:** `beta`
-  does not exist yet, and no workflow creates it. The maintainer creates it with their own `gh`
-  login after `v0.99.0` is released, following Flathub's documented flow (a pull request against
-  `master` for the test build, then `beta` created from `master` with the branch merged in; desk
-  research). That pull request migrates the tree: the manifest is the `v0.99.0` release asset
-  `com.leinardi.gx52.json`, `cargo-sources.json` its asset, `flathub.json` becomes
-  `{"only-arches": ["x86_64", "aarch64"], "disable-external-data-checker": true}`, and every other
-  file goes except `README.md` (the Python modules, `pypi-dependencies.json`, the `shared-modules`
-  and `flatpak-builder-tools` submodules and the script that refreshed them). If the flow does not
-  let a maintainer push a new branch, the flow it prescribes is followed and recorded here.
-- **`update.yml` on the Flathub `master`**, committed by hand. Before relying on it, check and
-  record here:
+  does not exist yet, and no workflow creates it. The maintainer creates it after `v0.99.0` is
+  released, following Flathub's documented flow (a pull request against `master` for the test
+  build, then `beta` created from `master` with the branch merged in): `make flathub-pr
+  VERSION=0.99.0 FLATHUB_BASE=master`, open the pull request from the printed link, and once the
+  bot's test build passes, `make flathub-beta VERSION=0.99.0` and close the pull request. The
+  branch migrates the tree ([Flathub by hand](#flathub-by-hand)): `flathub.json` becomes
+  `{"only-arches": ["x86_64", "aarch64"], "disable-external-data-checker": true}` and every file
+  but `README.md` is replaced (the Python modules, `pypi-dependencies.json`, the `shared-modules`
+  and `flatpak-builder-tools` submodules and the script that refreshed them go). If the flow does
+  not let a maintainer push a new branch, the flow it prescribes is followed and recorded here.
+- **`update.yml` on the Flathub `master`**, through `make flathub-workflow`. Before relying on it,
+  check and record here:
   - that merging it to `master` does not trigger an unwanted republish of `0.7.6`, and that
     Flathub's linter accepts it;
   - whether a pull request opened with `GITHUB_TOKEN` triggers Flathub's build bot; if it does not,
@@ -360,9 +396,9 @@ a version number is never reused for different code.
   The outcome is recorded here.
 - **`1.0.0` migration pull request to `master`:** `master` keeps the legacy manifest without
   `x-checker-data` until this pull request replaces it, so the update workflow cannot reach it
-  before. When `v1.0.0` is released, the maintainer opens it by hand against `master`, with the
-  same content as the `beta` migration, from the `v1.0.0` assets. From then on `update.yml` covers
-  `master` too.
+  before. When `v1.0.0` is released, the maintainer opens it against `master` with `make flathub-pr
+  VERSION=1.0.0 FLATHUB_BASE=master` (the same tree as the `beta` migration, from the `v1.0.0`
+  assets) and merges it. From then on `update.yml` covers `master` too.
 - **Private vulnerability reporting** on `leinardi/gx52`, as [SECURITY.md](../SECURITY.md) links to
   it: enabled by the IaC, checked once.
 - **Dependabot:** production Cargo dependencies are committed as `fix(deps)` and so trigger a patch
