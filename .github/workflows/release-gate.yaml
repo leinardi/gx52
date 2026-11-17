@@ -22,6 +22,7 @@ on:
 permissions: {}
 
 jobs:
+  # The volume on /var/lib/flatpak keeps the runtime update off the overlay: see ci.yaml's flatpak.
   build:
     strategy:
       fail-fast: false
@@ -37,7 +38,7 @@ jobs:
       contents: read
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
-      options: --privileged
+      options: --privileged --volume /var/lib/flatpak
 
     steps:
       - name: Checkout

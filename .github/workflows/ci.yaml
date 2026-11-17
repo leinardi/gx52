@@ -133,6 +133,10 @@ jobs:
   # directory (src/meson.build), so the dependencies are compiled once per key. The action saves
   # only under a key it did not restore, so the key covers what invalidates the compiled
   # dependencies: the lock file and the toolchain.
+  # The action's --install-deps-from updates the runtimes the image ships; on overlayfs that
+  # update fails with "Invalid cross-device link" (renaming a directory of an image layer), and
+  # flatpak-builder then segfaults, on some runner hosts only. An anonymous volume on
+  # /var/lib/flatpak, which Docker fills from the image, keeps the installation off the overlay.
   flatpak:
     strategy:
       fail-fast: false
@@ -148,7 +152,7 @@ jobs:
       contents: read
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
-      options: --privileged
+      options: --privileged --volume /var/lib/flatpak
 
     steps:
       - name: Checkout

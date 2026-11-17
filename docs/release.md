@@ -109,6 +109,10 @@ on a scratch clone: `make release-bump VERSION=0.99.0`.
 - **Container:** `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51` with `--privileged`, and
   `flatpak/flatpak-github-actions/flatpak-builder`. The image ships the GNOME SDK, `uv` and the
   linters, but not the `rust-stable` SDK extension and no `flathub` remote.
+- **`--volume /var/lib/flatpak`** on the containers that run the action. Its
+  `--install-deps-from` updates the image's runtimes in place, which on overlayfs fails with
+  `Invalid cross-device link` and then a flatpak-builder segfault (exit 139), on some runner hosts
+  only. The anonymous volume, filled from the image, keeps the installation off the overlay.
 - **`--disable-rofiles-fuse`** on every `flatpak-builder` call made outside the action.
 - **Offline build:** the Flathub-style build uses only the crates listed in `cargo-sources.json`,
   generated from `Cargo.lock` by `make cargo-sources` with the pinned generator.
