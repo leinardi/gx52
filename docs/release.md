@@ -237,7 +237,9 @@ source, which is exactly what the gate builds. It pushes nothing and reaches no 
 `scripts/flathub-release.sh` does what the maintainer pushes to `flathub/com.leinardi.gx52`, with
 their own logins: it keeps a clone in `_flathub/com.leinardi.gx52` (ignored, skipped by the
 manifests' `dir` source, cloned on first use; `FLATHUB_DIR` moves it), builds a branch there,
-pushes it with git, and opens its pull request with `gh` (or updates the one already open).
+pushes it with git over SSH (`FLATHUB_URL`, default `git@github.com:flathub/com.leinardi.gx52.git`;
+a clone of the same repository under its HTTPS URL is switched to it), and opens its pull request
+with `gh` (or updates the one already open).
 Nothing is downloaded by hand. `VERSION` defaults to the version the tree carries, which after a
 release's merge is the released one.
 

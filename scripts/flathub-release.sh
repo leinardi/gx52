@@ -37,9 +37,10 @@
 #
 # Usage: scripts/flathub-release.sh pr VERSION BASE | beta VERSION | merge BASE
 #
-# Environment: FLATHUB_DIR (the directory holding the Flathub clone, required), and for the tests
-# FLATHUB_URL, UPSTREAM_URL, RELEASES_URL (default: the GitHub repositories and their release
-# downloads), GH (default: gh), POLL_SECONDS (default 30), WAIT_SECONDS (how long merge waits for
+# Environment: FLATHUB_DIR (the directory holding the Flathub clone, required), FLATHUB_URL (what
+# it clones and pushes to, default the SSH URL of the Flathub repository; an existing clone of the
+# same repository under another URL is switched to it), and for the tests UPSTREAM_URL and
+# RELEASES_URL (default: the GitHub repository and its release downloads), GH (default: gh), POLL_SECONDS (default 30), WAIT_SECONDS (how long merge waits for
 # the test build, default 7200) and BUILD_CHECK (the check of Flathub's test build, default
 # flathub/build).
 
@@ -52,7 +53,7 @@ die() {
 
 APP_ID=com.leinardi.gx52
 FLATHUB_REPO="flathub/${APP_ID}"
-FLATHUB_URL="${FLATHUB_URL:-https://github.com/${FLATHUB_REPO}.git}"
+FLATHUB_URL="${FLATHUB_URL:-git@github.com:${FLATHUB_REPO}.git}"
 UPSTREAM_URL="${UPSTREAM_URL:-https://github.com/leinardi/gx52.git}"
 RELEASE_PAGES=https://github.com/leinardi/gx52/releases
 RELEASES_URL="${RELEASES_URL:-${RELEASE_PAGES}}"
@@ -73,6 +74,16 @@ check_version() {
 		die "the version must be X.Y.Z (got '$1')"
 }
 
+# OWNER/NAME of a GitHub URL in its HTTPS, SSH or scp-like form, or the URL itself for anything
+# else (a local path), so the two spellings of one repository compare equal.
+github_repository() {
+	local url="${1%.git}"
+	url="${url#https://github.com/}"
+	url="${url#ssh://git@github.com/}"
+	url="${url#git@github.com:}"
+	echo "${url}"
+}
+
 # The clone, fetched and clean, in the working directory.
 open_clone() {
 	[[ -n "${FLATHUB_DIR:-}" ]] || die "FLATHUB_DIR is not set"
@@ -83,8 +94,13 @@ open_clone() {
 	fi
 	cd "${clone}"
 	local origin
-	origin="$(git remote get-url origin)"
-	[[ "${origin}" == "${FLATHUB_URL}" ]] || die "${clone} is a clone of ${origin}, not ${FLATHUB_URL}"
+	origin="$(git config --get remote.origin.url)"
+	if [[ "${origin}" != "${FLATHUB_URL}" ]]; then
+		[[ "$(github_repository "${origin}")" == "$(github_repository "${FLATHUB_URL}")" ]] ||
+			die "${clone} is a clone of ${origin}, not ${FLATHUB_URL}"
+		git remote set-url origin "${FLATHUB_URL}"
+		echo "${clone}: origin is now ${FLATHUB_URL} (was ${origin})."
+	fi
 	[[ -z "$(git status --porcelain)" ]] || die "${clone} has uncommitted changes"
 	git fetch --quiet --prune origin
 }
