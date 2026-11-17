@@ -517,3 +517,53 @@ fn bad_inputs_and_mismatched_assets_are_refused() {
     std::fs::write(format!("{clone}/stray"), "").unwrap_or_else(|error| panic!("{error}"));
     setup.refused(&["pr", "0.99.1", "master"], "has uncommitted changes");
 }
+
+#[test]
+fn a_clone_of_the_same_repository_under_another_url_is_switched() {
+    let setup = Setup::new();
+    setup.release("v0.99.0", None);
+    setup.succeeds(&["pr", "0.99.0", "master"]);
+    let clone = setup.outside("clones/com.leinardi.gx52");
+    let ssh = "git@github.com:flathub/com.leinardi.gx52.git";
+    let in_clone = |args: &[&str]| {
+        let mut all = vec!["-C", clone.as_str()];
+        all.extend_from_slice(args);
+        setup.legacy.git_stdout(&all)
+    };
+    // An HTTPS clone, run with the SSH URL; the SSH URL resolves to the local stand-in, offline.
+    in_clone(&[
+        "remote",
+        "set-url",
+        "origin",
+        "https://github.com/flathub/com.leinardi.gx52.git",
+    ]);
+    in_clone(&["config", &format!("url.{}.insteadOf", setup.remote()), ssh]);
+    let run = setup.run_with(&["pr", "0.99.0", "master"], &[("FLATHUB_URL", ssh)]);
+    assert!(run.success, "{}", run.text);
+    assert!(
+        run.text.contains(&format!("origin is now {ssh}")),
+        "{}",
+        run.text
+    );
+    assert_eq!(in_clone(&["config", "--get", "remote.origin.url"]), ssh);
+
+    // A clone of another repository is never repointed.
+    in_clone(&[
+        "remote",
+        "set-url",
+        "origin",
+        "https://github.com/someone/else.git",
+    ]);
+    let run = setup.run_with(&["pr", "0.99.0", "master"], &[("FLATHUB_URL", ssh)]);
+    assert!(
+        !run.success,
+        "repointed a clone of another repository:\n{}",
+        run.text
+    );
+    assert!(
+        run.text
+            .contains("is a clone of https://github.com/someone/else.git"),
+        "{}",
+        run.text
+    );
+}

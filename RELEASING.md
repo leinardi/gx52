@@ -3,8 +3,10 @@
 The short version. How it works, the channels, the one-time setup and the recovery table are in
 [docs/release.md](docs/release.md).
 
-Needs `gh` and git logged in as the maintainer (a collaborator on `flathub/com.leinardi.gx52`),
-plus `jq` and `curl`. Run everything from the trunk (`rust-rewrite` until M9), up to date.
+Needs `gh` logged in as the maintainer (a collaborator on `flathub/com.leinardi.gx52`), their SSH
+key on GitHub (the Flathub branches are pushed over SSH; `FLATHUB_URL=https://...` with `gh auth
+setup-git` works too), plus `jq` and `curl`. Run everything from the trunk (`rust-rewrite` until
+M9), up to date.
 
 ## A release to beta
 
