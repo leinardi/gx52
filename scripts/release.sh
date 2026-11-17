@@ -169,8 +169,10 @@ see_through() {
 	done
 }
 
+# A published release: a draft (release-publish.yaml stopped while publishing) is not one yet,
+# and re-running that run finishes it.
 release_exists() {
-	"${GH}" release view "${TAG}" --repo "${REPOSITORY}" --json tagName --jq .tagName >/dev/null 2>&1
+	[[ "$("${GH}" release view "${TAG}" --repo "${REPOSITORY}" --json isDraft --jq .isDraft 2>/dev/null)" == false ]]
 }
 
 # "merge-commit url" of the merged bump pull request, empty when there is none.

@@ -26,8 +26,9 @@
 #                     master before 1.0.0 it is the test build of the beta branch (never merged).
 #   beta VERSION      creates `beta` from master with gx52/vVERSION-master merged in, once the
 #                     bot's test build of that pull request passed, and closes that pull request.
-#   merge BASE        waits for the checks of the open gx52/* pull request into BASE (Flathub's
-#                     test build), prints the test build's install command, and merges it on
+#   merge BASE        waits for the open gx52/* pull request into BASE to pass Flathub's test
+#                     build (the BUILD_CHECK check, on its head commit, with no other check
+#                     failing), prints the test build's install command, and merges that commit on
 #                     confirmation (ASSUME_YES=1 answers yes, ASSUME_YES=0 no). A master test build is refused.
 #
 # The assets are downloaded from the release, and the manifest must name the tag and the commit
@@ -38,7 +39,9 @@
 #
 # Environment: FLATHUB_DIR (the directory holding the Flathub clone, required), and for the tests
 # FLATHUB_URL, UPSTREAM_URL, RELEASES_URL (default: the GitHub repositories and their release
-# downloads), GH (default: gh) and POLL_SECONDS (default 30).
+# downloads), GH (default: gh), POLL_SECONDS (default 30), WAIT_SECONDS (how long merge waits for
+# the test build, default 7200) and BUILD_CHECK (the check of Flathub's test build, default
+# flathub/build).
 
 set -euo pipefail
 
@@ -55,6 +58,8 @@ RELEASE_PAGES=https://github.com/leinardi/gx52/releases
 RELEASES_URL="${RELEASES_URL:-${RELEASE_PAGES}}"
 GH="${GH:-gh}"
 POLL_SECONDS="${POLL_SECONDS:-30}"
+WAIT_SECONDS="${WAIT_SECONDS:-7200}"
+BUILD_CHECK="${BUILD_CHECK:-flathub/build}"
 FILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../build-aux/flathub" && pwd)"
 APP_SOURCE='.modules[] | select(type == "object" and .name == "gx52") | .sources[]
 	| select(type == "object" and .type == "git")'
@@ -266,24 +271,31 @@ ${found}"
 	[[ ! "${head}" =~ ^gx52/v0\..*-master$ ]] ||
 		die "${url} is the test build of the beta branch: create beta with make flathub-beta instead"
 
-	# Flathub's bot reports its test build as checks; until it has, there are none.
-	local checks pending failed waited=0
+	# The commit the checks are read for and the merge is pinned to: a push to the branch meanwhile
+	# makes the merge fail instead of merging a commit nobody saw built.
+	local commit
+	commit="$("${GH}" pr view "${url}" --repo "${FLATHUB_REPO}" --json headRefOid --jq .headRefOid)"
+	[[ "${commit}" =~ ^[0-9a-f]{40}$ ]] || die "could not read the head commit of ${url} (got '${commit}')"
+
+	# Flathub's bot reports on the head commit; other checks (flathub/permissions) can pass before
+	# the build has started, so the build's own check must be there and have passed. Any failed
+	# check stops it, and a skipped build is no build.
+	local checks failed build waited=0
 	while :; do
 		checks="$("${GH}" pr checks "${url}" --repo "${FLATHUB_REPO}" --json name,bucket \
 			--jq '.[] | "\(.bucket) \(.name)"' 2>/dev/null || true)"
-		pending="$(grep -c '^pending ' <<<"${checks}" || true)"
 		failed="$(grep -E '^(fail|cancel) ' <<<"${checks}" || true)"
 		[[ -z "${failed}" ]] || die "the checks of ${url} failed:
 ${failed}"
-		if [[ -n "${checks}" && "${pending}" -eq 0 ]]; then
-			break
-		fi
-		((waited < 7200)) || die "the checks of ${url} did not finish in 2 hours"
-		((waited == 0)) && echo "Waiting for the checks of ${url} (Flathub's test build)."
+		build="$(awk -v name="${BUILD_CHECK}" '$2 == name { print $1 }' <<<"${checks}")"
+		[[ "${build}" != skipping ]] || die "${BUILD_CHECK} was skipped on ${url}: there is no test build to merge"
+		[[ "${build}" != pass ]] || break
+		((waited < WAIT_SECONDS)) || die "${BUILD_CHECK} has not passed on ${url} after ${WAIT_SECONDS} seconds"
+		((waited == 0)) && echo "Waiting for ${BUILD_CHECK} on ${url} (Flathub's test build)."
 		sleep "${POLL_SECONDS}"
 		((waited += POLL_SECONDS))
 	done
-	echo "The checks of ${url} passed:"
+	echo "The test build of ${url} passed, at ${commit:0:12}:"
 	local line
 	while read -r line; do
 		echo "  ${line}"
@@ -296,7 +308,7 @@ ${failed}"
 	fi
 	confirm "Merge ${url} into ${base}, publishing it on Flathub?" ||
 		die "not merged: run make flathub-merge again to merge it"
-	"${GH}" pr merge "${url}" --repo "${FLATHUB_REPO}" --merge
+	"${GH}" pr merge "${url}" --repo "${FLATHUB_REPO}" --merge --match-head-commit "${commit}"
 	echo "Merged: Flathub's official build of ${base} starts now, and publishes it within a few hours."
 }
 

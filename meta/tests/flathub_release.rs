@@ -38,14 +38,15 @@ const LEGACY_MANIFEST: &str =
 /// A gh that knows `pr list`, `pr create`, `pr edit`, `pr close`, `pr checks`, `pr view` and
 /// `pr merge`: each call is a line of `GH_STATE/log` (`action|url|head|base|title`), an open pull
 /// request is `GH_STATE/open/N` (holding `head base`), its body `GH_STATE/body-N`, its checks
-/// `GH_STATE/checks-N` (`bucket name` lines) and its comments `GH_STATE/comments-N`.
+/// `GH_STATE/checks-N` (`bucket name` lines) and its comments `GH_STATE/comments-N`. Its head commit
+/// is `HEAD_COMMIT`; `pr merge` logs the commit it is pinned to (`--match-head-commit`) as `head`.
 const FAKE_GH: &str = r#"#!/usr/bin/env bash
 set -euo pipefail
 state="${GH_STATE:?}"
 mkdir -p "$state/open" "$state/closed" "$state/merged"
 action="$1 $2"
 shift 2
-url="" head="" base="" title="" body=""
+url="" head="" base="" title="" body="" json=""
 case "$action" in
 "pr list" | "pr create") ;;
 *)
@@ -59,6 +60,8 @@ while (($#)); do
 	--base) base="$2" ;;
 	--title) title="$2" ;;
 	--body) body="$2" ;;
+	--json) json="$2" ;;
+	--match-head-commit) head="$2" ;;
 	--merge) shift && continue ;;
 	esac
 	shift 2
@@ -88,7 +91,13 @@ case "$action" in
 "pr edit") printf '%s' "$body" >"$state/body-$number" ;;
 "pr close") mv "$state/open/$number" "$state/closed/" ;;
 "pr checks") cat "$state/checks-$number" 2>/dev/null || true ;;
-"pr view") cat "$state/comments-$number" 2>/dev/null || true ;;
+"pr view")
+	if [[ "$json" == headRefOid ]]; then
+		echo 0123456789abcdef0123456789abcdef01234567
+	else
+		cat "$state/comments-$number" 2>/dev/null || true
+	fi
+	;;
 "pr merge") mv "$state/open/$number" "$state/merged/" ;;
 *) exit 2 ;;
 esac
@@ -412,10 +421,52 @@ fn a_built_pull_request_is_merged_on_confirmation_only() {
         fs::write(format!("{state}/{file}"), content).unwrap_or_else(|error| panic!("{error}"));
     };
 
-    write("checks-2", "pass builds/x86_64\nfail builds/aarch64\n");
-    setup.refused(&["merge", "beta"], "fail builds/aarch64");
+    let refused_with = |checks: &str, reason: &str| {
+        write("checks-2", checks);
+        let run = setup.run_with(
+            &["merge", "beta"],
+            &[("WAIT_SECONDS", "2"), ("ASSUME_YES", "1")],
+        );
+        assert!(!run.success, "{checks:?}: merged:\n{}", run.text);
+        assert!(
+            run.text.contains(reason),
+            "{checks:?}: want '{reason}':\n{}",
+            run.text
+        );
+    };
+    // Not built yet: no checks, or only the ones that pass before the build starts.
+    refused_with("", "flathub/build has not passed");
+    refused_with("pass flathub/permissions\n", "flathub/build has not passed");
+    refused_with(
+        "pass flathub/permissions\npending flathub/build\n",
+        "flathub/build has not passed",
+    );
+    refused_with(
+        "pass flathub/permissions\nskipping flathub/build\n",
+        "flathub/build was skipped",
+    );
+    refused_with(
+        "pass flathub/permissions\nfail flathub/build\n",
+        "fail flathub/build",
+    );
+    refused_with(
+        "fail flathub/permissions\npass flathub/build\n",
+        "fail flathub/permissions",
+    );
+    assert_eq!(
+        setup.open_pull_requests(),
+        1,
+        "an unbuilt pull request was merged"
+    );
+    assert!(
+        !setup
+            .gh_calls()
+            .iter()
+            .any(|call| call.starts_with("pr merge|")),
+        "gh pr merge ran"
+    );
 
-    write("checks-2", "pass builds/x86_64\npass builds/aarch64\n");
+    write("checks-2", "pass flathub/permissions\npass flathub/build\n");
     write(
         "comments-2",
         "Test build succeeded. To test this build, install it from the testing repository:\n\n```\nflatpak install --user https://dl.flathub.org/build-repo/12345/com.leinardi.gx52.flatpakref\n```\n",
@@ -439,7 +490,10 @@ fn a_built_pull_request_is_merged_on_confirmation_only() {
     assert!(merged.success, "{}", merged.text);
     assert_eq!(
         setup.gh_calls().last().map(String::as_str),
-        Some("pr merge|https://github.com/flathub/com.leinardi.gx52/pull/2|||")
+        Some(
+            "pr merge|https://github.com/flathub/com.leinardi.gx52/pull/2|0123456789abcdef0123456789abcdef01234567||"
+        ),
+        "the merge is not pinned to the built commit"
     );
     assert_eq!(setup.open_pull_requests(), 0);
 }

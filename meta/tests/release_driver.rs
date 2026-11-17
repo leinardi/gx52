@@ -27,10 +27,12 @@ use meta::scratch::{Run, Scratch};
 const SCRIPT: &str = "scripts/release.sh";
 const TRUNK: &str = "rust-rewrite";
 
-/// GitHub, as far as release.sh asks it. State in `GH_STATE`: `release` (the release exists),
+/// GitHub, as far as release.sh asks it. State in `GH_STATE`: `release` (the release exists, holding
+/// its `isDraft`: `true` or `false`),
 /// `pr-open` (`number head url`), `pr-merged` (`merge url`), `runs/N` (`workflow|commit|branch|
 /// event|status|conclusion|created|url`). Knobs: `dispatch-result`, `ci-result`, `publish-result`
-/// (a new run's conclusion, default success), `rerun-result` (a re-run's, default success) and
+/// (a new run's conclusion, default success), `publish-leaves-draft` (a failed publish leaves a
+/// draft release), `rerun-result` (a re-run's, default success) and
 /// `behind` (how far the bump branch is behind the trunk, default 0; a dispatch resets it). Every
 /// call but the reads is a line of `log`.
 const FAKE_GH: &str = r#"#!/usr/bin/env bash
@@ -74,7 +76,10 @@ while (($#)); do
 	shift 2
 done
 case "$group" in
-"release view") [[ -f "$state/release" ]] ;;
+"release view")
+	[[ -f "$state/release" ]]
+	cat "$state/release"
+	;;
 "pr list") cat "$state/pr-$prstate" 2>/dev/null || true ;;
 "run list")
 	for id in $(ls "$state/runs" | sort -rn); do
@@ -91,7 +96,7 @@ case "$group" in
 	IFS='|' read -r w c b e _ _ created url <"$state/runs/$positional"
 	result="$(knob rerun-result success)"
 	echo "$w|$c|$b|$e|completed|$result|$created|$url" >"$state/runs/$positional"
-	if [[ "$w" == release-publish.yaml && "$result" == success ]]; then touch "$state/release"; fi
+	if [[ "$w" == release-publish.yaml && "$result" == success ]]; then echo false >"$state/release"; fi
 	;;
 "workflow run")
 	echo "workflow run $positional $ref" >>"$state/log"
@@ -120,7 +125,11 @@ case "$group" in
 	echo "merge1 $url" >"$state/pr-merged"
 	result="$(knob publish-result success)"
 	add_run release-publish.yaml merge1 rust-rewrite push "$result"
-	if [[ "$result" == success ]]; then touch "$state/release"; fi
+	if [[ "$result" == success ]]; then
+		echo false >"$state/release"
+	elif [[ -f "$state/publish-leaves-draft" ]]; then
+		echo true >"$state/release"
+	fi
 	;;
 *) exit 2 ;;
 esac
@@ -284,6 +293,34 @@ fn a_failed_publish_is_re_run_once_and_resumed_after_the_fix() {
 }
 
 #[test]
+fn a_draft_left_by_a_failed_publish_is_finished_not_skipped() {
+    let setup = Setup::new();
+    setup.knob("publish-result", "failure");
+    setup.knob("publish-leaves-draft", "");
+    setup.knob("rerun-result", "failure");
+    setup.stops(
+        &["0.99.1"],
+        true,
+        "release-publish.yaml failed again after a re-run",
+    );
+    // A draft exists now; it is not the release, so the resumed run re-runs the publish before
+    // anything reaches Flathub.
+    setup.knob("rerun-result", "success");
+    setup.succeeds(&["0.99.1"]);
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml rust-rewrite",
+            "pr review 28",
+            "pr merge 28",
+            "run rerun 3",
+            "run rerun 3",
+            "flathub pr 0.99.1 beta",
+        ]
+    );
+}
+
+#[test]
 fn a_failed_bump_ci_is_refreshed_from_the_fixed_trunk() {
     let setup = Setup::new();
     setup.knob("ci-result", "failure");
@@ -343,7 +380,7 @@ fn flathub_branches_follow_the_version() {
 
     // From 1.0.0 on, straight to stable, or to both (here with the release already published).
     let both = Setup::new();
-    both.knob("release", "");
+    both.knob("release", "false");
     both.succeeds(&["1.0.0", "beta master"]);
     assert_eq!(
         both.log(),

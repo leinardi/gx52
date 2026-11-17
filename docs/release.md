@@ -164,6 +164,9 @@ Before every step it reads back from GitHub what is already done, so **a run tha
 resumed by running the same command again** once the cause is fixed; it never dispatches, merges
 or publishes twice:
 
+A release counts as done only once it is published: a draft left by a `release-publish.yaml` run
+that stopped while publishing makes `make release` re-run that run, not move on to Flathub.
+
 1. **Dispatch** `release.yaml` on the trunk with `dry_run=false` and wait for it: the policy job,
    then version-bump-pr, which opens the pull request `chore(release): bump version to X.Y.Z` from
    `release/vX.Y.Z` and dispatches CI on it. A failed run is offered one re-run of its failed jobs.
@@ -179,8 +182,11 @@ or publishes twice:
    assets. `make release` waits for it; a failed or cancelled run is offered one re-run.
 4. **The Flathub pull request** into each `FLATHUB_BASE` branch is opened, or updated if one is
    open ([The Flathub pull requests](#the-flathub-pull-requests)).
-5. **`make flathub-merge`** waits for Flathub's bot to build the open pull request, prints the
-   command that installs its test build, and merges it on confirmation. Automating this merge
+5. **`make flathub-merge`** waits for Flathub's bot to build the open pull request: its
+   `flathub/build` check must have passed on the head commit (`flathub/permissions` passes before
+   the build starts, so it does not count), a skipped build or any failed check stops it. It prints
+   the command that installs the test build, and on confirmation merges exactly that commit (`gh pr
+   merge --match-head-commit`), so a push meanwhile makes the merge fail instead. Automating this merge
    without the maintainer was rejected (rewrite analysis, section 9.2).
 
 Every prompt is a `[y/N]` on the terminal; `ASSUME_YES=1` answers yes and `ASSUME_YES=0` no. The
@@ -239,7 +245,7 @@ release's merge is the released one.
 | --- | --- |
 | `make flathub-pr [FLATHUB_BASE=master]` | the pull request of `VERSION` into `beta` (or `master`), from `gx52/vX.Y.Z-<branch>`; `make release` runs it |
 | `make flathub-promote` | the same into `master`, for `1.0.0` or later: the promotion to stable |
-| `make flathub-merge [FLATHUB_BASE=master]` | waits for the checks of the open `gx52/*` pull request (Flathub's test build), prints the test build's install command, merges on confirmation |
+| `make flathub-merge [FLATHUB_BASE=master]` | waits for Flathub's test build of the open `gx52/*` pull request (`flathub/build` passed on its head commit, no check failed), prints the test build's install command, merges that commit on confirmation |
 | `make flathub-beta` | once: creates `beta` from the passed test build of `gx52/vX.Y.Z-master`, and closes that pull request |
 
 A `flathub-pr` branch is one commit on the base whose tree is exactly the release: the release's
