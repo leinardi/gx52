@@ -60,6 +60,7 @@ make meson-install # meson install -C _build
 make flatpak-build # Devel Flatpak into _flatpak/repo via org.flatpak.Builder (runs meson test)
 make flatpak-install  # the same, installed for the user: flatpak run com.leinardi.gx52.Devel
 make flatpak-bundle   # _flatpak/com.leinardi.gx52.Devel.flatpak
+make screenshots   # flatpak-install, then the metainfo screenshots into data/screenshots (weston)
 make flatpak-lint-manifest  # flatpak-builder-lint on both manifests (also a pre-commit hook)
 make flatpak-lint-repo      # flatpak-builder-lint on _flatpak/repo (a release gate; locally may report unmirrored screenshots)
 make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (network required)
@@ -81,7 +82,8 @@ sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler
 ```
 
 The Flatpak targets need `flatpak` with the `org.flatpak.Builder` Flatpak from Flathub;
-`cargo-sources` needs `uv` and `curl`.
+`cargo-sources` needs `uv` and `curl`; `screenshots` needs `weston` (`sudo apt install weston`)
+and `python3` too.
 
 The Makefile pulls shared snippets from `leinardi/make-common@v1` into `.mk/` on first run. To
 refresh: `make mk-common-update`. Repo-local targets go in their own `.mk/<fragment>.mk`, listed in
@@ -155,6 +157,7 @@ Run before considering an edit done. `make check` applies to every row.
 | `.pre-commit-config.yaml`, `Makefile`, `.mk/**` | `make check`, `cargo test --locked -p meta` (vacuous flags, whole-tree hooks), `make help` |
 | `.github/workflows/**` | `pre-commit run actionlint --all-files`, `cargo test --locked -p meta` (Rust pins, vacuous flags, required gates and skipped hooks) |
 | `scripts/hooks/rustfmt-on-edit.sh` | shellcheck (in `make check`); run it once by editing a `.rs` file in Claude Code |
+| `src/screenshots/**` (fixtures included), `scripts/screenshots.sh`, `.mk/screenshots.mk`, the metainfo `<screenshots>` | `make verify`, `make screenshots`, then look at every changed PNG in `data/screenshots/` and `cargo test --locked -p meta --test screenshots` |
 | `README.md`, `docs/**/*.md`, other Markdown | `cargo test --locked -p meta --test docs` (the `docs-links` hook); prose wraps at 100 columns (markdownlint in `make check`) |
 | `.agents/skills/**` | the Markdown row |
 

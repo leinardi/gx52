@@ -1,0 +1,95 @@
+schema_version = 1
+device_type = "x52-pro"
+name = "Combat Flight"
+kind = "per_mode"
+date_format = "dd-mm-yy"
+
+[clock_1]
+source = "local"
+use_24h = true
+
+[clock_2]
+source = { iana = "America/New_York" }
+use_24h = true
+
+[clock_3]
+source = { iana = "Asia/Tokyo" }
+use_24h = true
+
+[mode_1]
+led_brightness = 112
+mfd_brightness = 96
+shift = false
+blink = false
+
+[mode_1.leds]
+fire = "on"
+throttle = "on"
+a = "red"
+b = "amber"
+d = "green"
+e = "green"
+t1_t2 = "red"
+t3_t4 = "amber"
+t5_t6 = "amber"
+pov_2 = "green"
+i = "red"
+
+[mode_1.mfd]
+lines = [
+  { source = "text", text = "MASTER ARM ON" },
+  { source = "text", text = "WPN AIM-120C" },
+  { source = "profile_name" },
+]
+
+[mode_2]
+led_brightness = 96
+mfd_brightness = 96
+shift = false
+blink = false
+
+[mode_2.leds]
+fire = "on"
+throttle = "on"
+a = "green"
+b = "green"
+d = "amber"
+e = "amber"
+t1_t2 = "green"
+t3_t4 = "green"
+t5_t6 = "red"
+pov_2 = "amber"
+i = "green"
+
+[mode_2.mfd]
+lines = [
+  { source = "text", text = "NAV MODE" },
+  { source = "text", text = "WPT 3 BULLSEYE" },
+  { source = "profile_name" },
+]
+
+[mode_3]
+led_brightness = 80
+mfd_brightness = 96
+shift = false
+blink = false
+
+[mode_3.leds]
+fire = "on"
+throttle = "on"
+a = "amber"
+b = "red"
+d = "red"
+e = "amber"
+t1_t2 = "amber"
+t3_t4 = "red"
+t5_t6 = "green"
+pov_2 = "red"
+i = "amber"
+
+[mode_3.mfd]
+lines = [
+  { source = "text", text = "LANDING" },
+  { source = "text", text = "GEAR DOWN" },
+  { source = "profile_name" },
+]
