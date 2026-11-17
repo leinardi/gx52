@@ -20,9 +20,9 @@ pull requests](#the-flathub-pull-requests)): no token is stored anywhere.
 The shared logic is in `leinardi/gh-reusable-workflows` (`version-bump-pr`, `release-on-merge`,
 `simple-tag-and-release`), the same pattern as `rust-common` and `gtk-rs-skills`.
 
-This page supersedes [RELEASING.md](../RELEASING.md), the manual procedure of the legacy `0.7.x`
-Python application, which goes with the legacy tree in M9
-([tooling-todo.md](tooling-todo.md#cleanup-when-the-rewrite-lands)).
+[RELEASING.md](../RELEASING.md) is the short version: the commands of a release, to beta and to
+stable, and what to do when one fails. It replaced the manual procedure of the legacy `0.7.x`
+Python application.
 
 ## What a release produces
 

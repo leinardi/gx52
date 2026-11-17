@@ -694,7 +694,8 @@ lands"](tooling-todo.md#cleanup-when-the-rewrite-lands) section:
 3. **Remove `.gitlab/`** and push the GitLab tombstone (rewrite analysis, section 7.4), right before
    the first public `v1.0.0`.
 4. **Rename the trunk to `main`.**
-5. **Remove `RELEASING.md`** (superseded by release.md once `release.yaml` exists).
+5. **Point the release tooling at `main`:** `TRUNK` in `scripts/release.sh` and the trunk named
+   in `RELEASING.md`.
 
 Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 
