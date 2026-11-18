@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=GX52
-Comment=Configure the Logitech X52 and X52 Pro joysticks
+Comment=Configure your X52 joystick
 Exec=@bin@
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=@app-id@

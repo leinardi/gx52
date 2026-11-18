@@ -5,7 +5,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>GX52</name>
-  <summary>Configure the Logitech X52 and X52 Pro joysticks</summary>
+  <summary>Configure your X52 joystick</summary>
   <description>
     <p>GX52 configures the LEDs, the brightness and the multi-function display of the Logitech
       (Saitek) X52 and X52 Pro joysticks.</p>
