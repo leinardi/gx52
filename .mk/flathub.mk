@@ -27,9 +27,11 @@ FLATHUB_DIR ?= $(REPO_ROOT)/_flathub
 FLATHUB_BASE ?= beta
 
 .PHONY: flathub-pr
-flathub-pr: ## Push the Flathub branch of release VERSION into FLATHUB_BASE (beta; master) and open its PR
-	FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh pr \
-		"$(or $(VERSION),$(shell $(MAKE) -s --no-print-directory release-version))" "$(FLATHUB_BASE)"
+flathub-pr: ## Push the Flathub branch of release VERSION into each FLATHUB_BASE (beta, master or "beta master") and open its PR
+	@version="$(or $(VERSION),$(shell $(MAKE) -s --no-print-directory release-version))"; \
+	for base in $(FLATHUB_BASE); do \
+		FLATHUB_DIR="$(FLATHUB_DIR)" scripts/flathub-release.sh pr "$$version" "$$base" || exit 1; \
+	done
 
 .PHONY: flathub-beta
 flathub-beta: ## Create the Flathub beta branch from the passed test build of VERSION (once)

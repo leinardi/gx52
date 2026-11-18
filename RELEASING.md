@@ -41,7 +41,8 @@ is already done and continues from there: it never dispatches, merges or publish
 or cancelled workflow run is offered one re-run of its failed jobs. If the bump pull request's CI
 failed for a real bug, fix it on the trunk first: the next run refreshes the pull request onto it.
 
-The Flathub step alone can be repeated with `make flathub-pr VERSION=X.Y.Z [FLATHUB_BASE=master]`:
-it updates the open Flathub pull request instead of opening a second one.
+The Flathub step alone can be repeated with `make flathub-pr VERSION=X.Y.Z [FLATHUB_BASE=master]`
+(or `"beta master"` for both): it updates the open Flathub pull request instead of opening a second
+one.
 
 `ASSUME_YES=1` answers every `[y/N]` with yes, `ASSUME_YES=0` with no.
