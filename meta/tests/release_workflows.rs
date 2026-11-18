@@ -33,7 +33,7 @@ const RELEASE: &str = ".github/workflows/release.yaml";
 const PUBLISH: &str = ".github/workflows/release-publish.yaml";
 const GATE: &str = ".github/workflows/release-gate.yaml";
 const FLATHUB: &str = ".github/workflows/flathub-check.yaml";
-const TRUNK: &str = "rust-rewrite";
+const TRUNK: &str = "main";
 const VERSION_FILES: [&str; 4] = [
     "Cargo.toml",
     "Cargo.lock",
@@ -159,8 +159,9 @@ fn version_problems(workflows: &Workflows) -> Vec<String> {
     problems
 }
 
-/// Every reusable workflow of gh-reusable-workflows is pinned to one commit and gets the trunk;
-/// every action is pinned to a full SHA.
+/// Every reusable workflow of gh-reusable-workflows is pinned to one commit and names no
+/// `base_branch`: the trunk is the default branch, which they use when none is given. Every action
+/// is pinned to a full SHA.
 fn pin_problems(workflows: &Workflows) -> Vec<String> {
     let mut problems = Vec::new();
     let mut commits = BTreeSet::new();
@@ -174,8 +175,10 @@ fn pin_problems(workflows: &Workflows) -> Vec<String> {
             let called = text(&job["uses"]);
             if let Some(rest) = called.strip_prefix(REUSABLE) {
                 commits.insert(rest.split('@').nth(1).unwrap_or_default().to_owned());
-                if text(&job["with"]["base_branch"]) != TRUNK {
-                    problems.push(format!("{file} {name}: base_branch is not {TRUNK}"));
+                if !job["with"]["base_branch"].is_null() {
+                    problems.push(format!(
+                        "{file} {name}: base_branch is set; the trunk, {TRUNK}, is the default branch"
+                    ));
                 }
             }
             if !called.is_empty() && !called.starts_with("./") && !PINNED.is_match(called) {
@@ -497,9 +500,7 @@ fn runs(job: &Value) -> String {
 fn guard_problems(workflows: &Workflows) -> Vec<String> {
     let mut problems = Vec::new();
     let policy = runs(job(&workflows.release, "policy"));
-    if !policy
-        .contains("[ \"$DRY_RUN\" != \"true\" ] && [ \"$REF\" != \"refs/heads/rust-rewrite\" ]")
-    {
+    if !policy.contains("[ \"$DRY_RUN\" != \"true\" ] && [ \"$REF\" != \"refs/heads/main\" ]") {
         problems.push("release.yaml's policy job lets a real run off the trunk".to_owned());
     }
     let build = job(&workflows.gate, "build");
@@ -525,9 +526,9 @@ fn guard_problems(workflows: &Workflows) -> Vec<String> {
             .into_iter()
             .flatten()
             .any(|step| {
-                text(&step["if"]) == "github.ref != 'refs/heads/rust-rewrite'"
+                text(&step["if"]) == "github.ref != 'refs/heads/main'"
                     && text(&step["env"]["TRUNK_URL"])
-                        == "https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/"
+                        == "https://raw.githubusercontent.com/leinardi/gx52/main/"
             })
     {
         problems
@@ -603,9 +604,9 @@ fn value_breaks() -> Vec<Break> {
             Value::Sequence(vec!["Cargo.toml".into()]),
         ),
         (
-            "no trunk for the bump",
+            "a trunk other than the default branch for the bump",
             vec!["release", "jobs", "bump", "with", "base_branch"],
-            Value::Null,
+            "rust-rewrite".into(),
         ),
         (
             "another reusable commit",
@@ -860,7 +861,7 @@ fn the_screenshots_follow_the_trunk_url() {
         })
         .collect();
     assert!(!images.is_empty(), "the metainfo lists no screenshots");
-    let trunk = "https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/";
+    let trunk = "https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/";
     for image in images {
         assert!(image.starts_with(trunk), "{image} is not under {trunk}");
     }

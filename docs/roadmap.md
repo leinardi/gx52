@@ -630,7 +630,7 @@ Acceptance:
      `flathub-check.yaml` (which replaced `flathub-pr.yaml` on 2026-11-16), with
      `scripts/release-bump.sh`, `release-policy.sh` and `flathub-manifest.sh` and their meta-tests.
      Before M9 they are dispatched with `--ref rust-rewrite` through stubs on `master`
-     ([release.md](release.md#dispatching-before-m9)). The metainfo `<screenshots>` block is in;
+     ([release.md](release.md#dispatching)). The metainfo `<screenshots>` block is in;
      its PNGs are not captured yet. The gh-reusable-workflows `base_branch` change is released as
      v1.8.0 and pinned, and the `master` stubs are merged (2026-11-15). Open: the dry run on both
      architectures.
@@ -704,6 +704,11 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
   `.gitlab/` and `.pycharm/` are removed. The GitLab tombstone, the rename and the `main` tooling
   follow. The `1.0.0` notes are fixed in `scripts/release-bump.sh`: the rewrite's description plus
   the manual copy of a source install's profiles (R10) and the untested X52 (non-Pro).
+- **Done (2026-11-18): items 4 and 5.** `rust-rewrite` is renamed `main` and is the default branch;
+  the legacy `master` and its workflow stubs are deleted; `scheduled-scan.yaml` lives on `main`;
+  the release workflows name no `base_branch`; `release.sh`, `RELEASING.md`, the metainfo
+  screenshot URLs and the docs name `main`; gh-leinardi-iac moves `ci-result` to the
+  default-branch ruleset.
 
 ## `1.0.0` gate checklist
 

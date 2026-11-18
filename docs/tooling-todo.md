@@ -77,7 +77,7 @@ item off, or delete it, in the commit that does it.
       version-bump-pr, release-on-merge and simple-tag-and-release (M8).
 - [x] `scheduled-scan.yaml`: cargo-deny on the trunk every week, and a check that fails when
       Flathub has a newer GNOME runtime than the manifests (rewrite analysis, section 8). On
-      `master` until M9 ([release.md](release.md#dispatching-before-m9)).
+      `main` since M9 ([release.md](release.md#dispatching)).
 - [ ] Repository settings in `gh-leinardi-iac` (`repo_gx52`, M8): a ruleset on `rust-rewrite`
       with `ci-result` required (none on the legacy `master`), Actions may create pull requests;
       private vulnerability reporting is already on for public repositories. Applied
@@ -129,17 +129,17 @@ item off, or delete it, in the commit that does it.
       it.
 - [x] Remove `.gitlab/` with the GitLab tombstone (rewrite analysis, section 7.4); the tombstone
       itself is pushed to GitLab by the maintainer.
-- [ ] Rename the trunk to `main` (rewrite analysis, section 1, Branching).
-- [ ] Point the release tooling at `main`: `TRUNK` in `scripts/release.sh` and the trunk named in
+- [x] Rename the trunk to `main` (rewrite analysis, section 1, Branching).
+- [x] Point the release tooling at `main`: `TRUNK` in `scripts/release.sh` and the trunk named in
       `RELEASING.md`.
-- [ ] Release workflows ([release.md](release.md#dispatching-before-m9)): remove the `ci.yaml`,
+- [x] Release workflows ([release.md](release.md#dispatching)): remove the `ci.yaml`,
       `release.yaml` and `flathub-pr.yaml` stubs from the old `master`; move
       `scheduled-scan.yaml` to the trunk and drop its explicit `rust-rewrite` checkout; drop the
       `base_branch` inputs of the gh-reusable-workflows calls and every `rust-rewrite` ref in the
       release workflows (the trunk is then the default branch); point the metainfo screenshot
       URLs at `main`.
-- [ ] Repository settings: move `ci-result` from the `rust-rewrite` ruleset to
+- [x] Repository settings: move `ci-result` from the `rust-rewrite` ruleset to
       `default_branch_required_checks` and remove that ruleset.
 - [ ] `scheduled-scan.yaml` on the trunk: give it meta-test coverage like the release workflows'
-      (`release_workflows`); on `master` the trunk's meta-tests cannot read it, so until then its
-      check is the hands-on one in [release.md](release.md#dispatching-before-m9).
+      (`release_workflows`). It is on the trunk since M9; until the test exists, its check is a
+      `gh workflow run scheduled-scan.yaml` on `main`.

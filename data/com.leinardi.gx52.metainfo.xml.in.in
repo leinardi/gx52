@@ -37,23 +37,23 @@
        the tag exists. -->
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/leds.png</image>
+      <image>https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/leds.png</image>
       <caption>Set the LEDs of a profile</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/mfd.png</image>
+      <image>https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/mfd.png</image>
       <caption>Write the text of the multi-function display</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/clocks.png</image>
+      <image>https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/clocks.png</image>
       <caption>Show three clocks in real time zones</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/profiles.png</image>
+      <image>https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/profiles.png</image>
       <caption>Keep a profile per mode, and import and export profiles</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/preferences.png</image>
+      <image>https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/preferences.png</image>
       <caption>Run in the background and use the ministick as a mouse</caption>
     </screenshot>
   </screenshots>

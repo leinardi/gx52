@@ -6,10 +6,10 @@ GX52 is a GNOME desktop application that configures the Logitech (Saitek) X52 an
 joysticks on Linux: LEDs, brightness, the MFD (multi-function display) text and clocks, and
 profiles. It is distributed through Flathub as `com.leinardi.gx52`.
 
-The application is rewritten from Python + GTK 3 to Rust + gtk4-rs + libadwaita, on the
-`rust-rewrite` branch (renamed `main` when the rewrite lands, M9). The legacy `0.7.x` Python
-application is no longer in the tree; its tags keep it. The decisions behind the rewrite are
-recorded in [`docs/rewrite-analysis.md`](docs/rewrite-analysis.md), the preparation in
+The application is rewritten from Python + GTK 3 to Rust + gtk4-rs + libadwaita; the trunk is
+`main`. The legacy `0.7.x` Python application is no longer in the tree; its tags keep it. The
+decisions behind the rewrite are recorded in [`docs/rewrite-analysis.md`](docs/rewrite-analysis.md),
+the preparation in
 [`docs/preparation.md`](docs/preparation.md) and the spike results in
 [`docs/spikes/`](docs/spikes/). Tooling that is decided but not set up yet is tracked in
 [`docs/tooling-todo.md`](docs/tooling-todo.md).

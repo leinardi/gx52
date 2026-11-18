@@ -77,10 +77,10 @@ jobs:
       # pull request branch) may not hold yet: there they name the dispatched commit, so its own
       # screenshots are mirrored. A run on the trunk builds the metainfo as Flathub will.
       - name: Point the screenshots at the commit off the trunk
-        if: github.ref != 'refs/heads/rust-rewrite'
+        if: github.ref != 'refs/heads/main'
         env:
           METAINFO: data/com.leinardi.gx52.metainfo.xml.in.in
-          TRUNK_URL: https://raw.githubusercontent.com/leinardi/gx52/rust-rewrite/
+          TRUNK_URL: https://raw.githubusercontent.com/leinardi/gx52/main/
         run: |
           set -euo pipefail
           grep -qF "$TRUNK_URL" "$METAINFO"

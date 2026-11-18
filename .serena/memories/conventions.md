@@ -29,7 +29,7 @@
 
 ## Commits and branches
 
-- Conventional Commits with scope, enforced by `commit-msg` hook. PRs to `rust-rewrite`, merge
+- Conventional Commits with scope, enforced by `commit-msg` hook. PRs to `main`, merge
   commits, so every commit's type counts. Type by whether the change ships: shipped change is
   `fix`/`feat`. 0.99.x versions are explicit; svu from 1.0.0.
 - Removing a user-visible surface needs a line in `README.md` or `docs/**` retiring it.

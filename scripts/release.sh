@@ -39,7 +39,7 @@
 #
 # Environment: ASSUME_YES=1 answers every prompt yes and ASSUME_YES=0 no (otherwise they are read
 # from the terminal, and no terminal is a no). For the tests: GH (default gh), FLATHUB_RELEASE (default
-# scripts/flathub-release.sh), REPOSITORY (default leinardi/gx52), TRUNK (default rust-rewrite)
+# scripts/flathub-release.sh), REPOSITORY (default leinardi/gx52), TRUNK (default main)
 # and POLL_SECONDS (default 15).
 
 set -euo pipefail
@@ -51,7 +51,7 @@ die() {
 
 GH="${GH:-gh}"
 REPOSITORY="${REPOSITORY:-leinardi/gx52}"
-TRUNK="${TRUNK:-rust-rewrite}"
+TRUNK="${TRUNK:-main}"
 POLL_SECONDS="${POLL_SECONDS:-15}"
 FLATHUB_RELEASE="${FLATHUB_RELEASE:-$(dirname "${BASH_SOURCE[0]}")/flathub-release.sh}"
 

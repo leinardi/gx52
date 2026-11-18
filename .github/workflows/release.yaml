@@ -15,9 +15,8 @@ name: Release
 #   flathub flathub-check.yaml on the same patched tree: the Flathub manifest and cargo-sources.json
 #           the release would attach, linted and diffed against the Flathub branch.
 #
-# GitHub registers a dispatch workflow from the default branch only, so until M9 master carries a
-# stub of this file with the same inputs; `gh workflow run release.yaml --ref rust-rewrite` (or a
-# branch, for a dry run) runs this one.
+# Dispatched on the trunk, main, for a release (`make release`), or on any branch for a dry run
+# (`make release-dry-run`).
 on:
   workflow_dispatch:
     inputs:
@@ -57,8 +56,8 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
-          if [ "$DRY_RUN" != "true" ] && [ "$REF" != "refs/heads/rust-rewrite" ]; then
-            echo "A release is cut from rust-rewrite, got $REF; only a dry run may run elsewhere. Nothing was changed." >&2
+          if [ "$DRY_RUN" != "true" ] && [ "$REF" != "refs/heads/main" ]; then
+            echo "A release is cut from main, got $REF; only a dry run may run elsewhere. Nothing was changed." >&2
             exit 1
           fi
 
@@ -87,7 +86,6 @@ jobs:
       version_command: make -s release-version
       bump_command: make release-bump VERSION="$RELEASE_VERSION"
       allowed_files: Cargo.toml Cargo.lock meson.build data/com.leinardi.gx52.metainfo.xml.in.in
-      base_branch: rust-rewrite
       ci_workflow: ci.yaml
 
   gate:
