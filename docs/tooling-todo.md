@@ -117,17 +117,18 @@ item off, or delete it, in the commit that does it.
 
 ## Cleanup when the rewrite lands
 
-- [ ] Remove the legacy Python application and its tooling: `gx52/` (Python package), `bin/`,
+- [x] Remove the legacy Python application and its tooling: `gx52/` (Python package), `bin/`,
       `build.sh`, `run.sh`, `t.py`, `requirements.txt`, `mypy.ini`, `pylintrc`, `.pycharm/`,
       `scripts/make_local_manifest.py`, `scripts/meson_post_install.py`. They stay in the tree,
       unbuilt, until then: the Rust scaffold already replaced the legacy `meson.build`,
       `data/meson.build` and `bin/meson.build`, the GTK 3 `.glade` files and the legacy data files
       ([roadmap.md](roadmap.md#m0-project-setup-the-0990-skeleton), M0). They were brought up to the
       new checks (GPL header, shellcheck) only so `make check` passes in the meantime.
-- [ ] Remove the `flatpak/` submodule (rewrite analysis, section 9.3), its mapping in
+- [x] Remove the `flatpak/` submodule (rewrite analysis, section 9.3), its mapping in
       `.idea/vcs.xml`, and the `!.idea/vcs.xml` exception in `.gitignore` if nothing else needs
       it.
-- [ ] Remove `.gitlab/` with the GitLab tombstone (rewrite analysis, section 7.4).
+- [x] Remove `.gitlab/` with the GitLab tombstone (rewrite analysis, section 7.4); the tombstone
+      itself is pushed to GitLab by the maintainer.
 - [ ] Rename the trunk to `main` (rewrite analysis, section 1, Branching).
 - [ ] Point the release tooling at `main`: `TRUNK` in `scripts/release.sh` and the trunk named in
       `RELEASING.md`.
