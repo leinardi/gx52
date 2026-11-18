@@ -28,7 +28,7 @@ use std::time::Duration;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gtk::{gdk, glib};
+use gtk::{gdk, glib, graphene, gsk};
 use x52::device::DeviceType;
 use x52::input::Mode;
 
@@ -373,22 +373,63 @@ fn capture(window: &Window, name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Renders `window` as it is now and saves it to `path`.
+/// The window's corner radius, libadwaita's `--window-radius`: the headless compositor shows the
+/// window tiled, with square corners, so the shot rounds them itself.
+const CORNER_RADIUS: f32 = 15.0;
+
+/// The transparent border around the window that holds its shadow.
+const SHADOW_MARGIN: f32 = 32.0;
+
+/// libadwaita's `window.csd` box-shadow, outermost first: (opacity, spread, blur radius). Flathub's
+/// quality guidelines ask for the window's shadow and rounded corners in the screenshots.
+const SHADOW: [(f32, f32, f32); 3] = [(0.15, 5.0, 14.0), (0.10, 2.0, 5.0), (0.05, 1.0, 0.0)];
+
+/// Renders `window` as it is now, with rounded corners and libadwaita's window shadow on a
+/// transparent margin, and saves it to `path`.
 fn save_png(window: &Window, path: &Path) -> Result<(), String> {
-    let paintable = gtk::WidgetPaintable::new(Some(window));
-    let snapshot = gtk::Snapshot::new();
-    paintable.snapshot(
-        &snapshot,
-        f64::from(window.width()),
-        f64::from(window.height()),
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "a window is a few thousand pixels at most, exact in an f32"
+    )]
+    let (width, height) = (window.width() as f32, window.height() as f32);
+    let frame = gsk::RoundedRect::from_rect(
+        graphene::Rect::new(SHADOW_MARGIN, SHADOW_MARGIN, width, height),
+        CORNER_RADIUS,
     );
+    let snapshot = gtk::Snapshot::new();
+    for (opacity, spread, blur) in SHADOW {
+        snapshot.append_outset_shadow(
+            &frame,
+            &gdk::RGBA::new(0.0, 0.0, 0.0, opacity),
+            0.0,
+            0.0,
+            spread,
+            blur,
+        );
+    }
+    snapshot.push_rounded_clip(&frame);
+    snapshot.save();
+    snapshot.translate(&graphene::Point::new(SHADOW_MARGIN, SHADOW_MARGIN));
+    gtk::WidgetPaintable::new(Some(window)).snapshot(
+        &snapshot,
+        f64::from(width),
+        f64::from(height),
+    );
+    snapshot.restore();
+    snapshot.pop();
     let node = snapshot
         .to_node()
         .ok_or_else(|| "the window drew nothing".to_owned())?;
     let renderer = window
         .renderer()
         .ok_or_else(|| "the window has no renderer".to_owned())?;
-    let texture: gdk::Texture = renderer.render_texture(node, None);
+    let viewport = graphene::Rect::new(
+        0.0,
+        0.0,
+        width + 2.0 * SHADOW_MARGIN,
+        height + 2.0 * SHADOW_MARGIN,
+    );
+    let texture: gdk::Texture = renderer.render_texture(node, Some(&viewport));
     texture
         .save_to_png(path)
         .map_err(|error| format!("cannot save {}: {error}", path.display()))

@@ -29,8 +29,8 @@
     <control>touch</control>
   </supports>
   <branding>
-    <color type="primary" scheme_preference="light">#99c1f1</color>
-    <color type="primary" scheme_preference="dark">#1a5fb4</color>
+    <color type="primary" scheme_preference="light">#deddda</color>
+    <color type="primary" scheme_preference="dark">#3d3846</color>
   </branding>
   <!-- Regenerated with make screenshots, in the order of src/screenshots/capture.rs (docs/release.md,
        "Screenshots"). The URLs follow the trunk, not the tag: the release gate mirrors them before
