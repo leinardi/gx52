@@ -2,14 +2,13 @@ name: CI
 
 # Adapted from swarm-device-access/.github/workflows/ci.yaml at 4cd31c4cea79 (Apache-2.0, same
 # author), with the GNOME jobs of spike S6. The authoritative checks run on every pull request and
-# every push to master and rust-rewrite; the reviewdog jobs only annotate pull requests. ci-result
-# is the one required check.
+# every push to main; the reviewdog jobs only annotate pull requests. ci-result is the one required
+# check.
 on:
   pull_request:
   push:
     branches:
-      - master
-      - rust-rewrite
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -38,7 +37,7 @@ jobs:
 
       # For the cargo-fmt and cargo-machete hooks and the language: system hooks that run cargo
       # (docs links). The Rust cache is saved only on a pull request: on a push it would write
-      # the master cache scope.
+      # the main cache scope.
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
@@ -58,7 +57,7 @@ jobs:
       - name: Install pre-commit
         run: pip install --no-cache-dir pre-commit==4.6.2
 
-      # Restore only: pre-commit-warmup.yaml saves the entry on master under the same key.
+      # Restore only: pre-commit-warmup.yaml saves the entry on main under the same key.
       - name: Restore the pre-commit cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

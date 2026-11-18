@@ -115,39 +115,20 @@ on a scratch clone: `make release-bump VERSION=0.99.0`.
 - **Offline build:** the Flathub-style build uses only the crates listed in `cargo-sources.json`,
   generated from `Cargo.lock` by `make cargo-sources` with the pinned generator.
 
-## Dispatching before M9
+## Dispatching
 
-GitHub registers a `workflow_dispatch` workflow only from the default branch, and runs a schedule
-only from it. Until the rewrite lands (M9) the default branch is the legacy `master`, while releases
-are cut from `rust-rewrite`. So `master` carries stubs of `ci.yaml` and `release.yaml`, with the
-real files' dispatch inputs and a dispatch trigger only, and the real `scheduled-scan.yaml`.
-`flathub-check.yaml` is only called, never dispatched, so it needs no stub. A dispatch then runs
-the file of the ref it names:
+The trunk, `main`, is the default branch, so GitHub registers the dispatch workflows and runs
+`scheduled-scan.yaml`'s schedule from it, and gh-reusable-workflows' calls need no `base_branch`
+(the `release_workflows` meta-test refuses one). A dispatch runs the file of the ref it names:
 
 ```bash
-gh workflow run release.yaml --ref rust-rewrite -f version=0.99.0 -f dry_run=false
-gh workflow run release.yaml --ref m8/release -f version=0.99.0    # dry run, the default
+gh workflow run release.yaml --ref main -f version=X.Y.Z -f dry_run=false
+gh workflow run release.yaml --ref my/branch -f version=X.Y.Z    # dry run, the default
 ```
 
-A stub dispatched on `master` itself fails with "dispatch with --ref rust-rewrite". version-bump-pr
-dispatches `ci.yaml` on `release/vX.Y.Z` the same way, which runs that branch's real `ci.yaml`. The
-stubs have no push or pull-request trigger, so the legacy tree is never built. The stubs' inputs
-are these; the `release_workflows` meta-test checks that the real files declare the same:
-
-| Workflow | Input | Type | Required | Default |
-| --- | --- | --- | --- | --- |
-| `release.yaml` | `version` | string | no | `""` |
-| `release.yaml` | `dry_run` | boolean | no | `true` |
-
-A change to these inputs is made on both branches. The trunk's meta-tests cannot read `master`, so
-the stubs and `scheduled-scan.yaml` are checked by hand once the bootstrap is merged: `gh workflow
-list` shows CI, Release and Scheduled scan; a stub dispatched on `master` fails with its
-message; `gh workflow run scheduled-scan.yaml` on `master` passes (or fails only in its
-runtime job, naming a newer GNOME runtime).
-
-At M9 the trunk becomes `main`, the default branch: the stubs go, `scheduled-scan.yaml` moves to
-the trunk, and the `base_branch` inputs go
-([tooling-todo.md](tooling-todo.md#cleanup-when-the-rewrite-lands)).
+Until M9 (2026-11-18) the default branch was the legacy `master`, with dispatch-only stubs of
+`ci.yaml` and `release.yaml` and the real `scheduled-scan.yaml`, and the trunk was `rust-rewrite`;
+the trunk was renamed `main` and `master` deleted.
 
 ## How to release
 
@@ -190,7 +171,7 @@ that stopped while publishing makes `make release` re-run that run, not move on 
    without the maintainer was rejected (rewrite analysis, section 9.2).
 
 Every prompt is a `[y/N]` on the terminal; `ASSUME_YES=1` answers yes and `ASSUME_YES=0` no. The
-workflows can still be dispatched by hand (`gh workflow run release.yaml --ref rust-rewrite -f
+workflows can still be dispatched by hand (`gh workflow run release.yaml --ref main -f
 version=X.Y.Z -f dry_run=false`), and `make release` picks up from whatever state that leaves.
 
 Only one bump runs at a time (version-bump-pr's concurrency group). A newer dispatch of
@@ -283,11 +264,11 @@ The diff of a dry run is against `beta` for a `0.x` version, `master` from `1.0.
 
 The metainfo lists five screenshots under `data/screenshots/` (not installed), with translatable
 captions. Their URLs follow the trunk
-(`raw.githubusercontent.com/leinardi/gx52/rust-rewrite/data/screenshots/...`), not the tag: the
+(`raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/...`), not the tag: the
 gate mirrors them before the tag exists. A side effect: a later screenshot change on the trunk also
 changes what an older release shows. Off the trunk (a dry run of a pull request branch) the gate
 points them at the dispatched commit instead, so a branch that adds or changes screenshots gates
-its own. At M9 they move to `main`. The legacy `art/screenshot-*.png` stay until then.
+its own.
 
 `make screenshots` regenerates them, with no joystick and no manual set-up. It installs the Devel
 Flatpak and runs its screenshot mode (`--screenshots <dir>`, Devel builds only; see
@@ -341,9 +322,8 @@ a version number is never reused for different code.
 - **No bypass identity.** The bump lands through a pull request like any other change, so nothing
   pushes to the protected trunk; tags are created by publishing the release with `GITHUB_TOKEN`.
 - **Repository settings** (`gh-leinardi-iac`, `repo_gx52`): GitHub Actions may create pull
-  requests (the bump PR); a ruleset on `rust-rewrite` until M9 (pull request, review, no deletion
-  or force-push) with `ci-result` required; no required checks on the legacy `master`, whose
-  `ci.yaml` stub never runs on a pull request. No environment and no secret: the `release`
+  requests (the bump PR); the default-branch ruleset on `main` (pull request, review, no deletion
+  or force-push) with `ci-result` required. No environment and no secret: the `release`
   environment, applied for the Flathub token of the earlier design, is unused and is removed from
   the IaC.
 - **No Flathub token.** The Flathub pull requests are opened with the maintainer's own `gh` login,

@@ -25,7 +25,7 @@ use std::os::unix::fs::PermissionsExt;
 use meta::scratch::{Run, Scratch};
 
 const SCRIPT: &str = "scripts/release.sh";
-const TRUNK: &str = "rust-rewrite";
+const TRUNK: &str = "main";
 
 /// GitHub, as far as release.sh asks it. State in `GH_STATE`: `release` (the release exists, holding
 /// its `isDraft`: `true` or `false`),
@@ -103,7 +103,7 @@ case "$group" in
 	if [[ "$positional" == release.yaml ]]; then
 		result="$(knob dispatch-result success)"
 		add_run release.yaml "" "$ref" workflow_dispatch "$result"
-		if [[ "$result" == success && "$ref" == rust-rewrite ]]; then
+		if [[ "$result" == success && "$ref" == main ]]; then
 			count=$(($(knob dispatches 0) + 1))
 			echo "$count" >"$state/dispatches"
 			echo "28 head$count https://github.com/leinardi/gx52/pull/28" >"$state/pr-open"
@@ -124,7 +124,7 @@ case "$group" in
 	rm "$state/pr-open"
 	echo "merge1 $url" >"$state/pr-merged"
 	result="$(knob publish-result success)"
-	add_run release-publish.yaml merge1 rust-rewrite push "$result"
+	add_run release-publish.yaml merge1 main push "$result"
 	if [[ "$result" == success ]]; then
 		echo false >"$state/release"
 	elif [[ -f "$state/publish-leaves-draft" ]]; then
@@ -224,7 +224,7 @@ fn a_release_runs_from_the_dispatch_to_the_flathub_pull_request() {
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml rust-rewrite",
+            "workflow run release.yaml main",
             "pr review 28",
             "pr merge 28",
             "flathub pr 0.99.1 beta",
@@ -253,12 +253,12 @@ fn a_release_runs_from_the_dispatch_to_the_flathub_pull_request() {
 fn a_declined_merge_is_resumed_without_a_second_dispatch() {
     let setup = Setup::new();
     setup.stops(&["0.99.1"], false, "not merged: run make release again");
-    assert_eq!(setup.log(), ["workflow run release.yaml rust-rewrite"]);
+    assert_eq!(setup.log(), ["workflow run release.yaml main"]);
     setup.succeeds(&["0.99.1"]);
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml rust-rewrite",
+            "workflow run release.yaml main",
             "pr review 28",
             "pr merge 28",
             "flathub pr 0.99.1 beta",
@@ -282,7 +282,7 @@ fn a_failed_publish_is_re_run_once_and_resumed_after_the_fix() {
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml rust-rewrite",
+            "workflow run release.yaml main",
             "pr review 28",
             "pr merge 28",
             "run rerun 3",
@@ -310,7 +310,7 @@ fn a_draft_left_by_a_failed_publish_is_finished_not_skipped() {
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml rust-rewrite",
+            "workflow run release.yaml main",
             "pr review 28",
             "pr merge 28",
             "run rerun 3",
@@ -333,15 +333,12 @@ fn a_failed_bump_ci_is_refreshed_from_the_fixed_trunk() {
     setup.knob("ci-result", "success");
     setup.knob("behind", "1");
     let output = setup.succeeds(&["0.99.1"]);
-    assert!(
-        output.contains("is 1 commit(s) behind rust-rewrite"),
-        "{output}"
-    );
+    assert!(output.contains("is 1 commit(s) behind main"), "{output}");
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml rust-rewrite",
-            "workflow run release.yaml rust-rewrite",
+            "workflow run release.yaml main",
+            "workflow run release.yaml main",
             "pr review 28",
             "pr merge 28",
             "flathub pr 0.99.1 beta",

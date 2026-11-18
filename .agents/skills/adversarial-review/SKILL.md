@@ -25,8 +25,8 @@ This skill routes to the domain skills rather than replacing them: they own the 
 
 When invoked directly: review the scope the user gives (`gh pr view <n>` for intent, then `gh pr
 diff <n>`); with none, the uncommitted work (`git diff HEAD` plus untracked files, which no diff
-shows); on a clean tree, `git diff rust-rewrite...HEAD` (`rust-rewrite` is the integration
-branch, `AGENTS.md`). Never review from memory or from the user's description of the change.
+shows); on a clean tree, `git diff main...HEAD` (`main` is the trunk, `AGENTS.md`). Never review
+from memory or from the user's description of the change.
 
 Read the stated **intent** (`git log --oneline` for the range, any linked issue or PR body): a
 change that works but does something other than what it claims is a finding. Read every commit

@@ -1,13 +1,13 @@
 name: Pre-commit Cache Warm-up
 
-# Keeps a master-branch cache of the pre-commit hook environments for pull requests to restore: the
+# Keeps a main-branch cache of the pre-commit hook environments for pull requests to restore: the
 # pre-commit-all job in ci.yaml and the reviewdog jobs read it under the same key
 # (pre-commit|<OS>|<hash of .pre-commit-config.yaml>). The weekly schedule is eviction insurance:
 # GitHub evicts a cache nobody restored for 7 days.
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - .pre-commit-config.yaml
       - .github/workflows/pre-commit-warmup.yaml

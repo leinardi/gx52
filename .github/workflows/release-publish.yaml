@@ -22,7 +22,7 @@ name: Release publish
 on:
   push:
     branches:
-      - rust-rewrite
+      - main
     paths:
       - Cargo.toml
       - Cargo.lock
@@ -48,7 +48,6 @@ jobs:
     with:
       version_command: make -s release-version
       allowed_files: Cargo.toml Cargo.lock meson.build data/com.leinardi.gx52.metainfo.xml.in.in
-      base_branch: rust-rewrite
       ci_workflow: ci.yaml
       # ci.yaml's flatpak and sdk-checks jobs allow 45 minutes each, plus the queue.
       ci_timeout_minutes: 90
@@ -111,6 +110,5 @@ jobs:
     uses: leinardi/gh-reusable-workflows/.github/workflows/simple-tag-and-release.yaml@2635363c6cdbba761accc2a3d4a756787d1f911d # v1.8.0
     with:
       version: ${{ needs.decide.outputs.tag }}
-      base_branch: rust-rewrite
       prerelease: ${{ startsWith(needs.decide.outputs.tag, 'v0.') }}
       artifact_name: release-assets

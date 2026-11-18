@@ -76,8 +76,7 @@ A few rules the tools do not enforce:
 
 ## Branches and pull requests
 
-Until `1.0.0`, development happens on the `rust-rewrite` branch: open pull requests against it, not
-against `master`, which still holds the legacy `0.7.x` application. Name branches
+Development happens on `main`, the trunk: open pull requests against it. Name branches
 `<type>/<short-description>` (`fix/mfd-clock-offset`). Keep a pull request to one logical change,
 and make sure CI passes.
 

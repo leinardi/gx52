@@ -53,8 +53,7 @@ are welcome; the build is plain Meson and Cargo (see [Building from source](#bui
 
 ### Beta
 
-The rewrite is published as `0.99.x` development builds on the Flathub beta channel, until `1.0.0`
-replaces the legacy `0.7.6` on stable:
+New versions are published on the Flathub beta channel first, for testing:
 
 ```bash
 flatpak remote-add --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
