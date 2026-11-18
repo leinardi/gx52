@@ -60,6 +60,19 @@
   <!-- Newest first. The release workflow adds the entry for each new version (docs/release.md);
        the 0.7.x entries are the legacy Python application's history. -->
   <releases>
+    <release version="1.0.0" date="2026-11-18">
+      <description translate="no">
+        <ul>
+          <li>GX52 is rewritten in Rust with GTK 4 and libadwaita</li>
+          <li>Per-mode profiles for the LEDs, the MFD and the brightness; GX52 0.7 profiles are imported</li>
+          <li>Time zones for the MFD clocks, custom MFD text, and profile import and export</li>
+          <li>A tray icon, running in the background and starting on login</li>
+          <li>An input tester, a virtual mouse on the throttle ministick, and udev guidance in the app</li>
+          <li>The profiles of a GX52 0.7 installed from source, not from Flathub, are copied into the Flatpak first: the README shows how</li>
+          <li>The X52 (non-Pro) is supported on a best-effort basis: it has not been tested on a device</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.99.0" date="2026-11-17">
       <description translate="no">
         <ul>
