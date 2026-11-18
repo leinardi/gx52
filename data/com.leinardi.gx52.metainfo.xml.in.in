@@ -5,7 +5,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>GX52</name>
-  <summary>Configure the Logitech X52 and X52 Pro joysticks</summary>
+  <summary>Configure your X52 joystick</summary>
   <description>
     <p>GX52 configures the LEDs, the brightness and the multi-function display of the Logitech
       (Saitek) X52 and X52 Pro joysticks.</p>
@@ -29,8 +29,8 @@
     <control>touch</control>
   </supports>
   <branding>
-    <color type="primary" scheme_preference="light">#99c1f1</color>
-    <color type="primary" scheme_preference="dark">#1a5fb4</color>
+    <color type="primary" scheme_preference="light">#deddda</color>
+    <color type="primary" scheme_preference="dark">#3d3846</color>
   </branding>
   <!-- Regenerated with make screenshots, in the order of src/screenshots/capture.rs (docs/release.md,
        "Screenshots"). The URLs follow the trunk, not the tag: the release gate mirrors them before
