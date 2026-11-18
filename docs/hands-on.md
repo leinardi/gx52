@@ -47,7 +47,8 @@ Results go to [spikes/04-flatpak-sandbox.md](spikes/04-flatpak-sandbox.md).
 - [x] Background portal: first request shows GNOME's permission dialog; accept, then check autostart
       after logging out and in. (2026-11-15, M6 task 2: Ubuntu 26.04 shows no dialog and allows;
       autostart and the deny path through the permission store work; see S5.)
-- [ ] Optional: KDE Plasma (native watcher), if a session is at hand.
+- [ ] Optional: KDE Plasma (native watcher), if a session is at hand. Dropped on 2026-11-15: no
+      Plasma session at hand; GNOME is the target desktop (roadmap, M6).
 
 Results go to [spikes/05-tray.md](spikes/05-tray.md).
 
