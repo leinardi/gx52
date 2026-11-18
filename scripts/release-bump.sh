@@ -29,7 +29,10 @@
 # that rule before the version is resolved.
 #
 # The new `<release>` describes the `feat` and `fix` subjects since the newest `vX.Y.Z` tag; the
-# first release of the rewrite (no `v` tag yet) gets a fixed description instead. A `<release>` of
+# first release of the rewrite (no `v` tag yet) gets a fixed description of the rewrite instead,
+# and the first stable one (the first of major 1 or higher, which replaces 0.7.x on Flathub stable)
+# that description plus its two notes for 0.7 users, the source-install profiles and the untested
+# X52 (non-Pro). A `<release>` of
 # the rewrite whose `vX.Y.Z` tag does not exist (its bump was merged, its gate failed, it was never
 # published) is removed; the legacy `0.7.x` entries always stay. The date is today in UTC, or the
 # day of SOURCE_DATE_EPOCH when that is set.
@@ -128,13 +131,30 @@ read -r count < <(awk -v version="${VERSION}" '
 # The text of an <li>, escaped for XML.
 xml_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g'; }
 
+# The rewrite in a few lines: the notes of the first release, and of the first stable one, which
+# is what the users of the legacy 0.7.x see when it replaces it on Flathub stable.
+REWRITE=(
+	"GX52 is rewritten in Rust with GTK 4 and libadwaita"
+	"Per-mode profiles for the LEDs, the MFD and the brightness; GX52 0.7 profiles are imported"
+	"Time zones for the MFD clocks, custom MFD text, and profile import and export"
+	"A tray icon, running in the background and starting on login"
+	"An input tester, a virtual mouse on the throttle ministick, and udev guidance in the app"
+)
+# The first stable release: no `v` tag of major 1 or higher yet.
+first_stable() {
+	[[ "${VERSION%%.*}" -ge 1 ]] || return 1
+	local version
+	for version in "${V_TAGS[@]}"; do
+		[[ "${version%%.*}" -eq 0 ]] || return 1
+	done
+}
 if [[ -z "${LAST_TAG}" ]]; then
+	ITEMS=("${REWRITE[@]}")
+elif first_stable; then
 	ITEMS=(
-		"GX52 is rewritten in Rust with GTK 4 and libadwaita"
-		"Per-mode profiles for the LEDs, the MFD and the brightness; GX52 0.7 profiles are imported"
-		"Time zones for the MFD clocks, custom MFD text, and profile import and export"
-		"A tray icon, running in the background and starting on login"
-		"An input tester, a virtual mouse on the throttle ministick, and udev guidance in the app"
+		"${REWRITE[@]}"
+		"The profiles of a GX52 0.7 installed from source, not from Flathub, are copied into the Flatpak first: the README shows how"
+		"The X52 (non-Pro) is supported on a best-effort basis: it has not been tested on a device"
 	)
 else
 	# Oldest first. A subject's type, scope and `!` go; its first letter is capitalised.
