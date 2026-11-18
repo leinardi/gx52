@@ -2,9 +2,8 @@
 
 GNOME app (Rust, gtk4-rs + libadwaita, Blueprint, Meson, Flatpak `com.leinardi.gx52`) that sets
 the Logitech/Saitek X52 and X52 Pro LEDs, brightness, MFD text and clocks, with profiles per mode
-selector position. Rust rewrite on the `rust-rewrite` trunk (0.99.x on Flathub beta); `master` holds
-legacy Python 0.7.x until 1.0.0 (M9). Legacy Python in `gx52/` (not a crate), `bin/`, `*.py`: never
-extend.
+selector position. Rust rewrite on the `rust-rewrite` trunk (0.99.x on Flathub beta, `main` from
+M9); `master` holds legacy Python 0.7.x until 1.0.0. The legacy Python app is removed from the trunk.
 
 ## Source map
 

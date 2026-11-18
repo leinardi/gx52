@@ -699,6 +699,12 @@ lands"](tooling-todo.md#cleanup-when-the-rewrite-lands) section:
 
 Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 
+- **Done (2026-11-18): items 1 to 3.** The legacy application and its tooling, the `flatpak/`
+  submodule (its `.idea/vcs.xml` mapping too; the `vcs.xml` exception stays for the root mapping),
+  `.gitlab/` and `.pycharm/` are removed. The GitLab tombstone, the rename and the `main` tooling
+  follow. The `1.0.0` notes are fixed in `scripts/release-bump.sh`: the rewrite's description plus
+  the manual copy of a source install's profiles (R10) and the untested X52 (non-Pro).
+
 ## `1.0.0` gate checklist
 
 `1.0.0` replaces `0.7.6` on Flathub stable when all of these hold:
@@ -711,9 +717,11 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 - [ ] Every acceptance item of M2, M6 and M7 is checked and recorded (the optional ones may stay
       open).
 - [ ] M8 and M9 are done.
-- [ ] At least one `0.99.x` has been on beta with no open bug that blocks the release.
-- [ ] X52 non-Pro support is documented as "best effort": tested by a user and recorded in
-      protocol.md, or explicitly unverified in the README and the release notes.
+- [x] At least one `0.99.x` has been on beta with no open bug that blocks the release: `0.99.0`,
+      published after the permission review and tested by the maintainer (2026-11-18).
+- [x] X52 non-Pro support is documented as "best effort": tested by a user and recorded in
+      protocol.md, or explicitly unverified in the README and the release notes. Unverified: no
+      tester was found; the README and the `1.0.0` notes say so.
 - [ ] Released explicitly as `1.0.0` to `master` ([release.md](release.md#versions-and-channels)).
 - [ ] The `1.0.0` PR to the Flathub `master` is merged: the Rust manifest and the legacy files
       removed ([release.md](release.md#one-time-setup)).

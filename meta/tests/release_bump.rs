@@ -19,7 +19,8 @@
 //! against the real files it edits.
 //!
 //! The successful bumps check the four files, the `<release>` entry (the first release's fixed
-//! description, the `feat` and `fix` subjects since the last tag, the removal of an entry that was
+//! description and the first stable one's, the `feat` and `fix` subjects since the last tag, the
+//! removal of an entry that was
 //! never published) and that nothing else changed. Every refusal is the negative control of a
 //! bump: it fails and leaves the tree exactly as it was.
 
@@ -267,6 +268,37 @@ fn the_first_release_gets_the_fixed_description() {
 }
 
 #[test]
+fn the_first_stable_release_gets_the_rewrite_notes() {
+    let scratch = workspace(true);
+    bump_ok(&scratch, "0.99.0");
+    scratch.commit("chore(release): bump version to 0.99.0");
+    scratch.tag("v0.99.0");
+    scratch.commit("fix(device): reopen the device after resume");
+    bump_ok(&scratch, "1.0.0");
+    scratch.commit("chore(release): bump version to 1.0.0");
+    scratch.tag("v1.0.0");
+
+    let metainfo = scratch.read(METAINFO);
+    let stable = items(&metainfo, "1.0.0");
+    assert_eq!(stable.len(), 7, "{stable:#?}");
+    assert_eq!(
+        stable[..5],
+        items(&metainfo, "0.99.0")[..],
+        "the rewrite description"
+    );
+    assert!(stable[5].contains("installed from source"), "{}", stable[5]);
+    assert!(stable[6].contains("X52 (non-Pro)"), "{}", stable[6]);
+
+    // The next release is an ordinary one again.
+    scratch.commit("fix(mfd): clamp the clock offsets");
+    bump_ok(&scratch, "1.0.1");
+    assert_eq!(
+        items(&scratch.read(METAINFO), "1.0.1"),
+        ["Clamp the clock offsets"]
+    );
+}
+
+#[test]
 fn notes_come_from_feat_and_fix_and_unpublished_entries_go() {
     let scratch = workspace(true);
     bump_ok(&scratch, "0.99.0");
@@ -314,9 +346,9 @@ fn notes_come_from_feat_and_fix_and_unpublished_entries_go() {
     scratch.commit("chore(release): bump version to 0.99.2");
     scratch.tag("v0.99.2");
     scratch.commit("chore(deps): bump something else");
-    bump_ok(&scratch, "1.0.0");
+    bump_ok(&scratch, "0.99.3");
     assert_eq!(
-        items(&scratch.read(METAINFO), "1.0.0"),
+        items(&scratch.read(METAINFO), "0.99.3"),
         ["Maintenance release"]
     );
 }

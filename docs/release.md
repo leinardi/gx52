@@ -82,7 +82,7 @@ The version is resolved in one place, version-bump-pr's resolve step, and writte
 | `Cargo.toml` | `[package] version` of the root package (`0.0.0` until the first release) |
 | `Cargo.lock` | the `gx52` entry, rewritten by a plain `cargo metadata` resolve, which needs the registry index (the network): nothing else in the lock may change |
 | `meson.build` | `project(..., version: 'X.Y.Z')`; Meson sets it as a constant of `src/config.rs` through the environment of its cargo invocations, so the About dialog shows the same value |
-| `data/com.leinardi.gx52.metainfo.xml.in.in` | a new `<release version="X.Y.Z" date="YYYY-MM-DD">` at the top of `<releases>`, with the `feat` and `fix` subjects since the last `vX.Y.Z` tag; the first release, with no `v` tag yet, gets a fixed description of the rewrite |
+| `data/com.leinardi.gx52.metainfo.xml.in.in` | a new `<release version="X.Y.Z" date="YYYY-MM-DD">` at the top of `<releases>`, with the `feat` and `fix` subjects since the last `vX.Y.Z` tag; the first release, with no `v` tag yet, gets a fixed description of the rewrite, and the first stable one (`1.0.0`) that description plus two notes for 0.7 users: the manual copy of a source install's profiles and the untested X52 (non-Pro) |
 
 `make -s release-version` prints the version the tree carries; both reusable workflows read it
 with that command. Nothing else may hold a version: the `version` meta-test fails when

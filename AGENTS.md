@@ -6,10 +6,10 @@ GX52 is a GNOME desktop application that configures the Logitech (Saitek) X52 an
 joysticks on Linux: LEDs, brightness, the MFD (multi-function display) text and clocks, and
 profiles. It is distributed through Flathub as `com.leinardi.gx52`.
 
-The application is being rewritten from Python + GTK 3 to Rust + gtk4-rs + libadwaita, on the
-`rust-rewrite` branch. The Python code still in the tree is the legacy `0.7.x` application and is
-removed when the rewrite lands; do not extend it. The decisions behind the rewrite are recorded in
-[`docs/rewrite-analysis.md`](docs/rewrite-analysis.md), the preparation in
+The application is rewritten from Python + GTK 3 to Rust + gtk4-rs + libadwaita, on the
+`rust-rewrite` branch (renamed `main` when the rewrite lands, M9). The legacy `0.7.x` Python
+application is no longer in the tree; its tags keep it. The decisions behind the rewrite are
+recorded in [`docs/rewrite-analysis.md`](docs/rewrite-analysis.md), the preparation in
 [`docs/preparation.md`](docs/preparation.md) and the spike results in
 [`docs/spikes/`](docs/spikes/). Tooling that is decided but not set up yet is tracked in
 [`docs/tooling-todo.md`](docs/tooling-todo.md).
@@ -20,7 +20,7 @@ tests), built by Meson following the GNOME Rust app layout, with Blueprint templ
 bundle, a GSettings schema and gettext from the first commit.
 The root package `gx52` in `src/` is the libadwaita application skeleton, built by Meson
 (`meson.build`, `data/`, `po/`, Flatpak manifests in `build-aux/`); `x52/` and `meta/` are still
-doc-only stubs. The legacy Python package lives, unbuilt, in `gx52/`, which is not a crate.
+doc-only stubs.
 
 ## Architecture
 

@@ -22,9 +22,9 @@ Flathub.
 - Guidance in the app for the udev rule the joystick (and the virtual mouse) needs.
 
 The X52 Pro is the device GX52 is developed and tested with. The plain X52 is supported on a best
-effort basis: its individual LEDs cannot be set, GX52 leaves out the LED blinking and the SHIFT
-indicator until they are verified on one, and its input codes come from the documentation, not from
-a device on the desk. Reports from X52 owners are welcome.
+effort basis and has not been tested on a device: its individual LEDs cannot be set, GX52 leaves
+out the LED blinking and the SHIFT indicator until they are verified on one, and its input codes
+come from the documentation, not from a device on the desk. Reports from X52 owners are welcome.
 
 ## Screenshots
 
