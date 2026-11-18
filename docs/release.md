@@ -226,7 +226,7 @@ release's merge is the released one.
 
 | Target | Does |
 | --- | --- |
-| `make flathub-pr [FLATHUB_BASE=master]` | the pull request of `VERSION` into `beta` (or `master`), from `gx52/vX.Y.Z-<branch>`; `make release` runs it |
+| `make flathub-pr [FLATHUB_BASE=master]` | the pull request of `VERSION` into `beta` (or `master`, or each of `"beta master"`), from `gx52/vX.Y.Z-<branch>`; `make release` runs it |
 | `make flathub-promote` | the same into `master`, for `1.0.0` or later: the promotion to stable |
 | `make flathub-merge [FLATHUB_BASE=master]` | waits for Flathub's test build of the open `gx52/*` pull request (`flathub/build` passed on its head commit, no check failed), prints the test build's install command, merges that commit on confirmation |
 | `make flathub-beta` | once: creates `beta` from the passed test build of `gx52/vX.Y.Z-master`, and closes that pull request |

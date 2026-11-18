@@ -71,7 +71,7 @@ make release VERSION=X.Y.Z [FLATHUB_BASE=master]  # a whole release, to its Flat
 make release-dry-run VERSION=X.Y.Z  # dispatch the dry run of the current branch and watch it
 make flathub-merge [FLATHUB_BASE=master]  # merge the Flathub PR once Flathub's test build passed
 make flathub-promote VERSION=X.Y.Z  # the Flathub master PR of a 1.0.0+ release (beta to stable)
-make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # (re)open the Flathub PR of a release
+make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # (re)open the Flathub PRs ("beta master": both)
 make flathub-beta [VERSION=X.Y.Z] # create the Flathub beta branch from the passed test build (once)
 ```
 
