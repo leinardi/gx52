@@ -12,7 +12,7 @@ date.
 
 ```bash
 make release-dry-run                 # optional: the dry run of the current branch
-make release                         # dispatch, bump PR and CI, [y/N] merge, publish, Flathub beta PR
+make release                         # dispatch, bump PR, [y/N] merge, publish, Flathub beta PR
 make flathub-merge                   # once Flathub's test build passed: prints its install command, [y/N] merge
 ```
 
@@ -47,9 +47,10 @@ already done and continues from there: it never dispatches, merges or publishes 
 `VERSION` it resumes the open bump pull request, or a merged one whose release is not published
 yet. Once the release is published, a run without `VERSION` would start the next release, so a
 failed Flathub step is resumed with the command the run printed, `make release VERSION=X.Y.Z
-FLATHUB_BASE=...`. A failed or cancelled workflow run is offered one re-run of its failed jobs. If
-the bump pull request's CI failed for a real bug, fix it on the trunk first: the next run
-refreshes the pull request onto it.
+FLATHUB_BASE=...`. A failed or cancelled workflow run is offered one re-run of its failed jobs.
+The bump pull request's CI is shown, not waited for: `release-publish.yaml` runs CI on the merge
+commit before it tags. To fix a real bug first, decline the merge and fix it on the trunk: the
+next run refreshes the pull request onto it.
 
 The Flathub step alone can be repeated with `make flathub-pr VERSION=X.Y.Z
 [FLATHUB_BASE='beta master']` (or `master` alone): it updates the open Flathub pull request

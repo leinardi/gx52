@@ -119,11 +119,6 @@ if [[ "$1" == api ]]; then
 			dispatched "$ref" "$version" ""
 		fi
 		;;
-	*/actions/workflows/ci.yaml/dispatches)
-		echo "workflow run ci.yaml $ref" >>"$state/log"
-		read -r _ open_head _ <"$state/pr-open"
-		add_run ci.yaml "$open_head" "$ref" workflow_dispatch success
-		;;
 	*/pulls\?*)
 		query="${endpoint#*\?}"
 		prstate="$(sed -n 's/.*state=\([a-z]*\).*/\1/p' <<<"$query")"
@@ -399,16 +394,10 @@ fn a_draft_left_by_a_failed_publish_is_finished_not_skipped() {
 }
 
 #[test]
-fn a_failed_bump_ci_is_refreshed_from_the_fixed_trunk() {
+fn a_bump_behind_the_fixed_trunk_is_refreshed() {
     let setup = Setup::new();
-    setup.knob("ci-result", "failure");
-    setup.stops(
-        &["0.99.1"],
-        false,
-        "CI on release/v0.99.1 failed: fix the cause",
-    );
-    // Fixed on the trunk, which moved on: the bump pull request is refreshed, CI passes.
-    setup.knob("ci-result", "success");
+    setup.stops(&["0.99.1"], false, "not merged: run make release again");
+    // Fixed on the trunk, which moved on: the bump pull request is refreshed.
     setup.knob("behind", "1");
     let output = setup.succeeds(&["0.99.1"]);
     assert!(output.contains("is 1 commit(s) behind main"), "{output}");
@@ -543,10 +532,8 @@ fn an_empty_version_resumes_a_merged_bump_whose_release_is_missing() {
 #[test]
 fn a_derived_release_is_refreshed_with_its_version() {
     let setup = Setup::new();
-    setup.knob("ci-result", "failure");
-    setup.stops(&[""], false, "CI on release/v1.1.0 failed: fix the cause");
+    setup.stops(&[""], false, "not merged: run make release again");
     // The trunk moved on and gained a feat: the refresh keeps the version the bump branch carries.
-    setup.knob("ci-result", "success");
     setup.knob("behind", "1");
     setup.knob("derived", "1.2.0");
     setup.succeeds(&[""]);
@@ -598,6 +585,27 @@ fn another_run_does_not_stand_in_for_the_dispatch() {
     // A dry run on the trunk shows up right after the dispatch, before the dispatch's own run.
     setup.knob("dispatch-late", "");
     setup.succeeds(&["1.1.0"]);
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main 1.1.0",
+            "pr review 28",
+            "pr merge 28",
+            "flathub pr 1.1.0 beta",
+        ]
+    );
+}
+
+#[test]
+fn the_bump_ci_is_shown_not_waited_for() {
+    let setup = Setup::new();
+    // release-publish.yaml gates the merge commit: a failed bump CI neither stops nor is re-run.
+    setup.knob("ci-result", "failure");
+    let output = setup.succeeds(&["1.1.0"]);
+    assert!(
+        output.contains("CI on release/v1.1.0: completed, failure (not waited for)"),
+        "{output}"
+    );
     assert_eq!(
         setup.log(),
         [

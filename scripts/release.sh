@@ -25,8 +25,9 @@
 #   2. the bump pull request is merged: wait for release-publish.yaml on its merge commit; a failed
 #      or cancelled run is offered a re-run;
 #   3. the bump pull request is open: if the trunk moved on since, dispatch the release again,
-#      which refreshes it; otherwise wait for its CI (dispatched again if missing; a failed run is
-#      offered a re-run), show the diff, and approve and merge it on confirmation;
+#      which refreshes it; otherwise show the diff, and approve and merge it on confirmation. Its
+#      CI is not waited for (a run that needs approval may never start): release-publish.yaml
+#      waits for CI on the merge commit before it tags anything;
 #   4. nothing yet: dispatch release.yaml and wait for it.
 #
 # Then scripts/flathub-release.sh opens (or updates) the Flathub pull request into each of BASES:
@@ -280,15 +281,15 @@ merge_bump() {
 		dispatch_release
 		return
 	fi
-	local ci
+	# Shown, not waited for: release-publish.yaml waits for CI on the merge commit, and gates it.
+	local ci status conclusion url
 	ci="$(latest_run ci.yaml --commit "${head}" --event workflow_dispatch)"
-	if [[ -z "${ci}" ]]; then
-		echo "No CI run on ${BRANCH}: dispatching it."
-		local id
-		id="$(dispatch ci.yaml "${BRANCH}")"
-		ci="$(await_run_id "${id}")"
+	if [[ -n "${ci}" ]]; then
+		read -r _ status conclusion _ url <<<"${ci}"
+		echo "CI on ${BRANCH}: ${status}, ${conclusion} (not waited for): ${url}"
+	else
+		echo "No CI run on ${BRANCH} (not waited for: release-publish.yaml runs CI on the merge commit)."
 	fi
-	see_through "${ci}" "CI on ${BRANCH}"
 	"${GH}" pr diff "${number}" --repo "${REPOSITORY}"
 	confirm "Approve and merge ${url} (a merge commit), releasing ${TAG}?" ||
 		die "not merged: run make release again to merge it"

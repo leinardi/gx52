@@ -169,10 +169,11 @@ the same workflow such as a dry run dispatched meanwhile.
    then version-bump-pr, which opens the pull request `chore(release): bump version to X.Y.Z` from
    `release/vX.Y.Z` and dispatches CI on it. A failed run is offered one re-run of its failed jobs.
 2. **The bump pull request:** if the trunk moved on since it was opened (a fix landed), the release
-   is dispatched again, which refreshes it onto the new trunk. Then its CI run is awaited (and
-   dispatched if it is missing; a failed run is offered one re-run), its diff is shown, and on
-   confirmation it is approved and merged with a merge commit. Do not push to the branch or use
-   "Update branch".
+   is dispatched again, which refreshes it onto the new trunk. Then the state of its CI run is
+   shown but not waited for (a run that needs approval may never start, and the bump changes only
+   the version files): `release-publish.yaml` waits for CI on the merge commit before it tags
+   anything. Its diff is shown, and on confirmation it is approved and merged with a merge commit.
+   Do not push to the branch or use "Update branch".
 3. **The merge push runs `release-publish.yaml`:** release-on-merge checks that the push is the
    merge of exactly that one bump commit and waits for CI on the merge commit (up to 90 minutes),
    the gate builds and tests the merge commit and the Flathub check writes and lints the Flathub
@@ -327,7 +328,7 @@ human" on anything that disagrees with it. By hand, the same is "Re-run failed j
 | Failed at | State | What to do |
 | --- | --- | --- |
 | `release.yaml` policy or bump | Nothing changed | Fix the input or the history, dispatch again |
-| The bump pull request's CI | PR open, nothing released | Fix on the trunk, then dispatch again: the PR is refreshed onto the new trunk |
+| The bump pull request's CI | PR open, nothing released | `make release` does not wait for it; decline the merge, fix on the trunk, and run it again: the PR is refreshed onto the new trunk |
 | `release-publish.yaml` cancelled while pending | Bump merged, nothing tagged | A third push of a version file replaced it in release-on-merge's group: "Re-run all jobs" on it |
 | `release-publish.yaml` decide | Bump merged, nothing tagged | A transient failure (API, CI timeout): re-run. A refusal (not the one bump commit): revert the change and dispatch a release |
 | The gate | Bump merged, **no tag** | A transient failure (runner, network): re-run. If the code is wrong, fix it on the trunk and release the next patch version; the next bump drops the never-published `<release>` entry |
