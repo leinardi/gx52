@@ -716,7 +716,7 @@ impl Window {
     }
 
     /// Shows the input tester in place of the selected profile.
-    fn open_tester(&self) {
+    pub(crate) fn open_tester(&self) {
         let imp = self.imp();
         if imp.tester_open.get() {
             return;

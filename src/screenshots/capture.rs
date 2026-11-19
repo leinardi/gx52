@@ -30,7 +30,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gdk, glib, graphene, gsk};
 use x52::device::DeviceType;
-use x52::input::Mode;
+use x52::input::{self as x52_input, Axis, Button, Mode};
 
 use self::driver::{Action, Driver, Input, ShotPlan};
 use super::{ACTIVE_PROFILE, NARROW, WIDE};
@@ -53,6 +53,9 @@ const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// The fixture text on the first MFD line of the active profile in mode 1.
 const MFD_FIRST_LINE: &str = "MASTER ARM ON";
 
+/// The stick's left-to-right value in the input tester shot's pose (the screenshot backend).
+const POSE_STICK_X: i32 = 700;
+
 /// The time the MFD shows: the fixed instant in the fixed local zone.
 const MFD_TIME: &str = "12:09";
 
@@ -70,7 +73,7 @@ struct Shot {
 }
 
 /// The screenshots, in the order they are taken.
-const SHOTS: [Shot; 5] = [
+const SHOTS: [Shot; 6] = [
     Shot {
         name: "leds",
         set_up: |_, window| show_view(window, "leds", WIDE),
@@ -158,6 +161,43 @@ const SHOTS: [Shot; 5] = [
             check(
                 dialog.is_some_and(|dialog| dialog.virtual_mouse_active()),
                 "the virtual mouse switch is on",
+            )
+        },
+    },
+    // Last: the pose it puts the joystick in stays for the rest of the run.
+    Shot {
+        name: "tester",
+        set_up: |app, window| {
+            if let Some(dialog) = app.preferences_dialog() {
+                dialog.force_close();
+            }
+            super::backend::show_pose();
+            resize(window, WIDE);
+            window.open_tester();
+            window.imp().split_view.set_show_content(true);
+        },
+        ready: |app, window| {
+            device_ready(app)?;
+            sized(window, WIDE)?;
+            check(
+                app.preferences_dialog()
+                    .is_none_or(|dialog| !dialog.is_mapped()),
+                "the preferences dialog is closed",
+            )?;
+            check(
+                app.held_inputs()
+                    .is_held(x52_input::Input::Button(Button::TriggerStage1)),
+                "the pose's buttons are held",
+            )?;
+            check(
+                app.axis_values()
+                    .get(Axis::StickX)
+                    .is_some_and(|state| state.value == POSE_STICK_X),
+                "the pose's axes are read",
+            )?;
+            check(
+                window.imp().input_tester.shows_current(app),
+                "the input tester shows the pose",
             )
         },
     },

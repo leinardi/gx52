@@ -97,8 +97,8 @@ item off, or delete it, in the commit that does it.
 - [x] `RELEASING.md`: the short version of `docs/release.md` (the `make release` commands, to
       beta and to stable, and the recovery).
 - [x] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
-- [x] `README.md`: the screenshot table (LEDs, MFD, clocks, profiles, Preferences), from the PNGs
-      `make screenshots` writes into `data/screenshots/`.
+- [x] `README.md`: the screenshot table (LEDs, MFD, clocks, profiles, Preferences, input tester),
+      from the PNGs `make screenshots` writes into `data/screenshots/`.
 - [x] `AGENTS.md`: add the architecture section once `docs/architecture.md` exists.
 - [x] `AGENTS.md`: add the Meson and Flatpak commands once their `.mk` fragments do.
 - [x] `.agents/skills/`: decide whether gx52 needs a domain skill like `swarm-device-access`'s

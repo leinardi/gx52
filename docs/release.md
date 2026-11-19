@@ -264,7 +264,7 @@ The diff of a dry run is against `beta` for a `0.x` version, `master` from `1.0.
 
 ## Screenshots
 
-The metainfo lists five screenshots under `data/screenshots/` (not installed), with translatable
+The metainfo lists six screenshots under `data/screenshots/` (not installed), with translatable
 captions. Their URLs follow the trunk
 (`raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/...`), not the tag: the
 gate mirrors them before the tag exists. A side effect: a later screenshot change on the trunk also
@@ -275,12 +275,13 @@ its own.
 `make screenshots` regenerates them, with no joystick and no manual set-up. It installs the Devel
 Flatpak and runs its screenshot mode (`--screenshots <dir>`, Devel builds only; see
 [architecture.md](architecture.md#testing-strategy)) on a private headless weston, from an
-environment built from scratch: the fonts and libadwaita come from the GNOME runtime, and the
-host's locale, theme, style, accent and scale never reach the shots. The app shows fixture
-profiles, a fake X52 Pro in mode 1 and a fixed time, at 1000×700 (the profile list at 420×700), in
-the light style without the Devel stripes. Two runs give byte-identical PNGs, so a diff in
-`data/screenshots/` is a real change of the UI; look at each changed PNG before committing it.
-Needs `weston` on the host (CONTRIBUTING.md).
+environment built from scratch: the fonts and libadwaita come from the GNOME runtime, and the host's
+locale, theme, style, accent and scale never reach the shots. The app shows fixture profiles, a fake
+X52 Pro in mode 1 (held still, except in the input tester shot, the last, which holds a fixed pose
+of axes and buttons) and a fixed time, at 1000×700 (the profile list at 420×700), in the light style
+without the Devel stripes. Two runs give byte-identical PNGs, so a diff in `data/screenshots/` is a
+real change of the UI; look at each changed PNG before committing it. Needs `weston` on the host
+(CONTRIBUTING.md).
 
 | File | Shows |
 | --- | --- |
@@ -289,6 +290,7 @@ Needs `weston` on the host (CONTRIBUTING.md).
 | `data/screenshots/clocks.png` | the Clocks page: three clocks in real time zones |
 | `data/screenshots/profiles.png` | the profile list, in the narrow window |
 | `data/screenshots/preferences.png` | Preferences |
+| `data/screenshots/tester.png` | the input tester, with the joystick in a fixed pose |
 
 The order is the metainfo's, and `src/screenshots/capture.rs` takes them in that order (a unit test
 keeps the two in step); the `screenshots` meta-test checks that every image the metainfo names is a
