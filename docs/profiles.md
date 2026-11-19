@@ -126,7 +126,7 @@ Each of the three lines has a **source** (decided in the M4 UI session, [ui.md](
 | `"text"` | `text`: at most 16 bytes **after** conversion through the [MFD character set](protocol.md#mfd-character-set), and at most 64 characters as typed | The text. Characters without a glyph are stored as typed and converted (with the protocol.md fallback) when sent; the length is checked on the converted bytes. Combining marks take no byte on the MFD, so the 64-character limit is what keeps a line (and the file) small. The editor's entry stops accepting input at either limit, so it never saves a line the store would reject; a file with a longer text reports it out of range and the line shows nothing |
 | `"empty"` |  | Nothing |
 | `"profile_name"` |  | The active profile's name |
-| `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), shortened to fit a line: "Trigger stage 1", "Scroll press", "Thr. hat left"; translated), POV 1 directions included; the mode selector positions (keys 715–717, always one held) never count. Empty when none is held |
+| `"last_button"` |  | The name of the most recently pressed button that is still held (the names of [protocol.md](protocol.md#hats-and-names), shortened to fit a line: "Trigger stage 1", "Scroll press", "Thr. hat left"; translated), POV 1 directions included; the mode selector positions (keys 715–717, always one held) never count. Empty when none is held. Planned: the control's [custom name](#control-names) in the mode shown when it has one, and a wheel notch held on the line for 0.7 s ([Control names](#control-names)) |
 
 The dynamic sources are resolved on the main thread into the desired device state
 ([architecture.md](architecture.md#state-model)), which still carries three lines of text. **Every
@@ -139,6 +139,52 @@ differs from the device.
 The `"mode"` source ("Mode 2" on a line) was retired on 2026-11-10, before any release: the MFD
 always shows the mode selector's position in its own MODE area, so a text line repeated it. A file
 that still has it reports an unknown value and that line shows nothing until it is edited.
+
+### Control names
+
+Planned for [issue #42](https://github.com/leinardi/gx52/issues/42), decided on 2026-11-19 and not
+implemented yet ([roadmap.md](roadmap.md#1x)); the UI is the Names view of
+[ui.md](ui.md#names-view). It is **schema version 2**: the key below is new, and every other key
+keeps its meaning.
+
+Each mode settings table (`[settings]` or `[mode_1]`–`[mode_3]`) gets an optional `names` table
+from control to custom name; a control without a name is left out:
+
+```toml
+[mode_1.names]
+e = "Emerg. Lights"
+pov_1_up = "Pips: SYS"
+throttle_hat_left = "Gear"
+```
+
+- **Controls:** every button but the mode selector positions, plus the four POV 1 directions. The
+  keys are `trigger_stage_1`, `trigger_stage_2`, `fire`, `a`, `b`, `c`, `d`, `e`, `pinkie`, `t1`–`t6`,
+  `mouse_button`, `scroll_down`, `scroll_up`, `scroll_press`, `pov_2_up` (`_right`, `_down`,
+  `_left`), `throttle_hat_up` (`_right`, `_down`, `_left`), `clutch`, `function`, `start_stop`,
+  `reset`, `page_up`, `page_down`, `up`, `down`, `select` and `pov_1_up` (`_right`, `_down`,
+  `_left`): 40 on the X52 Pro. The `x52` type has no `page_up`, `page_down`, `up`, `down` and
+  `select` ([protocol.md](protocol.md#x52-non-pro)), so 35. The key set comes from the `x52`
+  device model, as the LED names do.
+- **Value:** the rules of a `"text"` MFD line: at most 16 bytes after conversion and at most 64
+  characters as typed, stored as typed. An empty or whitespace-only name is no name and is not
+  written. Custom names are never translated.
+- **Per mode:** names are a mode setting, so changing the kind copies or drops them like the rest.
+  The clocks stay the only shared settings.
+- **Shown by** the `"last_button"` line, which shows the custom name of the held control in the
+  mode shown, else its built-in name, through the same conversion and 16-byte cut; and by the input
+  tester, next to the built-in name. No name changes while the pinkie is held: GX52 maps no
+  controls, so a second name would not match a second action.
+- **Wheel notches** (`scroll_down`, `scroll_up`, `page_up`, `page_down`, `up`, `down`) are a
+  press and a release a few milliseconds apart ([protocol.md](protocol.md#buttons)), too short to
+  read. The `"last_button"` line keeps a notch's name, custom or built-in, for **0.7 s** after it,
+  unless another control is pressed first; another notch restarts the time. A held control below
+  it is shown again when the time ends.
+- **Validation:** a name out of range is rejected per name (the control falls back to its built-in
+  name) and reported, like an out-of-range value; an unknown control key, or one the device type
+  lacks, is ignored and reported like an unknown key.
+- **Migration** `1 → 2`: only `schema_version` changes; a version 1 profile has no names. As the
+  [migration policy](#migration-policy) says, the commit is a `feat` and the release notes say
+  that profiles saved by the new version are read-only in GX52 1.0.x.
 
 ## Clocks
 

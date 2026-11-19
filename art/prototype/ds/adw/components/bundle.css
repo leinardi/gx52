@@ -1007,7 +1007,12 @@ textarea.adw-textview { border: 0; margin: 0; width: 100%; resize: none; overflo
 .adw-toast-overlay__toast.has-action > .adw-toast { width: 100%; }
 .adw-toast-overlay__toast.is-hiding { pointer-events: none; }
 /* while the root page is the only page it is laid out in flow, so the dialog can measure its natural height */
-.adw-preferences-dialog__nav > .adw-navigation-view__page:only-child { position: relative; height: 100%; }
+.adw-preferences-dialog__nav { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+/* The dialog's natural height is its whole content, as AdwPreferencesDialog measures it when presented: the root page
+   (the tallest main page) and the pushed subpages share one grid cell, so the cell is as tall as the tallest of them.
+   A covered page stays in the layout, invisible (it is inert already). */
+.adw-preferences-dialog__nav > .adw-navigation-view__page { position: relative; inset: auto; grid-area: 1 / 1; min-height: 0; }
+.adw-preferences-dialog__nav > .adw-navigation-view__page[hidden] { display: flex; visibility: hidden; }
 
 /* ===================== Shortcuts and about dialogs ===================== */
 /* ShortcutLabel (_shortcuts-dialog.scss: shortcut-label, .keycap) */
@@ -1048,7 +1053,10 @@ textarea.adw-textview { border: 0; margin: 0; width: 100%; resize: none; overflo
 .adw-shortcut-row.is-search-target:focus { outline: 2px solid var(--focus-ring-color); outline-offset: -1px; }
 
 /* AboutDialog (adw-about-dialog.ui; _misc.scss dialog.about) */
-.adw-about__nav > .adw-navigation-view__page:only-child { position: relative; height: 100%; }
+.adw-about__nav { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+/* as the preferences dialog: the main page and the pushed subpages share one grid cell (natural height of the whole content) */
+.adw-about__nav > .adw-navigation-view__page { position: relative; inset: auto; grid-area: 1 / 1; min-height: 0; }
+.adw-about__nav > .adw-navigation-view__page[hidden] { display: flex; visibility: hidden; }
 .adw-about__main, .adw-about__subpage { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; }
 .adw-about__main-box { max-width: 600px; margin: 0 auto; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .adw-about__name { margin: 0; overflow-wrap: anywhere; }

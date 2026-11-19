@@ -747,6 +747,11 @@ Done when, for each: DW (for the code ones) + its tooling-todo item is ticked.
 
 Through the beta channel first ([release.md](release.md#versions-and-channels)):
 
+- **Custom control names** ([issue #42](https://github.com/leinardi/gx52/issues/42)): a name per
+  control and mode, shown by the MFD's "Last button" line and the input tester, and a 0.7 s hold
+  of wheel notches on that line. Profile schema version 2. Decided on 2026-11-19 against the
+  prototype: [ui.md, "Names view"](ui.md#names-view) and
+  [profiles.md, "Control names"](profiles.md#control-names).
 - **D-Bus / CLI control** on the app's bus name.
 - **Game integration**: the MFD pages engine and the X-Plane adapter first (needs `--share=network`,
   risk R12), later adapters as in rewrite analysis section 12.3.

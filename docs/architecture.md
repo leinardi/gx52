@@ -208,6 +208,9 @@ flowchart LR
     "last button" after an open is the POV 1 direction if one is held, else the highest key code.
     A change of the set pushes the state only when the newest entry changed and the set on the
     device shows a "last button" line, and never logs.
+    Planned with the custom control names ([profiles.md](profiles.md#control-names)): the main
+    thread also keeps the last wheel notch with a 0.7 s `glib` timeout, shown in place of the
+    newest held entry until the timeout fires or another control is pressed.
   - The other axes flow only while an input tester is shown. The main thread counts the testers
     that are mapped (`Application::listen_to_axes` and `ignore_axes`) and sends the reader
     `ListenToAxes` on the first and `IgnoreAxes` after the last, so nothing streams while the
