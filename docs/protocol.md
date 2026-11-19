@@ -187,6 +187,11 @@ stays green with every LED above switched off, follows the LED brightness (`0xb2
 back at `128`) and blinks with `0xb4`. It does not react to any `0xb8` bit (S2 scan, 2026-11-02).
 The app shows it as a fixed, non-editable green LED with a short explanation (GitHub issue #3).
 
+**Throttle LED: red past the afterburner detent.** With bit `20` on, the throttle LED turns red
+once the lever passes the afterburner detent; the device does this on its own, and no known command
+disables it or moves its threshold. With bit `20` off the LED stays dark past the detent too
+(checked on the X52 Pro, 2026-11-19, GitHub issue #41).
+
 ### Power-on state
 
 As observed in S2, after plugging in: **the MFD backlight and the throttle LEDs are off, while the
