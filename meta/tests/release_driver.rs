@@ -131,6 +131,7 @@ if [[ "$1" == api ]]; then
 fi
 group="$1 $2"
 shift 2
+args=" $* "
 positional=""
 workflow="" commit="" branch="" event=""
 while (($#)); do
@@ -190,6 +191,7 @@ case "$group" in
 "pr diff") echo "+version = \"0.99.1\"" ;;
 "pr review") echo "pr review $positional" >>"$state/log" ;;
 "pr merge")
+	[[ "$args" == *" --admin "* && "$args" == *" --match-head-commit head"* ]] || { echo "pr merge without --admin --match-head-commit" >&2; exit 1; }
 	echo "pr merge $positional" >>"$state/log"
 	read -r _ _ url <"$state/pr-open"
 	rm "$state/pr-open"
@@ -604,6 +606,11 @@ fn the_bump_ci_is_shown_not_waited_for() {
     let output = setup.succeeds(&["1.1.0"]);
     assert!(
         output.contains("CI on release/v1.1.0: completed, failure (not waited for)"),
+        "{output}"
+    );
+    // The prompt names the pull request, not the CI run.
+    assert!(
+        output.contains("Approve and merge https://github.com/leinardi/gx52/pull/28"),
         "{output}"
     );
     assert_eq!(

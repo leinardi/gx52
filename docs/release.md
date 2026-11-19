@@ -172,7 +172,9 @@ the same workflow such as a dry run dispatched meanwhile.
    is dispatched again, which refreshes it onto the new trunk. Then the state of its CI run is
    shown but not waited for (a run that needs approval may never start, and the bump changes only
    the version files): `release-publish.yaml` waits for CI on the merge commit before it tags
-   anything. Its diff is shown, and on confirmation it is approved and merged with a merge commit.
+   anything. Its diff is shown, and on confirmation it is approved and merged with a merge commit,
+   as an admin (`--admin`: the maintainer is the only reviewer, and their own approval does not
+   meet the trunk's review rules) and only at the commit shown (`--match-head-commit`).
    Do not push to the branch or use "Update branch".
 3. **The merge push runs `release-publish.yaml`:** release-on-merge checks that the push is the
    merge of exactly that one bump commit and waits for CI on the merge commit (up to 90 minutes),

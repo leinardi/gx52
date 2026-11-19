@@ -282,19 +282,23 @@ merge_bump() {
 		return
 	fi
 	# Shown, not waited for: release-publish.yaml waits for CI on the merge commit, and gates it.
-	local ci status conclusion url
+	local ci ci_status ci_conclusion ci_url
 	ci="$(latest_run ci.yaml --commit "${head}" --event workflow_dispatch)"
 	if [[ -n "${ci}" ]]; then
-		read -r _ status conclusion _ url <<<"${ci}"
-		echo "CI on ${BRANCH}: ${status}, ${conclusion} (not waited for): ${url}"
+		read -r _ ci_status ci_conclusion _ ci_url <<<"${ci}"
+		echo "CI on ${BRANCH}: ${ci_status}, ${ci_conclusion} (not waited for): ${ci_url}"
 	else
 		echo "No CI run on ${BRANCH} (not waited for: release-publish.yaml runs CI on the merge commit)."
 	fi
 	"${GH}" pr diff "${number}" --repo "${REPOSITORY}"
-	confirm "Approve and merge ${url} (a merge commit), releasing ${TAG}?" ||
+	confirm "Approve and merge ${url} (a merge commit, as an admin), releasing ${TAG}?" ||
 		die "not merged: run make release again to merge it"
 	"${GH}" pr review "${number}" --repo "${REPOSITORY}" --approve
-	"${GH}" pr merge "${number}" --repo "${REPOSITORY}" --merge
+	# The maintainer is the only reviewer, and their own approval does not meet the trunk's review
+	# rules (a code owner's review, an extra approval for a bot's commit): the merge overrides them
+	# as an admin, as every merge into the trunk does. Only the commit shown is merged: a push
+	# meanwhile makes it fail.
+	"${GH}" pr merge "${number}" --repo "${REPOSITORY}" --merge --admin --match-head-commit "${head}"
 }
 
 # The versions of the bump pull requests into the trunk, one per line: $1 open, every open one;
