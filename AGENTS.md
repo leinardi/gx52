@@ -67,8 +67,9 @@ make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (ne
 
 make -s release-version           # the version the tree carries (Cargo.toml [package] version)
 make release-bump VERSION=X.Y.Z   # write it into the four version files, no commit (docs/release.md)
-make release VERSION=X.Y.Z [FLATHUB_BASE=master]  # a whole release, to its Flathub PR; resumable
-make release-dry-run VERSION=X.Y.Z  # dispatch the dry run of the current branch and watch it
+make release [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # a whole release, to its Flathub PR; resumable
+make release-dry-run [VERSION=X.Y.Z]  # dispatch the dry run of the current branch and watch it
+# (no VERSION: the one the Release workflow derives with svu, from 1.0.0 on)
 make flathub-merge [FLATHUB_BASE=master]  # merge the Flathub PR once Flathub's test build passed
 make flathub-promote VERSION=X.Y.Z  # the Flathub master PR of a 1.0.0+ release (beta to stable)
 make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # (re)open the Flathub PRs ("beta master": both)

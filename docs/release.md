@@ -133,8 +133,8 @@ the trunk was renamed `main` and `master` deleted.
 ## How to release
 
 ```bash
-make release-dry-run VERSION=X.Y.Z                  # optional: the dry run of the current branch
-make release VERSION=X.Y.Z                          # beta (FLATHUB_BASE=master or "beta master")
+make release-dry-run [VERSION=X.Y.Z]                # optional: the dry run of the current branch
+make release [VERSION=X.Y.Z]                        # beta (FLATHUB_BASE=master or "beta master")
 make flathub-merge                                  # after Flathub's test build of the beta PR
 make flathub-promote VERSION=X.Y.Z                  # 1.0.0 or later: the same release to stable
 make flathub-merge FLATHUB_BASE=master
@@ -147,6 +147,23 @@ or publishes twice:
 
 A release counts as done only once it is published: a draft left by a `release-publish.yaml` run
 that stopped while publishing makes `make release` re-run that run, not move on to Flathub.
+
+`VERSION` is optional from `1.0.0` on: without it, the version is the one `release.yaml` derives
+with `svu` ([Versions and channels](#versions-and-channels)), so nothing is derived on the
+maintainer's machine and no local `svu` is needed. `make release` reads it back from GitHub: an
+open `release/vX.Y.Z` bump pull request into the trunk is resumed; otherwise the newest merged one
+whose release is not published yet is; otherwise `release.yaml` is dispatched with no version and
+the version is read from the pull request it opens. The merge confirmation, with the diff, is still
+the decision point. Once the release is published, a run without `VERSION` starts the next
+release, so a failed Flathub step is resumed with the `VERSION` the run prints. A version derived
+by an earlier run is kept when the bump pull request is refreshed. A merged bump whose release is
+abandoned (the next patch version is released instead) needs that `VERSION` given explicitly.
+With or without `VERSION`, only a bump pull request opened by `github-actions[bot]` counts (the
+only one release-on-merge publishes): one a person opened from `release/vX.Y.Z` is never resumed
+or merged. The pull requests are read from the pulls API, every page, not GitHub's search, which
+can lag behind a pull request the workflow just opened. A dispatch goes through the REST API with
+`return_run_details`, so the run followed is the one GitHub started for it, never another run of
+the same workflow such as a dry run dispatched meanwhile.
 
 1. **Dispatch** `release.yaml` on the trunk with `dry_run=false` and wait for it: the policy job,
    then version-bump-pr, which opens the pull request `chore(release): bump version to X.Y.Z` from
@@ -301,8 +318,9 @@ cannot mirror them, and fails.
 
 ## Recovering a failed run
 
-The recovery path is **`make release VERSION=X.Y.Z` again**, unchanged, once the cause is fixed: it
-resumes from the state GitHub shows, and offers a re-run of a failed run's jobs, which is the right
+The recovery path is **`make release VERSION=X.Y.Z` again**, unchanged, once the cause is fixed
+(without `VERSION` if the run had none, until the release is published): it resumes from the
+state GitHub shows, and offers a re-run of a failed run's jobs, which is the right
 answer to a transient failure. Every reusable workflow finishes what exists and fails with "needs a
 human" on anything that disagrees with it. By hand, the same is "Re-run failed jobs" on the run.
 

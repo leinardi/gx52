@@ -11,24 +11,30 @@ date.
 ## A release to beta
 
 ```bash
-make release-dry-run VERSION=X.Y.Z   # optional: the dry run of the current branch
-make release VERSION=X.Y.Z           # dispatch, bump PR and CI, [y/N] merge, publish, Flathub beta PR
+make release-dry-run                 # optional: the dry run of the current branch
+make release                         # dispatch, bump PR and CI, [y/N] merge, publish, Flathub beta PR
 make flathub-merge                   # once Flathub's test build passed: prints its install command, [y/N] merge
 ```
 
+With no `VERSION`, the Release workflow derives it with `svu` from the Conventional Commits since
+the last release, and `make release` reads it back from the bump pull request it opens; check it
+in the diff before you confirm the merge. `VERSION=X.Y.Z` on either command gives it explicitly.
 Before `1.0.0` the version is always given, and is a `0.99.x`.
 
 ## Stable (`1.0.0` or later)
 
+To beta and stable at once:
+
 ```bash
-make flathub-promote VERSION=X.Y.Z   # a release already tested on beta, to stable
-make flathub-merge FLATHUB_BASE=master
+make release FLATHUB_BASE='beta master'   # or FLATHUB_BASE=master: stable only
+make flathub-merge                        # the beta PR, once its test build passed
+make flathub-merge FLATHUB_BASE=master    # the master PR, likewise
 ```
 
-Or straight to stable, or to both at once:
+Or a release already tested on beta, promoted to stable:
 
 ```bash
-make release VERSION=X.Y.Z FLATHUB_BASE=master          # or FLATHUB_BASE="beta master"
+make flathub-promote VERSION=X.Y.Z
 make flathub-merge FLATHUB_BASE=master
 ```
 
@@ -36,13 +42,17 @@ A `0.x` release goes to beta only: `master` is refused for it.
 
 ## When something fails
 
-Fix the cause, then run **the same `make release VERSION=X.Y.Z` again**. It reads from GitHub what
-is already done and continues from there: it never dispatches, merges or publishes twice. A failed
-or cancelled workflow run is offered one re-run of its failed jobs. If the bump pull request's CI
-failed for a real bug, fix it on the trunk first: the next run refreshes the pull request onto it.
+Fix the cause, then run **the same `make release` command again**. It reads from GitHub what is
+already done and continues from there: it never dispatches, merges or publishes twice. Without
+`VERSION` it resumes the open bump pull request, or a merged one whose release is not published
+yet. Once the release is published, a run without `VERSION` would start the next release, so a
+failed Flathub step is resumed with the command the run printed, `make release VERSION=X.Y.Z
+FLATHUB_BASE=...`. A failed or cancelled workflow run is offered one re-run of its failed jobs. If
+the bump pull request's CI failed for a real bug, fix it on the trunk first: the next run
+refreshes the pull request onto it.
 
-The Flathub step alone can be repeated with `make flathub-pr VERSION=X.Y.Z [FLATHUB_BASE=master]`
-(or `"beta master"` for both): it updates the open Flathub pull request instead of opening a second
-one.
+The Flathub step alone can be repeated with `make flathub-pr VERSION=X.Y.Z
+[FLATHUB_BASE='beta master']` (or `master` alone): it updates the open Flathub pull request
+instead of opening a second one.
 
 `ASSUME_YES=1` answers every `[y/N]` with yes, `ASSUME_YES=0` with no.
