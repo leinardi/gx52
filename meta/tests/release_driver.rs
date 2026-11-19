@@ -28,41 +28,119 @@ const SCRIPT: &str = "scripts/release.sh";
 const TRUNK: &str = "main";
 
 /// GitHub, as far as release.sh asks it. State in `GH_STATE`: `release` (the release exists, holding
-/// its `isDraft`: `true` or `false`),
-/// `pr-open` (`number head url`), `pr-merged` (`merge url`), `runs/N` (`workflow|commit|branch|
-/// event|status|conclusion|created|url`). Knobs: `dispatch-result`, `ci-result`, `publish-result`
-/// (a new run's conclusion, default success), `publish-leaves-draft` (a failed publish leaves a
-/// draft release), `rerun-result` (a re-run's, default success) and
-/// `behind` (how far the bump branch is behind the trunk, default 0; a dispatch resets it). Every
-/// call but the reads is a line of `log`.
+/// its `isDraft`: `true` or `false`), `pr-open` (`number head url`), `pr-merged` (`merge url`), the
+/// bump branch in `pr-open-branch` and `pr-merged-branch`, its author in `pr-open-author` and
+/// `pr-merged-author` (default github-actions[bot]), `runs/N` (`workflow|commit|branch|event|
+/// status|conclusion|created|url`). Knobs: `dispatch-result`, `ci-result`, `publish-result` (a new
+/// run's conclusion, default success), `publish-leaves-draft` (a failed publish leaves a draft
+/// release), `rerun-result` (a re-run's, default success), `behind` (how far the bump branch is
+/// behind the trunk, default 0; a dispatch resets it), `derived` (the version a dispatch with no
+/// version input derives, default 1.1.0) and `dispatch-late` (a dry run on the trunk shows up right
+/// after the next release.yaml dispatch, whose own run shows only from the second look at it).
+/// The pulls API answers with what release.sh's jq expression would print, picked by the fields it
+/// names. Every call but the reads is a line of `log`, a dispatch with its version input (`-` when
+/// none).
 const FAKE_GH: &str = r#"#!/usr/bin/env bash
 set -euo pipefail
 state="${GH_STATE:?}"
 mkdir -p "$state/runs"
 knob() { cat "$state/$1" 2>/dev/null || echo "$2"; }
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
-add_run() { # workflow commit branch event conclusion
-	local id=$(($(ls "$state/runs" | wc -l) + 1))
+next_id() { echo $(($(ls "$state/runs" | wc -l) + 1)); }
+add_run() { # workflow commit branch event conclusion [id]
+	local id="${6:-$(next_id)}"
 	echo "$1|$2|$3|$4|completed|$5|$(now)|https://github.com/leinardi/gx52/actions/runs/$id" >"$state/runs/$id"
+	echo "$id"
 }
 line() { # a runs/N file as "id status conclusion created url"
 	IFS='|' read -r _ _ _ _ status conclusion created url <"$state/runs/$1"
 	echo "$1 $status $conclusion $created $url"
 }
+dispatched() { # ref version id: a release.yaml run, and on the trunk the bump pull request
+	local ref="$1" version="$2" result count id
+	result="$(knob dispatch-result success)"
+	id="$(add_run release.yaml "" "$ref" workflow_dispatch "$result" "$3")"
+	if [[ "$result" == success && "$ref" == main ]]; then
+		count=$(($(knob dispatches 0) + 1))
+		echo "$count" >"$state/dispatches"
+		[[ "$version" != - ]] || version="$(knob derived 1.1.0)"
+		echo "28 head$count https://github.com/leinardi/gx52/pull/28" >"$state/pr-open"
+		echo "release/v$version" >"$state/pr-open-branch"
+		echo "github-actions[bot]" >"$state/pr-open-author"
+		rm -f "$state/behind"
+		add_run ci.yaml "head$count" "release/v$version" workflow_dispatch "$(knob ci-result success)" >/dev/null
+	fi
+	echo "$id"
+}
+pulls() { # state head jq: what bump_pulls' jq would print
+	local prstate="$1" head="$2" jq="$3" file branch
+	[[ "$prstate" == open ]] && file=pr-open || file=pr-merged
+	[[ -f "$state/$file" ]] || return 0
+	[[ "$(knob "$file-author" "github-actions[bot]")" == "github-actions[bot]" ]] || return 0
+	branch="$(cat "$state/$file-branch")"
+	[[ -z "$head" || "$branch" == "${head#*:}" ]] || return 0
+	case "$jq" in
+	*merge_commit_sha*) cat "$state/$file" ;;
+	*.number*) cat "$state/$file" ;;
+	*merged_at*) echo "2026-01-01T00:00:00Z ${branch#release/v}" ;;
+	*) echo "${branch#release/v}" ;;
+	esac
+}
+if [[ "$1" == api ]]; then
+	shift
+	endpoint="" jq="" ref="" version="-"
+	while (($#)); do
+		case "$1" in
+		-X) shift ;;
+		--paginate) ;;
+		--jq) jq="$2"; shift ;;
+		-f | -F)
+			case "$2" in
+			ref=*) ref="${2#ref=}" ;;
+			"inputs[version]="*) version="${2#*=}" ;;
+			esac
+			shift
+			;;
+		*) endpoint="$1" ;;
+		esac
+		shift
+	done
+	case "$endpoint" in
+	*/compare/*) knob behind 0 ;;
+	*/actions/workflows/release.yaml/dispatches)
+		echo "workflow run release.yaml $ref $version" >>"$state/log"
+		if [[ -f "$state/dispatch-late" ]]; then
+			rm "$state/dispatch-late"
+			add_run release.yaml "" main workflow_dispatch success >/dev/null
+			id="$(next_id)"
+			echo "$id $ref $version" >"$state/pending"
+			echo "$id"
+		else
+			dispatched "$ref" "$version" ""
+		fi
+		;;
+	*/pulls\?*)
+		query="${endpoint#*\?}"
+		prstate="$(sed -n 's/.*state=\([a-z]*\).*/\1/p' <<<"$query")"
+		head="$(sed -n 's/.*head=\([^&]*\).*/\1/p' <<<"$query")"
+		pulls "$prstate" "$head" "$jq"
+		;;
+	*) exit 2 ;;
+	esac
+	exit 0
+fi
 group="$1 $2"
 shift 2
+args=" $* "
 positional=""
-workflow="" commit="" branch="" event="" head="" ref="" prstate=""
+workflow="" commit="" branch="" event=""
 while (($#)); do
 	case "$1" in
 	--workflow) workflow="$2" ;;
 	--commit) commit="$2" ;;
 	--branch) branch="$2" ;;
 	--event) event="$2" ;;
-	--head) head="$2" ;;
-	--state) prstate="$2" ;;
-	--ref) ref="$2" ;;
-	--repo | --json | --jq | --limit | --interval | --base | -f) ;;
+	--repo | --json | --jq | --limit | --interval) ;;
 	--*)
 		shift
 		continue
@@ -80,7 +158,6 @@ case "$group" in
 	[[ -f "$state/release" ]]
 	cat "$state/release"
 	;;
-"pr list") cat "$state/pr-$prstate" 2>/dev/null || true ;;
 "run list")
 	for id in $(ls "$state/runs" | sort -rn); do
 		IFS='|' read -r w c b e _ <"$state/runs/$id"
@@ -89,7 +166,20 @@ case "$group" in
 		break
 	done
 	;;
-"run view") line "$positional" ;;
+"run view")
+	if [[ -f "$state/pending" ]]; then
+		read -r pending_id pending_ref pending_version <"$state/pending"
+		if [[ "$positional" == "$pending_id" ]]; then
+			if [[ ! -f "$state/pending-seen" ]]; then
+				touch "$state/pending-seen"
+				exit 1
+			fi
+			rm "$state/pending" "$state/pending-seen"
+			dispatched "$pending_ref" "$pending_version" "$pending_id" >/dev/null
+		fi
+	fi
+	line "$positional"
+	;;
 "run watch") ;;
 "run rerun")
 	echo "run rerun $positional" >>"$state/log"
@@ -98,33 +188,18 @@ case "$group" in
 	echo "$w|$c|$b|$e|completed|$result|$created|$url" >"$state/runs/$positional"
 	if [[ "$w" == release-publish.yaml && "$result" == success ]]; then echo false >"$state/release"; fi
 	;;
-"workflow run")
-	echo "workflow run $positional $ref" >>"$state/log"
-	if [[ "$positional" == release.yaml ]]; then
-		result="$(knob dispatch-result success)"
-		add_run release.yaml "" "$ref" workflow_dispatch "$result"
-		if [[ "$result" == success && "$ref" == main ]]; then
-			count=$(($(knob dispatches 0) + 1))
-			echo "$count" >"$state/dispatches"
-			echo "28 head$count https://github.com/leinardi/gx52/pull/28" >"$state/pr-open"
-			rm -f "$state/behind"
-			add_run ci.yaml "head$count" release/v0.99.1 workflow_dispatch "$(knob ci-result success)"
-		fi
-	else
-		read -r _ open_head _ <"$state/pr-open"
-		add_run ci.yaml "$open_head" "$ref" workflow_dispatch success
-	fi
-	;;
-"api "*) knob behind 0 ;;
 "pr diff") echo "+version = \"0.99.1\"" ;;
 "pr review") echo "pr review $positional" >>"$state/log" ;;
 "pr merge")
+	[[ "$args" == *" --admin "* && "$args" == *" --match-head-commit head"* ]] || { echo "pr merge without --admin --match-head-commit" >&2; exit 1; }
 	echo "pr merge $positional" >>"$state/log"
 	read -r _ _ url <"$state/pr-open"
 	rm "$state/pr-open"
 	echo "merge1 $url" >"$state/pr-merged"
+	mv "$state/pr-open-branch" "$state/pr-merged-branch"
+	mv "$state/pr-open-author" "$state/pr-merged-author"
 	result="$(knob publish-result success)"
-	add_run release-publish.yaml merge1 main push "$result"
+	add_run release-publish.yaml merge1 main push "$result" >/dev/null
 	if [[ "$result" == success ]]; then
 		echo false >"$state/release"
 	elif [[ -f "$state/publish-leaves-draft" ]]; then
@@ -224,7 +299,7 @@ fn a_release_runs_from_the_dispatch_to_the_flathub_pull_request() {
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml main",
+            "workflow run release.yaml main 0.99.1",
             "pr review 28",
             "pr merge 28",
             "flathub pr 0.99.1 beta",
@@ -253,12 +328,12 @@ fn a_release_runs_from_the_dispatch_to_the_flathub_pull_request() {
 fn a_declined_merge_is_resumed_without_a_second_dispatch() {
     let setup = Setup::new();
     setup.stops(&["0.99.1"], false, "not merged: run make release again");
-    assert_eq!(setup.log(), ["workflow run release.yaml main"]);
+    assert_eq!(setup.log(), ["workflow run release.yaml main 0.99.1"]);
     setup.succeeds(&["0.99.1"]);
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml main",
+            "workflow run release.yaml main 0.99.1",
             "pr review 28",
             "pr merge 28",
             "flathub pr 0.99.1 beta",
@@ -282,7 +357,7 @@ fn a_failed_publish_is_re_run_once_and_resumed_after_the_fix() {
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml main",
+            "workflow run release.yaml main 0.99.1",
             "pr review 28",
             "pr merge 28",
             "run rerun 3",
@@ -310,7 +385,7 @@ fn a_draft_left_by_a_failed_publish_is_finished_not_skipped() {
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml main",
+            "workflow run release.yaml main 0.99.1",
             "pr review 28",
             "pr merge 28",
             "run rerun 3",
@@ -321,24 +396,18 @@ fn a_draft_left_by_a_failed_publish_is_finished_not_skipped() {
 }
 
 #[test]
-fn a_failed_bump_ci_is_refreshed_from_the_fixed_trunk() {
+fn a_bump_behind_the_fixed_trunk_is_refreshed() {
     let setup = Setup::new();
-    setup.knob("ci-result", "failure");
-    setup.stops(
-        &["0.99.1"],
-        false,
-        "CI on release/v0.99.1 failed: fix the cause",
-    );
-    // Fixed on the trunk, which moved on: the bump pull request is refreshed, CI passes.
-    setup.knob("ci-result", "success");
+    setup.stops(&["0.99.1"], false, "not merged: run make release again");
+    // Fixed on the trunk, which moved on: the bump pull request is refreshed.
     setup.knob("behind", "1");
     let output = setup.succeeds(&["0.99.1"]);
     assert!(output.contains("is 1 commit(s) behind main"), "{output}");
     assert_eq!(
         setup.log(),
         [
-            "workflow run release.yaml main",
-            "workflow run release.yaml main",
+            "workflow run release.yaml main 0.99.1",
+            "workflow run release.yaml main 0.99.1",
             "pr review 28",
             "pr merge 28",
             "flathub pr 0.99.1 beta",
@@ -373,6 +442,9 @@ fn flathub_branches_follow_the_version() {
     );
     setup.stops(&["0.99.1", "stable"], true, "beta or master (got 'stable')");
     setup.stops(&["0.99"], true, "must be X.Y.Z");
+    // Any blank separates the branches, so a tab does not hide master from the 0.x check.
+    setup.stops(&["0.99.1", "beta\tmaster"], true, "a 0.x release");
+    setup.stops(&["0.99.1", "beta\nmaster"], true, "a 0.x release");
     assert!(setup.log().is_empty(), "a refused run called GitHub");
 
     // From 1.0.0 on, straight to stable, or to both (here with the release already published).
@@ -382,5 +454,172 @@ fn flathub_branches_follow_the_version() {
     assert_eq!(
         both.log(),
         ["flathub pr 1.0.0 beta", "flathub pr 1.0.0 master"]
+    );
+}
+
+#[test]
+fn an_empty_version_is_the_one_the_release_workflow_derives() {
+    let setup = Setup::new();
+    let output = setup.succeeds(&["", "beta master"]);
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main -",
+            "pr review 28",
+            "pr merge 28",
+            "flathub pr 1.1.0 beta",
+            "flathub pr 1.1.0 master",
+        ]
+    );
+    assert!(
+        output.contains("The release workflow derived v1.1.0"),
+        "{output}"
+    );
+    assert!(
+        output.contains("make release VERSION=1.1.0 FLATHUB_BASE='beta master'"),
+        "{output}"
+    );
+
+    // No argument at all is the same as an empty one.
+    let bare = Setup::new();
+    bare.succeeds(&[]);
+    assert_eq!(
+        bare.log().first().map(String::as_str),
+        Some("workflow run release.yaml main -")
+    );
+}
+
+#[test]
+fn an_empty_version_resumes_the_open_bump_pull_request() {
+    let setup = Setup::new();
+    setup.stops(&[""], false, "not merged: run make release again");
+    setup.succeeds(&[""]);
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main -",
+            "pr review 28",
+            "pr merge 28",
+            "flathub pr 1.1.0 beta",
+        ]
+    );
+}
+
+#[test]
+fn an_empty_version_resumes_a_merged_bump_whose_release_is_missing() {
+    let setup = Setup::new();
+    setup.knob("publish-result", "failure");
+    setup.knob("rerun-result", "failure");
+    setup.stops(
+        &[""],
+        true,
+        "release-publish.yaml failed again after a re-run",
+    );
+    setup.knob("rerun-result", "success");
+    let output = setup.succeeds(&[""]);
+    assert!(output.contains("Resuming v1.1.0"), "{output}");
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main -",
+            "pr review 28",
+            "pr merge 28",
+            "run rerun 3",
+            "run rerun 3",
+            "flathub pr 1.1.0 beta",
+        ]
+    );
+}
+
+#[test]
+fn a_derived_release_is_refreshed_with_its_version() {
+    let setup = Setup::new();
+    setup.stops(&[""], false, "not merged: run make release again");
+    // The trunk moved on and gained a feat: the refresh keeps the version the bump branch carries.
+    setup.knob("behind", "1");
+    setup.knob("derived", "1.2.0");
+    setup.succeeds(&[""]);
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main -",
+            "workflow run release.yaml main 1.1.0",
+            "pr review 28",
+            "pr merge 28",
+            "flathub pr 1.1.0 beta",
+        ]
+    );
+}
+
+#[test]
+fn a_derived_0_x_release_does_not_reach_master() {
+    let setup = Setup::new();
+    setup.knob("derived", "0.99.2");
+    setup.stops(&["", "master"], true, "v0.99.2 is a 0.x release");
+    assert_eq!(setup.log(), ["workflow run release.yaml main -"]);
+}
+
+#[test]
+fn a_bump_pull_request_a_person_opened_is_never_resumed() {
+    let setup = Setup::new();
+    // An open release/v1.1.0 pull request from the same repository, opened by a person.
+    setup.knob(
+        "pr-open",
+        "29 human https://github.com/leinardi/gx52/pull/29",
+    );
+    setup.knob("pr-open-branch", "release/v1.1.0");
+    setup.knob("pr-open-author", "someone");
+    setup.succeeds(&[""]);
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main -",
+            "pr review 28",
+            "pr merge 28",
+            "flathub pr 1.1.0 beta",
+        ]
+    );
+}
+
+#[test]
+fn another_run_does_not_stand_in_for_the_dispatch() {
+    let setup = Setup::new();
+    // A dry run on the trunk shows up right after the dispatch, before the dispatch's own run.
+    setup.knob("dispatch-late", "");
+    setup.succeeds(&["1.1.0"]);
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main 1.1.0",
+            "pr review 28",
+            "pr merge 28",
+            "flathub pr 1.1.0 beta",
+        ]
+    );
+}
+
+#[test]
+fn the_bump_ci_is_shown_not_waited_for() {
+    let setup = Setup::new();
+    // release-publish.yaml gates the merge commit: a failed bump CI neither stops nor is re-run.
+    setup.knob("ci-result", "failure");
+    let output = setup.succeeds(&["1.1.0"]);
+    assert!(
+        output.contains("CI on release/v1.1.0: completed, failure (not waited for)"),
+        "{output}"
+    );
+    // The prompt names the pull request, not the CI run.
+    assert!(
+        output.contains("Approve and merge https://github.com/leinardi/gx52/pull/28"),
+        "{output}"
+    );
+    assert_eq!(
+        setup.log(),
+        [
+            "workflow run release.yaml main 1.1.0",
+            "pr review 28",
+            "pr merge 28",
+            "flathub pr 1.1.0 beta",
+        ]
     );
 }
