@@ -32,9 +32,9 @@ come from the documentation, not from a device on the desk. Reports from X52 own
 | --- | --- | --- |
 | ![The LEDs of a per-mode profile](data/screenshots/leds.png) | ![The text of the multi-function display](data/screenshots/mfd.png) | ![Three clocks in real time zones](data/screenshots/clocks.png) |
 
-| Profiles | Preferences |
-| --- | --- |
-| ![The profile list](data/screenshots/profiles.png) | ![Running in the background and the virtual mouse](data/screenshots/preferences.png) |
+| Profiles | Preferences | Input tester |
+| --- | --- | --- |
+| ![The profile list](data/screenshots/profiles.png) | ![Running in the background and the virtual mouse](data/screenshots/preferences.png) | ![Every button, axis and hat, live](data/screenshots/tester.png) |
 
 ## Install
 

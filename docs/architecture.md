@@ -515,7 +515,11 @@ settings, defaulting to the S9 values.
 The Flatpak `finish-args` beyond the display sockets:
 
 - `--device=all`: the USB node, the evdev node and `/dev/uinput` (S4, S9: without it `/dev/uinput`
-  does not exist in the sandbox). Device access itself comes from the host udev rule.
+  does not exist in the sandbox). Device access itself comes from the host udev rule. The
+  narrower `--device=usb` and `--device=input` are not enough: together they expose
+  `/dev/bus/usb` and `/dev/input` but not `/dev/uinput`, which no device class covers, so the
+  virtual mouse would fail (checked in the Devel Flatpak with Flatpak 1.16.6, 2026-11-19). They
+  also need Flatpak 1.15.11 and 1.15.6, newer than some supported distributions ship.
 - `--talk-name=org.kde.StatusNotifierWatcher` for the tray (S5; accepted by `flatpak-builder-lint`
   in S6); no well-known name is owned (`disable_dbus_name(true)`).
 - **No network**: hotplug works by polling (S4), so `--share=network` is not needed. It is added

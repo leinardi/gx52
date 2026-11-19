@@ -167,6 +167,19 @@ impl InputTester {
         }
     }
 
+    /// Whether the page shows `app`'s live input as it is now: the live view, with the held
+    /// inputs, the mode and the axes last shown equal to the application's.
+    pub(crate) fn shows_current(&self, app: &Application) -> bool {
+        let imp = self.imp();
+        if !self.is_mapped() || imp.stack.visible_child_name().as_deref() != Some("live") {
+            return false;
+        }
+        imp.view.borrow().as_ref().is_some_and(|view| {
+            view.held.borrow().as_ref() == Some(&(app.held_inputs(), app.selector_mode()))
+                && view.axes_shown.borrow().as_ref() == Some(&app.axis_values())
+        })
+    }
+
     /// Builds the indicators of `device_type`, unless they are already.
     fn build_for(&self, device_type: DeviceType) {
         let imp = self.imp();
