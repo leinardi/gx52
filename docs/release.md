@@ -243,7 +243,9 @@ release the base already has changes nothing and pushes nothing. The script neve
 `master`, and pushes `beta` only to create it: after that first push Flathub protects it.
 
 `flathub.json` keeps `disable-external-data-checker`: Flathub's own checker would otherwise open
-pull requests of its own on `master`.
+pull requests of its own on `master`. It has no `only-arches`: Flathub builds `x86_64` and
+`aarch64` by default, as the review of the `1.0.0` pull request noted; the `0.99.0` and `1.0.0`
+pull requests still listed them.
 
 ## Dry runs
 
@@ -337,9 +339,10 @@ a version number is never reused for different code.
   created from `master` with the branch merged in): `make flathub-pr
   VERSION=0.99.0 FLATHUB_BASE=master` opens the pull request, and once the bot's test build
   passes, `make flathub-beta VERSION=0.99.0` creates `beta` and closes it. The branch migrates
-  the tree ([The Flathub pull requests](#the-flathub-pull-requests)): `flathub.json` becomes
-  `{"only-arches": ["x86_64", "aarch64"], "disable-external-data-checker": true}` and every file
-  but `README.md` is replaced (the Python modules, `pypi-dependencies.json`, the `shared-modules`
+  the tree ([The Flathub pull requests](#the-flathub-pull-requests)): `flathub.json` became
+  `{"only-arches": ["x86_64", "aarch64"], "disable-external-data-checker": true}` (the file of
+  that time; see [The Flathub pull requests](#the-flathub-pull-requests) for today's) and every
+  file but `README.md` is replaced (the Python modules, `pypi-dependencies.json`, the `shared-modules`
   and `flatpak-builder-tools` submodules and the script that refreshed them go). If the flow does
   not let a maintainer push a new branch, the flow it prescribes is followed and recorded here.
   Done on 2026-11-17: the migration pull request (#16) built, `make flathub-beta` created `beta`
