@@ -64,6 +64,17 @@
   <!-- Newest first. The release workflow adds the entry for each new version (docs/release.md);
        the 0.7.x entries are the legacy Python application's history. -->
   <releases>
+    <release version="1.0.1" date="2026-11-19">
+      <description translate="no">
+        <ul>
+          <li>Shorten the summary to Flathub's 35 characters</li>
+          <li>Leave a margin around the app icon</li>
+          <li>Use grey brand colours and show the window's corners and shadow</li>
+          <li>Use blue brand colours</li>
+          <li>Add the input tester screenshot</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-11-18">
       <description translate="no">
         <ul>
