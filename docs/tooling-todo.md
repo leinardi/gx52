@@ -78,17 +78,17 @@ item off, or delete it, in the commit that does it.
 - [x] `scheduled-scan.yaml`: cargo-deny on the trunk every week, and a check that fails when
       Flathub has a newer GNOME runtime than the manifests (rewrite analysis, section 8). On
       `main` since M9 ([release.md](release.md#dispatching)).
-- [ ] Repository settings in `gh-leinardi-iac` (`repo_gx52`, M8): a ruleset on `rust-rewrite`
+- [x] Repository settings in `gh-leinardi-iac` (`repo_gx52`, M8): a ruleset on `rust-rewrite`
       with `ci-result` required (none on the legacy `master`), Actions may create pull requests;
       private vulnerability reporting is already on for public repositories. Applied
-      (2026-11-15). Tick when the unused `release` environment is removed: no Flathub token
-      secret, the Flathub PR is opened with the maintainer's `gh` login (next item).
-- [ ] Flathub side ([release.md, "The Flathub pull
+      (2026-11-15). The unused `release` environment is removed: no Flathub token secret, the
+      Flathub PR is opened with the maintainer's `gh` login (next item).
+- [x] Flathub side ([release.md, "The Flathub pull
       requests"](release.md#the-flathub-pull-requests)): the `beta` migration PR (`make flathub-pr
       VERSION=0.99.0 FLATHUB_BASE=master`, then `make flathub-beta`), with the outcome recorded in
-      release.md.
-- [ ] `master`: remove the `flathub-pr.yaml` stub, which no workflow on the trunk matches any
-      more.
+      release.md (2026-11-17).
+- [x] `master`: remove the `flathub-pr.yaml` stub, which no workflow on the trunk matches any
+      more (#25, 2026-11-16; `master` itself is deleted since M9).
 
 ## Docs and project files
 

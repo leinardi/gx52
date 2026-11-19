@@ -331,10 +331,10 @@ a version number is never reused for different code.
   requests](#the-flathub-pull-requests)). A fine-grained personal access token cannot write to a
   public repository of an organisation its owner is not a member of, and a classic one's
   `public_repo` scope would reach every public repository the account can write to.
-- **Flathub `beta` branch and migration pull request, before the first beta release:** `beta`
-  does not exist yet, and no workflow creates it. The maintainer creates it after `v0.99.0` is
-  released, following Flathub's documented flow (a pull request against `master` for the test
-  build, then `beta` created from `master` with the branch merged in): `make flathub-pr
+- **Flathub `beta` branch and migration pull request, before the first beta release:** no
+  workflow creates `beta`. The maintainer created it after `v0.99.0` was released, following
+  Flathub's documented flow (a pull request against `master` for the test build, then `beta`
+  created from `master` with the branch merged in): `make flathub-pr
   VERSION=0.99.0 FLATHUB_BASE=master` opens the pull request, and once the bot's test build
   passes, `make flathub-beta VERSION=0.99.0` creates `beta` and closes it. The branch migrates
   the tree ([The Flathub pull requests](#the-flathub-pull-requests)): `flathub.json` becomes
@@ -342,10 +342,13 @@ a version number is never reused for different code.
   but `README.md` is replaced (the Python modules, `pypi-dependencies.json`, the `shared-modules`
   and `flatpak-builder-tools` submodules and the script that refreshed them go). If the flow does
   not let a maintainer push a new branch, the flow it prescribes is followed and recorded here.
+  Done on 2026-11-17: the migration pull request (#16) built, `make flathub-beta` created `beta`
+  from it and closed it.
 - **`1.0.0` to `master`:** `master` keeps the legacy manifest until `1.0.0`. `make release
   VERSION=1.0.0 FLATHUB_BASE=master` (or `"beta master"`) opens the pull request that replaces it,
   with the same tree as the `beta` migration; it is merged with `make flathub-merge
-  FLATHUB_BASE=master`.
+  FLATHUB_BASE=master`. Done on 2026-11-18: #17 to `beta` and #18 to
+  `master` merged; the stable build then waits for Flathub's review before it is published.
 - **Private vulnerability reporting** on `leinardi/gx52`, as [SECURITY.md](../SECURITY.md) links to
   it: enabled by the IaC, checked once.
 - **Dependabot:** production Cargo dependencies are committed as `fix(deps)` and so trigger a patch
