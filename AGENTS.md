@@ -14,13 +14,13 @@ the preparation in
 [`docs/spikes/`](docs/spikes/). Tooling that is decided but not set up yet is tracked in
 [`docs/tooling-todo.md`](docs/tooling-todo.md).
 
-Target layout (rewrite analysis, section 1 and 5): a Cargo workspace with `x52` (protocol, device
+Layout (rewrite analysis, section 1 and 5): a Cargo workspace with `x52` (protocol, device
 model, key maps, MFD charset; no GTK), `gx52` (the application) and `meta` (repository hygiene
 tests), built by Meson following the GNOME Rust app layout, with Blueprint templates, a GResource
 bundle, a GSettings schema and gettext from the first commit.
-The root package `gx52` in `src/` is the libadwaita application skeleton, built by Meson
-(`meson.build`, `data/`, `po/`, Flatpak manifests in `build-aux/`); `x52/` and `meta/` are still
-doc-only stubs.
+The root package `gx52` in `src/` is the libadwaita application, built by Meson (`meson.build`,
+`data/`, `po/`, Flatpak manifests in `build-aux/`); `x52/` is the device library and `meta/` holds
+the repository meta-tests (`meta/tests/`).
 
 ## Architecture
 
@@ -69,7 +69,7 @@ make -s release-version           # the version the tree carries (Cargo.toml [pa
 make release-bump VERSION=X.Y.Z   # write it into the four version files, no commit (docs/release.md)
 make release [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # a whole release, to its Flathub PR; resumable
 make release-dry-run [VERSION=X.Y.Z]  # dispatch the dry run of the current branch and watch it
-# (no VERSION: the one the Release workflow derives with svu, from 1.0.0 on)
+# (no VERSION: the one the Release workflow derives with svu)
 make flathub-merge [FLATHUB_BASE=master]  # merge the Flathub PR once Flathub's test build passed
 make flathub-promote VERSION=X.Y.Z  # the Flathub master PR of a 1.0.0+ release (beta to stable)
 make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # (re)open the Flathub PRs ("beta master": both)
@@ -180,9 +180,8 @@ All commits MUST be Conventional Commits 1.0.0 **with a scope**:
 before `:` or a `BREAKING CHANGE:` footer. Examples: `fix(mfd): clamp clock offsets`,
 `ci(dependabot): group cargo updates`.
 
-From `1.0.0` on, release versions are derived by `svu` from the commits since the last tag, so a
-wrong type ships a wrong version. The `0.99.x` development builds always give the version
-explicitly (rewrite analysis, section 9.4).
+Release versions are derived by `svu` from the commits since the last tag, so a wrong type ships a
+wrong version.
 
 | Release | Commit | Example |
 | --- | --- | --- |
