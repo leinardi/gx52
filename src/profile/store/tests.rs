@@ -18,7 +18,6 @@ use std::fs;
 use std::time::SystemTime;
 
 use tempfile::TempDir;
-use toml::Table;
 
 use super::*;
 use crate::profile::tests::fixture;
@@ -243,30 +242,44 @@ fn a_newer_schema_is_listed_read_only() {
 
 #[test]
 fn an_older_schema_is_migrated_and_backed_up_on_save() {
-    fn noop(_: &mut Table) {}
-    let original = fixture("valid-x52-pro.toml");
+    let original = fixture("valid-x52-pro-v1.toml");
     let dir = dir_with([(&file_name(ID), &original)]);
-    let (mut store, _) = load_untouched(&dir, Schema::new(2, &[noop]));
+    let (mut store, _) = load_untouched(&dir, Schema::CURRENT);
     assert_eq!(
         store.loaded(&id(ID)).unwrap().origin,
         Origin::Migrated { from: 1 }
     );
 
     save(&mut store, &id(ID)).unwrap();
+    let saved = fs::read_to_string(dir.path().join(file_name(ID))).unwrap();
+    assert!(saved.starts_with("schema_version = 2\n"), "{saved}");
     let backup = dir.path().join(format!("{ID}.toml.schema-1.bak"));
     assert_eq!(fs::read(backup).unwrap(), original);
     assert_eq!(store.loaded(&id(ID)).unwrap().origin, Origin::File);
 
-    // A second backup of the same version never overwrites the first.
-    store.loaded_mut(&id(ID)).unwrap().origin = Origin::Migrated { from: 1 };
+    // The file is current now: a second save writes no backup.
+    let before = snapshot(dir.path());
     save(&mut store, &id(ID)).unwrap();
-    assert!(
-        dir.path()
-            .join(format!("{ID}.toml.schema-1.bak-2"))
-            .exists()
-    );
     assert_eq!(
-        fs::read(dir.path().join(format!("{ID}.toml.schema-1.bak"))).unwrap(),
+        snapshot(dir.path()).keys().collect::<Vec<_>>(),
+        before.keys().collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn a_backup_already_in_the_folder_is_never_overwritten() {
+    let original = fixture("valid-x52-pro-v1.toml");
+    let earlier = b"an earlier backup".as_slice();
+    let backup = format!("{ID}.toml.schema-1.bak");
+    let dir = dir_with([
+        (file_name(ID).as_str(), original.as_slice()),
+        (backup.as_str(), earlier),
+    ]);
+    let (mut store, _) = load_untouched(&dir, Schema::CURRENT);
+    save(&mut store, &id(ID)).unwrap();
+    assert_eq!(fs::read(dir.path().join(&backup)).unwrap(), earlier);
+    assert_eq!(
+        fs::read(dir.path().join(format!("{backup}-2"))).unwrap(),
         original
     );
 }

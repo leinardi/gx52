@@ -53,6 +53,11 @@ const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// The fixture text on the first MFD line of the active profile in mode 1.
 const MFD_FIRST_LINE: &str = "MASTER ARM ON";
 
+/// The control whose name the Names shot focuses, and its name in the fixture's mode 1, which the
+/// preview shows on the "Last button" line.
+const NAMES_FOCUSED: x52_input::Input = x52_input::Input::Button(Button::ButtonE);
+const NAMES_FOCUSED_NAME: &str = "Emerg. Lights";
+
 /// The stick's left-to-right value in the input tester shot's pose (the screenshot backend).
 const POSE_STICK_X: i32 = 700;
 
@@ -73,7 +78,7 @@ struct Shot {
 }
 
 /// The screenshots, in the order they are taken.
-const SHOTS: [Shot; 6] = [
+const SHOTS: [Shot; 7] = [
     Shot {
         name: "leds",
         set_up: |_, window| show_view(window, "leds", WIDE),
@@ -113,6 +118,31 @@ const SHOTS: [Shot; 6] = [
             let editor = &window.imp().clock_editor;
             check(editor.is_mapped(), "the clock editor is mapped")?;
             check(editor.times_shown(), "every clock shows its time")
+        },
+    },
+    Shot {
+        name: "names",
+        set_up: |_, window| {
+            show_view(window, "names", WIDE);
+            window.reveal_name(NAMES_FOCUSED);
+        },
+        ready: |app, window| {
+            device_ready(app)?;
+            sized(window, WIDE)?;
+            let editor = &window.imp().names_editor;
+            check(editor.is_mapped(), "the Names editor is mapped")?;
+            check(editor.rows_built(), "the name rows are built")?;
+            check(
+                editor.shows_name(NAMES_FOCUSED),
+                "the focused control's row is in view",
+            )?;
+            let (lines, _) = editor.display().shown_text();
+            check(
+                lines
+                    .get(2)
+                    .is_some_and(|line| line.trim_end() == NAMES_FOCUSED_NAME),
+                "the MFD preview shows the focused control's name",
+            )
         },
     },
     Shot {

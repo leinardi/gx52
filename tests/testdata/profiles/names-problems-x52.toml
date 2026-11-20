@@ -1,0 +1,37 @@
+schema_version = 2
+device_type = "x52"
+name = "Bad names"
+kind = "single"
+date_format = "yy-mm-dd"
+
+[clock_1]
+source = "utc"
+use_24h = false
+
+[clock_2]
+source = { fixed_offset_minutes = -240 }
+use_24h = true
+
+[clock_3]
+source = { fixed_offset_minutes = 480 }
+use_24h = true
+
+[settings]
+led_brightness = 128
+mfd_brightness = 0
+
+[settings.mfd]
+lines = [
+  { source = "empty" },
+  { source = "empty" },
+  { source = "empty" },
+]
+
+[settings.names]
+a = "Weapons"
+b = 3
+c = "   "
+d = "A\u0000B"
+e = "Emergency lights on"
+page_up = "Zoom"
+warp_drive = "Engage"

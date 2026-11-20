@@ -27,7 +27,7 @@ const TWO: Schema = Schema::new(2, &[v1_to_v2]);
 fn the_current_version_is_read_as_is() {
     let mut document = Table::new();
     assert_eq!(
-        Schema::CURRENT.migrate(&mut document, 1),
+        Schema::CURRENT.migrate(&mut document, 2),
         Version::Readable {
             migrated_from: None
         }
@@ -36,9 +36,23 @@ fn the_current_version_is_read_as_is() {
 }
 
 #[test]
+fn version_1_migrates_without_a_change() {
+    let mut document = Table::new();
+    document.insert("name".to_owned(), Value::String("Night".to_owned()));
+    let before = document.clone();
+    assert_eq!(
+        Schema::CURRENT.migrate(&mut document, 1),
+        Version::Readable {
+            migrated_from: Some(1)
+        }
+    );
+    assert_eq!(document, before);
+}
+
+#[test]
 fn a_newer_version_is_not_touched() {
     let mut document = Table::new();
-    assert_eq!(Schema::CURRENT.migrate(&mut document, 2), Version::Newer(2));
+    assert_eq!(Schema::CURRENT.migrate(&mut document, 3), Version::Newer(3));
     assert!(document.is_empty());
 }
 

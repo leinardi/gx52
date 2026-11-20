@@ -54,7 +54,7 @@ fn custom_profile() -> Profile {
 fn an_exported_profile_has_no_id() {
     let exported = export(&custom_profile());
     assert!(!exported.contains("id ="), "{exported}");
-    assert!(exported.starts_with("schema_version = 1\n"));
+    assert!(exported.starts_with("schema_version = 2\n"));
 }
 
 #[test]

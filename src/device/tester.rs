@@ -21,6 +21,7 @@
 //! and the mouse button on the X52), so the codes and numbers come from the device's
 //! [`InputMap`] only.
 
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use gettextrs::gettext;
@@ -185,20 +186,61 @@ fn present(buttons: &[Button], map: &InputMap) -> Vec<(Button, u16)> {
 }
 
 /// The tooltip of the indicator of the button with evdev `code`: "Button 2 · Fire · evdev code
-/// 289".
-pub(crate) fn tooltip(map: &InputMap, button: Button, code: u16) -> String {
+/// 289", or with its custom `name`, "Button 8 · Emerg. Lights (E) · evdev code 295".
+pub(crate) fn tooltip(map: &InputMap, button: Button, code: u16, name: Option<&str>) -> String {
     let number = map.button_number(code).unwrap_or_default();
     // Translators: the tooltip of a button on the input tester: the number games show for it,
     // its name and its Linux input event code.
     gettext("Button {number} · {name} · evdev code {code}")
         .replace("{number}", &number.to_string())
-        .replace("{name}", &names::full_name(button))
+        .replace("{name}", &named(Input::Button(button), name))
         .replace("{code}", &code.to_string())
 }
 
+/// The name of `input` the tester gives: its full name, or its custom `name` with the full name
+/// after it, "Emerg. Lights (E)".
+pub(crate) fn named(input: Input, name: Option<&str>) -> String {
+    let full = input_full_name(input);
+    match name {
+        // Translators: a control's custom name, then its built-in name in parentheses, as in
+        // "Emerg. Lights (E)".
+        Some(name) => gettext("{name} ({builtin})")
+            .replace("{name}", name)
+            .replace("{builtin}", &full),
+        None => full,
+    }
+}
+
+/// The custom names of `hat`'s directions, as listed under its grid: "↑ Pips: SYS".
+pub(crate) fn hat_names(hat: Hat, names: &BTreeMap<Input, String>) -> Vec<String> {
+    Pov1Direction::ALL
+        .into_iter()
+        .filter_map(|direction| {
+            let name = names.get(&hat.input(direction))?;
+            Some(format!("{} {name}", arrow(direction)))
+        })
+        .collect()
+}
+
+/// The arrow that stands for `direction` of a hat.
+pub(crate) const fn arrow(direction: Pov1Direction) -> char {
+    match direction {
+        Pov1Direction::Up => '↑',
+        Pov1Direction::Right => '→',
+        Pov1Direction::Down => '↓',
+        Pov1Direction::Left => '←',
+    }
+}
+
 /// What a screen reader reads for the held inputs and the mode: "Buttons pressed: Fire, A.
-/// Mode 2." Inputs are listed in the order the page shows them.
-pub(crate) fn summary(map: &InputMap, held: &HeldInputs, mode: Option<Mode>) -> String {
+/// Mode 2.", a control with a custom name in `names` as "Emerg. Lights (E)". Inputs are listed
+/// in the order the page shows them.
+pub(crate) fn summary(
+    map: &InputMap,
+    held: &HeldInputs,
+    mode: Option<Mode>,
+    names: &BTreeMap<Input, String>,
+) -> String {
     let buttons = ButtonGroup::ALL
         .into_iter()
         .flat_map(|group| group.buttons().iter().copied())
@@ -210,7 +252,7 @@ pub(crate) fn summary(map: &InputMap, held: &HeldInputs, mode: Option<Mode>) -> 
                 .flat_map(|hat| Pov1Direction::ALL.map(|direction| hat.input(direction))),
         )
         .filter(|input| has_input(map, *input) && held.is_held(*input))
-        .map(input_full_name)
+        .map(|input| named(input, names.get(&input).map(String::as_str)))
         .collect::<Vec<_>>();
     let pressed = if buttons.is_empty() {
         // Translators: read by a screen reader on the input tester when no button is held.

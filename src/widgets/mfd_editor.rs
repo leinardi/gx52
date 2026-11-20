@@ -25,10 +25,11 @@ use gtk::glib;
 use jiff::tz::TimeZone;
 
 use crate::profile::editor::EditorState;
-use crate::profile::mfd::{self, LineSource, ShownClock, TextInfo};
+use crate::profile::mfd::{self, LineSource, ShownClock};
 use crate::profile::{MfdLineSource, ProfileKind};
 use crate::time;
 use crate::widgets::mfd_display::DateArea;
+use crate::widgets::mfd_entry::MfdEntry;
 use crate::widgets::ticker::{Ticker, Ticking};
 use crate::widgets::{MfdDisplay, brightness_at};
 
@@ -41,19 +42,12 @@ struct LineRow {
     /// The source of the line.
     source: adw::ComboRow,
     /// The text of a custom text line.
-    text: adw::EntryRow,
-    /// "n/16".
-    counter: gtk::Label,
-    /// The characters the MFD shows as a replacement.
-    substitutions: gtk::Label,
+    text: MfdEntry,
 }
 
-/// The byte offset of character `position` in `text`, or the end.
-fn byte_offset(text: &str, position: i32) -> usize {
-    usize::try_from(position)
-        .ok()
-        .and_then(|position| text.char_indices().nth(position))
-        .map_or(text.len(), |(index, _)| index)
+/// What a custom text row lets in of an insertion: the part that fits the line.
+fn text_insert(before: &str, inserted: &str, after: &str) -> String {
+    mfd::accepted_insert(before, inserted, after).to_owned()
 }
 
 mod imp {
@@ -95,8 +89,6 @@ mod imp {
         pub(super) flash: RefCell<Option<glib::SourceId>>,
         /// Set while the editor shows a state itself, so the change is not taken as the user's.
         pub(super) syncing: Cell<bool>,
-        /// Set while the editor inserts the part of a typed text that fits.
-        pub(super) inserting: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -166,39 +158,27 @@ impl MfdEditor {
                     // Translators: {number} is the number of an MFD line, 1 to 3.
                     .title(gettext("Line {number} text").replace("{number}", &number))
                     .build();
-                // Up to 16 replaced characters: cut, so the row fits the narrowest window. The
-                // label's text, which screen readers read, keeps the whole list.
-                let substitutions = gtk::Label::builder()
-                    .valign(gtk::Align::Center)
-                    .ellipsize(gtk::pango::EllipsizeMode::End)
-                    .max_width_chars(12)
-                    .tooltip_text(gettext(
-                        "These characters are not on the MFD and are shown as their replacement",
-                    ))
-                    .css_classes(["caption", "warning"])
-                    .build();
-                let counter = gtk::Label::builder()
-                    .valign(gtk::Align::Center)
-                    .css_classes(["caption", "numeric", "dim-label"])
-                    .build();
-                text.add_suffix(&substitutions);
-                text.add_suffix(&counter);
-                self.connect_line(line, &source, &text);
-                imp.lines_group.add(&source);
-                imp.lines_group.add(&text);
-                LineRow {
-                    source,
+                let text = MfdEntry::new(
                     text,
-                    counter,
-                    substitutions,
-                }
+                    text_insert,
+                    glib::clone!(
+                        #[weak(rename_to = editor)]
+                        self,
+                        #[upgrade_or]
+                        true,
+                        move || editor.imp().syncing.get()
+                    ),
+                );
+                self.connect_line(line, &source, text.row());
+                imp.lines_group.add(&source);
+                imp.lines_group.add(text.row());
+                LineRow { source, text }
             })
             .collect();
         imp.rows.replace(rows);
     }
 
-    /// Sends the changes of line `line`'s rows to the application, and keeps the typed text
-    /// within the 16 bytes of the line.
+    /// Sends the changes of line `line`'s rows to the application.
     fn connect_line(&self, line: usize, source: &adw::ComboRow, text: &adw::EntryRow) {
         source.connect_selected_notify(glib::clone!(
             #[weak(rename_to = editor)]
@@ -229,32 +209,6 @@ impl MfdEditor {
                 }
             }
         ));
-        // Typing goes to the entry's text widget, which emits the insertion: only the part that
-        // fits is let through, so the text already there and the cursor stay as they are.
-        if let Some(delegate) = text.delegate() {
-            delegate.connect_insert_text(glib::clone!(
-                #[weak(rename_to = editor)]
-                self,
-                move |delegate, inserted, position| {
-                    let imp = editor.imp();
-                    if imp.syncing.get() || imp.inserting.get() {
-                        return;
-                    }
-                    let current = delegate.text();
-                    let (before, after) = current.split_at(byte_offset(&current, *position));
-                    let accepted = mfd::accepted_insert(before, inserted, after);
-                    if accepted.len() == inserted.len() {
-                        return;
-                    }
-                    if !accepted.is_empty() {
-                        imp.inserting.set(true);
-                        delegate.insert_text(accepted, position);
-                        imp.inserting.set(false);
-                    }
-                    delegate.stop_signal_emission_by_name("insert-text");
-                }
-            ));
-        }
     }
 
     /// Sends the clock switcher, brightness and shift rows' changes on.
@@ -322,17 +276,12 @@ impl MfdEditor {
                 MfdLineSource::Empty | MfdLineSource::ProfileName | MfdLineSource::LastButton => "",
             };
             // Only a different text is set: setting it again would move the cursor.
-            if row.text.text() != text {
-                row.text.set_text(text);
+            let entry = row.text.row();
+            if entry.text() != text {
+                entry.set_text(text);
             }
-            row.text.set_visible(source == LineSource::CustomText);
-            let info = TextInfo::of(text);
-            row.counter.set_label(&info.counter());
-            row.counter
-                .update_property(&[gtk::accessible::Property::Label(&info.counter_label())]);
-            row.substitutions.set_label(&info.substitutions);
-            row.substitutions
-                .set_visible(!info.substitutions.is_empty());
+            entry.set_visible(source == LineSource::CustomText);
+            row.text.show_info(text);
         }
         let level = settings.mfd_brightness.level();
         imp.brightness_scale.set_value(f64::from(level));
@@ -363,7 +312,7 @@ impl MfdEditor {
         } else {
             DateArea::Date
         };
-        if let Some(preview) = app.mfd_preview(imp.clock.get(), time::now(), &zone) {
+        if let Some(preview) = app.mfd_preview(imp.clock.get(), time::now(), &zone, None) {
             imp.display.show(&preview, date_area);
         }
     }

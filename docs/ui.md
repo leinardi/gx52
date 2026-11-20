@@ -56,8 +56,8 @@ on the right.
 A new GX52 process opens on the **active profile's editor**: the selected row is the profile on
 the device, so the first screen is one where the selection and the device agree, and the usual
 reason to open the window, changing a LED colour or an MFD line before a game, takes no click.
-The editor shows the view used last, LEDs, MFD or Clocks (GSettings `last-view`), so someone who
-only edits the MFD does not press Ctrl+2 each time. The input tester is never restored across
+The editor shows the view used last, LEDs, MFD, Clocks or Names (GSettings `last-view`), so
+someone who only edits the MFD does not press Ctrl+2 each time. The input tester is never restored across
 launches: it is a check made now, not a habit, and it selects no profile. A per-mode profile's
 [mode bar](#mode-bar) starts on the selector's position.
 
@@ -161,7 +161,8 @@ Changing the kind is in the row menu:
 ## Profile editor
 
 The content area for a profile: an `adw::ToolbarView` whose header bar has an `adw::ViewSwitcher`
-as title widget, with three views: **LEDs** (Ctrl+1), **MFD** (Ctrl+2) and **Clocks** (Ctrl+3).
+as title widget, with four views: **LEDs** (Ctrl+1), **MFD** (Ctrl+2), **Clocks** (Ctrl+3) and
+**Names** (Ctrl+4).
 The profile name is not repeated there: the selected sidebar row names the profile. In the narrow
 layout, where the sidebar is not visible, the header bar shows the profile name and the switcher
 moves to the bottom ([Adaptive layout](#adaptive-layout)). Each view is an
@@ -172,7 +173,7 @@ change (500 ms), with the atomic write of profiles.md.
 
 ### Mode bar
 
-On a per-mode profile, the LEDs and MFD views start with a bar:
+On a per-mode profile, the LEDs, MFD and Names views start with a bar:
 
 ```text
 Editing mode   [ 1 | 2 | 3 ]
@@ -259,7 +260,7 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
   | --- | --- |
   | Custom text | The text typed in an `adw::EntryRow` below it (shown only for this source); a counter "n/16" counts converted bytes, the entry stops accepting input at 16 bytes or 64 typed characters, whichever comes first (a paste is cut to the room left, and the text already there is never cut), and the row lists the characters that will be replaced ("ő → o") |
   | Profile name | The active profile's name |
-  | Last button | The name of the button being held, POV 1 directions included; the mode selector positions never count. The line clears on release |
+  | Last button | The name of the button being held, POV 1 directions included: its [custom name](#names-view) in the mode shown, else the built-in name. The mode selector positions never count. The line clears on release, except after a wheel notch, which stays for 0.7 s ([profiles.md](profiles.md#mfd-lines)) |
   | Empty | Nothing |
 
   A line switched from Custom text to another source keeps its text for the session: switching it
@@ -304,6 +305,44 @@ any case. Enter picks the first match, Down moves to the list, Escape closes. No
 shows "No Results Found". Without `zone.tab` the dialog lists every zone name the database knows,
 without countries. The pick goes to the profile and clock the dialog was opened for. The dialog
 closes when another profile is shown, and a pick still being looked up then is dropped.
+
+### Names view
+
+Custom names for the joystick's controls, shown by the MFD's "Last button" line and the [input
+tester](#input-tester) in place of the built-in names ("Emerg. Lights" for E). Requested in
+[issue #42](https://github.com/leinardi/gx52/issues/42); decided on 2026-11-19 against the
+prototype ([roadmap.md](roadmap.md#1x)). The data is in [profiles.md](profiles.md#control-names).
+
+- **Mode bar** on a per-mode profile: names are per mode and follow the bar like every other mode
+  setting. Changing the profile's kind copies or drops them with the rest
+  ([Profile kinds](#profile-kinds)).
+- **Simulated display** at the top, the MFD view's widget. While a name field has the focus, it
+  shows that control as if held, on the simulated display only: the device is not sent anything
+  for it. A control held on the device takes its place.
+- **No "Last button" line:** when none of the mode's MFD lines uses it, a row "Names aren't shown
+  on the MFD" with an **Edit MFD Lines** button that opens the MFD view. Otherwise the page's
+  description names the line ("Shown on MFD line 3…").
+- **Find a Control by Pressing It:** a row that waits for the next press on the device; the press
+  opens the control's group, scrolls to it and focuses its field. The mode selector is ignored.
+  Without an open evdev node the row is insensitive and says why.
+- **Controls:** one `adw::EntryRow` per control, in collapsible groups that follow the hardware:
+  Stick, Throttle, Toggle Switches, POV 1, POV 2, Throttle Hat and MFD. That is the 36 buttons of
+  the X52 Pro without the mode selector positions, plus the four POV 1 directions: 40 controls. A
+  control the device type lacks is left out, as in the input tester: the X52 (non-Pro) has no MFD
+  wheels (Page Up, Page Down, Up, Down) and no Select, so 35 controls. Each row starts with the
+  button number games show, as in the input tester, or the arrow of a POV 1 direction; a screen
+  reader skips it, since the title names the control.
+- **Entry:** while empty, the row's title is the built-in name that applies. The entry follows the
+  Custom text line of the [MFD view](#mfd-view): the "n/16" counter of converted bytes, a stop at
+  16 bytes or 64 typed characters, a paste cut to the room left, and the list of characters that
+  will be replaced. An empty or whitespace-only field is no name. A filled field has a reset button
+  whose tooltip names the built-in name it goes back to.
+- **At a glance:** the page description counts the names of the mode shown ("5 controls have
+  custom names in mode 2"); each group's subtitle lists its own ("2 custom: Gear, Emerg. Lights").
+  Groups with a name start expanded.
+- **Menu:** **Copy Names From Mode N** (per-mode only, for the two other modes) and **Clear All
+  Names** (the mode shown), each followed by a toast with Undo.
+- **Narrow:** the Find row stays its own row; the header keeps only the menu button.
 
 ### A profile that failed to load
 
@@ -355,6 +394,10 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
 - **Wrapping:** the cards wrap and fill their line. A line of buttons asks for about 420 px, less
   than all of them in one line, so the Toggles card shares its line with the Buttons card as in
   the prototype; a card stretched alone keeps its chips at their size.
+- **Custom names:** a control with a [custom name](#names-view) in the active profile, in the mode
+  shown, shows that name with the built-in name smaller beside it; the tooltip and the accessible
+  label give both. The named directions of a hat (POV 1, POV 2, the throttle hat) are listed under
+  its grid ("↑ Pips: SYS").
 - **X52 (non-Pro):** a warning line under the intro, "The X52 input map has not been verified on a
   device yet. Names may not match the controls." ([protocol.md](protocol.md#x52-non-pro)).
 - **POVs:** POV 1, POV 2 and the throttle hat as 3×3 direction grids, the cell the hat points at
@@ -512,6 +555,7 @@ symbolic icon (`com.leinardi.gx52-symbolic`, `.Devel` in development builds).
   opens the list;
 - the GX52 0.7 import deferred: "Close GX52 0.7 to import its profiles";
 - "“DCS World” removed" with Undo;
+- "Names copied from mode 1" and "Names cleared" with Undo ([Names view](#names-view));
 - "Imported “Falcon BMS”" after a profile import, and "Exported “DCS World”" after an export;
 - "Copied to clipboard" after a copy button on a guidance page or dialog;
 - "Still no access to the device" from the udev page's Try Again.
@@ -531,7 +575,7 @@ menu and the tray.
 | Ctrl+Shift+E | Export the selected profile |
 | F2 | Rename the selected profile |
 | Delete | Remove the selected profile (with the confirmation) |
-| Ctrl+1, Ctrl+2, Ctrl+3 | LEDs, MFD, Clocks view |
+| Ctrl+1, Ctrl+2, Ctrl+3, Ctrl+4 | LEDs, MFD, Clocks, Names view |
 | Ctrl+, | Preferences |
 | Ctrl+? | Keyboard Shortcuts |
 | Ctrl+W | Close the window |
@@ -545,8 +589,8 @@ Breakpoints, checked down to 360×294:
   Test input, footer); selecting a profile or "Test input" pushes the content with a back button.
   The view switcher moves from the header bar to an `adw::ViewSwitcherBar` at the bottom, and the
   header bar shows the profile name instead.
-- The LED cards, the MFD display and its rows, the clock groups and the input tester's groups
-  wrap and stack into one column. The mode bar stays at the top of the page.
+- The LED cards, the MFD display and its rows, the clock groups, the name groups and the input
+  tester's groups wrap and stack into one column. The mode bar stays at the top of the page.
 - The window remembers its size and maximised state (GSettings `window-width`, `window-height`,
   `is-maximized`).
 

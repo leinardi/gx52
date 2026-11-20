@@ -388,3 +388,17 @@ fn fill_replaces_known_placeholders_once_and_keeps_the_rest() {
         "{b} and 2, {c} {"
     );
 }
+
+#[test]
+fn a_name_insertion_drops_control_characters_then_fits_the_line() {
+    assert_eq!(
+        accepted_name_insert("", "Emerg.\nLights", ""),
+        "Emerg.Lights"
+    );
+    assert_eq!(accepted_name_insert("A", "\0B\t", ""), "B");
+    assert_eq!(accepted_name_insert("", "\u{7}", ""), "");
+    let paste = "x".repeat(20);
+    assert_eq!(accepted_name_insert("ABCDEFGHIJKL", &paste, ""), "xxxx");
+    let accepted = accepted_name_insert("", "Gear", "");
+    assert!(crate::profile::name_text(&accepted).is_ok());
+}

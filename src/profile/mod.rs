@@ -31,6 +31,7 @@ pub(crate) mod list;
 pub(crate) mod mfd;
 pub(crate) mod migrate;
 pub(crate) mod name;
+pub(crate) mod names;
 pub(crate) mod order;
 pub(crate) mod removals;
 pub(crate) mod reservations;
@@ -39,6 +40,7 @@ pub(crate) mod startup;
 pub(crate) mod store;
 pub(crate) mod writes;
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -50,7 +52,7 @@ use x52::charset::MfdText;
 use x52::clock::{ClockError, FixedOffset, ZoneSource};
 use x52::command::{Brightness, MfdLine};
 use x52::device::DeviceType;
-use x52::input::Mode;
+use x52::input::{Input, Mode};
 use x52::state::{Clock1Settings, DeviceState, Leds, ZoneClockSettings};
 
 use crate::config;
@@ -87,6 +89,31 @@ pub(crate) fn line_text(text: &str) -> Result<MfdText, LineTextError> {
         return Err(LineTextError::TooManyCharacters(chars));
     }
     Ok(MfdText::new(text)?)
+}
+
+/// Why a custom control name cannot be used.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub(crate) enum NameError {
+    /// The name breaks a limit of a custom text line.
+    #[error(transparent)]
+    Line(#[from] LineTextError),
+    /// The name has a control character, which a text field cannot keep (GTK cuts a text at its
+    /// first NUL) and the MFD shows as `?`.
+    #[error("the name has a control character")]
+    ControlCharacter,
+}
+
+/// The MFD text of a custom control name (docs/profiles.md, "Control names"): the limits of a
+/// custom text line, and no control character.
+///
+/// # Errors
+///
+/// [`NameError`] when the name breaks a limit or has a control character.
+pub(crate) fn name_text(text: &str) -> Result<MfdText, NameError> {
+    if text.chars().any(char::is_control) {
+        return Err(NameError::ControlCharacter);
+    }
+    Ok(line_text(text)?)
 }
 
 /// The id of a profile: the stem of its file name, stable for the profile's whole life.
@@ -237,6 +264,9 @@ pub(crate) struct ModeSettings {
     pub(crate) leds: Leds,
     /// What each MFD line shows.
     pub(crate) mfd_lines: [MfdLineSource; MFD_LINES],
+    /// The custom name of each named control (docs/profiles.md, "Control names"). Only controls
+    /// the device type can name are here, and every name is non-blank and passes [`name_text`].
+    pub(crate) names: BTreeMap<Input, String>,
 }
 
 impl ModeSettings {
@@ -250,6 +280,7 @@ impl ModeSettings {
             blink: state.blink,
             leds: state.leds,
             mfd_lines: Default::default(),
+            names: BTreeMap::new(),
         }
     }
 }
@@ -331,8 +362,9 @@ pub(crate) const fn mode_index(mode: Mode) -> usize {
 /// The values the dynamic MFD lines show, as the app knows them right now.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct LiveValues {
-    /// The name of the most recently pressed button still held, if any.
-    pub(crate) last_button: Option<String>,
+    /// The input the "Last button" line shows: the most recently pressed one still held, or a
+    /// wheel notch held on the line.
+    pub(crate) last_input: Option<Input>,
 }
 
 /// The name of `mode`, translated: "Mode 2".
@@ -410,10 +442,12 @@ impl Profile {
             }),
             MfdLineSource::Empty => MfdText::EMPTY,
             MfdLineSource::ProfileName => MfdText::fit(&self.name),
-            MfdLineSource::LastButton => live
-                .last_button
-                .as_deref()
-                .map_or(MfdText::EMPTY, MfdText::fit),
+            MfdLineSource::LastButton => live.last_input.map_or(MfdText::EMPTY, |input| {
+                settings.names.get(&input).map_or_else(
+                    || MfdText::fit(&crate::device::names::input_name(input)),
+                    |name| MfdText::fit(name),
+                )
+            }),
         });
         DeviceState {
             mfd_brightness: settings.mfd_brightness,

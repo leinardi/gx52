@@ -219,6 +219,14 @@ template $GX52Window: Adw.ApplicationWindow {
 
                       child: $GX52ClockEditor clock_editor {};
                     }
+
+                    Adw.ViewStackPage {
+                      name: "names";
+                      title: _("Names");
+                      icon-name: "text-x-generic-symbolic";
+
+                      child: $GX52NamesEditor names_editor {};
+                    }
                   };
                 }
 

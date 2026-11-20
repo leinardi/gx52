@@ -44,7 +44,8 @@ mod imp {
     use crate::config;
     use crate::profile::ProfileKind;
     use crate::widgets::{
-        ClockEditor, DeviceFooter, InputTester, LedEditor, MfdEditor, RowAction, UdevGuide,
+        ClockEditor, DeviceFooter, InputTester, LedEditor, MfdEditor, NamesEditor, RowAction,
+        UdevGuide,
     };
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
@@ -84,6 +85,8 @@ mod imp {
         #[template_child]
         pub clock_editor: TemplateChild<ClockEditor>,
         #[template_child]
+        pub names_editor: TemplateChild<NamesEditor>,
+        #[template_child]
         pub failed_page: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub udev_guide: TemplateChild<UdevGuide>,
@@ -117,6 +120,7 @@ mod imp {
             LedEditor::ensure_type();
             MfdEditor::ensure_type();
             ClockEditor::ensure_type();
+            NamesEditor::ensure_type();
             UdevGuide::ensure_type();
             InputTester::ensure_type();
             klass.bind_template();
@@ -288,7 +292,21 @@ impl Window {
 
     /// Shows the MFD display again, and nothing else: the dynamic lines changed.
     pub(crate) fn refresh_mfd(&self) {
-        self.imp().mfd_editor.refresh_display();
+        let imp = self.imp();
+        imp.mfd_editor.refresh_display();
+        imp.names_editor.refresh_display();
+    }
+
+    /// Shows the Names view's find as waiting for a press, or not.
+    pub(crate) fn show_finding(&self, finding: bool) {
+        self.imp().names_editor.show_finding(finding);
+    }
+
+    /// Shows the Names view with `input`'s name focused: the find pressed it.
+    pub(crate) fn reveal_name(&self, input: x52::input::Input) {
+        let imp = self.imp();
+        imp.view_stack.set_visible_child_name("names");
+        imp.names_editor.reveal_name(input);
     }
 
     /// Shows the live input again in the input tester, and nothing else; the tester does
@@ -608,6 +626,7 @@ impl Window {
             imp.led_editor.show(&state);
             imp.mfd_editor.show(&state);
             imp.clock_editor.show(&state);
+            imp.names_editor.show(&state);
         } else {
             imp.clock_editor.close_zone_dialogs();
         }

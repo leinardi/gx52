@@ -1,0 +1,101 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $GX52NamesEditor: Adw.Bin {
+  child: ScrolledWindow scroller {
+    hscrollbar-policy: never;
+
+    child: Adw.Clamp {
+      maximum-size: 760;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 24;
+        margin-top: 24;
+        margin-bottom: 36;
+        margin-start: 12;
+        margin-end: 12;
+
+        $GX52ModeBar mode_bar {}
+
+        Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Adw.Clamp {
+            maximum-size: 368;
+            tightening-threshold: 368;
+
+            child: $GX52MfdDisplay display {};
+          }
+
+          Label {
+            label: _(
+              "While a name is edited, the display shows its control as if held. Nothing is sent to the device."
+            );
+            wrap: true;
+            justify: center;
+
+            styles [
+              "caption",
+              "dim-label",
+            ]
+          }
+        }
+
+        Adw.PreferencesGroup no_line_group {
+          Adw.ActionRow {
+            icon-name: "dialog-information-symbolic";
+            title: _("Names Aren’t Shown on the MFD");
+            subtitle: _("No MFD line of this mode shows “Last button”, so the device never shows these names.");
+
+            [suffix]
+            Button {
+              label: _("Edit MFD Lines");
+              valign: center;
+              action-name: "win.show-view";
+              action-target: "'mfd'";
+            }
+          }
+        }
+
+        Adw.PreferencesGroup names_group {
+          title: _("Control Names");
+
+          header-suffix: MenuButton menu_button {
+            icon-name: "view-more-symbolic";
+            tooltip-text: _("More Name Actions");
+            valign: center;
+
+            accessibility {
+              label: _("More Name Actions");
+            }
+
+            styles [
+              "flat",
+            ]
+          };
+
+          Adw.ActionRow find_row {
+            icon-name: "input-gaming-symbolic";
+            title: _("Find a Control by Pressing It");
+            activatable: true;
+          }
+
+          Adw.ActionRow finding_row {
+            icon-name: "input-gaming-symbolic";
+            title: _("Press a Control on the Device");
+            subtitle: _("Its name opens here. The mode selector has no name.");
+            visible: false;
+
+            [suffix]
+            Button cancel_find_button {
+              label: _("Cancel");
+              valign: center;
+            }
+          }
+        }
+      };
+    };
+  };
+}

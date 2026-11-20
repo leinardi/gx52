@@ -206,8 +206,14 @@ flowchart LR
     disconnect. A snapshot says what is held but not since when, so its order is fixed: the held
     keys in ascending evdev code order, then the POV 1 directions (up, right, down, left). The
     "last button" after an open is the POV 1 direction if one is held, else the highest key code.
-    A change of the set pushes the state only when the newest entry changed and the set on the
-    device shows a "last button" line, and never logs.
+    The main thread also keeps the notch hold (`device::notch::NotchHold`,
+    [profiles.md](profiles.md#control-names)): a wheel notch pressed is shown in place of the
+    newest held entry until a 0.7 s `glib` timeout fires, another control is pressed (a key, or a
+    POV 1 direction not held before), a snapshot arrives or the set is cleared. The hold follows
+    the kind of change, never a comparison of sets, since a snapshot is not a press. A change
+    pushes the state only when the input shown changed and the set on the device shows a "last
+    button" line, and never logs. The line shows that input's custom name in the mode shown, else
+    its built-in name.
   - The other axes flow only while an input tester is shown. The main thread counts the testers
     that are mapped (`Application::listen_to_axes` and `ignore_axes`) and sends the reader
     `ListenToAxes` on the first and `IgnoreAxes` after the last, so nothing streams while the

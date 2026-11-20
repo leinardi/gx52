@@ -82,12 +82,30 @@ The version is resolved in one place, version-bump-pr's resolve step, and writte
 | `Cargo.toml` | `[package] version` of the root package (`0.0.0` until the first release) |
 | `Cargo.lock` | the `gx52` entry, rewritten by a plain `cargo metadata` resolve, which needs the registry index (the network): nothing else in the lock may change |
 | `meson.build` | `project(..., version: 'X.Y.Z')`; Meson sets it as a constant of `src/config.rs` through the environment of its cargo invocations, so the About dialog shows the same value |
-| `data/com.leinardi.gx52.metainfo.xml.in.in` | a new `<release version="X.Y.Z" date="YYYY-MM-DD">` at the top of `<releases>`, with the `feat` and `fix` subjects since the last `vX.Y.Z` tag; the first release, with no `v` tag yet, gets a fixed description of the rewrite, and the first stable one (`1.0.0`) that description plus two notes for 0.7 users: the manual copy of a source install's profiles and the untested X52 (non-Pro) |
+| `data/com.leinardi.gx52.metainfo.xml.in.in` | a new `<release version="X.Y.Z" date="YYYY-MM-DD">` at the top of `<releases>`, with the `feat` and `fix` subjects since the last `vX.Y.Z` tag, then the `Release-Note:` trailers of those commits (see below); the first release, with no `v` tag yet, gets a fixed description of the rewrite, and the first stable one (`1.0.0`) that description plus two notes for 0.7 users: the manual copy of a source install's profiles and the untested X52 (non-Pro) |
 
 `make -s release-version` prints the version the tree carries; both reusable workflows read it
 with that command. Nothing else may hold a version: the `version` meta-test fails when
 `Cargo.toml`, the `gx52` entry of `Cargo.lock`, `meson.build` and the newest metainfo `<release>`
 disagree.
+
+### Release notes
+
+The notes of an ordinary release are generated, never edited by hand: `make release` merges the
+bump PR, so a hand-written line has no place to go. A note a release needs beyond the `feat` and
+`fix` subjects, such as a compatibility warning, goes into a `Release-Note:` trailer of the commit
+that causes it, on a commit of any type:
+
+```text
+feat(profiles): add control names in schema version 2
+
+Release-Note: Profiles saved by this version are listed in GX52 1.0.x but cannot be loaded or
+ edited there
+```
+
+`release-bump.sh` lists the trailers of every commit since the last `vX.Y.Z` tag, oldest first,
+after the subjects; a value folded over several lines is joined into one. The first release and the
+first stable one keep their fixed descriptions and list no trailer.
 
 A `<release>` of the rewrite whose `vX.Y.Z` tag does not exist was merged but never published (its
 gate failed, see [Recovering a failed run](#recovering-a-failed-run)): the next bump removes it, and
@@ -284,7 +302,7 @@ The diff of a dry run is against `beta` for a `0.x` version, `master` from `1.0.
 
 ## Screenshots
 
-The metainfo lists six screenshots under `data/screenshots/` (not installed), with translatable
+The metainfo lists seven screenshots under `data/screenshots/` (not installed), with translatable
 captions. Their URLs follow the trunk
 (`raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/...`), not the tag: the
 gate mirrors them before the tag exists. A side effect: a later screenshot change on the trunk also
@@ -308,6 +326,7 @@ real change of the UI; look at each changed PNG before committing it. Needs `wes
 | `data/screenshots/leds.png` | the main window with a per-mode profile, on the LEDs page |
 | `data/screenshots/mfd.png` | the MFD page: the display preview and its text |
 | `data/screenshots/clocks.png` | the Clocks page: three clocks in real time zones |
+| `data/screenshots/names.png` | the Names page: custom control names, one focused and previewed on the MFD |
 | `data/screenshots/profiles.png` | the profile list, in the narrow window |
 | `data/screenshots/preferences.png` | Preferences |
 | `data/screenshots/tester.png` | the input tester, with the joystick in a fixed pose |

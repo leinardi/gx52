@@ -8,6 +8,7 @@ data/resources/ui/input-tester.blp
 data/resources/ui/led-editor.blp
 data/resources/ui/mfd-editor.blp
 data/resources/ui/mode-bar.blp
+data/resources/ui/names-editor.blp
 data/resources/ui/preferences-dialog.blp
 data/resources/ui/profile-row.blp
 data/resources/ui/shortcuts-dialog.blp
@@ -18,6 +19,7 @@ data/resources/ui/zone-clock-group.blp
 data/resources/ui/zone-dialog.blp
 src/application.rs
 src/application/autostart.rs
+src/application/editing.rs
 src/application/persistence.rs
 src/device/names.rs
 src/device/status.rs
@@ -28,6 +30,7 @@ src/profile/leds.rs
 src/profile/legacy.rs
 src/profile/mfd.rs
 src/profile/mod.rs
+src/profile/names.rs
 src/profile/schema.rs
 src/tray.rs
 src/widgets/autostart_page.rs
@@ -35,7 +38,9 @@ src/widgets/clock_editor.rs
 src/widgets/input_tester.rs
 src/widgets/led_button.rs
 src/widgets/mfd_editor.rs
+src/widgets/mfd_entry.rs
 src/widgets/mod.rs
+src/widgets/names_editor.rs
 src/widgets/preferences_dialog.rs
 src/widgets/profile_row.rs
 src/widgets/udev_guide.rs

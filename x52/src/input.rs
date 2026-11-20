@@ -108,6 +108,111 @@ pub enum Button {
     Select,
 }
 
+impl Button {
+    /// Every button, in declaration order.
+    pub const ALL: [Self; 39] = [
+        Self::TriggerStage1,
+        Self::TriggerStage2,
+        Self::Fire,
+        Self::ButtonA,
+        Self::ButtonB,
+        Self::ButtonC,
+        Self::Pinkie,
+        Self::ButtonD,
+        Self::ButtonE,
+        Self::T1,
+        Self::T2,
+        Self::T3,
+        Self::T4,
+        Self::T5,
+        Self::T6,
+        Self::MouseButton,
+        Self::ScrollDown,
+        Self::ScrollUp,
+        Self::ScrollPress,
+        Self::Pov2Up,
+        Self::Pov2Right,
+        Self::Pov2Down,
+        Self::Pov2Left,
+        Self::ThrottleHatUp,
+        Self::ThrottleHatRight,
+        Self::ThrottleHatDown,
+        Self::ThrottleHatLeft,
+        Self::Mode1,
+        Self::Mode2,
+        Self::Mode3,
+        Self::Clutch,
+        Self::Function,
+        Self::StartStop,
+        Self::Reset,
+        Self::PageUp,
+        Self::PageDown,
+        Self::Up,
+        Self::Down,
+        Self::Select,
+    ];
+
+    /// The key of this button in a profile's `names` table (docs/profiles.md, "Control names"),
+    /// or `None` for a mode selector position, which has no name.
+    #[must_use]
+    pub const fn key(self) -> Option<&'static str> {
+        Some(match self {
+            Self::TriggerStage1 => "trigger_stage_1",
+            Self::TriggerStage2 => "trigger_stage_2",
+            Self::Fire => "fire",
+            Self::ButtonA => "a",
+            Self::ButtonB => "b",
+            Self::ButtonC => "c",
+            Self::Pinkie => "pinkie",
+            Self::ButtonD => "d",
+            Self::ButtonE => "e",
+            Self::T1 => "t1",
+            Self::T2 => "t2",
+            Self::T3 => "t3",
+            Self::T4 => "t4",
+            Self::T5 => "t5",
+            Self::T6 => "t6",
+            Self::MouseButton => "mouse_button",
+            Self::ScrollDown => "scroll_down",
+            Self::ScrollUp => "scroll_up",
+            Self::ScrollPress => "scroll_press",
+            Self::Pov2Up => "pov_2_up",
+            Self::Pov2Right => "pov_2_right",
+            Self::Pov2Down => "pov_2_down",
+            Self::Pov2Left => "pov_2_left",
+            Self::ThrottleHatUp => "throttle_hat_up",
+            Self::ThrottleHatRight => "throttle_hat_right",
+            Self::ThrottleHatDown => "throttle_hat_down",
+            Self::ThrottleHatLeft => "throttle_hat_left",
+            Self::Clutch => "clutch",
+            Self::Function => "function",
+            Self::StartStop => "start_stop",
+            Self::Reset => "reset",
+            Self::PageUp => "page_up",
+            Self::PageDown => "page_down",
+            Self::Up => "up",
+            Self::Down => "down",
+            Self::Select => "select",
+            Self::Mode1 | Self::Mode2 | Self::Mode3 => return None,
+        })
+    }
+
+    /// Whether this is a notch of a wheel: a press and a release a few milliseconds apart
+    /// (docs/protocol.md, "Buttons"), the scroll wheel's and the two MFD wheels' turns.
+    #[must_use]
+    pub const fn is_wheel_notch(self) -> bool {
+        matches!(
+            self,
+            Self::ScrollUp
+                | Self::ScrollDown
+                | Self::PageUp
+                | Self::PageDown
+                | Self::Up
+                | Self::Down
+        )
+    }
+}
+
 /// An axis of the stick or the throttle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Axis {
@@ -162,6 +267,17 @@ impl Pov1Direction {
             Self::Left => x < 0,
         }
     }
+
+    /// The key of this direction in a profile's `names` table.
+    #[must_use]
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Up => "pov_1_up",
+            Self::Right => "pov_1_right",
+            Self::Down => "pov_1_down",
+            Self::Left => "pov_1_left",
+        }
+    }
 }
 
 /// A control that can be held: a button or a direction of POV 1.
@@ -171,6 +287,28 @@ pub enum Input {
     Button(Button),
     /// A direction of POV 1.
     Pov1(Pov1Direction),
+}
+
+impl Input {
+    /// The key of this input in a profile's `names` table (docs/profiles.md, "Control names"),
+    /// unique among the inputs, or `None` for a mode selector position.
+    #[must_use]
+    pub const fn key(self) -> Option<&'static str> {
+        match self {
+            Self::Button(button) => button.key(),
+            Self::Pov1(direction) => Some(direction.key()),
+        }
+    }
+
+    /// The input whose [`Self::key`] is `key`, or `None` for a key no input has.
+    #[must_use]
+    pub fn from_key(key: &str) -> Option<Self> {
+        Button::ALL
+            .into_iter()
+            .map(Self::Button)
+            .chain(Pov1Direction::ALL.into_iter().map(Self::Pov1))
+            .find(|input| input.key() == Some(key))
+    }
 }
 
 /// The inputs held now, in the order they were pressed: the source of the "last button" MFD line
@@ -508,6 +646,27 @@ impl InputMap {
                 .filter(|(known, _)| *known <= code)
                 .count(),
         )
+    }
+
+    /// Whether `input` can have a custom name on this device type (docs/profiles.md, "Control
+    /// names"): a POV 1 direction, which every device type has (its axes, not a button), or a
+    /// button the device has that is not a mode selector position.
+    #[must_use]
+    pub fn is_nameable(&self, input: Input) -> bool {
+        match input {
+            Input::Pov1(_) => true,
+            Input::Button(button) => !is_mode(input) && self.code_of(button).is_some(),
+        }
+    }
+
+    /// Every input that [`Self::is_nameable`], the buttons in [`Button::ALL`] order, then the
+    /// POV 1 directions.
+    pub fn nameable(&self) -> impl Iterator<Item = Input> {
+        Button::ALL
+            .into_iter()
+            .map(Input::Button)
+            .chain(Pov1Direction::ALL.into_iter().map(Input::Pov1))
+            .filter(|input| self.is_nameable(*input))
     }
 
     /// Whether the device has `axis`.

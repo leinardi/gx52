@@ -96,11 +96,11 @@ fn a_hat_points_at_one_cell_and_opposites_cancel() {
 fn the_tooltip_names_the_number_games_show() {
     let map = InputMap::for_device(DeviceType::X52Pro);
     assert_eq!(
-        tooltip(&map, Button::Fire, 289),
+        tooltip(&map, Button::Fire, 289, None),
         "Button 2 · Fire · evdev code 289"
     );
     assert_eq!(
-        tooltip(&map, Button::Select, 726),
+        tooltip(&map, Button::Select, 726, None),
         "Button 39 · Select · evdev code 726"
     );
 }
@@ -109,12 +109,15 @@ fn the_tooltip_names_the_number_games_show() {
 fn the_summary_lists_the_held_inputs_and_the_mode() {
     let map = InputMap::for_device(DeviceType::X52Pro);
     let mut held = HeldInputs::new();
-    assert_eq!(summary(&map, &held, None), "Buttons pressed: none.");
+    assert_eq!(
+        summary(&map, &held, None, &BTreeMap::new()),
+        "Buttons pressed: none."
+    );
     held.press(Input::Button(Button::ButtonA));
     held.press(Input::Button(Button::Fire));
     held.set_pov1(0, -1);
     assert_eq!(
-        summary(&map, &held, Some(Mode::Two)),
+        summary(&map, &held, Some(Mode::Two), &BTreeMap::new()),
         "Buttons pressed: Fire, A, POV 1 up. Mode 2."
     );
 }
@@ -124,8 +127,8 @@ fn a_mode_change_alone_changes_the_summary() {
     let map = InputMap::for_device(DeviceType::X52Pro);
     let held = HeldInputs::new();
     assert_ne!(
-        summary(&map, &held, Some(Mode::One)),
-        summary(&map, &held, Some(Mode::Three))
+        summary(&map, &held, Some(Mode::One), &BTreeMap::new()),
+        summary(&map, &held, Some(Mode::Three), &BTreeMap::new())
     );
 }
 
@@ -159,4 +162,30 @@ fn a_press_again_before_the_timer_keeps_it_lit() {
     assert_eq!(pulse.show(true, ms(20)), PulseStep::Keep, "still lit");
     assert!(!pulse.expire(), "held when the timer fires");
     assert_eq!(pulse.show(false, ms(400)), PulseStep::PutOut);
+}
+
+#[test]
+fn custom_names_come_with_the_builtin_name() {
+    let map = InputMap::for_device(DeviceType::X52Pro);
+    let button_e = Input::Button(Button::ButtonE);
+    let pips = Input::Pov1(Pov1Direction::Up);
+    let names = BTreeMap::from([
+        (button_e, "Emerg. Lights".to_owned()),
+        (pips, "Pips: SYS".to_owned()),
+        (Input::Button(Button::Pov2Left), "Chaff".to_owned()),
+    ]);
+    let mut held = HeldInputs::new();
+    held.press(button_e);
+    held.press(Input::Button(Button::Fire));
+    assert_eq!(
+        summary(&map, &held, None, &names),
+        "Buttons pressed: Fire, Emerg. Lights (E)."
+    );
+    assert_eq!(
+        tooltip(&map, Button::ButtonE, 295, Some("Emerg. Lights")),
+        "Button 8 · Emerg. Lights (E) · evdev code 295"
+    );
+    assert_eq!(hat_names(Hat::Pov1, &names), ["↑ Pips: SYS"]);
+    assert_eq!(hat_names(Hat::Pov2, &names), ["← Chaff"]);
+    assert!(hat_names(Hat::Throttle, &names).is_empty());
 }

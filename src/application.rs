@@ -28,13 +28,15 @@ use jiff::Timestamp;
 use jiff::tz::TimeZone;
 
 use x52::device::DeviceType;
-use x52::input::{AxisValues, HeldInputs, Mode};
+use x52::input::{AxisValues, HeldInputs, Input, InputMap, Mode};
 use x52::state::DeviceState;
 
 use crate::config;
 use crate::device::mouse_loop::MouseStatus;
+use crate::device::notch::{self, HoldTimer, NOTCH_HOLD, NotchHold};
+use crate::device::reader::HeldChange;
 use crate::device::status::DeviceStatus;
-use crate::device::{DeviceEvent, DeviceService, access, names};
+use crate::device::{DeviceEvent, DeviceService, access};
 use crate::model::{ProfileObject, splice};
 use crate::preferences;
 use crate::profile::legacy::{self, FileWriter};
@@ -107,6 +109,9 @@ mod imp {
     use gtk::{gio, glib};
     use x52::input::{AxisValues, HeldInputs, Mode};
 
+    use crate::device::notch::NotchHold;
+    use crate::profile::names::{NameGenerations, NamesUndo};
+
     use super::autostart::{AutostartSync, HIDDEN, Instance, Launch};
     use crate::config;
     use crate::device::status::DeviceStatus;
@@ -150,6 +155,17 @@ mod imp {
         pub(crate) last_logged: RefCell<Option<(ProfileId, Mode)>>,
         /// The buttons and POV 1 directions held on the selected device.
         pub(crate) held: RefCell<HeldInputs>,
+        /// The wheel notch the "Last button" line holds after its release.
+        pub(crate) notch: Cell<NotchHold>,
+        /// The timer that ends the hold of [`Self::notch`].
+        pub(crate) notch_timer: RefCell<Option<glib::SourceId>>,
+        /// How many names edits each set of mode settings has had, for the Undo of Copy and
+        /// Clear.
+        pub(crate) name_generations: RefCell<NameGenerations>,
+        /// The last Copy or Clear of names and its toast, while its Undo can still apply.
+        pub(crate) names_undo: RefCell<Option<(NamesUndo, adw::Toast)>>,
+        /// The window whose Names view waits for a press on the device to find a control.
+        pub(crate) finding: RefCell<Option<glib::WeakRef<Window>>>,
         /// The other axes of the selected device, known only while an input tester listens.
         pub(crate) axes: RefCell<AxisValues>,
         /// How many input testers are shown; the reader reports the axes while there is one.
@@ -372,6 +388,7 @@ impl Application {
             ("leds", "<Control>1"),
             ("mfd", "<Control>2"),
             ("clocks", "<Control>3"),
+            ("names", "<Control>4"),
         ] {
             self.set_accels_for_action(&format!("win.show-view::{view}"), &[accel]);
         }
@@ -889,6 +906,8 @@ impl Application {
                 imp.active_mode.set(None);
                 self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
+                self.end_notch_hold();
+                self.cancel_find();
                 imp.axes.borrow_mut().clear();
                 if let Some(settings) = imp.settings.get()
                     && let Err(error) =
@@ -909,13 +928,22 @@ impl Application {
                 imp.active_mode.set(None);
                 self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
+                self.end_notch_hold();
+                self.cancel_find();
                 imp.axes.borrow_mut().clear();
             }
             DeviceEvent::InputNode { node: None, .. } => {
                 imp.axes.borrow_mut().clear();
-                self.change_held(HeldInputs::clear);
+                self.change_held(None);
+                self.cancel_find();
             }
-            DeviceEvent::Held { change, .. } => self.change_held(|held| change.apply(held)),
+            DeviceEvent::Held { change, .. } => {
+                let pressed = notch::pressed_input(change, &imp.held.borrow());
+                self.change_held(Some(change));
+                if let Some(input) = pressed {
+                    self.find_pressed(input);
+                }
+            }
             // A change sent before the last tester went is not kept: nothing would update it.
             DeviceEvent::Axes { change, .. } => {
                 if imp.axis_listeners.get() > 0 {
@@ -997,27 +1025,145 @@ impl Application {
         }
     }
 
-    /// Applies `change` to the held inputs; pushes the state when the last held input changed and
-    /// the device shows it, and the editor's display follows. Never logs: this runs per input
-    /// event.
-    fn change_held(&self, change: impl FnOnce(&mut HeldInputs)) {
+    /// Applies `change` to the held inputs and the notch hold, or clears both when it is `None`;
+    /// pushes the state when the input the "Last button" line shows changed and the device shows
+    /// it, and the editor's display follows. Never logs: this runs per input event.
+    fn change_held(&self, change: Option<&HeldChange>) {
         let imp = self.imp();
-        let changed = {
+        let (changed, timer) = {
             let mut held = imp.held.borrow_mut();
-            let before = held.last();
-            change(&mut held);
-            held.last() != before
+            let mut notch = imp.notch.get();
+            let before = notch.shown(&held);
+            let timer = if let Some(change) = change {
+                let timer = notch.apply(change, &held);
+                change.apply(&mut held);
+                timer
+            } else {
+                held.clear();
+                notch.cancel()
+            };
+            imp.notch.set(notch);
+            (notch.shown(&held) != before, timer)
         };
-        if changed && imp.shows_last_button.get() {
+        match timer {
+            HoldTimer::Arm => self.arm_notch_timer(),
+            HoldTimer::Cancel => self.stop_notch_timer(),
+            HoldTimer::Keep => {}
+        }
+        if changed {
+            self.shown_input_changed();
+        }
+    }
+
+    /// Pushes the state when the device shows the "Last button" line, and updates the editor's
+    /// display.
+    fn shown_input_changed(&self) {
+        if self.imp().shows_last_button.get() {
             self.push_desired_state();
             self.update_mfd_previews();
         }
     }
 
+    /// Starts the notch hold's time again.
+    fn arm_notch_timer(&self) {
+        let source = glib::timeout_add_local_once(
+            NOTCH_HOLD,
+            glib::clone!(
+                #[weak(rename_to = app)]
+                self,
+                move || {
+                    let imp = app.imp();
+                    // The source is done: taken, so nothing removes it again.
+                    imp.notch_timer.take();
+                    let mut notch = imp.notch.get();
+                    let changed = {
+                        let held = imp.held.borrow();
+                        let before = notch.shown(&held);
+                        notch.cancel();
+                        notch.shown(&held) != before
+                    };
+                    imp.notch.set(notch);
+                    if changed {
+                        app.shown_input_changed();
+                    }
+                }
+            ),
+        );
+        if let Some(previous) = self.imp().notch_timer.replace(Some(source)) {
+            previous.remove();
+        }
+    }
+
+    /// Stops the notch hold's timer, if it runs.
+    fn stop_notch_timer(&self) {
+        if let Some(source) = self.imp().notch_timer.take() {
+            source.remove();
+        }
+    }
+
+    /// Ends the notch hold without a push: the device selection changed or the device went.
+    fn end_notch_hold(&self) {
+        self.imp().notch.set(NotchHold::default());
+        self.stop_notch_timer();
+    }
+
+    /// Makes `window`'s Names view wait for the next press on the device; a find another window
+    /// started ends.
+    pub(crate) fn start_find(&self, window: &Window) {
+        let previous = self.imp().finding.replace(Some(window.downgrade()));
+        if let Some(previous) = previous.and_then(|previous| previous.upgrade())
+            && previous != *window
+        {
+            previous.show_finding(false);
+        }
+    }
+
+    /// Ends the find, if one waits: its view was left, or the device or its node went.
+    pub(crate) fn cancel_find(&self) {
+        let finding = self.imp().finding.take();
+        if let Some(window) = finding.and_then(|window| window.upgrade()) {
+            window.show_finding(false);
+        }
+    }
+
+    /// Ends the find of `window`, if it waits: its Names view was left or shows another
+    /// profile. A find another window started goes on.
+    pub(crate) fn cancel_find_for(&self, window: &Window) {
+        if self.is_finding(window) {
+            self.cancel_find();
+        }
+    }
+
+    /// Whether `window`'s Names view waits for a press.
+    pub(crate) fn is_finding(&self, window: &Window) -> bool {
+        self.imp()
+            .finding
+            .borrow()
+            .as_ref()
+            .and_then(glib::WeakRef::upgrade)
+            .is_some_and(|finding| finding == *window)
+    }
+
+    /// `input` was pressed on the device: a find that waits ends, and its window shows the
+    /// input's name. An input the device type cannot name leaves the find waiting.
+    fn find_pressed(&self, input: Input) {
+        let Some(device_type) = self.device_status().device_type else {
+            return;
+        };
+        if !InputMap::for_device(device_type).is_nameable(input) {
+            return;
+        }
+        let finding = self.imp().finding.take();
+        if let Some(window) = finding.and_then(|window| window.upgrade()) {
+            window.reveal_name(input);
+        }
+    }
+
     /// The values the dynamic MFD lines show.
     fn live_values(&self) -> LiveValues {
+        let imp = self.imp();
         LiveValues {
-            last_button: self.imp().held.borrow().last().map(names::input_name),
+            last_input: imp.notch.get().shown(&imp.held.borrow()),
         }
     }
 
@@ -1027,6 +1173,7 @@ impl Application {
         &self,
         device_type: DeviceType,
         mode: Mode,
+        live: &LiveValues,
     ) -> Option<(ProfileId, DeviceState)> {
         let imp = self.imp();
         let profiles = imp.profiles.borrow();
@@ -1036,21 +1183,26 @@ impl Application {
             &settings.string(active::settings_key(device_type)),
             device_type,
             mode,
-            &self.live_values(),
+            live,
         )
     }
 
     /// What the editor's simulated MFD shows at `now`, with `local` as the system time zone and
     /// `shown_clock` in the clock area: the shown device type's active profile in the mode shown,
-    /// with or without a device, as the device shows it.
+    /// with or without a device, as the device shows it. While nothing on the device is shown on
+    /// the "Last button" line, `preview_input` is shown there as if held: on this display only,
+    /// never on the device.
     pub(crate) fn mfd_preview(
         &self,
         shown_clock: ShownClock,
         now: Timestamp,
         local: &TimeZone,
+        preview_input: Option<Input>,
     ) -> Option<MfdPreview> {
         let device_type = self.shown_device_type()?;
-        let (_, state) = self.desired_state(device_type, self.shown_mode())?;
+        let mut live = self.live_values();
+        live.last_input = live.last_input.or(preview_input);
+        let (_, state) = self.desired_state(device_type, self.shown_mode(), &live)?;
         // The MODE area shows the selector's position, which the device lights by itself.
         let selector = self.imp().active_mode.get();
         mfd::preview(&state, device_type, selector, shown_clock, now, local)
@@ -1081,7 +1233,7 @@ impl Application {
             return;
         };
         let mode = self.shown_mode();
-        let resolved = self.desired_state(device_type, mode);
+        let resolved = self.desired_state(device_type, mode, &self.live_values());
         let shows_last_button = resolved.as_ref().is_some_and(|(id, _)| {
             self.profile(id).is_some_and(|profile| {
                 profile

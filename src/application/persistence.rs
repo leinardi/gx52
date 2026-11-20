@@ -751,6 +751,9 @@ impl Application {
                 return tracing::warn!("Cannot change the kind of profile {id}: {error}");
             }
         }
+        // The sets are made again: an Undo of names never restores into one.
+        self.imp().name_generations.borrow_mut().bump_profile(id);
+        self.expire_names_undo();
         // A single profile has no mode to pick: the selector's mode is shown.
         if kind == ProfileKind::Single
             && self

@@ -22,6 +22,7 @@
 //! from the controls of [`crate::device::tester`], resolved through the device's input map.
 
 use std::cell::{Cell, RefCell};
+use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -177,6 +178,7 @@ impl InputTester {
         imp.view.borrow().as_ref().is_some_and(|view| {
             view.held.borrow().as_ref() == Some(&(app.held_inputs(), app.selector_mode()))
                 && view.axes_shown.borrow().as_ref() == Some(&app.axis_values())
+                && view.names.borrow().as_ref() == Some(&app.shown_names())
         })
     }
 
@@ -201,7 +203,13 @@ impl InputTester {
 #[derive(Debug)]
 struct Pill {
     input: Input,
+    /// The button's evdev code, for the tooltip.
+    code: u16,
     widget: gtk::Box,
+    /// The label: the custom name, else the built-in label.
+    label: gtk::Label,
+    /// The built-in label, smaller, beside a custom name.
+    builtin: gtk::Label,
     pulse: Cell<Pulse>,
     /// The timer that puts it out once [`tester::MIN_LIT`] has passed.
     timer: RefCell<Option<glib::SourceId>>,
@@ -211,7 +219,19 @@ impl Pill {
     /// The indicator of `button` (evdev `code` in `map`): its label and number, the full name in
     /// the tooltip.
     fn new(map: &InputMap, button: Button, code: u16) -> Rc<Self> {
-        let widget = pill_box(&names::tester_label(button));
+        let builtin_label = names::tester_label(button);
+        let widget = pill_box(&builtin_label);
+        let label = widget
+            .first_child()
+            .and_downcast::<gtk::Label>()
+            .unwrap_or_default();
+        let builtin = gtk::Label::builder()
+            .label(builtin_label)
+            .valign(gtk::Align::Center)
+            .visible(false)
+            .css_classes(["caption", "dimmed"])
+            .build();
+        widget.append(&builtin);
         if let Some(number) = map.button_number(code) {
             let badge = gtk::Label::builder()
                 .label(number.to_string())
@@ -221,10 +241,13 @@ impl Pill {
             widget.prepend(&badge);
             widget.add_css_class("numbered");
         }
-        widget.set_tooltip_text(Some(&tester::tooltip(map, button, code)));
+        widget.set_tooltip_text(Some(&tester::tooltip(map, button, code, None)));
         Rc::new(Self {
             input: Input::Button(button),
+            code,
             widget,
+            label,
+            builtin,
             pulse: Cell::default(),
             timer: RefCell::default(),
         })
@@ -259,6 +282,23 @@ impl Pill {
                 self.timer.replace(Some(timer));
             }
         }
+    }
+
+    /// Shows the custom `name` of the button, with its built-in label beside it, or the built-in
+    /// label alone.
+    fn show_name(&self, map: &InputMap, name: Option<&str>) {
+        let Input::Button(button) = self.input else {
+            return;
+        };
+        self.label
+            .set_label(&name.map_or_else(|| names::tester_label(button), str::to_owned));
+        self.builtin.set_visible(name.is_some());
+        self.widget
+            .set_tooltip_text(Some(&tester::tooltip(map, button, self.code, name)));
+        self.widget
+            .update_property(&[gtk::accessible::Property::Label(&tester::named(
+                self.input, name,
+            ))]);
     }
 
     fn stop_timer(&self) {
@@ -467,8 +507,9 @@ fn build_buttons(map: &InputMap, cards: &adw::WrapBox, pills: &mut Vec<Rc<Pill>>
     buttons_card
 }
 
-/// The POVs card: each hat of `map` as a 3×3 grid of direction cells, in row order.
-fn build_hats(map: &InputMap, cards: &adw::WrapBox) -> Vec<(Hat, Vec<gtk::Box>)> {
+/// The POVs card: each hat of `map` as a 3×3 grid of direction cells, in row order, with the
+/// label of its custom names under it.
+fn build_hats(map: &InputMap, cards: &adw::WrapBox) -> Vec<HatView> {
     let (povs_card, povs) = card(&gettext("POVs"));
     let hat_row = gtk::Box::builder().spacing(18).build();
     let mut hats = Vec::new();
@@ -489,12 +530,37 @@ fn build_hats(map: &InputMap, cards: &adw::WrapBox) -> Vec<(Hat, Vec<gtk::Box>)>
                 cells.push(cell);
             }
         }
-        hat_row.append(&captioned(&grid, &hat.title()));
-        hats.push((hat, cells));
+        let column = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .build();
+        column.append(&captioned(&grid, &hat.title()));
+        let named = gtk::Label::builder()
+            .xalign(0.0)
+            .visible(false)
+            .css_classes(["caption"])
+            .build();
+        column.append(&named);
+        hat_row.append(&column);
+        hats.push(HatView {
+            hat,
+            cells,
+            names: named,
+        });
     }
     povs.append(&hat_row);
     cards.append(&povs_card);
     hats
+}
+
+/// The grid of one hat on the POVs card.
+#[derive(Debug)]
+struct HatView {
+    hat: Hat,
+    /// The direction cells, in row order.
+    cells: Vec<gtk::Box>,
+    /// The custom names of its directions, under the grid.
+    names: gtk::Label,
 }
 
 /// Every indicator of the page, for one device type.
@@ -505,7 +571,7 @@ struct View {
     ministick: Option<(AxisPad, gtk::Label)>,
     pills: Vec<Rc<Pill>>,
     modes: Vec<(Mode, gtk::Box)>,
-    hats: Vec<(Hat, Vec<gtk::Box>)>,
+    hats: Vec<HatView>,
     buttons_card: gtk::Box,
     toggles_card: gtk::Box,
     /// Monotonic time, for how long an indicator has been lit.
@@ -517,6 +583,8 @@ struct View {
     held: RefCell<Option<(HeldInputs, Option<Mode>)>>,
     /// The axes last shown.
     axes_shown: RefCell<Option<AxisValues>>,
+    /// The custom names last shown, `None` until shown.
+    names: RefCell<Option<BTreeMap<Input, String>>>,
 }
 
 impl View {
@@ -541,6 +609,19 @@ impl View {
             summary: RefCell::default(),
             held: RefCell::default(),
             axes_shown: RefCell::default(),
+            names: RefCell::default(),
+        }
+    }
+
+    /// Shows the custom `names` on the indicators and under the hats.
+    fn show_names(&self, names: &BTreeMap<Input, String>) {
+        for pill in &self.pills {
+            pill.show_name(&self.map, names.get(&pill.input).map(String::as_str));
+        }
+        for view in &self.hats {
+            let listed = tester::hat_names(view.hat, names);
+            view.names.set_label(&listed.join("\n"));
+            view.names.set_visible(!listed.is_empty());
         }
     }
 
@@ -551,8 +632,14 @@ impl View {
             self.show_axes(&axes);
             self.axes_shown.replace(Some(axes));
         }
+        let names = app.shown_names();
+        let names_changed = self.names.borrow().as_ref() != Some(&names);
+        if names_changed {
+            self.show_names(&names);
+            self.names.replace(Some(names.clone()));
+        }
         let shown = (app.held_inputs(), app.selector_mode());
-        if self.held.borrow().as_ref() == Some(&shown) {
+        if !names_changed && self.held.borrow().as_ref() == Some(&shown) {
             return;
         }
         let (held, mode) = &shown;
@@ -570,10 +657,10 @@ impl View {
         let description = mode.map(profile::mode_text).unwrap_or_default();
         self.toggles_card
             .update_property(&[gtk::accessible::Property::Description(&description)]);
-        for (hat, cells) in &self.hats {
-            let (column, row) = hat.cell(held);
+        for view in &self.hats {
+            let (column, row) = view.hat.cell(held);
             let lit = usize::try_from(row * 3 + column).ok();
-            for (index, cell) in cells.iter().enumerate() {
+            for (index, cell) in view.cells.iter().enumerate() {
                 if Some(index) == lit && lit != Some(4) {
                     cell.add_css_class("on");
                 } else {
@@ -581,7 +668,7 @@ impl View {
                 }
             }
         }
-        let summary = tester::summary(&self.map, held, *mode);
+        let summary = tester::summary(&self.map, held, *mode, &names);
         if *self.summary.borrow() != summary {
             self.buttons_card
                 .update_property(&[gtk::accessible::Property::Description(&summary)]);

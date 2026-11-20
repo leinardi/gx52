@@ -133,7 +133,7 @@ impl Application {
     /// device type's active profile, as the device shows it.
     pub(crate) fn clocks_preview(&self, now: Timestamp, local: &TimeZone) -> Option<ClocksPreview> {
         let device_type = self.shown_device_type()?;
-        let (_, state) = self.desired_state(device_type, self.shown_mode())?;
+        let (_, state) = self.desired_state(device_type, self.shown_mode(), &self.live_values())?;
         ClocksPreview::of(&state, now, local)
             .inspect_err(|error| tracing::warn!("Cannot show the clocks: {error}"))
             .ok()

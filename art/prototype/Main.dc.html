@@ -139,6 +139,12 @@ body{margin:0}
 .gx-ind.is-on{background:var(--accent-bg-color);color:var(--accent-fg-color)}
 .gx-indgrid{display:grid;grid-template-columns:repeat(3,auto);gap:6px;justify-content:start}
 .gx-btngroups{display:flex;flex-direction:column;gap:12px}
+.gx-builtin{margin-inline-start:6px;font-size:11px;opacity:var(--dim-opacity)}
+.gx-povname{font-size:11px;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.gx-povname.is-on{color:var(--accent-color);font-weight:700}
+.gx-center-text{text-align:center}
+.gx-namenum{min-width:22px;justify-content:center;margin-inline-end:4px}
+.gx-mfd{max-width:100%}
 .gx-btngroup{display:flex;flex-direction:column;gap:6px}
 .gx-subhead{font-weight:700}
 .gx-ind.has-num{padding-left:4px;gap:7px}
@@ -345,7 +351,7 @@ body{margin:0}
                           </section>
                           <section class="card gx-tg gx-tg-small" aria-label="{{togglesAria}}">
                             <h3 class="heading">Toggles</h3>
-                            <div class="gx-indgrid" aria-hidden="true"><sc-for list="{{toggles}}" as="t" hint-placeholder-count="6"><span class="{{t.cls}}" title="{{t.tip}}"><span class="gx-num">{{t.num}}</span>{{t.label}}</span></sc-for></div>
+                            <div class="gx-indgrid" aria-hidden="true"><sc-for list="{{toggles}}" as="t" hint-placeholder-count="6"><span class="{{t.cls}}" title="{{t.tip}}"><span class="gx-num">{{t.num}}</span>{{t.label}}<sc-if value="{{t.hasCustom}}" hint-placeholder-val="{{ false }}"><span class="gx-builtin">{{t.builtin}}</span></sc-if></span></sc-for></div>
                             <h3 class="heading">Mode</h3>
                             <div class="gx-inds" aria-hidden="true"><sc-for list="{{modeInds}}" as="m" hint-placeholder-count="3"><span class="{{m.cls}}" title="{{m.tip}}">{{m.label}}</span></sc-for></div>
                           </section>
@@ -355,7 +361,7 @@ body{margin:0}
                               <sc-for list="{{btnGroups}}" as="g" hint-placeholder-count="3">
                                 <div class="gx-btngroup">
                                   <span class="gx-subhead caption dimmed">{{g.title}}</span>
-                                  <div class="gx-inds"><sc-for list="{{g.items}}" as="b" hint-placeholder-count="7"><span class="{{b.cls}}" title="{{b.tip}}"><span class="gx-num">{{b.num}}</span>{{b.label}}</span></sc-for></div>
+                                  <div class="gx-inds"><sc-for list="{{g.items}}" as="b" hint-placeholder-count="7"><span class="{{b.cls}}" title="{{b.tip}}"><span class="gx-num">{{b.num}}</span>{{b.label}}<sc-if value="{{b.hasCustom}}" hint-placeholder-val="{{ false }}"><span class="gx-builtin">{{b.builtin}}</span></sc-if></span></sc-for></div>
                                 </div>
                               </sc-for>
                             </div>
@@ -364,7 +370,7 @@ body{margin:0}
                             <h3 class="heading">POVs</h3>
                             <div class="gx-povs" aria-hidden="true">
                               <sc-for list="{{povs}}" as="p" hint-placeholder-count="3">
-                                <div class="gx-padcol"><div class="gx-pov"><sc-for list="{{p.cells}}" as="c" hint-placeholder-count="9"><span class="{{c}}"></span></sc-for></div><span class="caption dimmed">{{p.label}}</span></div>
+                                <div class="gx-padcol"><div class="gx-pov"><sc-for list="{{p.cells}}" as="c" hint-placeholder-count="9"><span class="{{c}}"></span></sc-for></div><span class="caption dimmed">{{p.label}}</span><sc-for list="{{p.named}}" as="n" hint-placeholder-count="0"><span class="{{n.cls}}">{{n.text}}</span></sc-for></div>
                               </sc-for>
                             </div>
                           </section>
@@ -452,7 +458,7 @@ body{margin:0}
                             <x-import component-from-global-scope="Adw.ToggleGroup" items="{{clockItems}}" selected="{{mfdClock}}" on-select="{{onMfdClock}}" label="Clock shown on the simulated display"></x-import>
                             <span class="caption dimmed">Clock 1 is shown by default. Start/Stop and Reset on the throttle cycle the clocks on the device.</span>
                           </div>
-                          <x-import component-from-global-scope="Adw.PreferencesGroup" title="Lines">
+                          <x-import component-from-global-scope="Adw.PreferencesGroup" title="Lines" description="{{linesDesc}}">
                             <sc-for list="{{lineRows}}" as="lr" hint-placeholder-count="3">
                               <x-import component-from-global-scope="Adw.ComboRow" title="{{lr.title}}" items="{{lineSourceItems}}" selected="{{lr.sel}}" on-select="{{lr.onSelect}}"></x-import>
                               <sc-if value="{{lr.isText}}" hint-placeholder-val="{{ false }}">
@@ -501,6 +507,56 @@ body{margin:0}
                           </sc-for>
                           <x-import component-from-global-scope="Adw.PreferencesGroup" title="Date">
                             <x-import component-from-global-scope="Adw.ComboRow" title="Date Format" items="{{dateItems}}" selected="{{clk.dateSel}}" on-select="{{onDateFormat}}"></x-import>
+                          </x-import>
+                        </sc-if>
+                        <sc-if value="{{vNames}}" hint-placeholder-val="{{ false }}">
+                          <div class="gx-mfdbox">
+                            <div class="{{mfd.cls}}" role="img" aria-label="{{mfd.aria}}">
+                              <div class="gx-mfd-top" aria-hidden="true">
+                                <div class="gx-mfd-modebox">
+                                  <div class="gx-mfd-modecol">
+                                    <span class="gx-mfd-modelbl">MODE</span>
+                                    <span class="{{mfd.shiftCls}}">SHIFT</span>
+                                  </div>
+                                  <sc-for list="{{mfd.modes}}" as="md" hint-placeholder-count="3"><span class="{{md.cls}}">{{md.n}}</span></sc-for>
+                                </div>
+                              </div>
+                              <div class="gx-mfd-text" aria-hidden="true">
+                                <sc-for list="{{mfd.lines}}" as="ln" hint-placeholder-count="3">
+                                  <div class="gx-mfdline"><sc-for list="{{ln}}" as="ch" hint-placeholder-count="16"><span class="gx-mfdcell">{{ch}}</span></sc-for></div>
+                                </sc-for>
+                              </div>
+                              <div class="gx-mfd-bottom" aria-hidden="true" style="position: relative; display: flex; justify-content: center; align-items: center">
+                                <svg class="gx-mfd-clockicon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true" style="position: absolute; left: 0px; top: 50%; transform: translateY(-50%)"><circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M12 7 L15 16 L23 11" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg>
+                                <span class="gx-mfd-time">{{mfd.time}}<small>{{mfd.ampm}}</small></span>
+                              </div>
+                              <div class="gx-mfd-date" aria-hidden="true">{{mfd.dateShown}}</div>
+                            </div>
+                            <span class="caption dimmed gx-center-text" aria-live="polite">{{names.previewNote}}</span>
+                          </div>
+                          <sc-if value="{{names.noLastLine}}" hint-placeholder-val="{{ false }}">
+                            <x-import component-from-global-scope="Adw.PreferencesGroup">
+                              <x-import component-from-global-scope="Adw.ActionRow" icon="dialog-information" title="Names aren’t shown on the MFD" subtitle="{{names.noLastLineText}}">
+                                <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" label="Edit MFD Lines" valign="center" on-click="{{names.goToLines}}"></x-import></x-import>
+                              </x-import>
+                            </x-import>
+                          </sc-if>
+                          <x-import component-from-global-scope="Adw.PreferencesGroup" title="Control Names" description="{{names.summary}}" suffix="{{names.headerSuffix}}">
+                            <sc-if value="{{names.notFinding}}" hint-placeholder-val="{{ true }}">
+                              <x-import component-from-global-scope="Adw.ActionRow" icon="input-gaming" title="Find a Control by Pressing It" subtitle="{{names.findSubtitle}}" activatable="{{yes}}" disabled="{{names.findDisabled}}" on-activate="{{names.startFind}}"></x-import>
+                            </sc-if>
+                            <sc-if value="{{names.finding}}" hint-placeholder-val="{{ false }}">
+                              <x-import component-from-global-scope="Adw.ActionRow" icon="input-gaming" title="Press a control on the device" subtitle="Its name opens here. The mode selector has no name.">
+                                <x-import component-from-global-scope="Adw.Slot" name="suffix"><x-import component-from-global-scope="Adw.Button" label="Cancel" valign="center" on-click="{{names.cancelFind}}"></x-import></x-import>
+                              </x-import>
+                            </sc-if>
+                            <sc-for list="{{names.groups}}" as="g" hint-placeholder-count="7">
+                              <x-import component-from-global-scope="Adw.ExpanderRow" title="{{g.title}}" subtitle="{{g.summary}}" expanded="{{g.expanded}}" on-toggle="{{g.onToggle}}">
+                                <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="6">
+                                  <x-import component-from-global-scope="Adw.EntryRow" id="{{r.id}}" title="{{r.title}}" value="{{r.value}}" status="{{r.status}}" prefix="{{r.prefix}}" suffix="{{r.suffix}}" on-change="{{r.onChange}}"></x-import>
+                                </sc-for>
+                              </x-import>
+                            </sc-for>
                           </x-import>
                         </sc-if>
                       </div>
@@ -601,6 +657,7 @@ body{margin:0}
             <x-import component-from-global-scope="Adw.ShortcutsItem" title="LEDs View" accelerator="{{acc.v1}}"></x-import>
             <x-import component-from-global-scope="Adw.ShortcutsItem" title="MFD View" accelerator="{{acc.v2}}"></x-import>
             <x-import component-from-global-scope="Adw.ShortcutsItem" title="Clocks View" accelerator="{{acc.v3}}"></x-import>
+            <x-import component-from-global-scope="Adw.ShortcutsItem" title="Names View" accelerator="{{acc.v4}}"></x-import>
           </x-import>
           <x-import component-from-global-scope="Adw.ShortcutsSection" title="General">
             <x-import component-from-global-scope="Adw.ShortcutsItem" title="Preferences" accelerator="{{acc.prefs}}"></x-import>
@@ -748,6 +805,44 @@ var BTN_GROUPS = [
   { title: 'Throttle', codes: [294, 295, 718, 303, 705, 704, 706] },
   { title: 'MFD', codes: [719, 720, 721, 722, 723, 724, 725, 726] }
 ];
+/* Controls that can have a custom name, grouped as on the hardware. The mode selector positions are never named. */
+var NAME_GROUPS = [
+  { key: 'stick', title: 'Stick', codes: [288, 302, 289, 290, 291, 292, 293] },
+  { key: 'throttle', title: 'Throttle', codes: [294, 295, 718, 303, 706, 705, 704] },
+  { key: 'toggles', title: 'Toggle Switches', codes: [296, 297, 298, 299, 300, 301] },
+  { key: 'pov1', title: 'POV 1', codes: ['pov1-up', 'pov1-right', 'pov1-down', 'pov1-left'] },
+  { key: 'pov2', title: 'POV 2', codes: [707, 708, 709, 710] },
+  { key: 'hat', title: 'Throttle Hat', codes: [711, 712, 713, 714] },
+  { key: 'mfd', title: 'MFD', codes: [719, 720, 721, 722, 723, 724, 725, 726] }
+];
+/* Wheel notches arrive as short presses: their names only flash on the MFD. */
+var PULSE_CODES = { 704: 1, 705: 1, 722: 1, 723: 1, 724: 1, 725: 1 };
+var ARROWS = { up: '↑', right: '→', down: '↓', left: '←' };
+/* The X52 (non-Pro) has no MFD wheels and no Select: 35 nameable controls instead of 40. */
+var X52_MISSING = { 722: 1, 723: 1, 724: 1, 725: 1, 726: 1 };
+function hasControl(type, code) { return !(type === 'x52' && X52_MISSING[code]); }
+function holdOptionsFor(type) { return HOLD_OPTIONS.filter(function (o) { return hasControl(type, o.code); }); }
+function ctrlInfo(code) {
+  if (typeof code === 'string' && code.indexOf('pov1-') === 0) { var d = code.slice(5); return { num: null, badge: ARROWS[d], name: 'POV 1 ' + d, short: 'POV 1 ' + d }; }
+  var b = btnInfo(code); return b ? { num: b.num, badge: String(b.num), name: b.name, short: b.short } : null;
+}
+function groupOf(code) { for (var i = 0; i < NAME_GROUPS.length; i++) if (NAME_GROUPS[i].codes.indexOf(code) >= 0) return NAME_GROUPS[i]; return null; }
+/* MFD text entry, shared by Custom text lines and control names: at most 16 bytes after conversion to the MFD
+   character set and 64 characters as typed. Typing stops at the limit; a paste is cut to the room left. */
+function mfdBytes(t) { return convert(t).chars.length; }
+function fitsMfd(t) { return Array.from(t || '').length <= 64 && mfdBytes(t) <= 16; }
+function fitMfdText(prev, next) {
+  prev = prev || ''; next = next || '';
+  if (fitsMfd(next)) return next;
+  var a = Array.from(prev), b = Array.from(next), i = 0, j = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++;
+  var head = b.slice(0, i), tail = b.slice(b.length - j), mid = b.slice(i, b.length - j), out = head.concat(tail);
+  for (var k = 1; k <= mid.length; k++) { var t = head.concat(mid.slice(0, k), tail); if (!fitsMfd(t.join(''))) break; out = t; }
+  return fitsMfd(out.join('')) ? out.join('') : prev;
+}
+/* A whitespace-only name counts as empty. */
+function isNamed(v) { return !!(v && String(v).trim()); }
 var HOLD_OPTIONS = (function () {
   var o = [];
   BUTTONS.forEach(function (b) { if (b[0] < 715 || b[0] > 717) o.push({ code: b[0], name: b[1] }); });
@@ -766,7 +861,7 @@ var GLYPHS = (function () {
 })();
 function convert(str) {
   var out = [], reps = [];
-  Array.from(str || '').forEach(function (ch) {
+  Array.from(String(str || '').normalize('NFC')).forEach(function (ch) {
     if (GLYPHS[ch]) { out.push(ch); return; }
     var base = ch.normalize('NFD').replace(/[̀-ͯ]/g, '');
     var r = (Array.from(base).length === 1 && GLYPHS[base]) ? base : '?';
@@ -819,7 +914,7 @@ function zoneCity(z) { for (var i = 0; i < ZONES.length; i++) if (ZONES[i][2] ==
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function leds(fire, thr, a, b, d, e, t1, t3, t5, pov2, i) { return { fire: fire, throttle: thr, a: a, b: b, d: d, e: e, t1_t2: t1, t3_t4: t3, t5_t6: t5, pov_2: pov2, i: i }; }
 function L(source, text) { return { source: source, text: text || '' }; }
-function MS(ledB, mfdB, l, lines, opts) { var m = { ledB: ledB, mfdB: mfdB, shift: false, blink: false, leds: l, lines: lines }; if (opts) Object.keys(opts).forEach(function (k) { m[k] = opts[k]; }); return m; }
+function MS(ledB, mfdB, l, lines, opts) { var m = { ledB: ledB, mfdB: mfdB, shift: false, blink: false, leds: l, lines: lines, names: {} }; if (opts) Object.keys(opts).forEach(function (k) { m[k] = opts[k]; }); return m; }
 function builtinLeds() { return leds('on', 'on', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green'); }
 function builtinMS() { return MS(128, 128, builtinLeds(), [L('empty'), L('empty'), L('empty')]); }
 function builtinClocks() { return [{ source: 'local', h24: true }, { type: 'offset', zone: 'America/New_York', offset: -240, h24: true }, { type: 'offset', zone: 'Asia/Shanghai', offset: 480, h24: true }]; }
@@ -833,15 +928,15 @@ function uid() { _n += 1; return 'f' + Math.random().toString(16).slice(2, 10) +
 function seedProfiles() {
   var def = P('x52-pro-default', 'Default', 'single', [MS(128, 128, builtinLeds(), [L('text', 'GX52'), L('profile_name'), L('last_button')])], null, 'yy-mm-dd', { isDefault: true });
   var dcs = P('6f1c2a90-4b7e-4d2a-9e51-0c3a7b1d2e44', 'DCS World', 'per_mode', [
-    MS(64, 96, leds('on', 'on', 'green', 'green', 'red', 'red', 'amber', 'amber', 'amber', 'green', 'off'), [L('text', 'GX52'), L('last_button'), L('profile_name')]),
-    MS(96, 112, leds('on', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'amber'), [L('text', 'MASTER ARM'), L('profile_name'), L('last_button')], { shift: true }),
-    MS(48, 80, leds('off', 'on', 'amber', 'amber', 'green', 'green', 'green', 'off', 'off', 'amber', 'green'), [L('text', 'GEAR / FLAPS'), L('profile_name'), L('last_button')], { blink: true })
+    MS(64, 96, leds('on', 'on', 'green', 'green', 'red', 'red', 'amber', 'amber', 'amber', 'green', 'off'), [L('text', 'GX52'), L('last_button'), L('profile_name')], { names: { 294: 'Gear', 295: 'Emerg. Lights', 707: 'Flaps up', 709: 'Flaps down' } }),
+    MS(96, 112, leds('on', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'amber'), [L('text', 'MASTER ARM'), L('profile_name'), L('last_button')], { shift: true, names: { 289: 'Gun', 290: 'Missile', 291: 'Bomb', 295: 'Chaff/Flare', 302: 'Gun burst' } }),
+    MS(48, 80, leds('off', 'on', 'amber', 'amber', 'green', 'green', 'green', 'off', 'off', 'amber', 'green'), [L('text', 'GEAR / FLAPS'), L('profile_name'), L('last_button')], { blink: true, names: { 294: 'Gear', 718: 'Wheel brakes', 707: 'Flaps up', 709: 'Flaps down' } })
   ], [{ source: 'local', h24: true }, { type: 'zone', zone: 'Europe/Rome', offset: 60, h24: true }, { type: 'offset', zone: 'Asia/Kathmandu', offset: 345, h24: false }], 'dd-mm-yy');
   var elite = P('b2e4c8d1-7a3f-4e90-8c21-5d6f7a8b9c0d', 'Elite Dangerous', 'single', [
-    MS(96, 112, leds('on', 'on', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'green'), [L('text', 'o7 CMDR'), L('last_button'), L('profile_name')])
+    MS(96, 112, leds('on', 'on', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'amber', 'green'), [L('text', 'o7 CMDR'), L('last_button'), L('profile_name')], { names: { 290: 'Boost', 291: 'FSD', 294: 'Landing gear', 295: 'Cargo scoop', 'pov1-up': 'Pips: SYS', 'pov1-left': 'Pips: ENG', 'pov1-right': 'Pips: WEP' } })
   ], [{ source: 'utc', h24: true }, { type: 'zone', zone: 'America/New_York', offset: -300, h24: true }, { type: 'zone', zone: 'Asia/Tokyo', offset: 540, h24: true }], 'yy-mm-dd');
   var night = P('c9d10e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f', 'Night flying', 'per_mode', [
-    MS(16, 8, leds('off', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'off'), [L('text', 'Éjszakai repülő'), L('profile_name'), L('empty')]),
+    MS(16, 8, leds('off', 'off', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'off'), [L('text', 'Éjszakai repülő'), L('profile_name'), L('empty')], { names: { 718: 'NVG' } }),
     MS(8, 4, leds('off', 'off', 'off', 'off', 'red', 'red', 'off', 'off', 'off', 'off', 'off'), [L('text', 'DARK'), L('empty'), L('empty')]),
     MS(24, 16, leds('off', 'off', 'amber', 'amber', 'off', 'off', 'off', 'off', 'off', 'off', 'off'), [L('last_button'), L('empty'), L('profile_name')])
   ], [{ source: 'local', h24: true }, { type: 'offset', zone: 'America/New_York', offset: -240, h24: true }, { type: 'zone', zone: 'Asia/Tokyo', offset: 540, h24: true }], 'dd-mm-yy');
@@ -863,7 +958,7 @@ class Component extends DCLogic {
     this.state = {
       theme: 'light', narrow: false, showContent: true,
       connected: true, devType: 'x52-pro', lastType: 'x52-pro', permission: true, x52d: false,
-      mode: 2, editMode: 2, holdIdx: 1, holding: false, moveAxes: true, t: 0, now: Date.now(),
+      mode: 2, editMode: 2, holdCode: 289, holding: false, moveAxes: true, t: 0, now: Date.now(),
       profiles: seedProfiles(), active: { 'x52-pro': '6f1c2a90-4b7e-4d2a-9e51-0c3a7b1d2e44', 'x52': 'x52-default' }, viewId: null,
       page: 'profile', view: 'leds',
       renaming: null, renameValue: '',
@@ -874,14 +969,14 @@ class Component extends DCLogic {
       toast: null, removed: null,
       prefs: { runBg: true, startLogin: false, mouse: false, speed: 0.6, curve: 1.6, deadzone: 1, invert: false },
       uinputOk: false, trayHost: true, windowShown: true, running: true,
-      bgPerm: 'allowed', loginPending: false, loginFail: null, loginNotice: false, loginRetryFailed: false, prefsSub: [],
+      bgPerm: 'allowed', loginPending: false, loginFail: null, loginNotice: false, loginRetryFailed: false, prefsSub: [], namesOpen: {}, findMode: false, namePreview: null, lastPulse: null,
       dragId: null, dropId: null, dropAfter: false
     };
     ['onKey', 'onShowContentChange', 'endDrag', 'cancelLongPress', 'onRenameChange', 'commitRename', 'onRenameKey', 'renameRef',
      'openTest', 'openFullGuide', 'tryAgain', 'copyUdevRule', 'copyUdevCmd', 'copyX52dCmd', 'showFile', 'removeViewed',
      'onEditMode', 'onLedB', 'onBlink', 'closeLedPop', 'onLedPick', 'onMfdClock', 'onMfdB', 'onShift', 'onC1Source', 'onC1H24', 'onDateFormat',
      'onAlertResponse', 'closeDetails', 'closeX52d', 'closeTz', 'closePrefs', 'closeShortcuts', 'closeAbout',
-     'onRunBg', 'onStartLogin', 'openLoginHelp', 'onPrefsSub', 'turnOnLoginElsewhere', 'onBgPerm', 'simulateLoginStart', 'retryLogin', 'onMouse', 'onSpeed', 'onCurve', 'onDeadzone', 'onInvert', 'openUinputHelp',
+     'onRunBg', 'onStartLogin', 'onFindToggle', 'cancelFind', 'openLoginHelp', 'onPrefsSub', 'turnOnLoginElsewhere', 'onBgPerm', 'simulateLoginStart', 'retryLogin', 'onMouse', 'onSpeed', 'onCurve', 'onDeadzone', 'onInvert', 'openUinputHelp',
      'onToastAction', 'dismissToast', 'showWindow', 'onDevice', 'onPermission', 'onX52d', 'forgetDevice', 'onStickMode', 'onHoldPick', 'onHolding', 'onMoveAxes',
      'import07Ok', 'import07Problems', 'import07Deferred', 'addDamaged', 'addNewer', 'startImport', 'importWrongType', 'importNewer', 'onUinput', 'onTrayHost', 'onTheme', 'onNarrow',
      'onTzQuery'].forEach(function (n) { self[n] = self[n].bind(self); });
@@ -1139,7 +1234,7 @@ class Component extends DCLogic {
     if (ctrl && !e.shiftKey && (k === 'n' || k === 'N')) this.newProfile('single');
     else if (ctrl && (k === 'o' || k === 'O')) this.startImport();
     else if (ctrl && e.shiftKey && (k === 'e' || k === 'E')) { if (sel) this.exportProfile(sel); }
-    else if (ctrl && (k === '1' || k === '2' || k === '3')) this.setState({ view: ['leds', 'mfd', 'clocks'][+k - 1] });
+    else if (ctrl && (k === '1' || k === '2' || k === '3' || k === '4')) this.setState({ view: ['leds', 'mfd', 'clocks', 'names'][+k - 1] });
     else if (ctrl && k === ',') this.setState({ prefsOpen: true });
     else if (ctrl && (k === '?' || (e.shiftKey && k === '/'))) this.setState({ shortcutsOpen: true });
     else if (ctrl && (k === 'w' || k === 'W')) this.closeWindow();
@@ -1233,7 +1328,8 @@ class Component extends DCLogic {
   onDevice(i) {
     var connected = i !== 0, devType = i === 2 ? 'x52' : 'x52-pro';
     this.setState(function (s) {
-      var r = { connected: connected, devType: connected ? devType : s.devType, viewId: null, renaming: null, ledPopOpen: false, menuOpen: null };
+      var r = { connected: connected, devType: connected ? devType : s.devType, viewId: null, renaming: null, ledPopOpen: false, menuOpen: null, lastPulse: null };
+      if (!connected) r.findMode = false;
       if (connected && s.permission) { r.lastType = devType; r.fullGuide = false; }
       return r;
     });
@@ -1242,8 +1338,57 @@ class Component extends DCLogic {
   onX52d(v) { this.setState({ x52d: v }); }
   forgetDevice() { this.setState({ lastType: null, connected: false, fullGuide: false, page: 'profile', viewId: null }); }
   onStickMode(i) { this.setState({ mode: i + 1, editMode: i + 1 }); }
-  onHoldPick(i) { this.setState({ holdIdx: i }); }
-  onHolding(v) { this.setState({ holding: v }); }
+  holdList() { return holdOptionsFor(this.typeOf(this.state) || 'x52-pro'); }
+  heldOption() { var l = this.holdList(), c = this.state.holdCode; for (var i = 0; i < l.length; i++) if (l[i].code === c) return l[i]; return l[0]; }
+  onHoldPick(i) { var o = this.holdList()[i]; if (!o) return; this.setState({ holdCode: o.code }); if (this.state.holding) this.pressed(o); }
+  onHolding(v) { this.setState({ holding: v }); if (v) this.pressed(this.heldOption()); }
+  /* A control went down. A wheel notch is a short pulse, so "Last button" keeps its name for 0.7 s (another notch
+     restarts the time). Any other press ends it at once; that control's name then clears on release. */
+  pressed(opt) {
+    var self = this; if (!opt || !this.state.connected) return;
+    clearTimeout(this._pulseT);
+    if (PULSE_CODES[opt.code]) {
+      this.setState({ lastPulse: { code: opt.code, until: Date.now() + 700 } });
+      this._pulseT = setTimeout(function () { self.setState({ lastPulse: null }); }, 700);
+    } else {
+      this.setState({ lastPulse: null });
+    }
+    if (this.state.findMode) this.findControl(opt.code);
+  }
+  findControl(code) {
+    var g = groupOf(code); if (!g) return;
+    var open = Object.assign({}, this.state.namesOpen); open[g.key] = true;
+    this.setState({ findMode: false, namePreview: code, namesOpen: open, view: 'names', page: 'profile', viewId: null });
+    setTimeout(function () {
+      var el = document.getElementById('name-' + code); if (!el) return;
+      try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+      var text = el.querySelector('input, [role="textbox"]');
+      /* the row draws its text until it gets focus, then shows its input */
+      if (text && text.tagName !== 'INPUT') { try { text.focus(); } catch (e) {} }
+      var tries = 0;
+      (function focusInput() { var i = el.querySelector('input'); if (i) { i.focus(); return; } if (tries++ < 10) setTimeout(focusInput, 40); })();
+    }, 180);
+  }
+  onFindToggle(v) { this.setState({ findMode: v }); }
+  cancelFind() { this.setState({ findMode: false }); }
+  setName(code, v) {
+    var inf = this.info(this.state), cur = inf.view ? (((inf.view.modes[inf.msIdx] || {}).names || {})[code] || '') : '';
+    var val = fitMfdText(cur, v);
+    this.updateMS(function (m) { m.names = m.names || {}; if (val) m.names[code] = val; else delete m.names[code]; });
+    this.setState({ namePreview: code });
+  }
+  copyNamesFrom(mode) {
+    var self = this, inf = this.info(this.state); if (!inf.view) return;
+    var before = clone((inf.view.modes[inf.msIdx] || {}).names || {}), src = clone((inf.view.modes[mode - 1] || {}).names || {});
+    this.updateMS(function (m) { m.names = src; });
+    this.showToast({ title: 'Copied names from mode ' + mode, actionLabel: 'Undo', action: function () { self.updateMS(function (m) { m.names = before; }); } });
+  }
+  clearNames() {
+    var self = this, inf = this.info(this.state); if (!inf.view) return;
+    var before = clone((inf.view.modes[inf.msIdx] || {}).names || {});
+    this.updateMS(function (m) { m.names = {}; });
+    this.showToast({ title: 'Custom names cleared', actionLabel: 'Undo', action: function () { self.updateMS(function (m) { m.names = before; }); } });
+  }
   onMoveAxes(v) { this.setState({ moveAxes: v }); }
   onUinput(v) { this.setState({ uinputOk: v }); }
   onTrayHost(v) { this.setState({ trayHost: v }); }
@@ -1259,11 +1404,10 @@ class Component extends DCLogic {
     var active = inf.active, view = inf.view;
 
     /* held buttons */
-    var holdOpt = HOLD_OPTIONS[s.holdIdx] || HOLD_OPTIONS[0];
+    var holdOpt = this.heldOption(), holdList = this.holdList();
     var held = {};
     if (s.connected && s.holding) { held[holdOpt.code] = 1; if (holdOpt.code === 302) held[288] = 1; }
     if (s.connected) held[714 + s.mode] = 1;
-    var lastBtn = (s.connected && s.holding) ? holdOpt.name : '';
 
     /* status */
     var status;
@@ -1346,7 +1490,7 @@ class Component extends DCLogic {
     }
 
     /* view switcher */
-    var vpages = [{ name: 'leds', title: 'LEDs', icon: 'display-brightness' }, { name: 'mfd', title: 'MFD', icon: 'video-display' }, { name: 'clocks', title: 'Clocks', icon: 'preferences-system-time' }];
+    var vpages = [{ name: 'leds', title: 'LEDs', icon: 'display-brightness' }, { name: 'mfd', title: 'MFD', icon: 'video-display' }, { name: 'clocks', title: 'Clocks', icon: 'preferences-system-time' }, { name: 'names', title: 'Names', icon: 'insert-text' }];
     var onView = function (n) { self.setState({ view: n, ledPopOpen: false }); };
     var hdr = { type: 'HeaderBar' };
     if (!s.narrow) hdr.titleWidget = { type: 'ViewSwitcher', policy: 'wide', pages: vpages, selected: s.view, onSelect: onView, label: 'Editor views' };
@@ -1359,6 +1503,14 @@ class Component extends DCLogic {
 
     /* editor data */
     var m = view && view.modes ? (view.modes[inf.msIdx] || view.modes[0]) : builtinMS();
+    var mNames = m.names || {};
+    function shownName(code) { var c = ctrlInfo(code); return isNamed(mNames[code]) ? mNames[code] : (c ? c.name : ''); }
+    var holdingNamed = s.connected && s.holding && !PULSE_CODES[holdOpt.code];
+    var pulsing = s.connected && s.lastPulse && Date.now() < s.lastPulse.until;
+    var lastBtn = holdingNamed ? shownName(holdOpt.code) : pulsing ? shownName(s.lastPulse.code) : '';
+    var previewing = s.view === 'names' && !holdingNamed && !pulsing && s.namePreview != null;
+    if (previewing) lastBtn = shownName(s.namePreview);
+    var lastLineIdx = -1; for (var lx = 0; lx < 3; lx++) if (m.lines[lx] && m.lines[lx].source === 'last_button' && lastLineIdx < 0) lastLineIdx = lx;
     var bright0 = m.ledB === 0;
     var ledCards = LED_CARDS.map(function (card) {
       return {
@@ -1393,15 +1545,15 @@ class Component extends DCLogic {
       var cells = []; for (var ci = 0; ci < 16; ci++) cells.push(shown[ci] || ' ');
       lineChars.push(cells);
       (function (idx, ln) {
-        var tc = convert(ln.text), n = Math.min(16, tc.chars.length);
+        var tc = convert(ln.text), n = tc.chars.length;
         lineRows.push({
           title: 'Line ' + (idx + 1), sel: LINE_SOURCES.indexOf(ln.source) < 0 ? LINE_SOURCES.indexOf('empty') : LINE_SOURCES.indexOf(ln.source), isText: ln.source === 'text',
           textTitle: 'Line ' + (idx + 1) + ' text', text: ln.text, status: tc.reps.length ? 'warning' : undefined,
           hasReps: tc.reps.length > 0, reps: tc.reps.join(', '), repsTip: 'These characters are not on the MFD and are shown as their replacement',
-          count: n + '/16', countCls: 'caption numeric dimmed', countAria: n + ' of 16 characters',
+          count: n + '/16', countCls: 'caption numeric dimmed', countAria: n + ' of 16 bytes on the MFD',
           onSelect: function (i) { self.setLine(idx, { source: LINE_SOURCES[i] }); },
           /* each character converts to one MFD byte, so stop accepting input at 16 */
-          onText: function (v) { self.setLine(idx, { text: Array.from(v || '').slice(0, 16).join('') }); }
+          onText: function (v) { self.setLine(idx, { text: fitMfdText(ln.text, v) }); }
         });
       })(li, ln);
     }
@@ -1465,22 +1617,83 @@ class Component extends DCLogic {
       miniAria: 'Ministick: X ' + MX + ', Y ' + MY
     };
     function ind(code, label) { var b = btnInfo(code); return { cls: 'gx-ind' + (held[code] ? ' is-on' : ''), label: label || (b.short + ' · ' + b.num), tip: b.name + ' · button ' + b.num + ' · evdev code ' + code }; }
-    var toggles = [296, 298, 300, 297, 299, 301].map(function (c) { var b = btnInfo(c); return { cls: 'gx-ind has-num' + (held[c] ? ' is-on' : ''), num: String(b.num), label: b.short, tip: 'Button ' + b.num + ' · ' + b.name + ' · evdev code ' + c }; });
+    var activeNames = active && active.modes ? ((active.modes[active.kind === 'per_mode' ? s.mode - 1 : 0] || {}).names || {}) : {};
+    function namedPill(c) {
+      var b = btnInfo(c), cn = isNamed(activeNames[c]) ? activeNames[c] : '';
+      return { cls: 'gx-ind has-num' + (held[c] ? ' is-on' : ''), num: String(b.num), label: cn || b.short, hasCustom: !!cn, builtin: b.short,
+        tip: 'Button ' + b.num + ' · ' + (cn ? '“' + cn + '” · ' : '') + b.name + ' · evdev code ' + c };
+    }
+    var toggles = [296, 298, 300, 297, 299, 301].map(namedPill);
     var modeInds = [715, 716, 717].map(function (c, i) { return ind(c, String(i + 1)); });
     var btnGroups = BTN_GROUPS.map(function (g) {
-      return { title: g.title, items: g.codes.map(function (c) { var b = btnInfo(c); return { cls: 'gx-ind has-num' + (held[c] ? ' is-on' : ''), num: String(b.num), label: b.short, tip: 'Button ' + b.num + ' · ' + b.name + ' · evdev code ' + c }; }) };
+      return { title: g.title, items: g.codes.filter(function (c) { return hasControl(ty, c); }).map(namedPill) };
     });
     function povCells(up, right, down, left) {
       var on = [0, up, 0, left, 0, right, 0, down, 0];
       return on.map(function (o, i) { return 'gx-povcell' + (i === 4 ? ' is-center' : '') + (o ? ' is-on' : ''); });
     }
+    function povNamed(codes) {
+      var dirs = ['↑', '→', '↓', '←'];
+      return codes.map(function (c, i) { return isNamed(activeNames[c]) ? { text: dirs[i] + ' ' + activeNames[c], cls: 'gx-povname' + (held[c] ? ' is-on' : '') } : null; }).filter(Boolean);
+    }
     var povs = [
-      { label: 'POV 1', cells: povCells(held['pov1-up'], held['pov1-right'], held['pov1-down'], held['pov1-left']) },
-      { label: 'POV 2', cells: povCells(held[707], held[708], held[709], held[710]) },
-      { label: 'Throttle hat', cells: povCells(held[711], held[712], held[713], held[714]) }
+      { label: 'POV 1', cells: povCells(held['pov1-up'], held['pov1-right'], held['pov1-down'], held['pov1-left']), named: povNamed(['pov1-up', 'pov1-right', 'pov1-down', 'pov1-left']) },
+      { label: 'POV 2', cells: povCells(held[707], held[708], held[709], held[710]), named: povNamed([707, 708, 709, 710]) },
+      { label: 'Throttle hat', cells: povCells(held[711], held[712], held[713], held[714]), named: povNamed([711, 712, 713, 714]) }
     ];
-    var pressed = Object.keys(held).map(function (k) { var b = btnInfo(+k); return b ? b.name : (String(k).indexOf('pov1') === 0 ? 'POV 1 ' + k.split('-')[1] : null); }).filter(function (x) { return x && x.indexOf('Mode') !== 0; });
+    var pressed = Object.keys(held).map(function (k) { var code = isNaN(+k) ? k : +k, c = ctrlInfo(code); if (!c || (code >= 715 && code <= 717)) return null; return isNamed(activeNames[code]) ? activeNames[code] + ' (' + c.name + ')' : c.name; }).filter(Boolean);
     var testSr = 'Buttons pressed: ' + (pressed.length ? pressed.join(', ') : 'none') + '. Mode ' + s.mode + '.';
+
+    /* names view */
+    var perModeView = !!(view && view.kind === 'per_mode');
+    var modeWord = perModeView ? 'mode ' + s.editMode : 'this profile';
+    var customCount = Object.keys(mNames).filter(function (k) { var c = isNaN(+k) ? k : +k; return groupOf(c) && hasControl(ty, c) && isNamed(mNames[k]); }).length;
+    var nameGroups = NAME_GROUPS.map(function (g) {
+      var codes = g.codes.filter(function (c) { return hasControl(ty, c); });
+      var named = codes.filter(function (c) { return isNamed(mNames[c]); });
+      var expanded = s.namesOpen[g.key] != null ? s.namesOpen[g.key] : named.length > 0;
+      return {
+        title: g.title, expanded: expanded,
+        summary: named.length ? named.length + ' custom: ' + named.map(function (c) { return mNames[c].trim(); }).join(', ') : 'Built-in names',
+        onToggle: function (v) { var o = Object.assign({}, self.state.namesOpen); o[g.key] = v; self.setState({ namesOpen: o }); },
+        rows: codes.map(function (c) {
+          var info = ctrlInfo(c), val = mNames[c] || '', cv = convert(val), n = cv.chars.length, named = isNamed(val);
+          return {
+            id: 'name-' + c, title: info.name, badge: info.badge, value: val, custom: named,
+            status: cv.reps.length ? 'warning' : undefined, hasReps: cv.reps.length > 0, reps: cv.reps.join(', '),
+            prefix: { type: 'Text', className: 'gx-num gx-namenum', children: info.badge },
+            suffix: (cv.reps.length ? [{ type: 'Text', variant: 'caption', tone: 'warning', children: cv.reps.join(', '), valign: 'center' }] : []).concat(val ? [
+              /* n/16 counts converted MFD bytes, as on the Custom text line */
+              { type: 'Text', variant: 'caption', dimmed: true, children: n + '/16', valign: 'center' },
+              { type: 'Button', icon: 'edit-undo', variant: 'flat', tooltip: 'Use the built-in name “' + info.name + '”', valign: 'center', onClick: function () { self.setName(c, ''); } }
+            ] : []),
+            onChange: function (v) { self.setName(c, v); }
+          };
+        })
+      };
+    });
+    var previewInfo = s.namePreview != null ? ctrlInfo(s.namePreview) : null;
+    var namesMenu = [];
+    if (perModeView) namesMenu.push({ section: [1, 2, 3].filter(function (n) { return n !== s.editMode; }).map(function (n) { return { label: 'Copy Names From Mode ' + n, action: 'names.copy' + n }; }) });
+    namesMenu.push({ section: [{ label: 'Clear All Names', action: 'names.clear' }] });
+    var namesActions = { 'names.copy1': { activate: function () { self.copyNamesFrom(1); } }, 'names.copy2': { activate: function () { self.copyNamesFrom(2); } }, 'names.copy3': { activate: function () { self.copyNamesFrom(3); } },
+      'names.clear': { enabled: customCount > 0, activate: function () { self.clearNames(); } } };
+    var names = {
+      groups: nameGroups, finding: s.findMode,
+      summary: (customCount ? customCount + (customCount === 1 ? ' control has a custom name' : ' controls have custom names') + ' in ' + modeWord + '.' : 'No custom names in ' + modeWord + ': every control uses its built-in name.')
+        + (lastLineIdx >= 0 ? ' Shown on MFD line ' + (lastLineIdx + 1) + ' while the control is held.' : '') + ' Wheel notches are short pulses: their names stay for 0.7 seconds.',
+      headerSuffix: { type: 'MenuButton', icon: 'view-more', variant: 'flat', tooltip: 'More Name Actions', menu: namesMenu, actions: namesActions },
+      notFinding: !s.findMode, findDisabled: !s.connected,
+      findSubtitle: s.connected ? 'Press a button or hat on the device to go to its name' : 'Connect the ' + DEV_NAMES[ty || 'x52-pro'] + ' to find a control by pressing it',
+      startFind: function () { if (self.state.connected) self.setState({ findMode: true }); },
+      noLastLine: lastLineIdx < 0, noLastLineText: 'No MFD line in ' + modeWord + ' shows “Last button”, so the device never shows these names.',
+      goToLines: function () { self.setState({ view: 'mfd' }); },
+      cancelFind: this.cancelFind,
+      previewNote: lastLineIdx < 0 ? 'Names appear only on a “Last button” line.'
+        : (holdingNamed || pulsing) ? 'Showing the control just pressed, as the device shows it.'
+        : previewInfo ? 'Preview of ' + previewInfo.name + ' as if held. Only this simulated display shows it; nothing is sent to the device.'
+        : 'Press a control or edit a name to preview it here. The preview is not sent to the device.'
+    };
 
     /* tray */
     var trayVisible = s.running && s.prefs.runBg && s.trayHost;
@@ -1552,7 +1765,8 @@ class Component extends DCLogic {
       editorTop: editorTop, editorBottom: editorBottom, clampW: s.view === 'clocks' ? 600 : 760,
       showModeBar: !!(view && view.kind === 'per_mode') && s.view !== 'clocks',
       modeItems: [{ label: '1' }, { label: '2' }, { label: '3' }], editModeIdx: s.editMode - 1, modeIdx: s.mode - 1,
-      vLeds: s.view === 'leds', vMfd: s.view === 'mfd', vClocks: s.view === 'clocks',
+      linesDesc: 'Last button shows the control being held, by its custom name if it has one, and clears on release. Wheel notches are short pulses: their name stays for 0.7 seconds, or until another control is pressed.',
+      vLeds: s.view === 'leds', vMfd: s.view === 'mfd', vClocks: s.view === 'clocks', vNames: s.view === 'names', names: names,
       ledCards: ledCards, ledB: m.ledB, ledBFrac: m.ledB / 128, blink: !!m.blink, mfdB: m.mfdB, mfdBFrac: m.mfdB / 128, shift: !!m.shift,
       ledGroupDesc: isPro ? (bright0 ? 'Brightness is 0: every LED is off. The states are kept.' : undefined) : 'This model has no LEDs that can be set one by one.',
       ledPopOpen: s.ledPopOpen && s.view === 'leds' && cEditor, ledPopAnchor: '#led-' + popKey, ledPopTitle: popDef.name + ' LED', ledPopLabel: popDef.name + ' LED state',
@@ -1571,14 +1785,14 @@ class Component extends DCLogic {
       bgPermItems: ['Allows background', 'Refuses (permission off)', 'Not available (no portal)'], bgPermIdx: ['allowed', 'denied', 'noportal'].indexOf(s.bgPerm), mouseOff: !s.prefs.mouse, uinputWarn: s.prefs.mouse && !s.uinputOk,
       prefsSubpages: subpages, prefsSub: s.prefsSub, onPrefsSub: this.onPrefsSub,
       shortcutsOpen: s.shortcutsOpen, aboutOpen: s.aboutOpen, appIcon: GX_ICON,
-      acc: { newp: '<Control>n', imp: '<Control>o', exp: '<Shift><Control>e', v1: '<Control>1', v2: '<Control>2', v3: '<Control>3', prefs: '<Control>comma', keys: '<Control>question', close: '<Control>w', quit: '<Control>q' },
+      acc: { newp: '<Control>n', imp: '<Control>o', exp: '<Shift><Control>e', v1: '<Control>1', v2: '<Control>2', v3: '<Control>3', v4: '<Control>4', prefs: '<Control>comma', keys: '<Control>question', close: '<Control>w', quit: '<Control>q' },
       releaseNotes: '<p>GX52 is rewritten for GNOME, in Rust with GTK 4 and libadwaita.</p><ul><li>Single and per-mode profiles: the mode selector on the stick can switch LEDs, MFD and brightness</li><li>A live simulated MFD and an input tester</li><li>Clocks in any time zone, with daylight saving time</li><li>Use the ministick as a mouse</li><li>Profiles from GX52 0.7 are imported automatically</li></ul>',
       developers: ['Roberto Leinardi https://github.com/leinardi'],
       hasToast: !!s.toast, toast: s.toast || { title: '' },
       topClock: now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + '  ' + pad(now.getHours()) + ':' + pad(now.getMinutes()),
       trayVisible: trayVisible, trayMenu: trayMenu, trayActions: trayActions, trayNote: trayNote,
       devItems: [{ label: 'None' }, { label: 'X52 Pro' }, { label: 'X52' }], devSel: s.connected ? (s.devType === 'x52' ? 2 : 1) : 0,
-      permission: s.permission, x52d: s.x52d, holdItems: HOLD_OPTIONS.map(function (o) { return o.name; }), holdIdx: s.holdIdx, holding: s.holding, moveAxes: s.moveAxes,
+      permission: s.permission, x52d: s.x52d, holdItems: holdList.map(function (o) { return o.name; }), holdIdx: Math.max(0, holdList.indexOf(holdOpt)), holding: s.holding, moveAxes: s.moveAxes,
       uinputOk: s.uinputOk, trayHost: s.trayHost, themeItems: [{ label: 'Light' }, { label: 'Dark' }],
       onKey: this.onKey, onShowContentChange: this.onShowContentChange, endDrag: this.endDrag, cancelLongPress: this.cancelLongPress,
       onRenameChange: this.onRenameChange, commitRename: this.commitRename, onRenameKey: this.onRenameKey, renameRef: this.renameRef,
