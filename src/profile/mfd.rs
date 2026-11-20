@@ -67,6 +67,17 @@ pub(crate) fn accepted_insert<'text>(
     &inserted[..accepted]
 }
 
+/// What a control name's row lets in of an insertion: `inserted` without its control characters
+/// (a paste with a newline or a NUL keeps the rest), then the part that fits the line, as
+/// [`accepted_insert`] takes it. So the row never shows a name [`super::name_text`] rejects.
+pub(crate) fn accepted_name_insert(before: &str, inserted: &str, after: &str) -> String {
+    let printable: String = inserted
+        .chars()
+        .filter(|character| !character.is_control())
+        .collect();
+    accepted_insert(before, &printable, after).to_owned()
+}
+
 /// What an MFD line shows, as the editor's combo row lists it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum LineSource {

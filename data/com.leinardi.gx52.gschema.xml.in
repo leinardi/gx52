@@ -18,10 +18,11 @@
         <choice value="leds"/>
         <choice value="mfd"/>
         <choice value="clocks"/>
+        <choice value="names"/>
       </choices>
       <default>'leds'</default>
       <summary>Last editor view</summary>
-      <description>The view of the profile editor shown last, LEDs, MFD or clocks; a new window opens on it.</description>
+      <description>The view of the profile editor shown last, LEDs, MFD, clocks or names; a new window opens on it.</description>
     </key>
     <key name="active-profile-x52-pro" type="s">
       <default>'x52-pro-default'</default>

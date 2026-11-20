@@ -144,3 +144,28 @@ fn a_node_loss_after_a_released_notch_clears_the_line() {
     assert_eq!(before, Some(SCROLL_UP));
     assert_eq!(notch.shown(&held), None);
 }
+
+#[test]
+fn a_press_is_a_key_down_or_a_new_pov1_direction() {
+    let mut held = HeldInputs::new();
+    assert_eq!(
+        pressed_input(&key(Button::ButtonE, true), &held),
+        Some(Input::Button(Button::ButtonE))
+    );
+    assert_eq!(pressed_input(&key(Button::ButtonE, false), &held), None);
+    held.set_pov1(1, -1);
+    assert_eq!(
+        pressed_input(&HeldChange::Pov1 { x: 0, y: -1 }, &held),
+        None
+    );
+    assert_eq!(
+        pressed_input(&HeldChange::Pov1 { x: 1, y: 1 }, &held),
+        Some(Input::Pov1(Pov1Direction::Down))
+    );
+    let mut snapshot = HeldInputs::new();
+    snapshot.press(BUTTON_A);
+    assert_eq!(
+        pressed_input(&HeldChange::Snapshot(snapshot), &HeldInputs::new()),
+        None
+    );
+}

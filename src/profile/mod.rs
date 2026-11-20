@@ -31,6 +31,7 @@ pub(crate) mod list;
 pub(crate) mod mfd;
 pub(crate) mod migrate;
 pub(crate) mod name;
+pub(crate) mod names;
 pub(crate) mod order;
 pub(crate) mod removals;
 pub(crate) mod reservations;

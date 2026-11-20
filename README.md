@@ -13,6 +13,8 @@ Flathub.
   schematic of the stick, its base and the throttle, plus the LED and MFD brightness.
 - MFD text per line, the SHIFT indicator (X52 Pro), and the three clocks with real time zones
   (daylight saving included) instead of minute offsets.
+- Custom names for the controls, per mode, shown by the MFD's "Last button" line ("Emerg. Lights"
+  for E).
 - Profiles: a single set of settings, or one per position of the mode selector (1/2/3). Import and
   export as TOML files; the profiles of GX52 0.7 are imported on first start.
 - A tray icon, running in the background and starting on login.

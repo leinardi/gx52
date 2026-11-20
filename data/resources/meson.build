@@ -10,6 +10,7 @@ blueprint_files = [
     'ui/mfd-display.blp',
     'ui/mfd-editor.blp',
     'ui/mode-bar.blp',
+    'ui/names-editor.blp',
     'ui/preferences-dialog.blp',
     'ui/profile-row.blp',
     'ui/shortcuts-dialog.blp',

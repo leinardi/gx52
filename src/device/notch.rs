@@ -52,17 +52,14 @@ impl NotchHold {
     /// any other press ends it: a key, or a POV 1 direction that was not held before (going from
     /// Up+Right to Up is a release). A release keeps it, and a snapshot ends it without arming it.
     pub(crate) fn apply(&mut self, change: &HeldChange, held: &HeldInputs) -> HoldTimer {
-        match change {
-            HeldChange::Key {
-                button,
-                pressed: true,
-            } if button.is_wheel_notch() => {
-                self.notch = Some(Input::Button(*button));
+        match (change, pressed_input(change, held)) {
+            (HeldChange::Snapshot(_), _) => self.cancel(),
+            (_, Some(Input::Button(button))) if button.is_wheel_notch() => {
+                self.notch = Some(Input::Button(button));
                 HoldTimer::Arm
             }
-            HeldChange::Key { pressed: true, .. } | HeldChange::Snapshot(_) => self.cancel(),
-            HeldChange::Pov1 { x, y } if pov1_presses(held, *x, *y) => self.cancel(),
-            HeldChange::Key { pressed: false, .. } | HeldChange::Pov1 { .. } => HoldTimer::Keep,
+            (_, Some(_)) => self.cancel(),
+            (_, None) => HoldTimer::Keep,
         }
     }
 
@@ -79,11 +76,26 @@ impl NotchHold {
     }
 }
 
-/// Whether POV 1 moving to `x`, `y` holds a direction `held` does not hold yet.
-fn pov1_presses(held: &HeldInputs, x: i32, y: i32) -> bool {
-    Pov1Direction::ALL
-        .into_iter()
-        .any(|direction| direction.is_held(x, y) && !held.is_held(Input::Pov1(direction)))
+/// The input `change`, about to be applied to `held`, presses: the key pressed, or the first POV
+/// 1 direction (in [`Pov1Direction::ALL`] order) that `held` does not hold yet. `None` for a
+/// release and for a snapshot, which says what is held but is not a press.
+pub(crate) fn pressed_input(change: &HeldChange, held: &HeldInputs) -> Option<Input> {
+    match change {
+        HeldChange::Key {
+            button,
+            pressed: true,
+        } => Some(Input::Button(*button)),
+        HeldChange::Pov1 { x, y } => {
+            Pov1Direction::ALL
+                .into_iter()
+                .map(Input::Pov1)
+                .find(|input| {
+                    matches!(input, Input::Pov1(direction) if direction.is_held(*x, *y))
+                        && !held.is_held(*input)
+                })
+        }
+        HeldChange::Key { pressed: false, .. } | HeldChange::Snapshot(_) => None,
+    }
 }
 
 #[cfg(test)]

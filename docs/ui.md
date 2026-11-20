@@ -56,8 +56,8 @@ on the right.
 A new GX52 process opens on the **active profile's editor**: the selected row is the profile on
 the device, so the first screen is one where the selection and the device agree, and the usual
 reason to open the window, changing a LED colour or an MFD line before a game, takes no click.
-The editor shows the view used last, LEDs, MFD or Clocks (GSettings `last-view`), so someone who
-only edits the MFD does not press Ctrl+2 each time. The input tester is never restored across
+The editor shows the view used last, LEDs, MFD, Clocks or Names (GSettings `last-view`), so
+someone who only edits the MFD does not press Ctrl+2 each time. The input tester is never restored across
 launches: it is a check made now, not a habit, and it selects no profile. A per-mode profile's
 [mode bar](#mode-bar) starts on the selector's position.
 
@@ -311,8 +311,7 @@ closes when another profile is shown, and a pick still being looked up then is d
 Custom names for the joystick's controls, shown by the MFD's "Last button" line and the [input
 tester](#input-tester) in place of the built-in names ("Emerg. Lights" for E). Requested in
 [issue #42](https://github.com/leinardi/gx52/issues/42); decided on 2026-11-19 against the
-prototype, not implemented yet ([roadmap.md](roadmap.md#1x)). The data is in
-[profiles.md](profiles.md#control-names).
+prototype ([roadmap.md](roadmap.md#1x)). The data is in [profiles.md](profiles.md#control-names).
 
 - **Mode bar** on a per-mode profile: names are per mode and follow the bar like every other mode
   setting. Changing the profile's kind copies or drops them with the rest

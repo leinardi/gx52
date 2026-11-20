@@ -11,6 +11,7 @@
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/mfd-display.ui">mfd-display.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/mfd-editor.ui">mfd-editor.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/mode-bar.ui">mode-bar.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks" alias="ui/names-editor.ui">names-editor.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/clock-editor.ui">clock-editor.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/zone-clock-group.ui">zone-clock-group.ui</file>
     <file compressed="true" preprocess="xml-stripblanks" alias="ui/zone-dialog.ui">zone-dialog.ui</file>

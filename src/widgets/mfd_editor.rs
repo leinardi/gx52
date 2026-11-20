@@ -312,7 +312,7 @@ impl MfdEditor {
         } else {
             DateArea::Date
         };
-        if let Some(preview) = app.mfd_preview(imp.clock.get(), time::now(), &zone) {
+        if let Some(preview) = app.mfd_preview(imp.clock.get(), time::now(), &zone, None) {
             imp.display.show(&preview, date_area);
         }
     }

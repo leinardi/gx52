@@ -18,15 +18,21 @@
 //! "Profile editor").
 
 use adw::subclass::prelude::*;
+use gettextrs::gettext;
+use gtk::glib;
 use x52::command::Brightness;
+use x52::input::{Input, InputMap, Mode};
 
 use super::Application;
 use crate::profile::clocks::ProfileClocks;
 use crate::profile::editor::EditorState;
 use crate::profile::leds::{self, EditorLed, LedChoice};
 use crate::profile::mfd::{DraftKey, LineSource, SettingsSet};
+use crate::profile::names::{self, NamesUndo};
 use crate::profile::store::StoreError;
-use crate::profile::{self, MFD_LINES, MfdLineSource, ModeSettings, Profile, ProfileId};
+use crate::profile::{
+    self, MFD_LINES, MfdLineSource, ModeSettings, Profile, ProfileId, ProfileKind,
+};
 
 /// The profile and the set of mode settings an edit changes.
 struct EditTarget {
@@ -127,6 +133,156 @@ impl Application {
     /// Turns the SHIFT label on or off in the mode shown.
     pub(crate) fn set_shift(&self, shift: bool) {
         self.edit_shown_settings(|settings| settings.shift = shift);
+    }
+
+    /// Sets the custom name of `input` in the mode shown to `text`; a blank text removes it. A
+    /// name that cannot be used is refused, and the editor shows the stored name again.
+    pub(crate) fn set_name(&self, input: Input, text: &str) {
+        let nameable = self
+            .shown_device_type()
+            .is_some_and(|device_type| InputMap::for_device(device_type).is_nameable(input));
+        let refused = if text.trim().is_empty() {
+            None
+        } else {
+            profile::name_text(text)
+                .err()
+                .map(|error| error.to_string())
+        };
+        if !nameable || refused.is_some() {
+            tracing::debug!("Name {text:?} of {input:?} refused: {refused:?}");
+            self.update_windows();
+            return;
+        }
+        self.edit_shown(|target, settings| {
+            if names::set_name(&mut settings.names, input, text) {
+                self.imp()
+                    .name_generations
+                    .borrow_mut()
+                    .bump(&target.profile, target.set);
+            }
+        });
+        self.expire_names_undo();
+    }
+
+    /// Copies the names of mode `from` into the mode shown of a per-mode profile, with a toast
+    /// to undo it.
+    pub(crate) fn copy_names_from(&self, from: Mode) {
+        let undo = self.replace_shown_names(|profile, shown| {
+            (profile.kind() == ProfileKind::PerMode && from != shown)
+                .then(|| profile.settings.for_mode(from).names.clone())
+        });
+        if let Some(undo) = undo {
+            // Translators: {mode} is the number of a mode of the mode selector, 1 to 3.
+            let title = gettext("Names copied from mode {mode}")
+                .replace("{mode}", &(profile::mode_index(from) + 1).to_string());
+            self.toast_names_undo(undo, &title);
+        }
+    }
+
+    /// Removes every name of the mode shown, with a toast to undo it.
+    pub(crate) fn clear_names(&self) {
+        if let Some(undo) =
+            self.replace_shown_names(|_, _| Some(std::collections::BTreeMap::default()))
+        {
+            self.toast_names_undo(undo, &gettext("Names cleared"));
+        }
+    }
+
+    /// Replaces the names of the mode shown with what `names` gives for the profile and that
+    /// mode; returns the Undo when they changed.
+    fn replace_shown_names(
+        &self,
+        names: impl FnOnce(&Profile, Mode) -> Option<std::collections::BTreeMap<Input, String>>,
+    ) -> Option<NamesUndo> {
+        let mode = self.shown_mode();
+        let mut undo = None;
+        self.edit_shown_profile(|id, profile| {
+            let Some(after) = names(profile, mode) else {
+                return;
+            };
+            let set = SettingsSet::of(profile.kind(), mode);
+            let current = &mut profile.settings.for_mode_mut(mode).names;
+            if *current == after {
+                return;
+            }
+            let before = std::mem::replace(current, after.clone());
+            undo = Some(NamesUndo::record(
+                &mut self.imp().name_generations.borrow_mut(),
+                id.clone(),
+                set,
+                before,
+                after,
+            ));
+        });
+        undo
+    }
+
+    /// Shows the toast of a Copy or Clear of names, with its Undo; the toast of an earlier one
+    /// goes.
+    fn toast_names_undo(&self, undo: NamesUndo, title: &str) {
+        let toast = adw::Toast::builder()
+            .title(title)
+            .button_label(gettext("_Undo"))
+            .use_markup(false)
+            .build();
+        toast.connect_button_clicked(glib::clone!(
+            #[weak(rename_to = app)]
+            self,
+            move |_| app.undo_names()
+        ));
+        toast.connect_dismissed(glib::clone!(
+            #[weak(rename_to = app)]
+            self,
+            move |toast| {
+                let imp = app.imp();
+                let ours = imp
+                    .names_undo
+                    .borrow()
+                    .as_ref()
+                    .is_some_and(|(_, shown)| shown == toast);
+                if ours {
+                    imp.names_undo.take();
+                }
+            }
+        ));
+        let previous = self.imp().names_undo.replace(Some((undo, toast.clone())));
+        if let Some((_, previous)) = previous {
+            previous.dismiss();
+        }
+        self.queue_toast(toast);
+    }
+
+    /// Puts back the names the last Copy or Clear replaced, unless a names edit came after it.
+    fn undo_names(&self) {
+        let Some((undo, _)) = self.imp().names_undo.take() else {
+            return;
+        };
+        let Some(before) = undo.restore(&mut self.imp().name_generations.borrow_mut()) else {
+            return;
+        };
+        let mode = match undo.set {
+            SettingsSet::Single => Mode::One,
+            SettingsSet::Mode(mode) => mode,
+        };
+        self.edit_profile(&undo.profile, |profile| {
+            if SettingsSet::of(profile.kind(), mode) == undo.set {
+                profile.settings.for_mode_mut(mode).names = before;
+            }
+        });
+    }
+
+    /// Dismisses the toast of the last Copy or Clear once a later names edit makes its Undo do
+    /// nothing.
+    pub(super) fn expire_names_undo(&self) {
+        let imp = self.imp();
+        let expired = imp
+            .names_undo
+            .borrow()
+            .as_ref()
+            .is_some_and(|(undo, _)| !undo.is_current(&imp.name_generations.borrow()));
+        if expired && let Some((_, toast)) = imp.names_undo.take() {
+            toast.dismiss();
+        }
     }
 
     /// Applies `edit` to the settings of the mode shown of the shown device type's active profile;
