@@ -132,6 +132,10 @@ const SHOTS: [Shot; 7] = [
             let editor = &window.imp().names_editor;
             check(editor.is_mapped(), "the Names editor is mapped")?;
             check(editor.rows_built(), "the name rows are built")?;
+            check(
+                editor.shows_name(NAMES_FOCUSED),
+                "the focused control's row is in view",
+            )?;
             let (lines, _) = editor.display().shown_text();
             check(
                 lines

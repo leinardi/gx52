@@ -17,6 +17,7 @@
 //! the simulated display, the search by pressing a control and the Copy and Clear actions
 //! (docs/ui.md, "Names view").
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 
 use adw::prelude::*;
@@ -37,6 +38,12 @@ use crate::widgets::mfd_display::DateArea;
 use crate::widgets::mfd_entry::MfdEntry;
 use crate::widgets::ticker::{Ticker, Ticking};
 use crate::window::Window;
+
+/// How many frames a reveal tries to scroll its row into view: about a second.
+const REVEAL_FRAMES: u32 = 60;
+
+/// The room left above or below a revealed row, in pixels.
+const REVEAL_MARGIN: f64 = 12.0;
 
 /// The row of one control.
 #[derive(Debug)]
@@ -75,6 +82,8 @@ mod imp {
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/leinardi/gx52/ui/names-editor.ui")]
     pub struct NamesEditor {
+        #[template_child]
+        pub(super) scroller: TemplateChild<gtk::ScrolledWindow>,
         #[template_child]
         pub(super) mode_bar: TemplateChild<ModeBar>,
         #[template_child]
@@ -477,13 +486,90 @@ impl NamesEditor {
     /// Opens the group of `input`, scrolls to its row and focuses its name.
     pub(crate) fn reveal_name(&self, input: Input) {
         self.show_finding(false);
-        for group in self.imp().groups.borrow().iter() {
-            if let Some(row) = group.rows.iter().find(|row| row.input == input) {
-                group.expander.set_expanded(true);
-                row.entry.row().grab_focus();
-                return;
+        let row = self.imp().groups.borrow().iter().find_map(|group| {
+            let row = group.rows.iter().find(|row| row.input == input)?;
+            group.expander.set_expanded(true);
+            Some(row.entry.row().clone())
+        });
+        let Some(row) = row else {
+            return;
+        };
+        row.grab_focus();
+        // A group that was closed gives its rows a place only in a later layout, and the page
+        // grows while it opens: the scroll is tried again each frame until the row is in view.
+        let frames = Cell::new(0_u32);
+        row.add_tick_callback(glib::clone!(
+            #[weak(rename_to = editor)]
+            self,
+            #[upgrade_or]
+            glib::ControlFlow::Break,
+            move |row, _| {
+                frames.set(frames.get() + 1);
+                if editor.scroll_to(row) || frames.get() >= REVEAL_FRAMES {
+                    glib::ControlFlow::Break
+                } else {
+                    glib::ControlFlow::Continue
+                }
             }
+        ));
+    }
+
+    /// Scrolls the page so `row` is in view; whether it is.
+    fn scroll_to(&self, row: &adw::EntryRow) -> bool {
+        let Some((top, bottom)) = self.row_span(row) else {
+            return false;
+        };
+        let adjustment = self.imp().scroller.vadjustment();
+        let value = adjustment.value();
+        let page = adjustment.page_size();
+        if top < value {
+            adjustment.set_value(top);
+        } else if bottom > value + page {
+            adjustment.set_value(bottom - page);
         }
+        self.in_view(row)
+    }
+
+    /// The top and bottom of `row` in the page, with a margin, once it is laid out.
+    fn row_span(&self, row: &adw::EntryRow) -> Option<(f64, f64)> {
+        // The scroller wraps the page in a viewport, whose own coordinates move with the scroll.
+        let content = self
+            .imp()
+            .scroller
+            .child()
+            .and_downcast::<gtk::Viewport>()?
+            .child()?;
+        if !row.is_mapped() {
+            return None;
+        }
+        let bounds = row.compute_bounds(&content)?;
+        if bounds.height() <= 0.0 {
+            return None;
+        }
+        let top = f64::from(bounds.y()) - REVEAL_MARGIN;
+        let bottom = f64::from(bounds.y() + bounds.height()) + REVEAL_MARGIN;
+        Some((top.max(0.0), bottom))
+    }
+
+    /// Whether `row` is laid out and wholly in view.
+    fn in_view(&self, row: &adw::EntryRow) -> bool {
+        let Some((top, bottom)) = self.row_span(row) else {
+            return false;
+        };
+        let adjustment = self.imp().scroller.vadjustment();
+        let value = adjustment.value();
+        top >= value - 1.0 && bottom <= value + adjustment.page_size() + 1.0
+    }
+
+    /// Whether the row of `input` is laid out and wholly in view.
+    pub(crate) fn shows_name(&self, input: Input) -> bool {
+        self.imp()
+            .groups
+            .borrow()
+            .iter()
+            .flat_map(|group| &group.rows)
+            .find(|row| row.input == input)
+            .is_some_and(|row| self.in_view(row.entry.row()))
     }
 
     /// The simulated display.
