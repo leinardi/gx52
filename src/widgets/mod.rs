@@ -24,6 +24,7 @@ mod led_button;
 mod led_editor;
 mod mfd_display;
 mod mfd_editor;
+mod mfd_entry;
 mod mode_bar;
 mod preferences_dialog;
 mod profile_row;

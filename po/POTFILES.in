@@ -35,6 +35,7 @@ src/widgets/clock_editor.rs
 src/widgets/input_tester.rs
 src/widgets/led_button.rs
 src/widgets/mfd_editor.rs
+src/widgets/mfd_entry.rs
 src/widgets/mod.rs
 src/widgets/preferences_dialog.rs
 src/widgets/profile_row.rs
