@@ -394,7 +394,8 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
   the prototype; a card stretched alone keeps its chips at their size.
 - **Custom names:** a control with a [custom name](#names-view) in the active profile, in the mode
   shown, shows that name with the built-in name smaller beside it; the tooltip and the accessible
-  label give both. Named POV 1 directions are listed under its grid ("↑ Pips: SYS").
+  label give both. The named directions of a hat (POV 1, POV 2, the throttle hat) are listed under
+  its grid ("↑ Pips: SYS").
 - **X52 (non-Pro):** a warning line under the intro, "The X52 input map has not been verified on a
   device yet. Names may not match the controls." ([protocol.md](protocol.md#x52-non-pro)).
 - **POVs:** POV 1, POV 2 and the throttle hat as 3×3 direction grids, the cell the hat points at

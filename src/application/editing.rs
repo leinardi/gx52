@@ -71,6 +71,16 @@ impl Application {
         })
     }
 
+    /// The custom control names of the shown device type's active profile in the mode shown, for
+    /// the input tester; none before the profiles are loaded.
+    pub(crate) fn shown_names(&self) -> std::collections::BTreeMap<Input, String> {
+        self.shown_device_type()
+            .and_then(|device_type| self.active_profile_id(device_type))
+            .and_then(|id| self.profile(&id))
+            .map(|profile| profile.settings_for(self.shown_mode()).names.clone())
+            .unwrap_or_default()
+    }
+
     /// Sets `led` to `choice` in the mode shown.
     pub(crate) fn set_led(&self, led: EditorLed, choice: LedChoice) {
         self.edit_shown_settings(|settings| {
