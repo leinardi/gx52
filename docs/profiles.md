@@ -28,13 +28,13 @@ mode mapping that M3 built (three profile ids per device type), which never ship
 the GSettings keys are redefined without a migration, because nothing is published before M8
 ([roadmap.md](roadmap.md#m3-follow-up-single-and-per-mode-profiles)).
 
-## TOML schema (version 1)
+## TOML schema (version 2)
 
 One file holds one profile. A per-mode X52 Pro profile (a single profile has `kind = "single"` and
 one `[settings]` table in place of the three `[mode_N]` tables):
 
 ```toml
-schema_version = 1
+schema_version = 2
 device_type = "x52-pro"
 name = "DCS World"
 kind = "per_mode"            # "single" or "per_mode"
@@ -78,6 +78,11 @@ lines = [                    # exactly 3 entries
   { source = "profile_name" },
 ]
 
+[mode_1.names]               # optional: only the controls with a custom name
+e = "Emerg. Lights"
+throttle_hat_left = "Gear"
+pov_1_up = "Pips: SYS"
+
 # [mode_2], [mode_2.leds], [mode_2.mfd], [mode_3], ... with the same keys
 ```
 
@@ -87,7 +92,7 @@ verified ([protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro)).
 
 | Key | Type | Values | Notes |
 | --- | --- | --- | --- |
-| `schema_version` | integer | `1` | Read first; see [Validation and recovery](#validation-and-recovery) and [Migration policy](#migration-policy) |
+| `schema_version` | integer | `2` | Read first; see [Validation and recovery](#validation-and-recovery) and [Migration policy](#migration-policy) |
 | `device_type` | string | `"x52-pro"`, `"x52"` | Decides which keys exist |
 | `name` | string | 1–64 characters after trimming, unique per device type | Shown in the UI |
 | `kind` | string | `"single"`, `"per_mode"` | Decides whether the file has `[settings]` or `[mode_1]`–`[mode_3]` |
@@ -99,10 +104,11 @@ verified ([protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro)).
 | `<set>.shift`, `<set>.blink` | boolean |  | `x52-pro` only |
 | `<set>.leds.<name>` | string | single-colour `fire`, `throttle`: `"off"`, `"on"`; bi-colour `a`, `b`, `d`, `e`, `t1_t2`, `t3_t4`, `t5_t6`, `pov_2`, `i`: `"off"`, `"green"`, `"red"`, `"amber"` | `x52-pro` only. The set of names comes from the `x52` device model (the [LED bits](protocol.md#led-bits)). POV 1 is not stored: its LED is fixed green |
 | `<set>.mfd.lines` | array of 3 tables | each `{ source = ... }`, see [MFD lines](#mfd-lines) |  |
+| `<set>.names.<control>` | string | the rules of a `"text"` MFD line, no control characters | Optional, since version 2; see [Control names](#control-names). The set of controls comes from the `x52` device model |
 
-Every key is required in a file the app writes. A missing key in a file being read is handled like
-an out-of-range value (see below); a missing mode table gets the type defaults for every field in
-it.
+Every key but `names` is required in a file the app writes. A missing key in a file being read is
+handled like an out-of-range value (see below); a missing mode table gets the type defaults for
+every field in it.
 
 In Rust (`gx52` crate, with `serde` and `toml`): `DeviceType`, `ProfileKind`, `LedState`,
 `DateFormat`, `ClockSource` and `MfdLine` are enums, never strings, past the parser. The mode
@@ -142,10 +148,9 @@ that still has it reports an unknown value and that line shows nothing until it 
 
 ### Control names
 
-Planned for [issue #42](https://github.com/leinardi/gx52/issues/42), decided on 2026-11-19 and not
-implemented yet ([roadmap.md](roadmap.md#1x)); the UI is the Names view of
-[ui.md](ui.md#names-view). It is **schema version 2**: the key below is new, and every other key
-keeps its meaning.
+Requested in [issue #42](https://github.com/leinardi/gx52/issues/42) and decided on 2026-11-19; the
+UI is the Names view of [ui.md](ui.md#names-view). It is **schema version 2**: the key below is
+new, and every other key keeps its meaning.
 
 Each mode settings table (`[settings]` or `[mode_1]`–`[mode_3]`) gets an optional `names` table
 from control to custom name; a control without a name is left out:
@@ -153,9 +158,12 @@ from control to custom name; a control without a name is left out:
 ```toml
 [mode_1.names]
 e = "Emerg. Lights"
-pov_1_up = "Pips: SYS"
 throttle_hat_left = "Gear"
+pov_1_up = "Pips: SYS"
 ```
+
+The app writes the names in the order of the controls' list above, after the `mfd` table, and
+writes no `names` table for a set without names.
 
 - **Controls:** every button but the mode selector positions, plus the four POV 1 directions. The
   keys are `trigger_stage_1`, `trigger_stage_2`, `fire`, `a`, `b`, `c`, `d`, `e`, `pinkie`, `t1`–`t6`,
@@ -166,7 +174,8 @@ throttle_hat_left = "Gear"
   `select` ([protocol.md](protocol.md#x52-non-pro)), so 35. The key set comes from the `x52`
   device model, as the LED names do.
 - **Value:** the rules of a `"text"` MFD line: at most 16 bytes after conversion and at most 64
-  characters as typed, stored as typed. An empty or whitespace-only name is no name and is not
+  characters as typed, stored as typed; and no control character (a NUL would cut the name in the
+  editor, which the MFD shows as `?`). An empty or whitespace-only name is no name and is not
   written. Custom names are never translated.
 - **Per mode:** names are a mode setting, so changing the kind copies or drops them like the rest.
   The clocks stay the only shared settings.
@@ -181,7 +190,8 @@ throttle_hat_left = "Gear"
   it is shown again when the time ends.
 - **Validation:** a name out of range is rejected per name (the control falls back to its built-in
   name) and reported, like an out-of-range value; an unknown control key, or one the device type
-  lacks, is ignored and reported like an unknown key.
+  lacks, is ignored and reported like an unknown key. A `names` table in a version 1 file is an
+  unknown key: version 1 has no names, so they are not loaded.
 - **Migration** `1 → 2`: only `schema_version` changes; a version 1 profile has no names. As the
   [migration policy](#migration-policy) says, the commit is a `feat` and the release notes say
   that profiles saved by the new version are read-only in GX52 1.0.x.
@@ -401,9 +411,9 @@ it is replaced only through the confirm-and-back-up path there.
 | Case | Outcome | File |
 | --- | --- | --- |
 | Malformed TOML, over the size limit, not UTF-8, or a missing or wrong `schema_version` / `device_type` | The profile is not loaded. The problem is logged and shown once: one toast per start that lists every file that failed. Other profiles load normally. The file is listed greyed out by its file name under the device type its TOML names (`device_type` read on its own), or under every type when that cannot be read | Kept as is; deleted only when the user removes it from the list |
-| Out-of-range value: brightness outside `0`–`128`, an MFD line over 16 bytes after conversion or not exactly 3 lines, `fixed_offset_minutes` outside `−720`–`+840`, an empty or too long name, a missing key | Rejected **per field**: that field gets the type default in memory, the rest of the profile loads. The problem is reported (log and the same toast) | Unchanged until the user saves the profile, which writes the corrected values |
+| Out-of-range value: brightness outside `0`–`128`, an MFD line over 16 bytes after conversion or not exactly 3 lines, `fixed_offset_minutes` outside `−720`–`+840`, an empty or too long name, a control name over a line's limits or with a control character (that control keeps its built-in name; a blank one is no name and not reported), a missing key | Rejected **per field**: that field gets the type default in memory, the rest of the profile loads. The problem is reported (log and the same toast) | Unchanged until the user saves the profile, which writes the corrected values |
 | Unknown enum value: LED state, date format, clock 1 source, a clock 2/3 source tag, an MFD line source, the profile `kind` (read as `"single"`, from `[settings]`), an IANA zone the tz database does not know | Same as out of range | Same |
-| A key the schema does not have, or a key the device type does not have (`[leds]` in an `x52` file) | Ignored in memory and reported | Same: the key is dropped only when the user saves |
+| A key the schema does not have, or a key the device type does not have (`[leds]` in an `x52` file, `names.page_up` in an `x52` file, `names` in a version 1 file) | Ignored in memory and reported | Same: the key is dropped only when the user saves |
 | Duplicate name within a type | Loaded with `(2)`, `(3)`, ... appended in memory and reported | Same |
 | `schema_version` newer than supported | Listed **read-only** with a message ("made by a newer GX52"). It cannot be edited, applied to the device or made active (the active profile falls back as above). It is never silently downgraded or re-saved in the old format | Never written |
 | `schema_version` older than supported | Migrated in memory through the [migration functions](#migration-policy) and loaded | Rewritten only when the user saves, and only after the original is copied to `<id>.toml.schema-<old version>.bak` |

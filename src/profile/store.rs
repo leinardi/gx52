@@ -93,8 +93,8 @@ pub(crate) struct Damaged {
 /// One profile of the store.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Entry {
-    /// A usable profile.
-    Loaded(Loaded),
+    /// A usable profile, boxed: it is far larger than the other variants.
+    Loaded(Box<Loaded>),
     /// A read-only file of a newer schema.
     Newer(Newer),
     /// A file that could not be read as a profile.
@@ -357,11 +357,11 @@ impl ProfileStore {
                     migrated_from,
                 }),
                 _,
-            ) => Ok(Entry::Loaded(Loaded {
+            ) => Ok(Entry::Loaded(Box::new(Loaded {
                 profile: *profile,
                 problems,
                 origin: migrated_from.map_or(Origin::File, |from| Origin::Migrated { from }),
-            })),
+            }))),
         };
         match outcome {
             Ok(entry) => {
@@ -418,11 +418,11 @@ impl ProfileStore {
         }
         self.entries.insert(
             id,
-            Entry::Loaded(Loaded {
+            Entry::Loaded(Box::new(Loaded {
                 profile,
                 problems: Vec::new(),
                 origin,
-            }),
+            })),
         );
     }
 
@@ -483,7 +483,7 @@ impl ProfileStore {
     /// The usable profile `id`.
     pub(crate) fn loaded(&self, id: &ProfileId) -> Option<&Loaded> {
         match self.entries.get(id)? {
-            Entry::Loaded(loaded) => Some(loaded),
+            Entry::Loaded(loaded) => Some(&**loaded),
             Entry::Newer(_) | Entry::Damaged(_) => None,
         }
     }
@@ -501,11 +501,11 @@ impl ProfileStore {
     pub(crate) fn added(&mut self, id: ProfileId, profile: Profile) {
         self.entries.insert(
             id,
-            Entry::Loaded(Loaded {
+            Entry::Loaded(Box::new(Loaded {
                 profile,
                 problems: Vec::new(),
                 origin: Origin::File,
-            }),
+            })),
         );
     }
 
@@ -805,7 +805,7 @@ impl ProfileStore {
         match self.entries.get(id) {
             None => Err(StoreError::Unknown(id.clone())),
             Some(Entry::Newer(_) | Entry::Damaged(_)) => Err(StoreError::ReadOnly(id.clone())),
-            Some(Entry::Loaded(loaded)) => Ok(loaded),
+            Some(Entry::Loaded(loaded)) => Ok(&**loaded),
         }
     }
 
@@ -813,7 +813,7 @@ impl ProfileStore {
         match self.entries.get_mut(id) {
             None => Err(StoreError::Unknown(id.clone())),
             Some(Entry::Newer(_) | Entry::Damaged(_)) => Err(StoreError::ReadOnly(id.clone())),
-            Some(Entry::Loaded(loaded)) => Ok(loaded),
+            Some(Entry::Loaded(loaded)) => Ok(&mut **loaded),
         }
     }
 }

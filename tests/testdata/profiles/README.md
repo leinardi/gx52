@@ -10,6 +10,10 @@ changes them.
 | `valid-x52-pro.toml` | A complete single X52 Pro profile, in the layout the app writes |
 | `valid-x52-pro-per-mode.toml` | The per-mode X52 Pro example of profiles.md, every MFD line source used, in the layout the app writes |
 | `valid-x52.toml` | A complete X52 profile, in the layout the app writes |
+| `valid-x52-pro-v1.toml` | `valid-x52-pro.toml` at schema version 1, before control names: migrated on load |
+| `names-x52-pro-per-mode.toml` | A per-mode X52 Pro profile with control names that differ per mode, in the layout the app writes |
+| `names-problems-x52.toml` | An `x52` file's names: a valid one, a value that is not a string, a blank one, one with a NUL, one over 16 bytes, `page_up` (X52 Pro only) and an unknown control |
+| `names-in-v1.toml` | A schema version 1 file with a `[settings.names]` table, which version 1 does not have |
 | `malformed.txt` | Not TOML (not named `.toml`, so the `check-toml` hook skips it) |
 | `not-utf8.bin` | Not UTF-8 |
 | `missing-schema-version.toml`, `wrong-schema-version.toml`, `zero-schema-version.toml` | No usable `schema_version` |
@@ -26,6 +30,6 @@ changes them.
 | `line-text-too-long.toml` | Text lines of 16 bytes, of 17 bytes, and of 16 bytes after conversion |
 | `line-text-missing.toml` | A text line without `text`, and a line that is not a table |
 
-Cases built by the tests themselves: a file over the 64 KiB limit, duplicate names, an older schema
-(through a test-only schema 2 with one migration step), and default profile files that are bad,
-newer, or of the other device type.
+Cases built by the tests themselves: a file over the 64 KiB limit, duplicate names, a backup of an
+older schema already in the folder, and default profile files that are bad, newer, or of the other
+device type.

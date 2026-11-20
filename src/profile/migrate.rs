@@ -32,6 +32,11 @@ pub(crate) struct Schema {
     steps: &'static [Step],
 }
 
+/// Version 1 to 2: version 2 adds the optional `names` tables (docs/profiles.md, "Control
+/// names"), which a version 1 file has none of, so the document stays as it is. A `names` table
+/// in a version 1 file stays unknown: the reader checks the file's own version.
+fn v1_to_v2(_document: &mut Table) {}
+
 /// What a document's version means for this app.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Version {
@@ -47,13 +52,13 @@ pub(crate) enum Version {
 impl Schema {
     /// The schema this app reads and writes.
     pub(crate) const CURRENT: Self = Self {
-        supported: 1,
-        steps: &[],
+        supported: 2,
+        steps: &[v1_to_v2],
     };
 
     /// A schema with its migration steps.
     ///
-    /// Only the tests build other schemas, to cover the migration path before schema 2 exists.
+    /// Only the tests build other schemas, to cover migration paths the app does not have.
     #[cfg(test)]
     pub(crate) const fn new(supported: i64, steps: &'static [Step]) -> Self {
         Self { supported, steps }

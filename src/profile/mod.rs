@@ -39,6 +39,7 @@ pub(crate) mod startup;
 pub(crate) mod store;
 pub(crate) mod writes;
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -50,7 +51,7 @@ use x52::charset::MfdText;
 use x52::clock::{ClockError, FixedOffset, ZoneSource};
 use x52::command::{Brightness, MfdLine};
 use x52::device::DeviceType;
-use x52::input::Mode;
+use x52::input::{Input, Mode};
 use x52::state::{Clock1Settings, DeviceState, Leds, ZoneClockSettings};
 
 use crate::config;
@@ -87,6 +88,31 @@ pub(crate) fn line_text(text: &str) -> Result<MfdText, LineTextError> {
         return Err(LineTextError::TooManyCharacters(chars));
     }
     Ok(MfdText::new(text)?)
+}
+
+/// Why a custom control name cannot be used.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub(crate) enum NameError {
+    /// The name breaks a limit of a custom text line.
+    #[error(transparent)]
+    Line(#[from] LineTextError),
+    /// The name has a control character, which a text field cannot keep (GTK cuts a text at its
+    /// first NUL) and the MFD shows as `?`.
+    #[error("the name has a control character")]
+    ControlCharacter,
+}
+
+/// The MFD text of a custom control name (docs/profiles.md, "Control names"): the limits of a
+/// custom text line, and no control character.
+///
+/// # Errors
+///
+/// [`NameError`] when the name breaks a limit or has a control character.
+pub(crate) fn name_text(text: &str) -> Result<MfdText, NameError> {
+    if text.chars().any(char::is_control) {
+        return Err(NameError::ControlCharacter);
+    }
+    Ok(line_text(text)?)
 }
 
 /// The id of a profile: the stem of its file name, stable for the profile's whole life.
@@ -237,6 +263,9 @@ pub(crate) struct ModeSettings {
     pub(crate) leds: Leds,
     /// What each MFD line shows.
     pub(crate) mfd_lines: [MfdLineSource; MFD_LINES],
+    /// The custom name of each named control (docs/profiles.md, "Control names"). Only controls
+    /// the device type can name are here, and every name is non-blank and passes [`name_text`].
+    pub(crate) names: BTreeMap<Input, String>,
 }
 
 impl ModeSettings {
@@ -250,6 +279,7 @@ impl ModeSettings {
             blink: state.blink,
             leds: state.leds,
             mfd_lines: Default::default(),
+            names: BTreeMap::new(),
         }
     }
 }

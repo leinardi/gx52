@@ -19,6 +19,10 @@ use x52::state::Leds;
 use super::*;
 use crate::profile::tests::fixture;
 
+fn input(key: &str) -> Input {
+    Input::from_key(key).unwrap_or_else(|| panic!("no input {key}"))
+}
+
 fn text(text: &str) -> MfdLineSource {
     MfdLineSource::Text(text.to_owned())
 }
@@ -126,6 +130,7 @@ fn writing_gives_the_layout_of_profiles_md() {
         "valid-x52-pro.toml",
         "valid-x52-pro-per-mode.toml",
         "valid-x52.toml",
+        "names-x52-pro-per-mode.toml",
     ] {
         let (profile, _) = readable(name);
         assert_eq!(
@@ -142,6 +147,11 @@ fn written_profiles_read_back_unchanged() {
     let mut settings = ModeSettings::builtin(DeviceType::X52Pro);
     settings.mfd_lines = [text("a\"b"), text("\\"), text("ÄÖÜ")];
     settings.leds = Leds::uniform(LedColour::Amber, false);
+    settings.names = BTreeMap::from([
+        (input("e"), "\"E\" \\ 'x'".to_owned()),
+        (input("pov_1_left"), "ÄÖÜ".to_owned()),
+        (input("select"), " padded ".to_owned()),
+    ]);
     odd.settings = ModeSets::Single(settings.clone());
     odd.clock2.source = ZoneSpec::Iana(IanaZone::new("America/Santiago").unwrap());
     let mut per_mode = odd.clone();
@@ -451,6 +461,12 @@ fn the_largest_profile_stays_within_the_file_limit() {
     );
     let mut settings = ModeSettings::builtin(DeviceType::X52Pro);
     settings.mfd_lines = [text(&widest_line), text(&widest_line), text(&widest_line)];
+    assert!(crate::profile::name_text(&widest_line).is_ok());
+    settings.names = InputMap::for_device(DeviceType::X52Pro)
+        .nameable()
+        .map(|control| (control, widest_line.clone()))
+        .collect();
+    assert_eq!(settings.names.len(), 40);
     profile.settings = ModeSets::PerMode(Box::new([settings.clone(), settings.clone(), settings]));
     let written = write(&profile);
     assert!(
@@ -505,9 +521,7 @@ fn a_newer_schema_is_only_listed() {
 
 #[test]
 fn an_older_schema_is_migrated_in_memory() {
-    fn noop(_: &mut Table) {}
-    let schema = Schema::new(2, &[noop]);
-    match parse(&fixture("valid-x52-pro.toml"), schema) {
+    match parse(&fixture("valid-x52-pro-v1.toml"), Schema::CURRENT) {
         Ok(Parsed::Readable {
             profile,
             problems,
@@ -515,10 +529,111 @@ fn an_older_schema_is_migrated_in_memory() {
         }) => {
             assert_eq!(migrated_from, Some(1));
             assert_eq!(problems, []);
-            assert_eq!(profile.name, "Night flying");
+            assert_eq!(*profile, readable("valid-x52-pro.toml").0);
         }
         other => panic!("{other:?}"),
     }
+}
+
+#[test]
+fn names_in_a_version_1_file_are_unknown() {
+    match parse(&fixture("names-in-v1.toml"), Schema::CURRENT) {
+        Ok(Parsed::Readable {
+            profile,
+            problems,
+            migrated_from,
+        }) => {
+            assert_eq!(migrated_from, Some(1));
+            assert_eq!(
+                problems,
+                [problem("settings.names", ProblemKind::UnknownKey)]
+            );
+            assert!(profile.settings_for(Mode::One).names.is_empty());
+        }
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn names_are_read_per_mode() {
+    let (profile, problems) = readable("names-x52-pro-per-mode.toml");
+    assert_eq!(problems, []);
+    assert_eq!(
+        profile.settings_for(Mode::One).names,
+        BTreeMap::from([
+            (input("e"), "Emerg. Lights".to_owned()),
+            (input("throttle_hat_left"), "Gear".to_owned()),
+            (input("pov_1_up"), "Pips: SYS".to_owned()),
+        ])
+    );
+    assert_eq!(
+        profile.settings_for(Mode::Two).names,
+        BTreeMap::from([
+            (input("e"), "Eject".to_owned()),
+            (input("page_up"), "Zoom in".to_owned()),
+        ])
+    );
+    assert!(profile.settings_for(Mode::Three).names.is_empty());
+}
+
+#[test]
+fn names_that_cannot_be_used_are_reported_and_left_out() {
+    let (profile, problems) = readable("names-problems-x52.toml");
+    assert_eq!(
+        profile.settings_for(Mode::One).names,
+        BTreeMap::from([(input("a"), "Weapons".to_owned())]),
+        "the blank name is no name, the others keep their built-in names"
+    );
+    assert_eq!(
+        keys(&problems),
+        [
+            "settings.names.b",
+            "settings.names.d",
+            "settings.names.e",
+            "settings.names.page_up",
+            "settings.names.warp_drive",
+        ]
+    );
+    assert_eq!(
+        problems[0].kind,
+        ProblemKind::WrongType {
+            expected: "a string"
+        }
+    );
+    assert_eq!(
+        problems[1].kind,
+        ProblemKind::OutOfRange("the name has a control character".to_owned())
+    );
+    assert!(
+        matches!(problems[2].kind, ProblemKind::OutOfRange(_)),
+        "{:?}",
+        problems[2]
+    );
+    assert_eq!(problems[3].kind, ProblemKind::NotForDeviceType);
+    assert_eq!(problems[4].kind, ProblemKind::UnknownKey);
+}
+
+#[test]
+fn names_that_are_not_a_table_are_reported() {
+    let file = String::from_utf8(fixture("valid-x52.toml"))
+        .unwrap()
+        .replace("[settings]\n", "[settings]\nnames = \"E\"\n");
+    let Ok(Parsed::Readable {
+        profile, problems, ..
+    }) = parse(file.as_bytes(), Schema::CURRENT)
+    else {
+        panic!("{file}");
+    };
+    assert_eq!(
+        problems,
+        [problem(
+            "settings.names",
+            ProblemKind::WrongType {
+                expected: "a table"
+            }
+        )]
+    );
+    assert!(profile.settings_for(Mode::One).names.is_empty());
 }
 
 #[test]

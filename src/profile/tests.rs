@@ -239,6 +239,48 @@ fn unknown_zones_cannot_be_named() {
 }
 
 #[test]
+fn changing_the_kind_carries_the_names() {
+    let button_e = Input::Button(x52::input::Button::ButtonE);
+    let mut single = Profile::builtin_default(DeviceType::X52Pro).settings;
+    single
+        .for_mode_mut(Mode::One)
+        .names
+        .insert(button_e, "Emerg. Lights".to_owned());
+    let mut per_mode = single.into_per_mode();
+    for mode in Mode::ALL {
+        assert_eq!(
+            per_mode.for_mode(mode).names[&button_e],
+            "Emerg. Lights",
+            "{mode:?}"
+        );
+    }
+    per_mode
+        .for_mode_mut(Mode::Two)
+        .names
+        .insert(button_e, "Eject".to_owned());
+    assert_eq!(
+        per_mode.into_single().for_mode(Mode::Three).names[&button_e],
+        "Emerg. Lights"
+    );
+}
+
+#[test]
+fn name_text_is_line_text_without_control_characters() {
+    assert!(name_text("Emerg. Lights").is_ok());
+    assert!(matches!(
+        name_text("ABCDEFGHIJKLMNOPQ"),
+        Err(NameError::Line(LineTextError::TooLong(_)))
+    ));
+    for control in ["A\0B", "A\nB", "\t", "A\u{7f}"] {
+        assert_eq!(
+            name_text(control),
+            Err(NameError::ControlCharacter),
+            "{control:?}"
+        );
+    }
+}
+
+#[test]
 fn line_text_keeps_both_limits() {
     let at_limit = format!("e{}", "\u{301}".repeat(MFD_TEXT_MAX_CHARS - 1));
     assert!(line_text(&at_limit).is_ok());

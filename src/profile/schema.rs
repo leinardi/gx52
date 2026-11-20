@@ -20,6 +20,7 @@
 //! converted on its own. A field with a problem gets its built-in value and the problem is listed.
 //! Writing produces the layout of docs/profiles.md, with every key the device type has.
 
+use std::collections::BTreeMap;
 use std::fmt::{self, Write as _};
 
 use gettextrs::gettext;
@@ -27,6 +28,7 @@ use toml::{Table, Value};
 use x52::clock::{Clock1Source, DateFormat, FixedOffset};
 use x52::command::Brightness;
 use x52::device::{BiColourLed, DeviceType, LedColour, SingleColourLed};
+use x52::input::{Input, InputMap};
 use x52::state::Leds;
 
 use super::migrate::{Schema, Version};
@@ -191,14 +193,21 @@ const SINGLE_TABLE: &str = "settings";
 const MODE_TABLES: [&str; 3] = ["mode_1", "mode_2", "mode_3"];
 
 /// The keys of a table of mode settings.
-const SET_KEYS: [&str; 6] = [
+const SET_KEYS: [&str; 7] = [
     "led_brightness",
     "mfd_brightness",
     "shift",
     "blink",
     "leds",
     "mfd",
+    NAMES_TABLE,
 ];
+
+/// The table of a set's custom control names (docs/profiles.md, "Control names").
+const NAMES_TABLE: &str = "names";
+
+/// The first schema version with [`NAMES_TABLE`].
+const NAMES_SINCE: i64 = 2;
 
 /// The device type a file names, read leniently: the file only has to be TOML with a known
 /// `device_type` string. Used to list a damaged file under its type; `None` when that cannot be
@@ -241,7 +250,7 @@ pub(crate) fn parse(bytes: &[u8], schema: Schema) -> Result<Parsed, ParseError> 
                 .and_then(|raw| name::normalise(raw).ok()),
         }),
         Version::Readable { migrated_from } => {
-            let mut reader = Reader::default();
+            let mut reader = Reader::new(version);
             let profile = reader.profile(&document, device_type);
             Ok(Parsed::Readable {
                 profile: Box::new(profile),
@@ -258,12 +267,23 @@ pub(crate) fn fallback_name() -> String {
 }
 
 /// Converts the fields of a document, collecting the problems.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Reader {
+    /// The `schema_version` of the file, before any migration: a key a later version added is
+    /// unknown in an older file, which a migration that leaves the document alone cannot show.
+    version: i64,
     problems: Vec<FieldProblem>,
 }
 
 impl Reader {
+    /// A reader of a file of schema `version`.
+    const fn new(version: i64) -> Self {
+        Self {
+            version,
+            problems: Vec::new(),
+        }
+    }
+
     fn profile(&mut self, document: &Table, device_type: DeviceType) -> Profile {
         let mut profile = Profile::builtin(device_type, fallback_name());
         self.unknown_keys(document, "", &TOP_LEVEL_KEYS);
@@ -333,7 +353,13 @@ impl Reader {
         let Some(table) = self.table(document, "", key) else {
             return settings;
         };
-        self.unknown_keys(table, key, &SET_KEYS);
+        let names = self.version >= NAMES_SINCE;
+        let known = if names {
+            &SET_KEYS[..]
+        } else {
+            &SET_KEYS[..SET_KEYS.len() - 1]
+        };
+        self.unknown_keys(table, key, known);
         for (name, field) in [
             ("led_brightness", &mut settings.led_brightness),
             ("mfd_brightness", &mut settings.mfd_brightness),
@@ -360,7 +386,58 @@ impl Reader {
             self.problem(&join(key, "leds"), ProblemKind::NotForDeviceType);
         }
         self.mfd(table, key, &mut settings.mfd_lines);
+        if names {
+            self.names(table, key, device_type, &mut settings.names);
+        }
         settings
+    }
+
+    /// The custom names of the set's `names` table, which is optional. A name that cannot be used
+    /// is reported and left out, so its control keeps its built-in name; a blank one is no name.
+    fn names(
+        &mut self,
+        set: &Table,
+        prefix: &str,
+        device_type: DeviceType,
+        names: &mut BTreeMap<Input, String>,
+    ) {
+        if !set.contains_key(NAMES_TABLE) {
+            return;
+        }
+        let Some(table) = self.table(set, prefix, NAMES_TABLE) else {
+            return;
+        };
+        let prefix = join(prefix, NAMES_TABLE);
+        let map = InputMap::for_device(device_type);
+        for (key, value) in table {
+            let field = join(&prefix, key);
+            let Some(input) = Input::from_key(key) else {
+                self.problem(&field, ProblemKind::UnknownKey);
+                continue;
+            };
+            if !map.is_nameable(input) {
+                self.problem(&field, ProblemKind::NotForDeviceType);
+                continue;
+            }
+            let Some(text) = value.as_str() else {
+                self.problem(
+                    &field,
+                    ProblemKind::WrongType {
+                        expected: "a string",
+                    },
+                );
+                continue;
+            };
+            if text.trim().is_empty() {
+                continue;
+            }
+            match super::name_text(text) {
+                Ok(_) => {
+                    names.insert(input, text.to_owned());
+                }
+                Err(error) => self.problem(&field, ProblemKind::OutOfRange(error.to_string())),
+            }
+        }
     }
 
     fn brightness(&mut self, table: &Table, prefix: &str, key: &str) -> Option<Brightness> {
@@ -761,7 +838,17 @@ fn write_set(
     for line in &settings.mfd_lines {
         writeln!(out, "  {},", line_table(line))?;
     }
-    writeln!(out, "]")
+    writeln!(out, "]")?;
+    if !settings.names.is_empty() {
+        writeln!(out, "\n[{key}.{NAMES_TABLE}]")?;
+        for (input, name) in &settings.names {
+            // Only nameable inputs are in the map, and every one of them has a key.
+            if let Some(control) = input.key() {
+                writeln!(out, "{control} = {}", toml_string(name))?;
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

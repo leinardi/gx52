@@ -666,3 +666,64 @@ fn centring_survives_extreme_and_tiny_ranges() {
     let negative = AxisRange { min: -8, max: 7 };
     assert_eq!(negative.centre(), 0);
 }
+
+#[test]
+fn input_keys_round_trip_and_are_unique() {
+    let inputs: Vec<Input> = Button::ALL
+        .into_iter()
+        .map(Input::Button)
+        .chain(Pov1Direction::ALL.into_iter().map(Input::Pov1))
+        .collect();
+    let mut keys = Vec::new();
+    for input in inputs {
+        match input.key() {
+            Some(key) => {
+                assert_eq!(Input::from_key(key), Some(input), "{key}");
+                keys.push(key);
+            }
+            None => assert!(is_mode(input), "{input:?} has no key"),
+        }
+    }
+    let count = keys.len();
+    keys.sort_unstable();
+    keys.dedup();
+    assert_eq!(keys.len(), count, "a key is used twice");
+    assert_eq!(Input::from_key("mode_1"), None);
+    assert_eq!(Input::from_key("E"), None);
+}
+
+#[test]
+fn nameable_controls_follow_the_device_type() {
+    let pro = InputMap::for_device(DeviceType::X52Pro);
+    let x52 = InputMap::for_device(DeviceType::X52);
+    assert_eq!(pro.nameable().count(), 40);
+    assert_eq!(x52.nameable().count(), 35);
+    let key = |key| Input::from_key(key).unwrap_or_else(|| panic!("no input {key}"));
+    for map in [pro, x52] {
+        assert!(map.is_nameable(key("pov_1_up")));
+        assert!(map.is_nameable(key("pinkie")));
+        assert!(!map.is_nameable(Input::Button(Button::Mode1)));
+        assert!(map.nameable().all(|input| map.is_nameable(input)));
+    }
+    assert!(pro.is_nameable(key("page_up")));
+    assert!(!x52.is_nameable(key("page_up")));
+}
+
+#[test]
+fn wheel_notches_are_the_wheel_turns() {
+    let notches: Vec<Button> = Button::ALL
+        .into_iter()
+        .filter(|button| button.is_wheel_notch())
+        .collect();
+    assert_eq!(
+        notches,
+        [
+            Button::ScrollDown,
+            Button::ScrollUp,
+            Button::PageUp,
+            Button::PageDown,
+            Button::Up,
+            Button::Down,
+        ]
+    );
+}
