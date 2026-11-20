@@ -211,16 +211,45 @@ fn dynamic_lines_show_the_live_values_cut_to_a_line() {
         MfdLineSource::Empty,
         MfdLineSource::LastButton,
     ];
+    let trigger = Input::Button(x52::input::Button::TriggerStage1);
+    profile
+        .settings
+        .for_mode_mut(Mode::One)
+        .names
+        .insert(trigger, "Gun, first stage".to_owned());
     let live = LiveValues {
-        last_button: Some("Trigger, first stage".to_owned()),
+        last_input: Some(trigger),
     };
     let lines = profile.to_device_state(Mode::One, &live).mfd_lines;
     assert_eq!(
         lines.map(|line| line.preview()),
-        ["A name of twenty", "", "Trigger, first s"].map(str::to_owned)
+        ["A name of twenty", "", "Gun, first stage"].map(str::to_owned)
     );
     let idle = profile.to_device_state(Mode::One, &LiveValues::default());
     assert_eq!(idle.mfd_lines[2], MfdText::EMPTY, "nothing held");
+}
+
+#[test]
+fn the_last_button_line_shows_the_name_of_the_mode_shown() {
+    let button_e = Input::Button(x52::input::Button::ButtonE);
+    let mut profile = per_mode_profile();
+    for (mode, name) in [(Mode::One, "Emerg. Lights"), (Mode::Two, "Eject")] {
+        let settings = profile.settings.for_mode_mut(mode);
+        settings.mfd_lines[0] = MfdLineSource::LastButton;
+        settings.names.insert(button_e, name.to_owned());
+    }
+    profile.settings.for_mode_mut(Mode::Three).mfd_lines[0] = MfdLineSource::LastButton;
+    let live = LiveValues {
+        last_input: Some(button_e),
+    };
+    let shown = |mode| profile.to_device_state(mode, &live).mfd_lines[0].preview();
+    assert_eq!(shown(Mode::One), "Emerg. Lights");
+    assert_eq!(shown(Mode::Two), "Eject");
+    assert_eq!(
+        shown(Mode::Three),
+        MfdText::fit(&crate::device::names::input_name(button_e)).preview(),
+        "the built-in name without a custom one"
+    );
 }
 
 #[test]

@@ -361,8 +361,9 @@ pub(crate) const fn mode_index(mode: Mode) -> usize {
 /// The values the dynamic MFD lines show, as the app knows them right now.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct LiveValues {
-    /// The name of the most recently pressed button still held, if any.
-    pub(crate) last_button: Option<String>,
+    /// The input the "Last button" line shows: the most recently pressed one still held, or a
+    /// wheel notch held on the line.
+    pub(crate) last_input: Option<Input>,
 }
 
 /// The name of `mode`, translated: "Mode 2".
@@ -440,10 +441,12 @@ impl Profile {
             }),
             MfdLineSource::Empty => MfdText::EMPTY,
             MfdLineSource::ProfileName => MfdText::fit(&self.name),
-            MfdLineSource::LastButton => live
-                .last_button
-                .as_deref()
-                .map_or(MfdText::EMPTY, MfdText::fit),
+            MfdLineSource::LastButton => live.last_input.map_or(MfdText::EMPTY, |input| {
+                settings.names.get(&input).map_or_else(
+                    || MfdText::fit(&crate::device::names::input_name(input)),
+                    |name| MfdText::fit(name),
+                )
+            }),
         });
         DeviceState {
             mfd_brightness: settings.mfd_brightness,

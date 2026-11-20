@@ -27,6 +27,7 @@ pub(crate) mod monotonic;
 pub(crate) mod mouse;
 pub(crate) mod mouse_loop;
 pub(crate) mod names;
+pub(crate) mod notch;
 pub(crate) mod reader;
 pub(crate) mod status;
 pub(crate) mod tester;

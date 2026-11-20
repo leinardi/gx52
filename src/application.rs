@@ -33,8 +33,10 @@ use x52::state::DeviceState;
 
 use crate::config;
 use crate::device::mouse_loop::MouseStatus;
+use crate::device::notch::{HoldTimer, NOTCH_HOLD, NotchHold};
+use crate::device::reader::HeldChange;
 use crate::device::status::DeviceStatus;
-use crate::device::{DeviceEvent, DeviceService, access, names};
+use crate::device::{DeviceEvent, DeviceService, access};
 use crate::model::{ProfileObject, splice};
 use crate::preferences;
 use crate::profile::legacy::{self, FileWriter};
@@ -107,6 +109,8 @@ mod imp {
     use gtk::{gio, glib};
     use x52::input::{AxisValues, HeldInputs, Mode};
 
+    use crate::device::notch::NotchHold;
+
     use super::autostart::{AutostartSync, HIDDEN, Instance, Launch};
     use crate::config;
     use crate::device::status::DeviceStatus;
@@ -150,6 +154,10 @@ mod imp {
         pub(crate) last_logged: RefCell<Option<(ProfileId, Mode)>>,
         /// The buttons and POV 1 directions held on the selected device.
         pub(crate) held: RefCell<HeldInputs>,
+        /// The wheel notch the "Last button" line holds after its release.
+        pub(crate) notch: Cell<NotchHold>,
+        /// The timer that ends the hold of [`Self::notch`].
+        pub(crate) notch_timer: RefCell<Option<glib::SourceId>>,
         /// The other axes of the selected device, known only while an input tester listens.
         pub(crate) axes: RefCell<AxisValues>,
         /// How many input testers are shown; the reader reports the axes while there is one.
@@ -889,6 +897,7 @@ impl Application {
                 imp.active_mode.set(None);
                 self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
+                self.end_notch_hold();
                 imp.axes.borrow_mut().clear();
                 if let Some(settings) = imp.settings.get()
                     && let Err(error) =
@@ -909,13 +918,14 @@ impl Application {
                 imp.active_mode.set(None);
                 self.clear_editing_mode();
                 imp.held.borrow_mut().clear();
+                self.end_notch_hold();
                 imp.axes.borrow_mut().clear();
             }
             DeviceEvent::InputNode { node: None, .. } => {
                 imp.axes.borrow_mut().clear();
-                self.change_held(HeldInputs::clear);
+                self.change_held(None);
             }
-            DeviceEvent::Held { change, .. } => self.change_held(|held| change.apply(held)),
+            DeviceEvent::Held { change, .. } => self.change_held(Some(change)),
             // A change sent before the last tester went is not kept: nothing would update it.
             DeviceEvent::Axes { change, .. } => {
                 if imp.axis_listeners.get() > 0 {
@@ -997,27 +1007,93 @@ impl Application {
         }
     }
 
-    /// Applies `change` to the held inputs; pushes the state when the last held input changed and
-    /// the device shows it, and the editor's display follows. Never logs: this runs per input
-    /// event.
-    fn change_held(&self, change: impl FnOnce(&mut HeldInputs)) {
+    /// Applies `change` to the held inputs and the notch hold, or clears both when it is `None`;
+    /// pushes the state when the input the "Last button" line shows changed and the device shows
+    /// it, and the editor's display follows. Never logs: this runs per input event.
+    fn change_held(&self, change: Option<&HeldChange>) {
         let imp = self.imp();
-        let changed = {
+        let (changed, timer) = {
             let mut held = imp.held.borrow_mut();
-            let before = held.last();
-            change(&mut held);
-            held.last() != before
+            let mut notch = imp.notch.get();
+            let before = notch.shown(&held);
+            let timer = if let Some(change) = change {
+                let timer = notch.apply(change, &held);
+                change.apply(&mut held);
+                timer
+            } else {
+                held.clear();
+                notch.cancel()
+            };
+            imp.notch.set(notch);
+            (notch.shown(&held) != before, timer)
         };
-        if changed && imp.shows_last_button.get() {
+        match timer {
+            HoldTimer::Arm => self.arm_notch_timer(),
+            HoldTimer::Cancel => self.stop_notch_timer(),
+            HoldTimer::Keep => {}
+        }
+        if changed {
+            self.shown_input_changed();
+        }
+    }
+
+    /// Pushes the state when the device shows the "Last button" line, and updates the editor's
+    /// display.
+    fn shown_input_changed(&self) {
+        if self.imp().shows_last_button.get() {
             self.push_desired_state();
             self.update_mfd_previews();
         }
     }
 
+    /// Starts the notch hold's time again.
+    fn arm_notch_timer(&self) {
+        let source = glib::timeout_add_local_once(
+            NOTCH_HOLD,
+            glib::clone!(
+                #[weak(rename_to = app)]
+                self,
+                move || {
+                    let imp = app.imp();
+                    // The source is done: taken, so nothing removes it again.
+                    imp.notch_timer.take();
+                    let mut notch = imp.notch.get();
+                    let changed = {
+                        let held = imp.held.borrow();
+                        let before = notch.shown(&held);
+                        notch.cancel();
+                        notch.shown(&held) != before
+                    };
+                    imp.notch.set(notch);
+                    if changed {
+                        app.shown_input_changed();
+                    }
+                }
+            ),
+        );
+        if let Some(previous) = self.imp().notch_timer.replace(Some(source)) {
+            previous.remove();
+        }
+    }
+
+    /// Stops the notch hold's timer, if it runs.
+    fn stop_notch_timer(&self) {
+        if let Some(source) = self.imp().notch_timer.take() {
+            source.remove();
+        }
+    }
+
+    /// Ends the notch hold without a push: the device selection changed or the device went.
+    fn end_notch_hold(&self) {
+        self.imp().notch.set(NotchHold::default());
+        self.stop_notch_timer();
+    }
+
     /// The values the dynamic MFD lines show.
     fn live_values(&self) -> LiveValues {
+        let imp = self.imp();
         LiveValues {
-            last_button: self.imp().held.borrow().last().map(names::input_name),
+            last_input: imp.notch.get().shown(&imp.held.borrow()),
         }
     }
 
