@@ -165,3 +165,29 @@ fn undo_does_nothing_after_a_kind_change() {
     edited.undo(&undo);
     assert!(edited.names.is_empty());
 }
+
+#[test]
+fn badges_are_the_button_numbers_and_the_arrows() {
+    let pro = InputMap::for_device(DeviceType::X52Pro);
+    let plain = InputMap::for_device(DeviceType::X52);
+    assert_eq!(
+        badge(&pro, Input::Button(Button::TriggerStage1)).as_deref(),
+        Some("1")
+    );
+    assert_eq!(
+        badge(&pro, Input::Pov1(Pov1Direction::Left)).as_deref(),
+        Some("←")
+    );
+    // Every nameable control has a badge, and no two buttons share one.
+    let mut numbers: Vec<String> = NameGroup::ALL
+        .into_iter()
+        .flat_map(|group| group.nameable(&pro))
+        .filter(|input| matches!(input, Input::Button(_)))
+        .map(|input| badge(&pro, input).expect("a nameable button has a number"))
+        .collect();
+    let count = numbers.len();
+    numbers.sort();
+    numbers.dedup();
+    assert_eq!(numbers.len(), count);
+    assert_eq!(badge(&plain, Input::Button(Button::Select)), None);
+}

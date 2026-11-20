@@ -244,7 +244,7 @@ impl NamesEditor {
                 let rows = group
                     .nameable(&map)
                     .map(|input| {
-                        let row = self.name_row(input);
+                        let row = self.name_row(&map, input);
                         expander.add_row(row.entry.row());
                         row
                     })
@@ -256,13 +256,24 @@ impl NamesEditor {
         imp.groups.replace(groups);
     }
 
-    /// The row of `input`'s name, connected.
-    fn name_row(&self, input: Input) -> NameRow {
+    /// The row of `input`'s name on a device of `map`, connected.
+    fn name_row(&self, map: &InputMap, input: Input) -> NameRow {
         let builtin = input_name(input);
         let row = adw::EntryRow::builder()
             .title(&builtin)
             .use_markup(false)
             .build();
+        // The button number or the POV 1 arrow, as the input tester shows it. Hidden from screen
+        // readers: the title already names the control.
+        if let Some(badge) = names::badge(map, input) {
+            let label = gtk::Label::builder()
+                .label(badge)
+                .valign(gtk::Align::Center)
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .css_classes(["input-number"])
+                .build();
+            row.add_prefix(&label);
+        }
         // Translators: {name} is the built-in name of a control, such as "E".
         let reset_label = gettext("Reset to “{name}”").replace("{name}", &builtin);
         let reset = gtk::Button::builder()

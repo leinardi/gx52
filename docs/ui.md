@@ -329,7 +329,9 @@ prototype ([roadmap.md](roadmap.md#1x)). The data is in [profiles.md](profiles.m
   Stick, Throttle, Toggle Switches, POV 1, POV 2, Throttle Hat and MFD. That is the 36 buttons of
   the X52 Pro without the mode selector positions, plus the four POV 1 directions: 40 controls. A
   control the device type lacks is left out, as in the input tester: the X52 (non-Pro) has no MFD
-  wheels (Page Up, Page Down, Up, Down) and no Select, so 35 controls.
+  wheels (Page Up, Page Down, Up, Down) and no Select, so 35 controls. Each row starts with the
+  button number games show, as in the input tester, or the arrow of a POV 1 direction; a screen
+  reader skips it, since the title names the control.
 - **Entry:** while empty, the row's title is the built-in name that applies. The entry follows the
   Custom text line of the [MFD view](#mfd-view): the "n/16" counter of converted bytes, a stop at
   16 bytes or 64 typed characters, a paste cut to the room left, and the list of characters that

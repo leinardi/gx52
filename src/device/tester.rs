@@ -217,15 +217,19 @@ pub(crate) fn hat_names(hat: Hat, names: &BTreeMap<Input, String>) -> Vec<String
         .into_iter()
         .filter_map(|direction| {
             let name = names.get(&hat.input(direction))?;
-            let arrow = match direction {
-                Pov1Direction::Up => '↑',
-                Pov1Direction::Right => '→',
-                Pov1Direction::Down => '↓',
-                Pov1Direction::Left => '←',
-            };
-            Some(format!("{arrow} {name}"))
+            Some(format!("{} {name}", arrow(direction)))
         })
         .collect()
+}
+
+/// The arrow that stands for `direction` of a hat.
+pub(crate) const fn arrow(direction: Pov1Direction) -> char {
+    match direction {
+        Pov1Direction::Up => '↑',
+        Pov1Direction::Right => '→',
+        Pov1Direction::Down => '↓',
+        Pov1Direction::Left => '←',
+    }
 }
 
 /// What a screen reader reads for the held inputs and the mode: "Buttons pressed: Fire, A.

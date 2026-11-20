@@ -24,6 +24,7 @@ use x52::input::{Button, Input, InputMap, Mode, Pov1Direction};
 
 use super::mfd::SettingsSet;
 use super::{ProfileId, mode_index};
+use crate::device::tester;
 
 /// A group of nameable controls, by part of the device, as the Names view lists them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -136,6 +137,18 @@ impl NameGroup {
             .iter()
             .copied()
             .filter(|input| map.is_nameable(*input))
+    }
+}
+
+/// The badge at the start of `input`'s row: the number games show for a button of `map`, or
+/// the arrow of a POV 1 direction. `None` for a button `map` does not have.
+pub(crate) fn badge(map: &InputMap, input: Input) -> Option<String> {
+    match input {
+        Input::Button(button) => map
+            .code_of(button)
+            .and_then(|code| map.button_number(code))
+            .map(|number| number.to_string()),
+        Input::Pov1(direction) => Some(tester::arrow(direction).to_string()),
     }
 }
 
