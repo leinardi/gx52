@@ -61,7 +61,7 @@ disallowed_methods = "deny"
 [package]
 name = "gx52"
 # The release workflow sets the version (docs/rewrite-analysis.md, section 9).
-version = "1.0.1"
+version = "1.1.0"
 description = "Configure the Logitech X52 and X52 Pro joysticks"
 edition.workspace = true
 rust-version.workspace = true

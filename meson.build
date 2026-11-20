@@ -2,7 +2,7 @@ project(
     'gx52',
     'rust',
     # The release workflow sets the version, together with Cargo.toml's (docs/release.md).
-    version: '1.0.1',
+    version: '1.1.0',
     meson_version: '>= 1.1',
     license: 'GPL-3.0-or-later',
 )
