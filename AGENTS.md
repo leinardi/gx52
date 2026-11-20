@@ -201,3 +201,7 @@ it is a performance improvement, a refactor or a revert. Use `perf`, `refactor`,
 of a shipped `feat` or `fix` is itself a `fix`. `svu` matches `feat`/`fix` anywhere in the subject
 (e.g. `prefix:` counts as `fix:`), so avoid a word ending in `feat` or `fix` directly before a colon
 in other subjects. PRs land as merge commits, so every commit counts, not just the PR title.
+
+A note users need beyond the subject (a compatibility warning, say) goes into a
+`Release-Note: <text>` trailer of the commit, which the generated release notes list after the
+subjects ([`docs/release.md`](docs/release.md#release-notes)). Never edit the notes by hand.

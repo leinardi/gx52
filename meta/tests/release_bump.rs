@@ -19,8 +19,8 @@
 //! against the real files it edits.
 //!
 //! The successful bumps check the four files, the `<release>` entry (the first release's fixed
-//! description and the first stable one's, the `feat` and `fix` subjects since the last tag, the
-//! removal of an entry that was
+//! description and the first stable one's, the `feat` and `fix` subjects since the last tag and
+//! the `Release-Note:` trailers after them, the removal of an entry that was
 //! never published) and that nothing else changed. Every refusal is the negative control of a
 //! bump: it fails and leaves the tree exactly as it was.
 
@@ -243,7 +243,7 @@ fn with_legacy(newest: &[&str]) -> Vec<String> {
 #[test]
 fn the_first_release_gets_the_fixed_description() {
     let scratch = workspace(true);
-    scratch.commit("feat(leds): never listed, there is no v tag yet");
+    scratch.commit("feat(leds): never listed, there is no v tag yet\n\nRelease-Note: Never listed");
     bump_ok(&scratch, "0.99.0");
     let metainfo = scratch.read(METAINFO);
     assert_eq!(versions(&metainfo), with_legacy(&["0.99.0"]));
@@ -273,7 +273,7 @@ fn the_first_stable_release_gets_the_rewrite_notes() {
     bump_ok(&scratch, "0.99.0");
     scratch.commit("chore(release): bump version to 0.99.0");
     scratch.tag("v0.99.0");
-    scratch.commit("fix(device): reopen the device after resume");
+    scratch.commit("fix(device): reopen the device after resume\n\nRelease-Note: Never listed");
     bump_ok(&scratch, "1.0.0");
     scratch.commit("chore(release): bump version to 1.0.0");
     scratch.tag("v1.0.0");
@@ -342,13 +342,33 @@ fn notes_come_from_feat_and_fix_and_unpublished_entries_go() {
         "the published 0.99.0 stays"
     );
 
-    // Nothing that ships since the last tag: a maintenance entry.
+    // A `Release-Note:` trailer adds its value after the subjects, on any type of commit; the
+    // commits without one add nothing.
     scratch.commit("chore(release): bump version to 0.99.2");
     scratch.tag("v0.99.2");
-    scratch.commit("chore(deps): bump something else");
+    scratch.commit(
+        "feat(profiles): add control names\n\nThe body.\n\nRelease-Note: Profiles saved here <need> 1.1 & up",
+    );
+    scratch.commit("fix(mfd): hold wheel notches");
+    scratch.commit("docs(profiles): words\n\nRelease-Note: A second\n note, folded");
     bump_ok(&scratch, "0.99.3");
     assert_eq!(
         items(&scratch.read(METAINFO), "0.99.3"),
+        [
+            "Add control names",
+            "Hold wheel notches",
+            "Profiles saved here &lt;need&gt; 1.1 &amp; up",
+            "A second note, folded",
+        ],
+    );
+
+    // Nothing that ships since the last tag: a maintenance entry.
+    scratch.commit("chore(release): bump version to 0.99.3");
+    scratch.tag("v0.99.3");
+    scratch.commit("chore(deps): bump something else");
+    bump_ok(&scratch, "0.99.4");
+    assert_eq!(
+        items(&scratch.read(METAINFO), "0.99.4"),
         ["Maintenance release"]
     );
 }

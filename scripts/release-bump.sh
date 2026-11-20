@@ -28,11 +28,11 @@
 # chose it (explicit, or svu after 1.0.0) is not visible here: scripts/release-policy.sh enforces
 # that rule before the version is resolved.
 #
-# The new `<release>` describes the `feat` and `fix` subjects since the newest `vX.Y.Z` tag; the
-# first release of the rewrite (no `v` tag yet) gets a fixed description of the rewrite instead,
-# and the first stable one (the first of major 1 or higher, which replaces 0.7.x on Flathub stable)
-# that description plus its two notes for 0.7 users, the source-install profiles and the untested
-# X52 (non-Pro). A `<release>` of
+# The new `<release>` describes the `feat` and `fix` subjects since the newest `vX.Y.Z` tag, then
+# the `Release-Note:` trailers of every commit since that tag; the first release of the rewrite (no
+# `v` tag yet) gets a fixed description of the rewrite instead, and the first stable one (the first
+# of major 1 or higher, which replaces 0.7.x on Flathub stable) that description plus its two notes
+# for 0.7 users, the source-install profiles and the untested X52 (non-Pro). A `<release>` of
 # the rewrite whose `vX.Y.Z` tag does not exist (its bump was merged, its gate failed, it was never
 # published) is removed; the legacy `0.7.x` entries always stay. The date is today in UTC, or the
 # day of SOURCE_DATE_EPOCH when that is set.
@@ -161,6 +161,13 @@ else
 	mapfile -t ITEMS < <(git log --no-merges --reverse --format=%s "${LAST_TAG}..HEAD" |
 		sed -nE 's/^(feat|fix)(\([^)]*\))?!?: +(.+)$/\3/p' |
 		awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
+	# Then the `Release-Note:` trailers of the same commits, oldest first, each as written: a note
+	# a release needs beyond its subjects (docs/release.md, "Release notes"). A commit without the
+	# trailer prints an empty line, which is dropped.
+	mapfile -t NOTES < <(git log --no-merges --reverse \
+		--format='%(trailers:key=Release-Note,valueonly,unfold)' "${LAST_TAG}..HEAD" |
+		sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
+	ITEMS+=("${NOTES[@]}")
 	if [[ "${#ITEMS[@]}" -eq 0 ]]; then
 		ITEMS=("Maintenance release")
 	fi
