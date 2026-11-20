@@ -38,6 +38,10 @@ come from the documentation, not from a device on the desk. Reports from X52 own
 | --- | --- | --- |
 | ![The profile list](data/screenshots/profiles.png) | ![Running in the background and the virtual mouse](data/screenshots/preferences.png) | ![Every button, axis and hat, live](data/screenshots/tester.png) |
 
+| Names |
+| --- |
+| ![Custom names for the controls](data/screenshots/names.png) |
+
 ## Install
 
 ### Flathub

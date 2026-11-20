@@ -302,7 +302,7 @@ The diff of a dry run is against `beta` for a `0.x` version, `master` from `1.0.
 
 ## Screenshots
 
-The metainfo lists six screenshots under `data/screenshots/` (not installed), with translatable
+The metainfo lists seven screenshots under `data/screenshots/` (not installed), with translatable
 captions. Their URLs follow the trunk
 (`raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/...`), not the tag: the
 gate mirrors them before the tag exists. A side effect: a later screenshot change on the trunk also
@@ -326,6 +326,7 @@ real change of the UI; look at each changed PNG before committing it. Needs `wes
 | `data/screenshots/leds.png` | the main window with a per-mode profile, on the LEDs page |
 | `data/screenshots/mfd.png` | the MFD page: the display preview and its text |
 | `data/screenshots/clocks.png` | the Clocks page: three clocks in real time zones |
+| `data/screenshots/names.png` | the Names page: custom control names, one focused and previewed on the MFD |
 | `data/screenshots/profiles.png` | the profile list, in the narrow window |
 | `data/screenshots/preferences.png` | Preferences |
 | `data/screenshots/tester.png` | the input tester, with the joystick in a fixed pose |

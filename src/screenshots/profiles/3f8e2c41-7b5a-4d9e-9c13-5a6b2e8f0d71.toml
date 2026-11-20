@@ -39,8 +39,17 @@ i = "red"
 lines = [
   { source = "text", text = "MASTER ARM ON" },
   { source = "text", text = "WPN AIM-120C" },
-  { source = "profile_name" },
+  { source = "last_button" },
 ]
+
+[mode_1.names]
+trigger_stage_1 = "Gun"
+a = "Weapon Release"
+e = "Emerg. Lights"
+t1 = "Master Arm"
+pov_2_right = "Chaff"
+throttle_hat_left = "Gear"
+pov_1_up = "Pips: SYS"
 
 [mode_2]
 led_brightness = 96

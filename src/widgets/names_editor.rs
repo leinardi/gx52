@@ -475,6 +475,16 @@ impl NamesEditor {
         }
     }
 
+    /// The simulated display.
+    pub(crate) fn display(&self) -> crate::widgets::MfdDisplay {
+        self.imp().display.get()
+    }
+
+    /// Whether the rows of a device type are built.
+    pub(crate) fn rows_built(&self) -> bool {
+        self.imp().built_for.get().is_some()
+    }
+
     /// Shows the display again: the dynamic lines and the time follow the device and the clock.
     pub(crate) fn refresh_display(&self) {
         let imp = self.imp();
