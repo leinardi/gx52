@@ -2,7 +2,7 @@
 
 The expected profile files of the GX52 0.7 import (`src/profile/legacy/tests.rs`), one per row of
 the two fixture databases the tests build (`flatpak_database` and `source_database`, the two
-schemas of [spike S8](../../../docs/spikes/08-legacy-import.md)). Each file is named
+schemas of [spike S8](../../../docs/internal/research/spikes/08-legacy-import.md)). Each file is named
 `<database>-<table>-<row id>.toml` and holds the row's profile as the import converts it, before
 the plan gives the default rows their default name.
 

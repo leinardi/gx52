@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The Clocks view of the profile editor: clock 1, clocks 2 and 3 and the date format, shared by
-//! every mode, each with its time now as the MFD shows it (docs/ui.md, "Clocks view").
+//! every mode, each with its time now as the MFD shows it (docs/internal/ui.md, "Clocks view").
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;

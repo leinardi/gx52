@@ -20,7 +20,7 @@
 # One exact Rust release for host builds, pre-commit and the bare CI runner: the Cargo
 # rust-version names the same one. The Flatpak builds use the Rust of the
 # org.freedesktop.Sdk.Extension.rust-stable extension instead, so this pin follows that
-# extension's release (docs/tooling-todo.md). No extra targets: Flathub builds every architecture
+# extension's release (docs/internal/tooling-todo.md). No extra targets: Flathub builds every architecture
 # natively.
 [toolchain]
 channel = "1.98.0"

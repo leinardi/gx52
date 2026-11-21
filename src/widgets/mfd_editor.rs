@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The MFD view of the profile editor: the mode bar, the simulated display with its clock
-//! switcher, the line rows, and the brightness and shift rows (docs/ui.md, "MFD view").
+//! switcher, the line rows, and the brightness and shift rows (docs/internal/ui.md, "MFD view").
 
 use std::time::Duration;
 

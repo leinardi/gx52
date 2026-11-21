@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! A row of the profile list: the name, the active marker, the "1 2 3" badges of a per-mode
-//! profile, the warning of a profile that failed to load, and the row menu (docs/ui.md,
+//! profile, the warning of a profile that failed to load, and the row menu (docs/internal/ui.md,
 //! "Sidebar" and "Profile row menu").
 //!
 //! The menu's actions are the row's own (`row.*`), so each row enables only what applies to its

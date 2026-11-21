@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! What the views of the profile editor show (docs/ui.md, "Profile editor").
+//! What the views of the profile editor show (docs/internal/ui.md, "Profile editor").
 
 use x52::device::DeviceType;
 use x52::input::Mode;

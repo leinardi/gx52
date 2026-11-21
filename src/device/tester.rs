@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! What the input tester shows (docs/ui.md, "Input tester"): its groups of indicators, the
+//! What the input tester shows (docs/internal/ui.md, "Input tester"): its groups of indicators, the
 //! direction grids of the hats, the tooltips and the text a screen reader reads.
 //!
 //! Everything here is in terms of controls ([`Button`], [`Pov1Direction`]), never evdev codes:

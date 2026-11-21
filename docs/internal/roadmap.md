@@ -2,19 +2,20 @@
 
 The ordered plan for the coding session, from the project setup to `1.0.0` and beyond. Each
 milestone has ordered tasks, each task a "done when". What to build is specified in
-[protocol.md](protocol.md), [architecture.md](architecture.md), [profiles.md](profiles.md) and
-[release.md](release.md); the scope comes from [rewrite-analysis.md](rewrite-analysis.md) section
-12; the open items come from [preparation.md](preparation.md), [hands-on.md](hands-on.md) and the
-docs above. Tooling still to set up is tracked in [tooling-todo.md](tooling-todo.md) and referenced
-here by section, not copied.
+[protocol.md](../protocol.md), [architecture.md](../architecture.md), [profiles.md](../profiles.md)
+and [release.md](release.md); the scope comes from
+[rewrite-analysis.md](history/rewrite-analysis.md) section 12; the open items come from
+[preparation.md](history/preparation.md), [hands-on.md](history/hands-on.md) and the docs above.
+Tooling still to set up is tracked in [tooling-todo.md](tooling-todo.md) and referenced here by
+section, not copied.
 
 ## Rules for every code task
 
 A task marked **(code)** touches code, build files or CI. For each one:
 
 - **Before starting:** load the skills listed in [AGENTS.md, "Project
-  skills"](../AGENTS.md#project-skills) (for Rust and GTK work `gtk-rs-development` and
-  `rust-best-practices`), as [architecture.md](architecture.md#skills) explains.
+  skills"](../../AGENTS.md#project-skills) (for Rust and GTK work `gtk-rs-development` and
+  `rust-best-practices`), as [architecture.md](../architecture.md#skills) explains.
 - **Done when**, in addition to the task's own condition (written "DW, plus" below):
   - `make verify` and `make check` pass;
   - the `adversarial-review` skill reports no open findings on the task's diff;
@@ -70,10 +71,10 @@ Tasks, in order:
 
 ## M1: the `x52` crate
 
-Pure, unit-tested, no GTK ([architecture.md](architecture.md#workspace)).
+Pure, unit-tested, no GTK ([architecture.md](../architecture.md#workspace)).
 
 1. **(code) Protocol.** Device types and IDs, the transport trait, and the typed commands of
-   [protocol.md, "Commands the app may send"](protocol.md#commands-the-app-may-send) with
+   [protocol.md, "Commands the app may send"](../protocol.md#commands-the-app-may-send) with
    range-checked constructors and their encoding (LED bits and colour order, brightness, MFD write
    and clear with padding, clocks, date field order, shift, blink); the capabilities per device type
    (no LEDs, shift or blink on the X52). Done when: DW, plus every row of the allowlist has an
@@ -84,19 +85,19 @@ Pure, unit-tested, no GTK ([architecture.md](architecture.md#workspace)).
    `disallowed-methods` ban. Done when: DW, plus tests cover DST transitions on either side and the
    profiles.md worked examples.
 3. **(code) MFD character set.** The Unicode-to-byte table of
-   [protocol.md](protocol.md#mfd-character-set), the fallbacks and the 16-byte limit on converted
+   [protocol.md](../protocol.md#mfd-character-set), the fallbacks and the 16-byte limit on converted
    bytes. Done when: DW, plus every byte that is neither blank (`0x00`–`0x07`, `0xA0`) nor a
    duplicate glyph round-trips byte → character → byte; for each duplicate (`¥`, `←`, `` ` ``) the
    conversion gives the byte protocol.md documents as the chosen one; text never produces a blank
    byte other than the space `0x20`; and the fallback cases are tested.
 4. **(code) Input map and mode debounce.** The X52 Pro button, axis and hat names of
-   [protocol.md](protocol.md#evdev-input-map-x52-pro), the GX52 0.7 candidate map for the X52
+   [protocol.md](../protocol.md#evdev-input-map-x52-pro), the GX52 0.7 candidate map for the X52
    marked unverified, and the 200 ms mode debounce over event timestamps. Done when: DW, plus the S3
    bounce log is a test fixture and gives modes 1, 2, 3, 1 without the pass through 2.
 
 ## M2: the device service
 
-The threads of [architecture.md](architecture.md#threads-and-data-flow), in the `gx52` crate.
+The threads of [architecture.md](../architecture.md#threads-and-data-flow), in the `gx52` crate.
 
 1. **(code) Writer and replay.** The writer thread owning the `nusb` device, the command channel,
    coalescing, sending only changes, the full-state replay on every connect, the clocks and the
@@ -110,7 +111,7 @@ The threads of [architecture.md](architecture.md#threads-and-data-flow), in the 
    the selector on the device changes the reported mode once per position.
 4. **(code) Permission states.** No device / found but no permission / ready, retry of `open` on
    each poll and on "Try again", uinput permission as a separate state
-   ([protocol.md](protocol.md#access-states)). Done when: DW, plus with the udev rule removed and
+   ([protocol.md](../protocol.md#access-states)). Done when: DW, plus with the udev rule removed and
    restored (`udevadm trigger`, no replug), the state goes to "no permission" and back to "ready".
 5. **(code) Resume.** Decide how a resume from suspend is noticed so the clocks are re-sent
    (monotonic timers stop during suspend) and record it in architecture.md. Done when: DW, plus
@@ -124,7 +125,7 @@ Acceptance, on the X52 Pro, in the Devel Flatpak:
   brightness, LEDs, MFD text and clocks in the app, plug back in. Done when: the MFD backlight and
   the throttle LEDs come back, and every LED, all three MFD lines and the three clocks show the
   app's state.
-- **Clock offsets across midnight** ([protocol.md](protocol.md#usb-vendor-commands)): a clock 2/3
+- **Clock offsets across midnight** ([protocol.md](../protocol.md#usb-vendor-commands)): a clock 2/3
   whose time is on the other side of midnight from clock 1 shows the right time. Done when: checked
   with a positive and a negative normalised offset and recorded in protocol.md.
 
@@ -133,11 +134,11 @@ host and in the Devel Flatpak (9 of 9 each, every CHECK confirmed on the device)
 `permission` (11 of 11), `resume` (6 of 6: clock 1 right 0.1 s after a suspend of 2 min 38 s) and
 the `x52d` banner (with a root-owned socket) passed on the host. `midnight` passed in the forward
 direction only (`+617` from 14:43 showed 01:00); the backward direction, which needs a run before
-noon, became an optional check on 2026-11-07 ([preparation.md](preparation.md)), so M2 is accepted.
+noon, became an optional check on 2026-11-07 ([preparation.md](history/preparation.md)), so M2 is accepted.
 
 ## M3: profiles
 
-[profiles.md](profiles.md) as written.
+[profiles.md](../profiles.md) as written.
 
 1. **(code) Profile store.** Schema 1, two-step parsing with per-field problems, built-in defaults
    with stable ids, atomic writes off the main thread, size limits, the `gx52-devel` directory for
@@ -147,7 +148,7 @@ noon, became an optional check on 2026-11-07 ([preparation.md](preparation.md)),
 2. **(code) Per-type mode mapping.** The two GSettings keys and the fallback rules, wired to the
    reader's mode and the device type. Done when: DW, plus switching the selector applies the mapped
    profile, and a missing or wrong-type id falls back to the type's default.
-3. **(code) Legacy import.** The S8 rules table of [profiles.md](profiles.md#legacy-import),
+3. **(code) Legacy import.** The S8 rules table of [profiles.md](../profiles.md#legacy-import),
    `rusqlite` read-only with the size limit, the import-done flag, the report toast. Done when: DW,
    plus round-trip tests (legacy row → profile → TOML → profile) on fixture databases with both S8
    schemas, and the maintainer's two real databases import as expected (not committed).
@@ -183,34 +184,34 @@ Results on 2026-11-08:
 
 ## M3 follow-up: single and per-mode profiles
 
-The profile model changed in the M4 UI session ([profiles.md](profiles.md#model)): a profile is
+The profile model changed in the M4 UI session ([profiles.md](../profiles.md#model)): a profile is
 single or per-mode, and the active profile replaces the per-type mode mapping of M3 task 2. Nothing
 is published yet, so schema 1 and the GSettings keys are redefined without a migration. Done before
 M5, so the UI is built on the new model.
 
 1. **(code) Schema and store.** `kind`, `[settings]` / `[mode_1]`–`[mode_3]`, the shared clocks and
    date format, the MFD line sources, and the new validation cases of
-   [profiles.md](profiles.md#validation-and-recovery); the legacy import writes single profiles and
+   [profiles.md](../profiles.md#validation-and-recovery); the legacy import writes single profiles and
    maps `settings_show_app_indicator` to `run-in-background`. Done when: DW, plus a fixture per new
    validation case, and the round-trip tests of M3 pass with single and per-mode profiles.
 2. **(code) Active profile and mode sets.** The `active-profile-*` and `profile-order-*` keys in
    place of `mode-profiles-*`, `run-in-background` in place of `show-tray`; the state model picks
    the mode's set of a per-mode profile and resolves the dynamic MFD line sources
-   ([architecture.md](architecture.md#state-model)). Done when: DW, plus on the X52 Pro a per-mode
+   ([architecture.md](../architecture.md#state-model)). Done when: DW, plus on the X52 Pro a per-mode
    profile switches sets with the selector, a single profile ignores it, and an unknown or
    wrong-type active id falls back to the type's default.
 
 Results on 2026-11-10:
 
 - **Schema and store:** single and per-mode profiles read and write the layout of
-  [profiles.md](profiles.md#toml-schema-version-2), and both kinds round-trip (write, parse, equal,
+  [profiles.md](../profiles.md#toml-schema-version-2), and both kinds round-trip (write, parse, equal,
   no problems), the legacy import, export and store tests included. A fixture per new validation
   case: an unknown `kind`, a missing mode table, the other kind's tables, an unknown line source,
   a text line over 16 converted bytes and one without `text`. Dynamic lines are cut to 16 bytes
   (`MfdText::fit`).
 - **Active profile and profile order:** `active-profile-*`, `profile-order-*` and
   `run-in-background` replace `mode-profiles-*` and `show-tray`. The active id resolves as
-  [profiles.md](profiles.md#active-profile) says, falling back to the type's default for an unknown,
+  [profiles.md](../profiles.md#active-profile) says, falling back to the type's default for an unknown,
   unloaded or other-type id; the order functions return the complete effective order to store, a
   new profile last and a duplicate right after its original. The applied profile and mode are
   logged only when they change.
@@ -229,21 +230,21 @@ Results on 2026-11-10:
 
 ## M4: UI design session
 
-Before any UI work. A dedicated session that writes `docs/ui.md` (postponed from stage C because the
-UI is redesigned from scratch).
+Before any UI work. A dedicated session that writes `docs/internal/ui.md` (postponed from stage C
+because the UI is redesigned from scratch).
 
 The app ships no pictures or drawings of the device; the LED editor is the schematic layout of
-[spike S7](spikes/07-led-editor.md#design-for-the-app), decided on 2026-11-09.
+[spike S7](research/spikes/07-led-editor.md#design-for-the-app), decided on 2026-11-09.
 
 1. **[`docs/ui.md`](ui.md).** Screens, navigation, libadwaita widgets, adaptive layout, the
    guidance pages, the LED editor's schematic layout, the MFD line sources. Drafted on 2026-11-09
    from an interview with the maintainer. Done when: `make check` passes and the user has reviewed
    it. **Done** on 2026-11-10: reviewed through the clickable prototype in
-   [`art/prototype/`](../art/prototype/), the reference for M5.
+   [`art/prototype/`](../../art/prototype), the reference for M5.
 
 ## M5: UI implementation
 
-Per `docs/ui.md`. Every string translatable, every interactive widget with an accessible label
+Per `docs/internal/ui.md`. Every string translatable, every interactive widget with an accessible label
 (AGENTS.md).
 
 1. **(code) Main window and profiles UI**: the split view, the profile list (active profile,
@@ -282,16 +283,15 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
      name being typed while an import finishes is kept, because the file chooser is modal (the
      list splice it relies on is unit-tested).
 2. **(code) LED editor**: the schematic layout of
-   [S7](spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a popover
-   of states, grid positions as data), the mode bar of a per-mode profile (it overrides
+   [S7](research/spikes/07-led-editor.md#design-for-the-app) (one card per part, LED buttons with a
+   popover of states, grid positions as data), the mode bar of a per-mode profile (it overrides
    `LiveValues::mode_shown` and the set sent until the selector moves; until then the "mode" MFD
-   line shows the active mode), POV 1 shown fixed green
-   with its explanation, every change sent to the device at once. Every LED is shown off while
-   brightness is `0`, with its state kept. Done when: DW, plus brightness `0` shows every LED off in
-   the editor and on the device and the states come back above `0`, plus the S7 checks skipped on
-   2026-11-02 pass: keyboard only, the narrowest window, light and dark style. The Orca check
-   ("<LED> LED: <state>"), optional in hands-on.md, is required here because the editor is the
-   app's main custom widget.
+   line shows the active mode), POV 1 shown fixed green with its explanation, every change sent to
+   the device at once. Every LED is shown off while brightness is `0`, with its state kept. Done
+   when: DW, plus brightness `0` shows every LED off in the editor and on the device and the states
+   come back above `0`, plus the S7 checks skipped on 2026-11-02 pass: keyboard only, the narrowest
+   window, light and dark style. The Orca check ("<LED> LED: <state>"), optional in
+   history/hands-on.md, is required here because the editor is the app's main custom widget.
 
    Results on 2026-11-10:
 
@@ -399,7 +399,7 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
      without one), and 0.1 steps stored as `0.7000000000000001` (inside the range, harmless).
 6. **(code) udev/uinput guidance**: the udev page in place of the content area, the uinput subpage
    in Preferences; the rule file, a copy button, the commands, "no need to unplug", what works
-   without access, the uinput security note ([protocol.md](protocol.md#udev-rule)). Done when: DW,
+   without access, the uinput security note ([protocol.md](../protocol.md#udev-rule)). Done when: DW,
    plus the udev page appears in the "no permission" state and goes away after `udevadm trigger`
    without a replug.
 
@@ -436,9 +436,10 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
      generation, a stale result is dropped and a fresh check starts, unit-tested with a delayed
      result.
 7. **(code) Input tester**: the "Test input" page of
-   [S7](spikes/07-led-editor.md#input-tester-test-page), reading evdev without grabbing the device.
-   Done when: DW, plus every button, axis, hat, toggle and the mode selector of the X52 Pro shows on
-   the page (checked on the device), and a game keeps receiving input while the page is open.
+   [S7](research/spikes/07-led-editor.md#input-tester-test-page), reading evdev without grabbing the
+   device. Done when: DW, plus every button, axis, hat, toggle and the mode selector of the X52 Pro
+   shows on the page (checked on the device), and a game keeps receiving input while the page is
+   open.
 
    Results on 2026-11-11:
 
@@ -477,7 +478,7 @@ Per `docs/ui.md`. Every string translatable, every interactive widget with an ac
 
 ## M6: tray and background
 
-1. **(code) Tray** with `ksni` as in [architecture.md](architecture.md#threads-and-data-flow): the
+1. **(code) Tray** with `ksni` as in [architecture.md](../architecture.md#threads-and-data-flow): the
    tri-state availability, the menu of [ui.md](ui.md#tray-menu) (status line, Show / Hide GX52,
    the Profile submenu, Preferences, About, Quit), the app's symbolic icon. With "Run in
    background" on, closing the window keeps the app running whether or not a tray is available;
@@ -571,14 +572,14 @@ Acceptance:
 
 ## M7: virtual mouse
 
-1. **(code) Virtual-mouse loop** as in [architecture.md](architecture.md#virtual-mouse), with the S9
-   mapping and values ([protocol.md](protocol.md#virtual-mouse-uinput)); decide whether the uinput
-   device is kept alive across a replug and record it in architecture.md. Done when: DW, plus the
-   acceptance below.
+1. **(code) Virtual-mouse loop** as in [architecture.md](../architecture.md#virtual-mouse), with the
+   S9 mapping and values ([protocol.md](../protocol.md#virtual-mouse-uinput)); decide whether the
+   uinput device is kept alive across a replug and record it in architecture.md. Done when: DW, plus
+   the acceptance below.
    - **Decided (2026-11-15):** the uinput device exists only while the switch is on and a joystick
      is connected; it is removed on unplug (after the release) and created again on replug, so no
      leftover pointer can turn a laptop's touchpad off. Recorded in
-     [architecture.md, "Threads and data flow"](architecture.md#threads-and-data-flow).
+     [architecture.md, "Threads and data flow"](../architecture.md#threads-and-data-flow).
    - **Code done:** the loop thread (`src/device/mouse_loop.rs`) and the pure mapping
      (`src/device/mouse.rs`), unit-tested with a fake pointer and clock: release then removal on
      unplug and switch-off, a new device on replug, the arrival-based ordering, a failed creation
@@ -593,7 +594,7 @@ Acceptance:
      `/proc/bus/input/devices` after a replug and gone while unplugged. All as expected.
    - **Plain X52:** the ministick on the Pro's codes and the mouse buttons at 718–721, derived from
      the kernel's HID quirk and libx52's report parser
-     ([protocol.md](protocol.md#x52-non-pro)), not tested on a device; the input tester now shows
+     ([protocol.md](../protocol.md#x52-non-pro)), not tested on a device; the input tester now shows
      its ministick too.
    - **`--device-check uinput`** creates the "GX52 virtual mouse" device and removes it: passes on
      the host and in the Devel Flatpak (2026-11-15).
@@ -615,7 +616,7 @@ Acceptance:
 - No button stays held after unplugging the joystick or turning the switch off while a button is
   held.
 - Checked on 2026-11-15 on the X52 Pro, host build and Devel Flatpak (task 1).
-- Optional: an X11 session ([spike S9](spikes/09-virtual-mouse.md#not-done-yet)); other games,
+- Optional: an X11 session ([spike S9](research/spikes/09-virtual-mouse.md#not-done-yet)); other games,
   especially ones that bind every axis.
 
 ## M8: release pipeline and the first `0.99.x` on beta
@@ -660,7 +661,7 @@ Acceptance:
      passed test build of the `master` migration PR (#16, closed by it), as
      [release.md](release.md#one-time-setup) describes. The `release` environment is gone from
      the IaC and from the repository.
-3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of preparation.md): the packaging
+3. **GitHub #1 decision** ("[feature request] Deb Snap ?", stage A of history/preparation.md): the packaging
    scope beyond Flathub. Done when: the issue is answered and closed or scheduled, and
    rewrite-analysis section 1 records the decision.
    - **Done (2026-10-28):** closed as not planned, Flathub is the only official channel; recorded
@@ -681,10 +682,10 @@ Acceptance:
 5. **First `0.99.x` on beta.** Done when: the Flathub PR is merged, the beta build installs with
    `flatpak install flathub-beta com.leinardi.gx52`, and an X52 non-Pro call for testers is posted.
    - **Prepared (2026-11-15):** the call for testers is drafted in
-     [x52-call-for-testers.md](x52-call-for-testers.md) (the input tester map, the mode selector,
+     [x52-call-for-testers.md](notes/x52-call-for-testers.md) (the input tester map, the mode selector,
      the MFD, the character set, the clocks and the virtual mouse), for the maintainer to post as a
      GitHub issue or discussion once the beta installs. Its results go here and in
-     [protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro). The dispatch, the bump PR merge, the
+     [protocol.md, "X52 (non-Pro)"](../protocol.md#x52-non-pro). The dispatch, the bump PR merge, the
      Flathub `beta` branch and the Flathub PR merge are the maintainer's.
    - **Done (2026-11-18), except the call for testers:** `v0.99.0` released on 2026-11-17, on the
      Flathub `beta` branch after the permission review, and tested from beta by the maintainer.
@@ -751,7 +752,7 @@ Through the beta channel first ([release.md](release.md#versions-and-channels)):
   control and mode, shown by the MFD's "Last button" line and the input tester, and a 0.7 s hold
   of wheel notches on that line. Profile schema version 2. Decided on 2026-11-19 against the
   prototype: [ui.md, "Names view"](ui.md#names-view) and
-  [profiles.md, "Control names"](profiles.md#control-names). Implemented on 2026-11-20, for the
+  [profiles.md, "Control names"](../profiles.md#control-names). Implemented on 2026-11-20, for the
   next release; not checked on a device yet.
 - **D-Bus / CLI control** on the app's bus name.
 - **Game integration**: the MFD pages engine and the X-Plane adapter first (needs `--share=network`,

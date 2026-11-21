@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The rows of the profile list (docs/ui.md, "Sidebar"): what each device type's list shows, in
+//! The rows of the profile list (docs/internal/ui.md, "Sidebar"): what each device type's list shows, in
 //! the order it shows it.
 
 use x52::device::DeviceType;

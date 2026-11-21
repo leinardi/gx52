@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# The maintainer's side of the Flathub repository (docs/release.md, "Flathub by hand"). It keeps a
+# The maintainer's side of the Flathub repository (docs/internal/release.md, "The Flathub pull requests"). It keeps a
 # clone of flathub/com.leinardi.gx52 under FLATHUB_DIR, prepares a branch there, pushes it with the
 # maintainer's own git login and opens its pull request with the maintainer's gh login (or updates
 # the one already open). It never pushes to `master`, and pushes `beta` only to create it.

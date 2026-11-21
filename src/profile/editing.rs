@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The mode the editor shows and the device shows: the one picked in the mode bar, else the one
-//! the selector on the stick is at (docs/ui.md, "Mode bar").
+//! the selector on the stick is at (docs/internal/ui.md, "Mode bar").
 
 use x52::input::Mode;
 

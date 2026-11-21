@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The tray icon (docs/ui.md, "Tray menu"), a `StatusNotifierItem` served by `ksni` on its own
+//! The tray icon (docs/internal/ui.md, "Tray menu"), a `StatusNotifierItem` served by `ksni` on its own
 //! executor thread, as spike S5 built it.
 //!
 //! The tray item lives on `ksni`'s thread, so it holds only plain data: the [`TrayModel`] the
@@ -261,7 +261,7 @@ fn action_item(label: String, action: TrayAction) -> MenuItem<Gx52Tray> {
     .into()
 }
 
-/// The menu of docs/ui.md, "Tray menu". Show / Hide comes right after the status line: on GNOME a
+/// The menu of docs/internal/ui.md, "Tray menu". Show / Hide comes right after the status line: on GNOME a
 /// single click opens the menu instead of activating the icon (S5).
 fn menu(model: &TrayModel) -> Vec<MenuItem<Gx52Tray>> {
     let toggle = if model.window_shown {

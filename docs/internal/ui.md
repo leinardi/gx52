@@ -4,10 +4,10 @@ The UI of the rewrite: screens, navigation, the libadwaita widgets behind them, 
 and the states the app can be in. Written in the M4 design session
 ([roadmap.md](roadmap.md#m4-ui-design-session)) on 2026-11-09, from an interview with the
 maintainer, and reviewed on 2026-11-10 against the clickable prototype in
-[`art/prototype/`](../art/prototype/) (open `Main.dc.html` through a local web server).
+[`art/prototype/`](../../art/prototype) (open `Main.dc.html` through a local web server).
 
-What the device does is in [protocol.md](protocol.md), the profile model in
-[profiles.md](profiles.md), and how the pieces run in [architecture.md](architecture.md). Every
+What the device does is in [protocol.md](../protocol.md), the profile model in
+[profiles.md](../profiles.md), and how the pieces run in [architecture.md](../architecture.md). Every
 user-visible string is translatable and every interactive widget has an accessible label
 (AGENTS.md).
 
@@ -77,12 +77,12 @@ launches: it is a check made now, not a habit, and it selects no profile. A per-
 - **Header bar:** the main menu button (☰) on the left, the window title "GX52", and a "+" menu
   button on the right.
 - **Profile list:** a `gtk::ListBox` with the `navigation-sidebar` style, the connected device
-  type's profiles only ([profiles.md](profiles.md#model)).
+  type's profiles only ([profiles.md](../profiles.md#model)).
   - The **default profile** is always first. It can be renamed and edited, never removed or moved.
   - The **other profiles** are in the user's order: drag a row to move it, by the handle
     (`list-drag-handle-symbolic`) that shows at its start while the pointer is over it; "Move Up"
     and "Move Down" in its menu do the same from the keyboard. The order is stored per device type
-    ([profiles.md](profiles.md#profile-order)).
+    ([profiles.md](../profiles.md#profile-order)).
   - The **active profile** (the one on the device) is the selected row. Selecting a row makes that
     profile active at once. When another row is selected (a profile that failed to load), the
     active row shows a check mark next to its menu button.
@@ -103,7 +103,7 @@ launches: it is a check made now, not a habit, and it selects no profile. A per-
 ### "+" menu
 
 "New Single Profile" and "New Per-Mode Profile". The new profile gets the built-in values
-([profiles.md](profiles.md#defaults)), appears at the end of the list as the active profile, and
+([profiles.md](../profiles.md#defaults)), appears at the end of the list as the active profile, and
 its row opens for inline naming with "New profile" selected: Enter confirms, Escape keeps the
 proposed name. An empty or duplicate name cannot be confirmed; the row shows why.
 
@@ -114,8 +114,8 @@ A "⋮" button on each row, also opened by right-click or long press:
 | Item | Shortcut | Notes |
 | --- | --- | --- |
 | Rename | F2 | Inline, as for a new profile |
-| Duplicate |  | "<name> (2)" right after the original ([profiles.md](profiles.md#profile-order)) |
-| Export… | Ctrl+Shift+E | `gtk::FileDialog` save, as [profiles.md](profiles.md#import-and-export) describes |
+| Duplicate |  | "<name> (2)" right after the original ([profiles.md](../profiles.md#profile-order)) |
+| Export… | Ctrl+Shift+E | `gtk::FileDialog` save, as [profiles.md](../profiles.md#import-and-export) describes |
 | Use Per-Mode Settings / Use Single Settings |  | See [Profile kinds](#profile-kinds) |
 | Move Up, Move Down |  | Not on the default profile |
 | Remove | Delete | Not on the default profile; see below |
@@ -134,7 +134,7 @@ a section of its own Quit (Ctrl+Q), which exits even with "Run in Background" on
 Quit does.
 
 **Import Profile…** opens the file chooser, then one of
-([profiles.md](profiles.md#import-and-export)):
+([profiles.md](../profiles.md#import-and-export)):
 
 - a file without problems is added at once, with the toast "Imported “Falcon BMS”";
 - a file with per-field problems opens an `adw::AlertDialog` "Import “Falcon BMS”?" that lists
@@ -145,7 +145,7 @@ Quit does.
 
 ## Profile kinds
 
-A profile is **Single** or **Per-mode** ([profiles.md](profiles.md#model)):
+A profile is **Single** or **Per-mode** ([profiles.md](../profiles.md#model)):
 
 - **Single:** one set of settings; the mode selector on the stick does nothing. The default profile
   starts as Single, like every GX52 0.7 profile.
@@ -190,7 +190,7 @@ The mode selector on the stick picks the mode.
 
 ### LEDs view
 
-The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
+The schematic layout of [spike S7](research/spikes/07-led-editor.md#design-for-the-app):
 
 - **One card per part of the device:** Stick, Stick base, Throttle, side by side when there is
   room and stacked when narrow. Inside a card the LED buttons sit in a grid that roughly follows the
@@ -241,26 +241,26 @@ The schematic layout of [spike S7](spikes/07-led-editor.md#design-for-the-app):
   lit. It shows **live values**: the line sources resolved now (the active profile, the button being
   held: the display follows a held button and clears on release), the converted characters (a
   character the MFD cannot show appears as its fallback,
-  [protocol.md](protocol.md#mfd-character-set)), and the time ticking at each minute. It is built
+  [protocol.md](../protocol.md#mfd-character-set)), and the time ticking at each minute. It is built
   from the state the device gets, and works with no device connected: edits to the last type's
   profiles change it ([Problem states](#problem-states)). The time is `HH:MM` in 24 h, and `h:MM`
   with a small `AM` or `PM` beside it in 12 h; the date uses dots, as the device draws it
-  ("09.11.26", [protocol.md](protocol.md#usb-vendor-commands)). The clock area shows **clock 1**; a
-  small "1 | 2 | 3" toggle under the display shows the other clocks, with the note "Clock 1 is shown
-  by default. Start/Stop and Reset on the throttle cycle the clocks on the device." The app cannot
-  read which clock the MFD shows, so it never guesses. Picking a clock shows its number in the date
-  area for 3 seconds, as the device does when Start/Stop cycles the clocks, then the date again. The
-  display is dark in both styles, as on the device, at most 368 pixels wide and narrower in a narrow
-  window, and lit by the MFD brightness in four steps (0, up to 40, up to 90, above); at 0 the glass
-  is dark and the ink dims. Assistive technologies read it as one image naming only what is lit:
-  "Simulated MFD: mode 2, SHIFT on; GX52, Fire, blank; clock 1 12:45, date 09.11.26".
+  ("09.11.26", [protocol.md](../protocol.md#usb-vendor-commands)). The clock area shows **clock 1**;
+  a small "1 | 2 | 3" toggle under the display shows the other clocks, with the note "Clock 1 is
+  shown by default. Start/Stop and Reset on the throttle cycle the clocks on the device." The app
+  cannot read which clock the MFD shows, so it never guesses. Picking a clock shows its number in
+  the date area for 3 seconds, as the device does when Start/Stop cycles the clocks, then the date
+  again. The display is dark in both styles, as on the device, at most 368 pixels wide and narrower
+  in a narrow window, and lit by the MFD brightness in four steps (0, up to 40, up to 90, above); at
+  0 the glass is dark and the ink dims. Assistive technologies read it as one image naming only what
+  is lit: "Simulated MFD: mode 2, SHIFT on; GX52, Fire, blank; clock 1 12:45, date 09.11.26".
 - **Line rows**, one per line, each an `adw::ComboRow` for the source, listed in this order:
 
   | Source | Shows |
   | --- | --- |
   | Custom text | The text typed in an `adw::EntryRow` below it (shown only for this source); a counter "n/16" counts converted bytes, the entry stops accepting input at 16 bytes or 64 typed characters, whichever comes first (a paste is cut to the room left, and the text already there is never cut), and the row lists the characters that will be replaced ("ő → o") |
   | Profile name | The active profile's name |
-  | Last button | The name of the button being held, POV 1 directions included: its [custom name](#names-view) in the mode shown, else the built-in name. The mode selector positions never count. The line clears on release, except after a wheel notch, which stays for 0.7 s ([profiles.md](profiles.md#mfd-lines)) |
+  | Last button | The name of the button being held, POV 1 directions included: its [custom name](#names-view) in the mode shown, else the built-in name. The mode selector positions never count. The line clears on release, except after a wheel notch, which stays for 0.7 s ([profiles.md](../profiles.md#mfd-lines)) |
   | Empty | Nothing |
 
   A line switched from Custom text to another source keeps its text for the session: switching it
@@ -311,7 +311,7 @@ closes when another profile is shown, and a pick still being looked up then is d
 Custom names for the joystick's controls, shown by the MFD's "Last button" line and the [input
 tester](#input-tester) in place of the built-in names ("Emerg. Lights" for E). Requested in
 [issue #42](https://github.com/leinardi/gx52/issues/42); decided on 2026-11-19 against the
-prototype ([roadmap.md](roadmap.md#1x)). The data is in [profiles.md](profiles.md#control-names).
+prototype ([roadmap.md](roadmap.md#1x)). The data is in [profiles.md](../profiles.md#control-names).
 
 - **Mode bar** on a per-mode profile: names are per mode and follow the bar like every other mode
   setting. Changing the profile's kind copies or drops them with the rest
@@ -349,13 +349,13 @@ prototype ([roadmap.md](roadmap.md#1x)). The data is in [profiles.md](profiles.m
 Selecting it shows an `adw::StatusPage` in the content area with the reason ("This
 profile file is damaged", "Made by a newer GX52") and the actions **Show File** (opens the folder
 through the portal) and **Remove**. A newer-schema profile is never edited or rewritten
-([profiles.md](profiles.md#validation-and-recovery)).
+([profiles.md](../profiles.md#validation-and-recovery)).
 
 ## Input tester
 
 The "Test input" page, in the content area. A live view of every input, read from evdev **without
 grabbing** the device, so games keep receiving it. Layout from the maintainer's mockup, grouped by
-kind of input ([spike S7](spikes/07-led-editor.md#input-tester-test-page)):
+kind of input ([spike S7](research/spikes/07-led-editor.md#input-tester-test-page)):
 
 ```text
 Live view of the device. Input is read without grabbing it, so games keep receiving it.
@@ -380,7 +380,7 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
   of their widest values, so the cards do not change size as they move.
 - **Ministick:** a second square, on both models. The X52 (non-Pro)'s codes are derived from the
   kernel's HID quirk and libx52, not tested on a device
-  ([protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro)).
+  ([protocol.md, "X52 (non-Pro)"](../protocol.md#x52-non-pro)).
 - **Toggles:** T1–T6 in pairs. **Mode:** 1 / 2 / 3, the current one highlighted.
 - **Buttons:** one indicator per button, lit while pressed, labelled with the name on the device
   and the button number games show ("Fire · 2"); the full name and the evdev code in the tooltip
@@ -399,16 +399,16 @@ Buttons   (Trigger·1) (Fire·2) (A·3) (B·4) …          POVs   [3×3] [3×3]
   label give both. The named directions of a hat (POV 1, POV 2, the throttle hat) are listed under
   its grid ("↑ Pips: SYS").
 - **X52 (non-Pro):** a warning line under the intro, "The X52 input map has not been verified on a
-  device yet. Names may not match the controls." ([protocol.md](protocol.md#x52-non-pro)).
+  device yet. Names may not match the controls." ([protocol.md](../protocol.md#x52-non-pro)).
 - **POVs:** POV 1, POV 2 and the throttle hat as 3×3 direction grids, the cell the hat points at
   lit (a diagonal lights a corner).
 - **Mode:** the selector's position after the debounce of
-  [protocol.md](protocol.md#mode-selector), as the footer shows it.
+  [protocol.md](../protocol.md#mode-selector), as the footer shows it.
 - The indicators are not focusable; each group has an accessible label, and the page's state is
   readable by a screen reader as text: the Buttons group's description lists what is held
   ("Buttons pressed: Fire, A. Mode 2."), the Toggles group's names the mode. The axes have no
   such text, because of their noise.
-- The axes are read only while the page is shown ([architecture.md](architecture.md)).
+- The axes are read only while the page is shown ([architecture.md](../architecture.md)).
 - **Narrow:** the groups wrap and stack into one column.
 - Without a connected device, or while its evdev node is not open, the page is an
   `adw::StatusPage` "Connect your X52 or X52 Pro". Without access to the USB device (the udev
@@ -441,7 +441,7 @@ reads the whole line.
 | No device was ever connected (no last device type) | The whole window is an `adw::StatusPage`: "Connect your X52 or X52 Pro". No profiles until a device appears. A device that is present always has a type, accessible or not, so this page never needs a "How to Fix" button: a device without permission shows its type's profiles with the udev guidance, as in the prototype (whose full-window guide cannot be reached) |
 | No device now, one was connected before | The last device type's profiles, editable; the footer says "Not connected" |
 | Device present, no permission (USB) | The content area is replaced by the [udev guidance](#guidance-pages) until access works; the sidebar stays |
-| `x52d` running | An `adw::Banner` over the editor: "x52d is running and may overwrite these settings", with "Learn More", which opens an `adw::Dialog` "x52d Is Running": what x52d is, that GX52 does not stop it, and the command `sudo systemctl disable --now x52d` with a copy button ([protocol.md](protocol.md#libx52s-x52d)) |
+| `x52d` running | An `adw::Banner` over the editor: "x52d is running and may overwrite these settings", with "Learn More", which opens an `adw::Dialog` "x52d Is Running": what x52d is, that GX52 does not stop it, and the command `sudo systemctl disable --now x52d` with a copy button ([protocol.md](../protocol.md#libx52s-x52d)) |
 | Start on Login refused with no Preferences dialog showing (as at login) | An `adw::Banner` over the content, also on the page with no device: "Start on Login is off: the desktop doesn’t allow GX52 to run in the background" (or "…: the desktop’s Background portal isn’t available"), with "How to Fix", which opens Preferences on the [Start on Login page](#guidance-pages). It goes once Preferences opens, which shows the refusal, or when the refusal ends |
 | A different supported model connected | The sidebar switches to that type's profiles |
 
@@ -453,7 +453,7 @@ reads the whole line.
   uinput line is in Preferences, as in the prototype) with a copy button. **Load the Rule**: "No
   need to unplug…" and `sudo udevadm control --reload && sudo udevadm trigger` with a copy button.
   **Without Access**: test input keeps working; LEDs, MFD and clocks are unavailable
-  ([protocol.md](protocol.md#udev-rule)). The page scrolls, so every row and Try Again stay
+  ([protocol.md](../protocol.md#udev-rule)). The page scrolls, so every row and Try Again stay
   reachable in the narrowest window. It goes away by itself when access works, after
   `udevadm trigger`, without a replug; a **Try Again** button checks at once and shows the toast
   "Still no access to the device" when it still fails.
@@ -512,7 +512,7 @@ change applies at once and a change made elsewhere (the tray, `gsettings`) shows
     step every 10 ms tick), **Curve** ("Higher values move slowly near the centre": the exponent)
     and **Deadzone** ("Steps around the centre treated as centred"), each an `adw::SpinRow`, and
     **Invert Wheel** (`adw::SwitchRow`). Insensitive while the switch is off. They default to the
-    S9 values ([protocol.md](protocol.md#virtual-mouse-uinput)):
+    S9 values ([protocol.md](../protocol.md#virtual-mouse-uinput)):
 
     | Row | Key | Default | Range | Step |
     | --- | --- | --- | --- | --- |
@@ -537,8 +537,8 @@ symbolic icon (`com.leinardi.gx52-symbolic`, `.Devel` in development builds).
    No permission"; with `x52d` running "X52 Pro · x52d is running"; before the profiles are
    loaded "X52 Pro · Connected".
 2. Show GX52 / Hide GX52: first, because on GNOME a single click on the icon opens the menu
-   ([S5](spikes/05-tray.md#visual-check-on-gnome-2026-11-02)); a click where the host sends one
-   (KDE Plasma, a double click on GNOME) does the same. Hide closes the window with its dialogs,
+   ([S5](research/spikes/05-tray.md#visual-check-on-gnome-2026-11-02)); a click where the host sends
+   one (KDE Plasma, a double click on GNOME) does the same. Hide closes the window with its dialogs,
    the same path as the close button.
 3. **Profile** submenu: radio items with the usable profiles of the connected type, in the
    profile list's order; picking one makes it the active profile. Not shown while no device is
@@ -550,7 +550,7 @@ symbolic icon (`com.leinardi.gx52-symbolic`, `.Devel` in development builds).
 
 `adw::Toast`s in an `adw::ToastOverlay` over the content:
 
-- the problem toasts of [profiles.md](profiles.md#validation-and-recovery), one per start;
+- the problem toasts of [profiles.md](../profiles.md#validation-and-recovery), one per start;
 - the GX52 0.7 import: "Imported 4 profiles from GX52 0.7"; with problems, a "Details" button that
   opens the list;
 - the GX52 0.7 import deferred: "Close GX52 0.7 to import its profiles";

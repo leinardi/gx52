@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Writes a release version into the four files that carry it (docs/release.md, "One version
+# Writes a release version into the four files that carry it (docs/internal/release.md, "One version
 # source"): the root package's `[package] version` in Cargo.toml, its Cargo.lock entry, the
 # `version:` of meson.build's project() and a new top `<release>` of the metainfo. Called by the
 # Release workflow (gh-reusable-workflows' version-bump-pr) as
@@ -162,7 +162,7 @@ else
 		sed -nE 's/^(feat|fix)(\([^)]*\))?!?: +(.+)$/\3/p' |
 		awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
 	# Then the `Release-Note:` trailers of the same commits, oldest first, each as written: a note
-	# a release needs beyond its subjects (docs/release.md, "Release notes"). A commit without the
+	# a release needs beyond its subjects (docs/internal/release.md, "Release notes"). A commit without the
 	# trailer prints an empty line, which is dropped.
 	mapfile -t NOTES < <(git log --no-merges --reverse \
 		--format='%(trailers:key=Release-Note,valueonly,unfold)' "${LAST_TAG}..HEAD" |

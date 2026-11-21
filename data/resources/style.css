@@ -203,7 +203,7 @@ button.led.blinking {
   letter-spacing: 0.06em;
 }
 
-/* The input tester (docs/ui.md, "Input tester"), from the prototype. */
+/* The input tester (docs/internal/ui.md, "Input tester"), from the prototype. */
 .tester-card {
   padding: 14px 18px 18px;
 }

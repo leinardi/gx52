@@ -32,7 +32,7 @@
     <color type="primary" scheme_preference="light">#99c1f1</color>
     <color type="primary" scheme_preference="dark">#1a5fb4</color>
   </branding>
-  <!-- Regenerated with make screenshots, in the order of src/screenshots/capture.rs (docs/release.md,
+  <!-- Regenerated with make screenshots, in the order of src/screenshots/capture.rs (docs/internal/release.md,
        "Screenshots"). The URLs follow the trunk, not the tag: the release gate mirrors them before
        the tag exists. -->
   <screenshots>
@@ -65,7 +65,7 @@
       <caption>Test every button, axis and hat live</caption>
     </screenshot>
   </screenshots>
-  <!-- Newest first. The release workflow adds the entry for each new version (docs/release.md);
+  <!-- Newest first. The release workflow adds the entry for each new version (docs/internal/release.md);
        the 0.7.x entries are the legacy Python application's history. -->
   <releases>
     <release version="1.1.0" date="2026-11-20">

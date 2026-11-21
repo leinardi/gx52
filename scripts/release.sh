@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# `make release` (docs/release.md, "How to release"): drives one release from the dispatch to the
+# `make release` (docs/internal/release.md, "How to release"): drives one release from the dispatch to the
 # Flathub pull request, with the maintainer's gh login, and stops at the one decision that is
 # theirs (approving and merging the bump pull request). Every step is read back from GitHub before
 # it is taken, so a run that stopped (a failed job, a declined prompt, a closed terminal) is resumed
@@ -198,7 +198,7 @@ see_through() {
 			return
 		fi
 		((reruns == 0)) || die "${what} failed again after a re-run (${url}): fix the cause" \
-			"(docs/release.md, \"Recovering a failed run\"), then run make release again"
+			"(docs/internal/release.md, \"Recovering a failed run\"), then run make release again"
 		case "${conclusion}" in
 		cancelled)
 			confirm "${what} was cancelled (${url}). Re-run all its jobs?" ||
@@ -208,7 +208,7 @@ see_through() {
 			;;
 		*)
 			confirm "${what} failed (${url}). Re-run its failed jobs (a transient failure)?" ||
-				die "${what} failed: fix the cause (docs/release.md, \"Recovering a failed run\"), then run make release again"
+				die "${what} failed: fix the cause (docs/internal/release.md, \"Recovering a failed run\"), then run make release again"
 			"${GH}" run rerun "${id}" --repo "${REPOSITORY}" --failed
 			((reruns += 1))
 			;;

@@ -30,7 +30,7 @@ use std::time::Duration;
 
 use super::ProfileId;
 
-/// How long after the last edit a profile is saved (docs/ui.md, "Profile editor").
+/// How long after the last edit a profile is saved (docs/internal/ui.md, "Profile editor").
 pub(crate) const DEBOUNCE: Duration = Duration::from_millis(500);
 
 /// A file operation of one profile.

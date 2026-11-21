@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! Detects a running libx52 `x52d`, which would fight GX52 over the LEDs, the MFD and the clocks
-//! (docs/protocol.md, "libx52's x52d"; risk R11 of docs/rewrite-analysis.md).
+//! (docs/protocol.md, "libx52's x52d"; risk R11 of docs/internal/history/rewrite-analysis.md).
 //!
 //! The daemon listens on a Unix command socket; a successful `connect` means it is running. A
 //! socket file nobody listens on (left by a daemon that died) refuses the connection and is not a

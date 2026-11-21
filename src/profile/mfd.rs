@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The MFD as the MFD editor shows it: the simulated display, the line sources, the text budget of
-//! a line and the text kept while a line shows another source (docs/ui.md, "MFD view").
+//! a line and the text kept while a line shows another source (docs/internal/ui.md, "MFD view").
 //!
 //! Plain Rust: the widgets only apply what is computed here, so the rules are tested here.
 

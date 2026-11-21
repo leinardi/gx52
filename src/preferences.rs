@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The settings of the preferences dialog (docs/ui.md, "Preferences"): their keys, the rule that
+//! The settings of the preferences dialog (docs/internal/ui.md, "Preferences"): their keys, the rule that
 //! starting on login needs running in the background, and the bounds of the numeric ones.
 
 use gtk::{gio, glib, prelude::*};

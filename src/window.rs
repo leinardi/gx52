@@ -17,7 +17,7 @@
 // originally MIT-licensed, Copyright (c) 2026 Roberto Leinardi
 
 //! The main window: the profile list in the sidebar, the editor of the active profile, and the
-//! problem states of docs/ui.md, with its size and maximized state kept in `GSettings`.
+//! problem states of docs/internal/ui.md, with its size and maximized state kept in `GSettings`.
 
 use adw::{prelude::*, subclass::prelude::*};
 use gtk::{gio, glib};
@@ -225,7 +225,7 @@ pub(crate) fn plain_toast(message: &str) -> adw::Toast {
 
 /// What a closed window showed beyond the active profile and the view, which follow the
 /// application and `GSettings`: a window reopened from the background shows it again, while a
-/// new process starts on the active profile's editor (docs/ui.md, "Start-up").
+/// new process starts on the active profile's editor (docs/internal/ui.md, "Start-up").
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Placement {
     /// Whether the input tester was shown.
@@ -778,7 +778,7 @@ impl Window {
         self.show_selected();
     }
 
-    /// Explains `x52d` and how to stop it (docs/ui.md, "Problem states").
+    /// Explains `x52d` and how to stop it (docs/internal/ui.md, "Problem states").
     fn show_x52d_help(&self) {
         let dialog = adw::AlertDialog::new(
             Some(&gettext("x52d Is Running")),

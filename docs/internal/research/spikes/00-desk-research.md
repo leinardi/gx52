@@ -1,8 +1,11 @@
 # Desk research (2026-10-28)
 
-Answers to the desk-research items of [preparation.md](../preparation.md), stage B. Gathered from
-upstream sources and documentation, not from experiments; versions and commits are the ones current
-on the date above.
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
+Answers to the desk-research items of [preparation.md](../../history/preparation.md), stage B.
+Gathered from upstream sources and documentation, not from experiments; versions and commits are the
+ones current on the date above.
 
 ## udev coverage for the raw USB device
 

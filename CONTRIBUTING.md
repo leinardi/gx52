@@ -102,7 +102,7 @@ From `1.0.0` on, the release version is derived from these types: any `feat` mak
 release a minor, any `fix` a patch, `!` a major, and the other types bump nothing. Pick the type by
 whether the change should ship: a refactor, a performance improvement or a revert that changes the
 application users receive is a `fix` (or a `feat`). The `feat` and `fix` subjects also become the
-release notes in the metainfo file. See [docs/release.md](docs/release.md).
+release notes in the metainfo file. See [docs/internal/release.md](docs/internal/release.md).
 
 ## Translations
 

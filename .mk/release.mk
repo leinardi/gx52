@@ -18,7 +18,7 @@ ifndef MK_LOCAL_RELEASE_INCLUDED
 MK_LOCAL_RELEASE_INCLUDED := 1
 
 # Local snippet (NOT part of make-common): the two commands the Release workflow gives
-# gh-reusable-workflows' version-bump-pr and release-on-merge (docs/release.md). release-version
+# gh-reusable-workflows' version-bump-pr and release-on-merge (docs/internal/release.md). release-version
 # prints the version the tree carries, the root package's in Cargo.toml (`make -s` keeps make's
 # own lines out of it); release-bump writes a new one into the four files that carry it
 # (scripts/release-bump.sh) and never commits.

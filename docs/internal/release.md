@@ -1,10 +1,11 @@
 # Release
 
 How a GX52 release is versioned, built and published to Flathub, what to do when one fails halfway,
-and what has to be set up by hand. The decisions are in [rewrite-analysis.md](rewrite-analysis.md)
-sections 8 and 9; what the build and CI jobs were proven to do is in [spike
-S6](spikes/06-build-and-release.md). The pipeline is four workflows here, driven end to end by
-`make release` on the maintainer's machine, which also opens the Flathub pull request:
+and what has to be set up by hand. The decisions are in
+[rewrite-analysis.md](history/rewrite-analysis.md) sections 8 and 9; what the build and CI jobs were
+proven to do is in [spike S6](research/spikes/06-build-and-release.md). The pipeline is four
+workflows here, driven end to end by `make release` on the maintainer's machine, which also opens
+the Flathub pull request:
 
 | Workflow | Runs on | Does |
 | --- | --- | --- |
@@ -20,7 +21,7 @@ pull requests](#the-flathub-pull-requests)): no token is stored anywhere.
 The shared logic is in `leinardi/gh-reusable-workflows` (`version-bump-pr`, `release-on-merge`,
 `simple-tag-and-release`), the same pattern as `rust-common` and `gtk-rs-skills`.
 
-[RELEASING.md](../RELEASING.md) is the short version: the commands of a release, to beta and to
+[RELEASING.md](../../RELEASING.md) is the short version: the commands of a release, to beta and to
 stable, and what to do when one fails. It replaced the manual procedure of the legacy `0.7.x`
 Python application.
 
@@ -49,7 +50,7 @@ Python application.
   `1.0.0`.
 - **`1.0.0` is released explicitly**; from then on a run with no version derives it with `svu` from
   the Conventional Commits since the last release. Which commit type bumps what is the table in
-  [AGENTS.md, "Commit messages"](../AGENTS.md#commit-messages). A run with only "none" commits
+  [AGENTS.md, "Commit messages"](../../AGENTS.md#commit-messages). A run with only "none" commits
   since the last tag fails with "nothing to bump".
 - **Higher than every release:** the version must be higher than every `vX.Y.Z` tag, than the
   legacy tags `0.7.0` … `0.7.6` (never below `0.7.6`, even without them) and than the version the
@@ -312,7 +313,7 @@ its own.
 
 `make screenshots` regenerates them, with no joystick and no manual set-up. It installs the Devel
 Flatpak and runs its screenshot mode (`--screenshots <dir>`, Devel builds only; see
-[architecture.md](architecture.md#testing-strategy)) on a private headless weston, from an
+[architecture.md](../architecture.md#testing-strategy)) on a private headless weston, from an
 environment built from scratch: the fonts and libadwaita come from the GNOME runtime, and the host's
 locale, theme, style, accent and scale never reach the shots. The app shows fixture profiles, a fake
 X52 Pro in mode 1 (held still, except in the input tester shot, the last, which holds a fixed pose
@@ -394,8 +395,8 @@ a version number is never reused for different code.
   with the same tree as the `beta` migration; it is merged with `make flathub-merge
   FLATHUB_BASE=master`. Done on 2026-11-18: #17 to `beta` and #18 to
   `master` merged; the stable build then waits for Flathub's review before it is published.
-- **Private vulnerability reporting** on `leinardi/gx52`, as [SECURITY.md](../SECURITY.md) links to
-  it: enabled by the IaC, checked once.
+- **Private vulnerability reporting** on `leinardi/gx52`, as [SECURITY.md](../../SECURITY.md) links
+  to it: enabled by the IaC, checked once.
 - **Dependabot:** production Cargo dependencies are committed as `fix(deps)` and so trigger a patch
   release after `1.0.0`; dev dependencies, actions and pre-commit hooks are `chore(deps)` (rewrite
   analysis, section 8). The GNOME runtime and the `rust-stable` extension have no Dependabot

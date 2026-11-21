@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The Start on Login guidance (docs/ui.md, "Guidance pages"): a subpage of the preferences
+//! The Start on Login guidance (docs/internal/ui.md, "Guidance pages"): a subpage of the preferences
 //! dialog that says why the desktop refused Start on Login, how to fix it, and asks again.
 
 use adw::prelude::*;

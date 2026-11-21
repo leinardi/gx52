@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The uinput guidance (docs/ui.md, "Guidance pages"): a subpage of the preferences dialog with
+//! The uinput guidance (docs/internal/ui.md, "Guidance pages"): a subpage of the preferences dialog with
 //! the rule line the virtual mouse needs and its security note.
 
 use gtk::glib;

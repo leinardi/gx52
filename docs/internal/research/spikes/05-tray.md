@@ -1,5 +1,8 @@
 # S5: tray icon (ksni)
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 Spike `spikes/s5-tray` on the `spikes` branch: an `adw::Application` with one window and a `ksni`
 0.3.7 tray (`async-io` feature, no tokio), spawned from `glib::spawn_future_local`. Tray callbacks
 send a `TrayAction` through an `async_channel`; a `glib::spawn_future_local` loop applies it on the
@@ -90,7 +93,7 @@ build and Devel Flatpak:
 - **Deny path:** only through the permission store
   (`flatpak permission-set background background <app id> no`, or GNOME Settings → Apps). The
   portal then answers Cancelled, as for a dismissed dialog, and GX52 shows the refusal
-  (ui.md, "Guidance pages").
+  (../../ui.md, "Guidance pages").
 - **Permission off ends the app:** the portal kills an instance of the app id with no window a few
   seconds after its last window closes, whether "Run in Background" is on or not. A
   `flatpak-builder` test run of the Devel id is killed the same way (exit 137), so the permission

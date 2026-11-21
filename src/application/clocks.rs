@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The edits of the Clocks view: the clocks and the date of the shown device type's active
-//! profile, shared by every mode (docs/ui.md, "Clocks view"), and the zone list of its search
+//! profile, shared by every mode (docs/internal/ui.md, "Clocks view"), and the zone list of its search
 //! dialog.
 
 use std::sync::Arc;

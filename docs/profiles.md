@@ -2,10 +2,13 @@
 
 The profile data format: the TOML schema, where the files live, the default profiles, the active
 profile and the profile order, validation and recovery, import and export, the legacy import from
-GX52 0.7 and the migration policy. Sources: [spike S8](spikes/08-legacy-import.md) (the legacy
-database and the importer decisions), [rewrite-analysis.md](rewrite-analysis.md) sections 1, 2.4
-and 10, the device facts in [protocol.md](protocol.md) and the UI decisions in [ui.md](ui.md).
-Where the profile store sits in the app is in [architecture.md](architecture.md#persistence).
+GX52 0.7 and the migration policy. Sources: [spike
+S8](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/08-legacy-import.md)
+(the legacy database and the importer decisions),
+[rewrite-analysis.md](https://github.com/leinardi/gx52/blob/main/docs/internal/history/rewrite-analysis.md)
+sections 1, 2.4 and 10, the device facts in [protocol.md](protocol.md) and the UI decisions in
+[ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md). Where the profile store
+sits in the app is in [architecture.md](architecture.md#persistence).
 
 ## Model
 
@@ -23,10 +26,12 @@ Where the profile store sits in the app is in [architecture.md](architecture.md#
 - Each device type has exactly one **default profile**, with a stable id, that cannot be removed.
   It starts as a single profile.
 
-Decided on 2026-11-09 in the M4 UI session ([ui.md](ui.md#profile-kinds)). It replaces the per-type
-mode mapping that M3 built (three profile ids per device type), which never shipped: schema 1 and
-the GSettings keys are redefined without a migration, because nothing is published before M8
-([roadmap.md](roadmap.md#m3-follow-up-single-and-per-mode-profiles)).
+Decided on 2026-11-09 in the M4 UI session
+([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#profile-kinds)). It replaces
+the per-type mode mapping that M3 built (three profile ids per device type), which never shipped:
+schema 1 and the GSettings keys are redefined without a migration, because nothing is published
+before M8
+([roadmap.md](https://github.com/leinardi/gx52/blob/main/docs/internal/roadmap.md#m3-follow-up-single-and-per-mode-profiles)).
 
 ## TOML schema (version 2)
 
@@ -120,12 +125,12 @@ does not lose the whole profile: parse the document into a `toml::Table`, read `
 `device_type` and `kind`, then convert field by field into the typed profile, collecting a list of
 field problems instead of failing on the first.
 
-**Changing the kind** (ui.md): single → per-mode copies `[settings]` into all three modes;
+**Changing the kind** (internal/ui.md): single → per-mode copies `[settings]` into all three modes;
 per-mode → single keeps `[mode_1]`, after the user confirmed that modes 2 and 3 are dropped.
 
 ### MFD lines
 
-Each of the three lines has a **source** (decided in the M4 UI session, [ui.md](ui.md#mfd-view)):
+Each of the three lines has a **source** (decided in the M4 UI session, [ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#mfd-view)):
 
 | `source` | Extra keys | The line shows |
 | --- | --- | --- |
@@ -149,8 +154,9 @@ that still has it reports an unknown value and that line shows nothing until it 
 ### Control names
 
 Requested in [issue #42](https://github.com/leinardi/gx52/issues/42) and decided on 2026-11-19; the
-UI is the Names view of [ui.md](ui.md#names-view). It is **schema version 2**: the key below is
-new, and every other key keeps its meaning.
+UI is the Names view of
+[ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#names-view). It is **schema
+version 2**: the key below is new, and every other key keeps its meaning.
 
 Each mode settings table (`[settings]` or `[mode_1]`–`[mode_3]`) gets an optional `names` table
 from control to custom name; a control without a name is left out:
@@ -202,8 +208,9 @@ writes no `names` table for a set without names.
 - **Clocks 2 and 3** have a tagged source:
   - `{ iana = "Europe/Rome" }`: a geographic zone from the runtime's tz database, read through
     `jiff` (desk research: GNOME 51 ships `/usr/share/zoneinfo`), with its daylight saving
-    transitions. The Clocks view picks one from the same database's `zone.tab` and
-    `iso3166.tab` ([ui.md](ui.md#clocks-view)), but any name the database knows is valid;
+    transitions. The Clocks view picks one from the same database's `zone.tab` and `iso3166.tab`
+    ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#clocks-view)), but any
+    name the database knows is valid;
   - `{ fixed_offset_minutes = 345 }`: a fixed offset from UTC in minutes, `−720`–`+840` (UTC−12:00
     to UTC+14:00, the range GX52 0.7 offered). A fixed offset has **no daylight saving**.
 - What is sent: the device only knows clock 1's time and offsets from clock 1, so the app sends
@@ -391,10 +398,12 @@ nothing.
 ## Profile order
 
 GSettings keys `profile-order-x52-pro` and `profile-order-x52` (`as`, default `[]`): the ids of the
-non-default profiles in the order the user set ([ui.md](ui.md#sidebar)). The default profile is
-always first and never listed. Ids that name no loaded profile are skipped; loaded profiles missing
-from the list follow it in name order. A new or imported profile is appended; a duplicate is
-inserted right after its original (first in the list when the original is the default profile).
+non-default profiles in the order the user set
+([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#sidebar)). The default
+profile is always first and never listed. Ids that name no loaded profile are skipped; loaded
+profiles missing from the list follow it in name order. A new or imported profile is appended; a
+duplicate is inserted right after its original (first in the list when the original is the default
+profile).
 
 ## Validation and recovery
 

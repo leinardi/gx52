@@ -15,7 +15,7 @@
 
 //! The entry of a text the MFD shows on one line, shared by the editors that edit one: the row
 //! keeps a typed or pasted text within the line, and its suffix shows the bytes used and the
-//! characters the MFD replaces (docs/ui.md, "MFD view").
+//! characters the MFD replaces (docs/internal/ui.md, "MFD view").
 
 use std::cell::Cell;
 use std::rc::Rc;

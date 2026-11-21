@@ -58,7 +58,7 @@ review.
 
 Check these on every review, whatever changed. These are the ways this codebase breaks that
 generic reviewers miss. Read `AGENTS.md` and
-`docs/rewrite-analysis.md` (section 1, decisions taken) for the full statements.
+`docs/internal/history/rewrite-analysis.md` (section 1, decisions taken) for the full statements.
 
 - **Only known commands to known devices.** A USB control transfer goes only to a device whose
   vendor and product ID the `x52` crate lists, and only with a request the protocol
@@ -140,7 +140,7 @@ finding:
 
 The rules are written in [architecture.md, "Untrusted input"](../../../docs/architecture.md#untrusted-input)
 and [profiles.md](../../../docs/profiles.md#validation-and-recovery); there is no separate
-trust-boundary skill (docs/tooling-todo.md records why).
+trust-boundary skill (docs/internal/tooling-todo.md records why).
 
 ### (b) Deletion smell
 
@@ -192,8 +192,8 @@ finding, never a full suite or gate. A candidate that is neither reproduced nor 
 dropped: a vague "consider" is not a finding.
 
 A change to the `x52` crate's device paths gets the hands-on check on a real X52 Pro
-(`docs/hands-on.md`) when one is available. Hardware is never something you run: give the human
-the exact command and mark the finding unresolved.
+(`docs/internal/history/hands-on.md`) when one is available. Hardware is never something you run:
+give the human the exact command and mark the finding unresolved.
 
 ## Report
 

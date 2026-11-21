@@ -1,5 +1,8 @@
 # S3: input map (X52 Pro, evdev)
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 Tool: `spikes/x52-input` on the `spikes` branch (`evdev` 0.13), reading
 `/dev/input/event*` without grabbing while the kernel's `usbhid` / `hid-generic` driver stays bound.
 Every control pressed or moved by hand on 2026-11-02, one at a time, in a fixed order; the log was
@@ -76,8 +79,8 @@ about 200 ms; ignore the gaps with no mode held; don't apply mode 2 while passin
 
 The excerpt above is elided. A full recording of the same bounce (1 → 2 → 3 → 1, three times, made
 for M1) is the debounce's test fixture:
-[`x52/tests/testdata/input/mode-bounce.evtest`](../../x52/tests/testdata/input/mode-bounce.evtest),
-described in its [README](../../x52/tests/testdata/input/README.md).
+[`x52/tests/testdata/input/mode-bounce.evtest`](../../../../x52/tests/testdata/input/mode-bounce.evtest),
+described in its [README](../../../../x52/tests/testdata/input/README.md).
 
 ## Input while the app writes to the device
 

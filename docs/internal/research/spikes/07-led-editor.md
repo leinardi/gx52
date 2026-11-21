@@ -1,5 +1,8 @@
 # S7: LED editor
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 Spike `spikes/s7-led-editor` on the `spikes` branch: an `adw::Application` with one page per part of
 the device (stick, stick base, throttle) in an `adw::ViewStack`. Each page placed one round button
 per LED over a placeholder outline of the device; the button opens a popover with an
@@ -30,7 +33,7 @@ is not used.
 Each LED is a `gtk::MenuButton` with an empty child. Its colour comes from CSS classes on the
 `menubutton` node (`led-off`, `led-on`, `led-green`, `led-red`, `led-amber`) styled with libadwaita's
 palette variables (`--green-3`, `--red-3`, `--yellow-3`; the app uses the prototype's `--green-3`,
-`--red-2`, `--yellow-4`, see [ui.md](../ui.md#leds-view)); the tooltip and the accessible label say
+`--red-2`, `--yellow-4`, see [ui.md](../../ui.md#leds-view)); the tooltip and the accessible label say
 "<LED> LED: <state>".
 
 Findings:
@@ -59,7 +62,7 @@ Findings:
   the bi-colour LEDs, Off / On for Fire and Throttle. Choosing a state closes the popover.
 - **POV 1** is shown as a fixed green LED that does not open a popover; its tooltip and accessible
   label explain that it cannot be changed and follows brightness and blink
-  ([protocol.md](../protocol.md#led-bits)).
+  ([protocol.md](../../../protocol.md#led-bits)).
 - **Brightness and blink** are regular rows below the cards.
 - **The LED shown follows the brightness.** When LED brightness is `0`, every LED is dark on the
   device (POV 1 included), so the editor shows every LED as off, whatever its state. The states are
@@ -67,7 +70,7 @@ Findings:
   "<LED> LED: <state>, brightness 0", and the LEDs light again as soon as brightness goes above `0`.
   Above `0` the button shows the state colour at full strength; it does not dim with brightness.
 - The editor edits the active profile; changes go to the device immediately and are saved
-  automatically ([ui.md](../ui.md#profile-editor)).
+  automatically ([ui.md](../../ui.md#profile-editor)).
 - The grid positions are data (LED, card, row, column) next to the LED bits, so moving an LED does
   not touch widget code.
 
@@ -115,7 +118,7 @@ Missing in the spike: the POV 1 LED (lower hat between B and C). It cannot be co
 ## Not done yet
 
 - Keyboard navigation, screen reader labels, narrow window, light/dark: skipped on purpose
-  (2026-11-02) and checked on the app's editor instead ([roadmap M5](../roadmap.md)). This spike
+  (2026-11-02) and checked on the app's editor instead ([roadmap M5](../../roadmap.md)). This spike
   provides the LED button, the data (LED bits, states) and the device logic (worker thread, replay
   on connect).
 - Input tester prototype: depends on S3 (key codes, mode selector, MFD buttons on evdev).

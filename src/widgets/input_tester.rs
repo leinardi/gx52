@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The input tester (docs/ui.md, "Input tester"): a live view of every axis, button, toggle, hat
+//! The input tester (docs/internal/ui.md, "Input tester"): a live view of every axis, button, toggle, hat
 //! and the mode selector, read from evdev without grabbing the device.
 //!
 //! The page asks the reader for the axes only while it is mapped, so nothing streams while the

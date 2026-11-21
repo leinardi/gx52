@@ -1,5 +1,8 @@
 # S8: legacy profile database
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 Two real GX52 0.7 databases on the maintainer's machine, opened read-only with SQLite:
 
 | File | Last modified | Origin |

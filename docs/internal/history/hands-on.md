@@ -1,5 +1,8 @@
 # Hands-on session checklist
 
+> **Status:** Historical: the hands-on checklist of the rewrite preparation, finished: every item is
+> ticked or dropped. The results are in the spike records.
+
 Everything in the preparation that needs a person at the device or the desktop: button presses,
 plugging cables, looking at the screen. Collected here so it can be done in one sitting.
 Tick items off and record the results in the linked spike documents.
@@ -19,11 +22,11 @@ Run `spikes/x52-input` and, in order:
 - [x] Mode selector through 1, 2, 3: confirm it is a held key (715 = mode 1 seen at start).
 - [x] MFD buttons (Start/Stop, Reset, function wheel up/down/press): do they appear on evdev at all?
 - [x] Clutch / i button and the shift-related buttons, if any. (2026-11-02: results in
-      [spikes/03-input.md](spikes/03-input.md).)
+      [spikes/03-input.md](../research/spikes/03-input.md).)
 - [x] While `x52-input` runs, change LEDs with `x52-probe` and confirm input keeps flowing
       (control transfers and evdev at the same time).
 
-Results go to a new `docs/spikes/03-input.md` and later to `docs/protocol.md`.
+Results go to a new `docs/internal/research/spikes/03-input.md` and later to `docs/protocol.md`.
 
 ## 2. Hotplug (S3 and S4)
 
@@ -37,7 +40,7 @@ Results go to a new `docs/spikes/03-input.md` and later to `docs/protocol.md`.
 - [x] Remove the udev rule temporarily (or test as another user) and note the exact error, for the
       in-app guidance page.
 
-Results go to [spikes/04-flatpak-sandbox.md](spikes/04-flatpak-sandbox.md).
+Results go to [spikes/04-flatpak-sandbox.md](../research/spikes/04-flatpak-sandbox.md).
 
 ## 3. Tray (S5)
 
@@ -50,7 +53,7 @@ Results go to [spikes/04-flatpak-sandbox.md](spikes/04-flatpak-sandbox.md).
 - [ ] Optional: KDE Plasma (native watcher), if a session is at hand. Dropped on 2026-11-15: no
       Plasma session at hand; GNOME is the target desktop (roadmap, M6).
 
-Results go to [spikes/05-tray.md](spikes/05-tray.md).
+Results go to [spikes/05-tray.md](../research/spikes/05-tray.md).
 
 ## 4. Virtual mouse (S9)
 
@@ -66,7 +69,7 @@ Run `spikes/s9-virtual-mouse` (from its directory: `cargo run --release`).
       ministick axes.
 - [x] Unplug while holding the primary button: the spike exits; check no button stays stuck.
 
-Results go to [spikes/09-virtual-mouse.md](spikes/09-virtual-mouse.md).
+Results go to [spikes/09-virtual-mouse.md](../research/spikes/09-virtual-mouse.md).
 
 ## 5. LED editor (S7)
 
@@ -83,4 +86,4 @@ checks the UI only).
       and labels stay readable.
 - [-] (skipped: UI to be redesigned) Optional: Orca screen reader reads "<LED> LED: <state>".
 
-Results go to [spikes/07-led-editor.md](spikes/07-led-editor.md).
+Results go to [spikes/07-led-editor.md](../research/spikes/07-led-editor.md).

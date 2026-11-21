@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The mode bar of a per-mode profile: the mode shown, which follows the selector on the stick
-//! until another one is picked (docs/ui.md, "Mode bar").
+//! until another one is picked (docs/internal/ui.md, "Mode bar").
 
 use adw::subclass::prelude::*;
 use gtk::glib;

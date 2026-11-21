@@ -15,7 +15,7 @@
 
 //! The Names view of the profile editor: the custom names of the controls in the mode shown, with
 //! the simulated display, the search by pressing a control and the Copy and Clear actions
-//! (docs/ui.md, "Names view").
+//! (docs/internal/ui.md, "Names view").
 
 use std::cell::Cell;
 use std::collections::BTreeMap;

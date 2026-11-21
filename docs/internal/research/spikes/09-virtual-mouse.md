@@ -1,5 +1,8 @@
 # S9: virtual mouse from the throttle ministick
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 Question (added 2026-10-28): can GX52 make the ministick on the X52 Pro throttle move the mouse
 pointer, as the Windows driver does? Out of the box on Linux the ministick is only two joystick axes
 and the mouse buttons are joystick buttons.
@@ -40,7 +43,7 @@ The 16-step resolution is the device's own (the HID report has 4 bits per axis),
 limit. The key codes follow the HID report order (first 16 buttons on `BTN_JOYSTICK` 288–303, the
 rest on `BTN_TRIGGER_HAPPY1`... 704–726); libx52's report table gives the same order and puts
 mode 1 at 715, which matches what S2 saw. Still to confirm by pressing each button (S3,
-[hands-on.md](../hands-on.md)).
+[hands-on.md](../../history/hands-on.md)).
 
 ## What the spike does
 
@@ -117,7 +120,7 @@ settings move into 1.0.0, with these values as the defaults.
 - Whether the X52 (non-Pro) reports the ministick on the same codes (libx52's non-Pro table orders
   the mouse buttons differently). Update (M7, 2026-11-15): the app assumes the same ministick codes
   and the mouse buttons at 718–721, derived from the kernel's HID quirk and libx52's report parser
-  ([protocol.md, "X52 (non-Pro)"](../protocol.md#x52-non-pro)); still not tested on a device.
+  ([protocol.md, "X52 (non-Pro)"](../../../protocol.md#x52-non-pro)); still not tested on a device.
 - Keeping the uinput device across a replug: decided against in M7. The app removes it when the
   joystick goes away and creates it again when it comes back
-  ([architecture.md, "Virtual-mouse loop"](../architecture.md#threads-and-data-flow)).
+  ([architecture.md, "Virtual-mouse loop"](../../../architecture.md#threads-and-data-flow)).
