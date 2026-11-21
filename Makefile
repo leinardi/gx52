@@ -24,7 +24,11 @@ MK_COMMON_VERSION     ?= v1
 MK_COMMON_DIR         := $(REPO_ROOT)/.mk
 
 # Shared snippets coming from make-common
-MK_COMMON_FILES       := help.mk pre-commit.mk
+MK_COMMON_FILES       := help.mk pre-commit.mk zensical.mk
+
+# zensical.mk in uv mode: the docs site's Zensical from tools/docs/uv.lock, run through uv
+# (make docs-build, make docs-serve); set before the include below
+DOCS_UV_PROJECT       := tools/docs
 
 # Repo-local snippets that are NOT in make-common
 MK_LOCAL_FILES        := audit-deps.mk flathub.mk flatpak.mk meson.mk release.mk rust.mk screenshots.mk verify.mk

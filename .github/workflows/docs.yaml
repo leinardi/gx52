@@ -4,8 +4,9 @@
 # "GitHub Actions"; until then the deploy job fails.
 #
 # Every action is pinned to a full commit SHA (the tag is in the comment); let Dependabot's
-# github-actions ecosystem update them. Zensical is installed from the hash-pinned lock
-# (zensical-requirements.txt, compiled from zensical-requirements.in).
+# github-actions ecosystem update them. Zensical runs through uv from the committed lock of the
+# docs project, tools/docs/uv.lock (references/config.md); change DOCS_UV_PROJECT if it lives
+# elsewhere.
 name: Docs
 
 on:
@@ -17,6 +18,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  DOCS_UV_PROJECT: tools/docs
 
 # One deployment at a time; a newer push waits for the running one instead of cancelling it.
 concurrency:
@@ -34,17 +38,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.x"
+      # uv itself is the latest release (the action's default); every package comes from uv.lock.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
-      - name: Install Zensical from the lock
-        run: python -m pip install --disable-pip-version-check --require-hashes -r zensical-requirements.txt
-
-      # --strict fails the build on a broken link, a missing anchor or a missing snippet file.
+      # --locked refuses a lock that no longer matches pyproject.toml; uv installs from the lock,
+      # hashes included. --strict fails the build on a broken link, a missing anchor or a missing
+      # snippet file.
       - name: Build the site
-        run: zensical build --strict --clean
+        run: uv run --project "$DOCS_UV_PROJECT" --locked zensical build --strict --clean
 
       - name: Upload the site
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

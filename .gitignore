@@ -52,3 +52,8 @@ desktop.ini
 
 # An interrupted make screenshots (scripts/screenshots.sh)
 data/screenshots/.capture.*
+
+# Zensical docs site: build output and the uv environment of tools/docs
+/site/
+.cache/
+tools/docs/.venv/

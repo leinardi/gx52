@@ -66,6 +66,9 @@ make flatpak-lint-manifest  # flatpak-builder-lint on both manifests (also a pre
 make flatpak-lint-repo      # flatpak-builder-lint on _flatpak/repo (a release gate; locally may report unmirrored screenshots)
 make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (network required)
 
+make docs-build    # the Zensical docs site into site/, strict, through uv (tools/docs/uv.lock)
+make docs-serve    # serve the docs locally with live reload (DOCS_ADDR=IP:PORT to change)
+
 make -s release-version           # the version the tree carries (Cargo.toml [package] version)
 make release-bump VERSION=X.Y.Z   # write it into the four version files, no commit (docs/internal/release.md)
 make release [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # a whole release, to its Flathub PR; resumable
