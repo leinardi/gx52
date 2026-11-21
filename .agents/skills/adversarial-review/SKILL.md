@@ -45,9 +45,9 @@ green. Load only what the diff touches.
 | --- | --- | --- |
 | any `**/*.rs`, `Cargo.toml` (any member), `Cargo.lock`, `clippy.toml`, `rustfmt.toml`, `rust-toolchain.toml`, `deny.toml` | user-level `rust-review` and `rust-best-practices`, plus `AGENTS.md` | idiom, error handling, the lint set and `#[expect]` |
 | Rust code that uses `gtk::`/`adw::`/`glib::`, `**/*.blp`, `**/*.ui`, `data/**` (desktop file, metainfo, GSettings schema, GResource, icons), `meson.build`, `po/**`, the Flatpak manifests | user-level `gtk-rs-review` (and `gtk-rs-development` for the rules it cites) | main-thread blocking, reference cycles and leaked signal handlers, `RefCell` borrows across callbacks and `await`, GObject subclassing, list-factory recycling, deprecated APIs, i18n and accessibility, Meson/Flatpak/GResource/GSettings configuration |
-| the `x52` crate (protocol, device model, key maps, MFD charset) | `rust-review` + `docs/protocol.md` once it exists, the spike results in `docs/spikes/` until then | the bytes sent to the device; no GTK dependency |
+| the `x52` crate (protocol, device model, key maps, MFD charset) | `rust-review` + `docs/protocol.md` | the bytes sent to the device; no GTK dependency |
 | `meta/**` | `AGENTS.md`; the comment heading each test | a meta-test that can skip or pass on nothing is a finding |
-| `scripts/check-*.sh` | the script's header comment (and its meta-test once it exists) | the check still fails on what it exists to stop |
+| `scripts/check-*.sh` | the script's header comment and its meta-test (`meta/tests/license_headers.rs` for `check-license-headers.sh`) | the check still fails on what it exists to stop |
 | `.pre-commit-config.yaml`, `[workspace.lints]`, `clippy.toml` | `AGENTS.md` (coding rules) | no lint disabled or narrowed, no hook dropped; see *A new suppression has to show its work* below |
 
 No skill matches (bash, Makefile, `.mk/**`, plain YAML, Markdown, workflows)? Fall back to the
@@ -88,13 +88,13 @@ generic reviewers miss. Read `AGENTS.md` and
 - **App identity.** The app ID `com.leinardi.gx52` (and `.Devel` for development builds) is the
   same across the desktop file, metainfo, GSettings schema, GResource prefix, icons and manifest.
   A mismatch is a finding even when the build passes.
-- **Release bump.** `svu` derives the release version from the commit types (from `1.0.0` on),
-  so check that every commit's type matches whether the change should ship (AGENTS.md, Commit
-  messages). Anything users should receive in the application is `fix` or `feat`, even a
-  performance change, a refactor or a revert of a shipped `feat`/`fix`. A stray `!` cuts a
-  major. `svu` matches `feat`/`fix` anywhere before the colon, so a word such as `prefix:` in a
-  subject counts as `fix:`. Pull requests land as merge commits, so every commit in the range
-  counts, not just the PR title.
+- **Release bump.** `svu` derives the release version from the commit types, so check that
+  every commit's type matches whether the change should ship (AGENTS.md, Commit messages).
+  Anything users should receive in the application is `fix` or `feat`, even a performance
+  change, a refactor or a revert of a shipped `feat`/`fix`. A stray `!` cuts a major. `svu`
+  matches `feat`/`fix` anywhere before the colon, so a word such as `prefix:` in a subject counts
+  as `fix:`. Pull requests land as merge commits, so every commit in the range counts, not just
+  the PR title.
 - **Licence headers and provenance.** Every governed file carries the GPL-3.0-or-later header;
   a file reused from another project adds the provenance line below it. A pasted MIT or
   Apache-2.0 block, or a provenance line missing its commit, is a finding.
