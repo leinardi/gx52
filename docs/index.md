@@ -68,12 +68,12 @@ flatpak run com.leinardi.gx52
 
 ![Three clocks in real time zones](https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/clocks.png)
 
-![The profile list](https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/profiles.png)
-
 ![Running in the background and the virtual mouse](https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/preferences.png)
 
 ![Every button, axis and hat, live](https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/tester.png)
 
 ![Custom names for the controls](https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/names.png)
+
+![The profile list](https://raw.githubusercontent.com/leinardi/gx52/main/data/screenshots/profiles.png)
 
 </div>

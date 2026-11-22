@@ -51,3 +51,15 @@ updates:
         dependency-type: "development"
         patterns:
           - "*"
+
+  # tools/docs: the Zensical that builds the docs site (make docs-build / docs-serve, uv mode).
+  # chore, not fix: the site is not part of the application release.
+  - package-ecosystem: "uv"
+    directory: "/tools/docs"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies", "ci"]

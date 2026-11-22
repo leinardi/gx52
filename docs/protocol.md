@@ -337,8 +337,8 @@ Each position is a held button (715 / 716 / 717). The current mode is in the key
 log): a position can pulse on and off several times within about 150 ms, there can be gaps of about
 70 ms with no mode held, and going from 3 to 1 passes through 2.
 
-Debounce rule: a mode becomes active only after **one** mode button has been held, alone, for
-**200 ms**. Gaps with no mode held are ignored (the previous mode stays active), and a mode passed
+Debounce rule: a mode becomes active only after **one** mode button has been held, alone, for **200
+ms**. Gaps with no mode held are ignored (the previous mode stays active), and a mode passed
 through for less than 200 ms (2 on the way from 3 to 1) is never applied.
 
 ## Hotplug
@@ -416,9 +416,9 @@ app assumes, all unverified until a test on the device is recorded here:
 - **Character set:** assumed the same as the X52 Pro.
 - **evdev map:** the candidate is GX52 0.7's non-Pro table (`X52EvdevKeyMapping` in
   `gx52/driver/x52_driver.py`): the first 15 buttons as on the Pro (288–302), then POV 2 303 and
-  704–706, throttle hat 707–710, **mode 1/2/3 at 711/712/713**, MFD Function / Start/Stop / Reset at
-  714 / 715 / 716, i at 717, mouse button 718, scroll wheel press / down / up at 719 / 720 / 721. It
-  is to be compared with the non-Pro report order in [libx52](https://github.com/nirenjan/libx52)
+  704–706, throttle hat 707–710, **mode 1, 2, 3 at 711/712/713**, MFD Function / Start/Stop / Reset
+  at 714 / 715 / 716, i at 717, mouse button 718, scroll wheel press / down / up at 719 / 720 / 721.
+  It is to be compared with the non-Pro report order in [libx52](https://github.com/nirenjan/libx52)
   (which differs from the Pro's). Not checked against a device.
 - **Ministick and mouse controls**, derived from documented sources, not tested on a device. The
   kernel's `hid-quirks.c` applies `HID_QUIRK_INCREMENT_USAGE_ON_DUPLICATE` to all three X52 IDs, so
