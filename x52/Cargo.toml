@@ -32,7 +32,7 @@ test-support = []
 
 [dependencies]
 # Reads the system's time zone database (/usr/share/zoneinfo, shipped by the GNOME runtime).
-jiff = "0.2"
+jiff = "1.0"
 thiserror = "2"
 unicode-normalization = "0.1"
 
