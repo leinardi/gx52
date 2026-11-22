@@ -1,30 +1,7 @@
 # Getting started
 
-Install GX52, give it access to the joystick and find where it keeps its settings. Building it
+Install GX52 and give it access to the joystick, that's it. Building it
 yourself is described in [Building from source](building.md).
-
-## Features
-
-- LED colours and on/off states per LED, and the blinking of the i and POV 1 LEDs (X52 Pro), on a
-  schematic of the stick, its base and the throttle, plus the LED and MFD brightness.
-- MFD text per line, the SHIFT indicator (X52 Pro), and the three clocks with real time zones
-  (daylight saving included) instead of minute offsets.
-- Custom names for the controls, per mode, shown by the MFD's "Last button" line ("Emerg. Lights"
-  for E).
-- Profiles: a single set of settings, or one per position of the mode selector (1/2/3). Import and
-  export as TOML files; the profiles of GX52 0.7 are imported on first start.
-- A tray icon, running in the background and starting on login.
-- An input tester: a live view of the axes, buttons, hats, toggles and the mode selector.
-- A virtual mouse: the throttle's ministick moves the pointer, with left click, right click (press
-  the wheel) and the wheel, with speed, curve, deadzone and wheel direction settings.
-- Guidance in the app for the udev rule the joystick (and the virtual mouse) needs.
-
-## Supported devices
-
-The X52 Pro is the device GX52 is developed and tested with. The plain X52 is supported on a best
-effort basis and has not been tested on a device: its individual LEDs cannot be set, GX52 leaves
-out the LED blinking and the SHIFT indicator until they are verified on one, and its input codes
-come from the documentation, not from a device on the desk. Reports from X52 owners are welcome.
 
 ## Install
 
@@ -49,6 +26,29 @@ New versions are published on the Flathub beta channel first, for testing:
 flatpak remote-add --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
 flatpak install flathub-beta com.leinardi.gx52
 ```
+
+## Supported devices
+
+The X52 Pro is the device GX52 is developed and tested with. The plain X52 is supported on a best
+effort basis and has not been tested on a device: its individual LEDs cannot be set, GX52 leaves
+out the LED blinking and the SHIFT indicator until they are verified on one, and its input codes
+come from the documentation, not from a device on the desk. Reports from X52 owners are welcome.
+
+## Features
+
+- LED colours and on/off states per LED, and the blinking of the i and POV 1 LEDs (X52 Pro), on a
+  schematic of the stick, its base and the throttle, plus the LED and MFD brightness.
+- MFD text per line, the SHIFT indicator (X52 Pro), and the three clocks with real time zones
+  (daylight saving included) instead of minute offsets.
+- Custom names for the controls, per mode, shown by the MFD's "Last button" line ("Emerg. Lights"
+  for E).
+- Profiles: a single set of settings, or one per position of the mode selector (1/2/3). Import and
+  export as TOML files; the profiles of GX52 0.7 are imported on first start.
+- A tray icon, running in the background and starting on login.
+- An input tester: a live view of the axes, buttons, hats, toggles and the mode selector.
+- A virtual mouse: the throttle's ministick moves the pointer, with left click, right click (press
+  the wheel) and the wheel, with speed, curve, deadzone and wheel direction settings.
+- Guidance in the app for the udev rule the joystick (and the virtual mouse) needs.
 
 ## Device access (udev)
 

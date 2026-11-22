@@ -4,8 +4,8 @@ On Ubuntu 26.04 (other distributions: the same libraries at the versions the GNO
 ships):
 
 ```bash
-sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler meson \
-    desktop-file-utils appstream
+sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler \
+    meson desktop-file-utils appstream
 git clone https://github.com/leinardi/gx52.git
 cd gx52
 meson setup _build

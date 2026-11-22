@@ -9,6 +9,7 @@ X52 and X52 Pro joysticks on Linux.</strong></p>
 <p align="center">
   <a href="https://github.com/leinardi/gx52/actions/workflows/ci.yaml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/leinardi/gx52/ci.yaml?style=flat-square"></a>
   <a href="https://flathub.org/apps/com.leinardi.gx52"><img alt="Flathub" src="https://img.shields.io/flathub/v/com.leinardi.gx52?style=flat-square"></a>
+  <a href="https://github.com/leinardi/gx52/actions/workflows/docs.yaml"><img alt="Docs" src="https://img.shields.io/github/actions/workflow/status/leinardi/gx52/docs.yaml?label=docs&style=flat-square"></a>
   <a href="COPYING.txt"><img alt="License" src="https://img.shields.io/github/license/leinardi/gx52?style=flat-square"></a>
 </p>
 
@@ -24,7 +25,8 @@ X52 and X52 Pro joysticks on Linux.</strong></p>
 
 GX52 is a GNOME application written in Rust with GTK 4 and libadwaita, distributed through
 Flathub. It is developed and tested on the X52 Pro; the plain X52 is supported on a best effort
-basis, as [Getting started][start] explains.
+basis and has not been tested on a device yet, so its LED blinking and SHIFT indicator are left
+out until an owner confirms them. [Getting started][start] has the details.
 
 ## ✨ Features
 
@@ -42,19 +44,48 @@ flatpak run com.leinardi.gx52
 
 <a href="https://flathub.org/apps/com.leinardi.gx52"><img width="200" alt="Get it on Flathub" src="https://flathub.org/api/badge?locale=en"></a>
 
-GX52 needs a udev rule before it can set anything; it shows the rule and how to install it the
-first time it cannot open the device. The beta channel, the rule, the command line and where the
-settings are stored are in [Getting started][start].
+Flathub is the only official channel; new versions reach its beta channel first. The beta
+remote and every other install detail are in [Getting started][start], and building GX52
+yourself is described below.
+
+## 🚀 Usage
+
+GX52 needs a udev rule before it can set anything. The first time it cannot open the joystick it
+shows the rule, the file to put it in (`/etc/udev/rules.d/70-gx52.rules`) and the commands that
+reload udev; the virtual mouse's page in Preferences does the same for `/dev/uinput`. GX52 never
+asks for root or installs the rule itself.
+
+From the command line, `--hidden` starts it in the background without a window, the way the
+login autostart does, and `RUST_LOG` raises the log level:
+
+```bash
+flatpak run --env=RUST_LOG=debug com.leinardi.gx52 --hidden
+```
+
+If libx52's `x52d` daemon is running, it drives the same LEDs and display, and GX52 shows a
+banner while it sees it. Where the settings and profiles are stored, and how to bring the
+profiles of a GX52 0.7 source install into the Flatpak, are in [Getting started][start].
 
 ## 🛠️ Building from source
 
-Meson and Cargo, with the libraries of the GNOME 51 runtime: see [Building from source][build].
-The development build and its Flatpak are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Meson and Cargo, with GTK 4, libadwaita and blueprint-compiler at the versions of the GNOME 51
+runtime:
+
+```bash
+meson setup _build
+meson compile -C _build
+meson test -C _build
+```
+
+The packages to install first are in [Building from source][build]. The development build
+(`com.leinardi.gx52.Devel`, installable next to the stable app) and its Flatpak are in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 🤝 Contributing
 
-Bug reports and feature requests go to the [issue tracker](https://github.com/leinardi/gx52/issues).
-[CONTRIBUTING.md](CONTRIBUTING.md) covers building, checks, branches, commits and translations;
+Bug reports, X52 test reports and feature requests go to the
+[issue tracker](https://github.com/leinardi/gx52/issues). [CONTRIBUTING.md](CONTRIBUTING.md)
+covers building, checks, branches, commits and translations (`po/`);
 [SECURITY.md](SECURITY.md) explains how to report a vulnerability privately.
 
 ## 📝 License
