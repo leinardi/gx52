@@ -1,7 +1,7 @@
 # Releasing
 
 The short version. How it works, the channels, the one-time setup and the recovery table are in
-[docs/release.md](docs/release.md).
+[docs/internal/release.md](docs/internal/release.md).
 
 Needs `gh` logged in as the maintainer (a collaborator on `flathub/com.leinardi.gx52`), their SSH
 key on GitHub (the Flathub branches are pushed over SSH; `FLATHUB_URL=https://...` with `gh auth

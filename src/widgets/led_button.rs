@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The round button of one LED, coloured by its state; it opens a popover with the states the LED
-//! can take (docs/ui.md, "LEDs view").
+//! can take (docs/internal/ui.md, "LEDs view").
 
 use adw::subclass::prelude::*;
 use gettextrs::gettext;

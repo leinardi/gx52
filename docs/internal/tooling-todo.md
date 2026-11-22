@@ -3,9 +3,9 @@
 The project tooling (Makefile and `.mk` fragments, pre-commit, editor and linter configs, AI
 tooling, GitHub templates) was ported from `swarm-device-access` and `gh-leinardi-iac` ahead of the
 rewrite, as planned in [section 6 of the rewrite
-analysis](rewrite-analysis.md#6-tooling-porting-the-reference-standard-to-this-repository). This
-page lists what was left out because it depends on code or decisions that do not exist yet. Tick an
-item off, or delete it, in the commit that does it.
+analysis](history/rewrite-analysis.md#6-tooling-porting-the-reference-standard-to-this-repository).
+This page lists what was left out because it depends on code or decisions that do not exist yet.
+Tick an item off, or delete it, in the commit that does it.
 
 ## Needs the Cargo workspace
 
@@ -71,7 +71,7 @@ item off, or delete it, in the commit that does it.
       ported and expects the pre-commit job to restore the cache under the same key. Also skipped
       there: `cargo-deny` (the `deny` job) and `flatpak-builder-lint` (the `flatpak` job); the
       meta-tests run in their own bare-runner job, `meta`.
-- [x] `docs/release.md`: the release specification (rewrite analysis, section 9).
+- [x] `docs/internal/release.md`: the release specification (rewrite analysis, section 9).
 - [x] `.github/workflows/release.yaml`, implementing [release.md](release.md): `release.yaml`,
       `release-publish.yaml`, `release-gate.yaml` and `flathub-check.yaml`, on gh-reusable-workflows'
       version-bump-pr, release-on-merge and simple-tag-and-release (M8).
@@ -94,8 +94,8 @@ item off, or delete it, in the commit that does it.
 
 - [x] `CONTRIBUTING.md`: rewrite for the Rust project (build from source with Meson, Flatpak
       Devel build, `make check`, commit conventions), adapted from `swarm-device-access`.
-- [x] `RELEASING.md`: the short version of `docs/release.md` (the `make release` commands, to
-      beta and to stable, and the recovery).
+- [x] `RELEASING.md`: the short version of `docs/internal/release.md` (the `make release` commands,
+      to beta and to stable, and the recovery).
 - [x] `README.md`: rewrite for the new application (install from Flathub, udev rule, features).
 - [x] `README.md`: the screenshot table (LEDs, MFD, clocks, profiles, Preferences, input tester),
       from the PNGs `make screenshots` writes into `data/screenshots/`.

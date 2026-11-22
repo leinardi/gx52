@@ -96,7 +96,7 @@ fn finish_legacy_import(plan: legacy::Plan) {
 }
 
 /// The version of Cargo.toml and meson.build until the release workflow sets the first one
-/// (docs/release.md, "One version source").
+/// (docs/internal/release.md, "One version source").
 const UNRELEASED_VERSION: &str = "0.0.0";
 
 mod imp {
@@ -229,7 +229,7 @@ mod imp {
         /// Whether the refusal waits for the window's banner: no preferences showed it.
         pub(crate) autostart_notice: Cell<bool>,
         /// What the last window showed when it closed, for the next one: a window reopened from
-        /// the background shows it again (docs/ui.md, "Start-up").
+        /// the background shows it again (docs/internal/ui.md, "Start-up").
         pub(crate) window_placement: RefCell<Option<Placement>>,
     }
 

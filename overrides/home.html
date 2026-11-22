@@ -1,0 +1,31 @@
+{#-
+  Landing page for Zensical 0.1.3 (repo-docs-toolkit "Minimal Developer Showcase").
+  Use it as is: configure it through the front matter of docs/index.md (template: home.html,
+  hide: [navigation, toc], and a home: table) and the brand colour, never by editing this file.
+  Only the content block is overridden, so the header, search, tabs and palette toggle stay native.
+-#}
+{% extends "main.html" %}
+{% block content %}
+  {%- set home = page.meta.home or {} -%}
+  <div class="rdt-home">
+    <section class="rdt-hero">
+      {%- if home.logo %}
+      <img class="rdt-hero__logo" src="{{ home.logo | url }}#only-light" alt="">
+      <img class="rdt-hero__logo" src="{{ (home.logo_dark or home.logo) | url }}#only-dark" alt="">
+      {%- endif %}
+      <h1 class="rdt-hero__name">{{ home.name or config.site_name }}
+        {%- if home.text %} <span class="rdt-hero__text">{{ home.text }}</span>{% endif %}</h1>
+      {%- if home.tagline %}
+      <p class="rdt-hero__tagline">{{ home.tagline }}</p>
+      {%- endif %}
+      {%- if home.actions %}
+      <p class="rdt-hero__actions">
+        {%- for action in home.actions %}
+        <a class="md-button{% if action.primary %} md-button--primary{% endif %}" href="{{ action.link | url }}">{{ action.text }}</a>
+        {%- endfor %}
+      </p>
+      {%- endif %}
+    </section>
+    {{ page.content }}
+  </div>
+{% endblock %}

@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The edits of the profile editor: they change the active profile's settings in the mode shown,
-//! or its clocks, go to the device at once and are saved after the debounce (docs/ui.md,
+//! or its clocks, go to the device at once and are saved after the debounce (docs/internal/ui.md,
 //! "Profile editor").
 
 use adw::subclass::prelude::*;

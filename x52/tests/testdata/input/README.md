@@ -5,7 +5,7 @@
 The mode selector of an X52 Pro (`06a3:0762`, "Logitech X52 Professional H.O.T.A.S."), recorded
 on 2026-11-03 with `evtest` 1.36 for the mode debounce of the `x52` crate
 (`x52/src/input/tests.rs`). It replaces the elided excerpt of
-[spike S3](../../../../docs/spikes/03-input.md#mode-selector) as the debounce's fixture.
+[spike S3](../../../../docs/internal/research/spikes/03-input.md#mode-selector) as the debounce's fixture.
 
 Procedure:
 

@@ -1,11 +1,11 @@
 # GX52 rewrite: analysis and decisions
 
 Status: decision record. The spikes S1–S9 and the hands-on session are done, and stage C turned
-their results into the reference docs: [protocol.md](protocol.md),
-[architecture.md](architecture.md), [profiles.md](profiles.md), [release.md](release.md) and the
-ordered plan in [roadmap.md](roadmap.md). This document collects what the Python + GTK 3 application
-does, what the rewrite has to cover and why each decision was taken; where a reference doc now holds
-the detail, the section here links to it.
+their results into the reference docs: [protocol.md](../../protocol.md),
+[architecture.md](../../architecture.md), [profiles.md](../../profiles.md),
+[release.md](../release.md) and the ordered plan in [roadmap.md](../roadmap.md). This document
+collects what the Python + GTK 3 application does, what the rewrite has to cover and why each
+decision was taken; where a reference doc now holds the detail, the section here links to it.
 
 Sources analysed:
 
@@ -49,12 +49,12 @@ Sources analysed:
 | UI definition | The current GTK 4 best practice: Blueprint templates. See [section 5.4](#54-ui-definition-blueprint). |
 | AI tooling | Port everything from the reference repositories (`AGENTS.md`, `.agents/skills`, `.claude/`, `.serena/`). |
 | Architectures | `x86_64` and `aarch64` (the current `flathub.json` restricts to `x86_64`). |
-| Per-mode profiles | A profile is single (the mode selector changes nothing) or per-mode (one set of LED, MFD and brightness settings per mode; clocks shared). One profile per device type is active. Replaced the per-type mode mapping on 2026-11-09; see [profiles.md](profiles.md#model). |
+| Per-mode profiles | A profile is single (the mode selector changes nothing) or per-mode (one set of LED, MFD and brightness settings per mode; clocks shared). One profile per device type is active. Replaced the per-type mode mapping on 2026-11-09; see [profiles.md](../../profiles.md#model). |
 | GNOME versions | **Required GNOME 50, runtime GNOME 51** (S6): crate features `gnome_50` / `v1_9` + `gtk_v4_22`, Meson `gtk4 >= 4.22`, `libadwaita-1 >= 1.9`; raised only when an API needs it. |
 | Hotplug in the sandbox | `nusb::watch_devices` on the host, **polling every 250 ms** in the Flatpak sandbox, where the udev netlink events never arrive (S4). No `--share=network`. |
-| Virtual mouse | **In 1.0.0, off by default**, enabled by a switch; uinput through the `evdev` crate, with the S9 values (S9, [protocol.md](protocol.md#virtual-mouse-uinput)). |
+| Virtual mouse | **In 1.0.0, off by default**, enabled by a switch; uinput through the `evdev` crate, with the S9 values (S9, [protocol.md](../../protocol.md#virtual-mouse-uinput)). |
 | POV 1 LED | **Fixed green**, not controllable (S2 scan); shown as a fixed LED in the editor, answering GitHub #3. |
-| Clock sources | Clock 1 `local` or `utc`; clocks 2/3 an IANA zone (`jiff`, runtime tzdata) or a fixed offset in minutes. Legacy offsets import unchanged as fixed offsets, never guessed into a zone. See [profiles.md](profiles.md#clocks). |
+| Clock sources | Clock 1 `local` or `utc`; clocks 2/3 an IANA zone (`jiff`, runtime tzdata) or a fixed offset in minutes. Legacy offsets import unchanged as fixed offsets, never guessed into a zone. See [profiles.md](../../profiles.md#clocks). |
 | Runtime and libraries | Always the latest stable runtime Flathub supports (see GNOME versions above for the required minimum). At the time of writing: `org.gnome.Platform//51`, `org.freedesktop.Sdk.Extension.rust-stable//26.08`, `gtk4` 0.11, `libadwaita` 0.9. |
 
 ## 2. Feature inventory of the current application
@@ -163,7 +163,7 @@ Described from the user's perspective. This is the parity baseline for the rewri
 
 ## 4. USB / input protocol summary
 
-Superseded by [protocol.md](protocol.md), which records the USB vendor commands, the MFD character
+Superseded by [protocol.md](../../protocol.md), which records the USB vendor commands, the MFD character
 set, the evdev input map, hotplug, the virtual mouse and the list of commands the app may send, as
 verified on the device in spikes S1 to S4 and S9. The encoding is pure arithmetic and is unit-tested
 without hardware behind a transport trait in the `x52` crate.
@@ -176,9 +176,9 @@ without hardware behind a transport trait in the `x52` crate.
 | --- | --- | --- |
 | PyGObject + GTK 3 | `gtk4` 0.11, `libadwaita` 0.9 | Latest stable bindings matching GNOME 51. |
 | pyusb (libusb) | `nusb` 0.2 (pure Rust) | No libusb to bundle, has a hotplug API (`nusb::watch_devices`). Fallback: `rusb`. **See risk R1.** |
-| evdev | `evdev` 0.13 | Pure Rust. Read on its own thread, which also feeds the virtual mouse ([architecture.md](architecture.md#threads-and-data-flow)); the earlier idea of polling the fd from the GLib main loop was dropped. |
+| evdev | `evdev` 0.13 | Pure Rust. Read on its own thread, which also feeds the virtual mouse ([architecture.md](../../architecture.md#threads-and-data-flow)); the earlier idea of polling the fd from the GLib main loop was dropped. |
 | pyudev | `nusb` hotplug (kernel netlink uevents) | `/run/udev` is not visible in the Flatpak sandbox, and S4 showed the netlink events do not arrive there either: the app polls in the sandbox (section 1, Hotplug in the sandbox). |
-| peewee + SQLite | `serde` + one TOML file per profile in `glib::user_config_dir().join("gx52/profiles")` ([profiles.md](profiles.md)) | Small data, human-readable, trivially exportable. |
+| peewee + SQLite | `serde` + one TOML file per profile in `glib::user_config_dir().join("gx52/profiles")` ([profiles.md](../../profiles.md)) | Small data, human-readable, trivially exportable. |
 | injector | none | Plain constructor wiring. |
 | reactivex | `glib::spawn_future_local`, `gio::spawn_blocking`, `async-channel` | Device I/O on a worker; UI updates on the main context. |
 | AppIndicator3 | `ksni` 0.3 (StatusNotifierItem over D-Bus) | GTK 4 has no tray API. Works on KDE and on GNOME with the AppIndicator extension. Needs `--talk-name=org.kde.StatusNotifierWatcher` (already granted). See risk R5. |
@@ -189,7 +189,7 @@ without hardware behind a transport trait in the `x52` crate.
 
 ### 5.2 Architecture sketch
 
-Superseded by [architecture.md](architecture.md): workspace, threads and data flow, device service,
+Superseded by [architecture.md](../../architecture.md): workspace, threads and data flow, device service,
 state model, profile store, UI layers, background mode, errors, sandbox and tests.
 
 ### 5.3 Build and packaging
@@ -257,7 +257,7 @@ everything. `--debug` maps to a `debug` filter, `RUST_LOG` overrides it. Decisio
   `.gitignore`.
 - The `meta` crate (repository hygiene tests: doc links, license headers, toolchain),
   adapted: license headers become GPL-3.0-or-later, Dockerfile tests removed.
-- Docs: `CONTRIBUTING.md`, `SECURITY.md`, `docs/release.md`, `AGENTS.md`.
+- Docs: `CONTRIBUTING.md`, `SECURITY.md`, `docs/internal/release.md`, `AGENTS.md`.
 - AI tooling: `.agents/skills/` (adversarial review, Rust style guide), `.claude/settings.json`,
   `.claude/skills`, `.serena/` (project + memories rewritten for this project), `.idea/` copyright
   profile (GPL instead of MIT).
@@ -406,8 +406,8 @@ that opens an issue when a newer GNOME runtime exists on Flathub is a possible l
 ### 9.1 Target flow
 
 1. `release.yaml` run manually (`workflow_dispatch`) on the trunk with optional `version` and
-   `dry_run` inputs (same contract as `awtrix-controller`'s `docs/release.md`; the workflows are
-   specified in [release.md](release.md)).
+   `dry_run` inputs (same contract as `awtrix-controller`'s `docs/internal/release.md`; the
+   workflows are specified in [release.md](../release.md)).
 2. Version computed by `svu` from Conventional Commits (or taken from the `version` input), checked
    to be higher than every existing release (see 9.4 for the legacy tags).
 3. Bump the version in `Cargo.toml` / `Cargo.lock` / `meson.build`, add a `<release>` entry to the
@@ -495,7 +495,7 @@ Automatic, once, with no CLI option.
   doesn't exist, set the flag too, so the check never runs again.
 - **What.** Rows of `x52_pro_profile` and `x52_profile` mapped to the new format: name, LED states,
   brightness, clock settings, date format, clock offsets (1:1 as fixed offsets, never guessed into a
-  zone; [profiles.md](profiles.md#legacy-import) has the full mapping). The old "Default Profile"
+  zone; [profiles.md](../../profiles.md#legacy-import) has the full mapping). The old "Default Profile"
   maps to the new default profile instead of creating a duplicate.
 - **Safety.** The old database is opened read-only and never modified or deleted (users can still go
   back to `0.7.6`). A corrupt or unreadable database is logged, reported once in a toast, and the
@@ -512,13 +512,13 @@ Automatic, once, with no CLI option.
 | R1 | The kernel HID driver owns the X52 interface. pyusb sends device-level vendor control transfers without claiming it; `nusb` must be able to do the same on Linux without detaching the driver (detaching would kill joystick input). | First spike: send one LED command with `nusb`; fall back to `rusb` if needed. |
 | R2 | Switch-over to GitHub: the GitLab push mirror overwriting GitHub, broken links in the Flathub metainfo, users filing issues in the old place. | Follow the order in section 7.3; tombstone and archive GitLab. |
 | R3 | `flatpak-builder-lint` on the update PR applies current Flathub rules to old permissions. | Drop `org.freedesktop.Flatpak` and `--share=network`; justify `--device=all`. |
-| R4 | Device access needs a udev rule, which a sandboxed app cannot install. | In-app guidance page with the rule and commands. Spike results: no distribution rule covers the X52 (desk research); the rule in [protocol.md](protocol.md#udev-rule) works on the host and in the sandbox, the three access states are told apart without guessing, and access comes back after `udevadm trigger` without a replug (S1, S4). The virtual mouse needs a second line for `/dev/uinput` (S9). Proposing the rule to `game-devices-udev` stays a 1.x item. |
+| R4 | Device access needs a udev rule, which a sandboxed app cannot install. | In-app guidance page with the rule and commands. Spike results: no distribution rule covers the X52 (desk research); the rule in [protocol.md](../../protocol.md#udev-rule) works on the host and in the sandbox, the three access states are told apart without guessing, and access comes back after `udevadm trigger` without a replug (S1, S4). The virtual mouse needs a second line for `/dev/uinput` (S9). Proposing the rule to `game-devices-udev` stays a 1.x item. |
 | R5 | Tray on GNOME requires the AppIndicator extension; without it the icon is invisible. | Background portal as an additional mechanism; detect a missing `StatusNotifierWatcher` and don't hide the window in that case. Spike results (S5): `ksni` with `async-io` works on GNOME with the extension and in the sandbox; a missing watcher is reported asynchronously, so availability is a tri-state; a single left-click opens the menu on GNOME, so "Show / Hide GX52" is the first item. The tray inside the Flatpak build and the Background portal dialog are acceptance tests of roadmap M6. M6 (2026-11-13/15): the tray works in the Flatpak; start on login uses the Background portal, which on Ubuntu 26.04 GNOME asks nothing and allows, and with the background permission off ends a window-less GX52, so a refusal is shown with how to fix it. |
 | R6 | X52 non-Pro cannot be tested on hardware. | Protocol unit tests; mark support as community-tested; ask for testers. |
 | R7 | GTK 4 / libadwaita development packages on CI images are older than GNOME 51. | Run Rust checks inside the GNOME 51 SDK container. |
 | R8 | MFD non-ASCII characters. | Use the MFD character map; replace unmappable characters. |
 | R10 | Users who installed from source (not Flatpak) and switch to the Flatpak: their database is in `~/.config/gx52/`, outside the sandbox. | Documented manual copy (README, release notes). |
-| R11 | libx52's `x52d` daemon (or its CLI) running at the same time fights over the same device: both write LEDs, clocks and the MFD. | Detect a running `x52d` (its command socket) and show a warning; document it. Done in M2: the device watch connects to the socket every 5 s and the window shows a banner. In the Flatpak the socket is visible through the read-only finish-arg `--filesystem=/run/x52d.cmd:ro`, which `flatpak-builder-lint` accepts; a daemon started after GX52 is seen after a restart of GX52, and a source build's socket under `/usr/local` is not seen at all ([protocol.md, "libx52's x52d"](protocol.md#libx52s-x52d)). |
+| R11 | libx52's `x52d` daemon (or its CLI) running at the same time fights over the same device: both write LEDs, clocks and the MFD. | Detect a running `x52d` (its command socket) and show a warning; document it. Done in M2: the device watch connects to the socket every 5 s and the window shows a banner. In the Flatpak the socket is visible through the read-only finish-arg `--filesystem=/run/x52d.cmd:ro`, which `flatpak-builder-lint` accepts; a daemon started after GX52 is seen after a restart of GX52, and a source build's socket under `/usr/local` is not seen at all ([protocol.md, "libx52's x52d"](../../protocol.md#libx52s-x52d)). |
 | R12 | The X-Plane adapter (1.x) needs `--share=network`, which the rewrite otherwise drops. | Add it only with the adapter, with a comment in the manifest; the D-Bus API needs no permission. |
 
 ## 12. Feature roadmap
@@ -534,19 +534,20 @@ the whole list from the start, so 1.x features don't need rework.
   mode selector (1/2/3); a single profile ignores it.
 - LED editor: a schematic layout of the LEDs per part of the device (stick, stick base,
   throttle), each a clickable LED with a popover of states; no pictures of the device
-  (`docs/spikes/07-led-editor.md`).
-- Time zones (`jiff`, see `docs/spikes/00-desk-research.md`) for clocks 2 and 3 instead of minute
-  offsets, with daylight saving handled; the MFD clocks are re-synced when an offset changes.
+  (`docs/internal/research/spikes/07-led-editor.md`).
+- Time zones (`jiff`, see `docs/internal/research/spikes/00-desk-research.md`) for clocks 2 and 3
+  instead of minute offsets, with daylight saving handled; the MFD clocks are re-synced when an
+  offset changes.
 - Custom MFD text, shift indicator and blink controls.
 - Profile import / export (TOML files).
 - Tray icon (`ksni`) and background running / autostart (Background portal).
 - In-app udev guidance (R4).
 - Virtual mouse: the throttle ministick moves the pointer, with left click, right click (wheel
-  press) and wheel, through uinput (`docs/spikes/09-virtual-mouse.md`). An on/off switch plus
-  speed, curve, deadzone and wheel direction settings, defaulting to the spike's tuning (deadzone 1
-  step, gain 0.6, curve 1.6, 10 ms tick); the udev guidance covers `/dev/uinput`.
+  press) and wheel, through uinput (`docs/internal/research/spikes/09-virtual-mouse.md`). An on/off
+  switch plus speed, curve, deadzone and wheel direction settings, defaulting to the spike's tuning
+  (deadzone 1 step, gain 0.6, curve 1.6, 10 ms tick); the udev guidance covers `/dev/uinput`.
 - Input tester: live view of axes, buttons, hats, toggles and the mode selector, modelled on the
-  Windows driver's Test tab (`docs/spikes/07-led-editor.md`).
+  Windows driver's Test tab (`docs/internal/research/spikes/07-led-editor.md`).
 
 ### 12.2 `1.x` (through the beta channel first)
 
@@ -593,13 +594,13 @@ Resolved during the spikes and stage C:
 
 - Artwork for the LED editor: none. The editor is a schematic layout of stock widgets, so the
   app ships no pictures or drawings of the device (S7, decided 2026-11-09).
-- Exact TOML schema for profiles and its versioning: [profiles.md](profiles.md).
+- Exact TOML schema for profiles and its versioning: [profiles.md](../../profiles.md).
 - Whether `game-devices-udev` / `steam-devices` already cover the X52 product IDs: no (desk
   research); the app ships its guidance page.
 - GitHub #1 "[feature request] Deb Snap ?", the packaging scope beyond Flathub: Flathub only,
   closed as not planned on 2026-10-28 (section 7.2).
 
-Still open, each with an owner in [roadmap.md](roadmap.md):
+Still open, each with an owner in [roadmap.md](../roadmap.md):
 
 - D-Bus interface definition (1.x), kept stable once published.
 - Whether the MFD lines show dynamic content as GX52 0.7 did (M4).

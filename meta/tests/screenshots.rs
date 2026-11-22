@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The metainfo screenshots (docs/release.md, "Screenshots"): every image the metainfo names is a
+//! The metainfo screenshots (docs/internal/release.md, "Screenshots"): every image the metainfo names is a
 //! PNG in `data/screenshots/`, committed with it, and that directory holds no other PNG.
 
 use std::collections::BTreeSet;

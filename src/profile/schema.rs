@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The TOML schema of a profile file (docs/profiles.md, "TOML schema (version 1)").
+//! The TOML schema of a profile file (docs/profiles.md, "TOML schema (version 2)").
 //!
 //! Reading takes two steps, so one bad field does not lose the whole profile: the text is parsed
 //! into a [`Table`], `schema_version`, `device_type` and `kind` are read first, then every field is

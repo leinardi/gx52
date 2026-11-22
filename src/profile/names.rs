@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The custom control names of the Names view (docs/ui.md, "Names view"): the groups of controls,
+//! The custom control names of the Names view (docs/internal/ui.md, "Names view"): the groups of controls,
 //! the texts that sum the names up, and the bookkeeping that keeps an Undo of Copy and Clear from
 //! overwriting a later edit.
 

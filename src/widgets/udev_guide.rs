@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The udev guidance page (docs/ui.md, "Guidance pages"): shown in place of the editor while the
+//! The udev guidance page (docs/internal/ui.md, "Guidance pages"): shown in place of the editor while the
 //! device is present but GX52 may not open it.
 
 use adw::subclass::prelude::*;

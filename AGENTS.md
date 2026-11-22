@@ -8,11 +8,12 @@ profiles. It is distributed through Flathub as `com.leinardi.gx52`.
 
 The application is rewritten from Python + GTK 3 to Rust + gtk4-rs + libadwaita; the trunk is
 `main`. The legacy `0.7.x` Python application is no longer in the tree; its tags keep it. The
-decisions behind the rewrite are recorded in [`docs/rewrite-analysis.md`](docs/rewrite-analysis.md),
-the preparation in
-[`docs/preparation.md`](docs/preparation.md) and the spike results in
-[`docs/spikes/`](docs/spikes/). Tooling that is decided but not set up yet is tracked in
-[`docs/tooling-todo.md`](docs/tooling-todo.md).
+decisions behind the rewrite are recorded in
+[`docs/internal/history/rewrite-analysis.md`](docs/internal/history/rewrite-analysis.md), the
+preparation in [`docs/internal/history/preparation.md`](docs/internal/history/preparation.md) and
+the spike results in [`docs/internal/research/spikes/`](docs/internal/research/spikes/). Tooling
+that is decided but not set up yet is tracked in
+[`docs/internal/tooling-todo.md`](docs/internal/tooling-todo.md).
 
 Layout (rewrite analysis, section 1 and 5): a Cargo workspace with `x52` (protocol, device
 model, key maps, MFD charset; no GTK), `gx52` (the application) and `meta` (repository hygiene
@@ -66,7 +67,7 @@ make flatpak-lint-repo      # flatpak-builder-lint on _flatpak/repo (a release g
 make cargo-sources # regenerate build-aux/cargo-sources.json from Cargo.lock (network required)
 
 make -s release-version           # the version the tree carries (Cargo.toml [package] version)
-make release-bump VERSION=X.Y.Z   # write it into the four version files, no commit (docs/release.md)
+make release-bump VERSION=X.Y.Z   # write it into the four version files, no commit (docs/internal/release.md)
 make release [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # a whole release, to its Flathub PR; resumable
 make release-dry-run [VERSION=X.Y.Z]  # dispatch the dry run of the current branch and watch it
 # (no VERSION: the one the Release workflow derives with svu)
@@ -76,10 +77,10 @@ make flathub-pr [VERSION=X.Y.Z] [FLATHUB_BASE=master]  # (re)open the Flathub PR
 make flathub-beta [VERSION=X.Y.Z] # create the Flathub beta branch from the passed test build (once)
 ```
 
-The cargo and Meson targets need the GTK 4, libadwaita and SQLite development files on the host,
-at the versions the crate features require (see
-[`docs/spikes/06-build-and-release.md`](docs/spikes/06-build-and-release.md)), plus Meson,
-`blueprint-compiler` and the two validators `meson setup` refuses to run without
+The cargo and Meson targets need the GTK 4, libadwaita and SQLite development files on the host, at
+the versions the crate features require (see
+[`docs/internal/research/spikes/06-build-and-release.md`](docs/internal/research/spikes/06-build-and-release.md)),
+plus Meson, `blueprint-compiler` and the two validators `meson setup` refuses to run without
 (`desktop-file-validate`, `appstreamcli`). SQLite is linked from the system (the GNOME SDK in the
 Flatpak) for the GX52 0.7 import. On Ubuntu 26.04:
 
@@ -201,6 +202,7 @@ of a shipped `feat` or `fix` is itself a `fix`. `svu` matches `feat`/`fix` anywh
 (e.g. `prefix:` counts as `fix:`), so avoid a word ending in `feat` or `fix` directly before a colon
 in other subjects. PRs land as merge commits, so every commit counts, not just the PR title.
 
-A note users need beyond the subject (a compatibility warning, say) goes into a
-`Release-Note: <text>` trailer of the commit, which the generated release notes list after the
-subjects ([`docs/release.md`](docs/release.md#release-notes)). Never edit the notes by hand.
+A note users need beyond the subject (a compatibility warning, say) goes into a `Release-Note:
+<text>` trailer of the commit, which the generated release notes list after the subjects
+([`docs/internal/release.md`](docs/internal/release.md#release-notes)). Never edit the notes by
+hand.

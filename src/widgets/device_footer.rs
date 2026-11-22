@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The sidebar footer: the device status as a dot and two lines (docs/ui.md, "Device status").
+//! The sidebar footer: the device status as a dot and two lines (docs/internal/ui.md, "Device status").
 
 use adw::subclass::prelude::*;
 use gtk::glib;

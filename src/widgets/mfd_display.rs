@@ -15,7 +15,7 @@
 
 //! The simulated MFD of the MFD view, laid out as the device's display: the MODE area with SHIFT
 //! and the mode numbers, three lines of 16 cells, the clock and the date, lit by the MFD
-//! brightness (docs/ui.md, "MFD view").
+//! brightness (docs/internal/ui.md, "MFD view").
 
 use adw::subclass::prelude::*;
 use gtk::glib;

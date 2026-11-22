@@ -8,11 +8,21 @@ rule points here.
 Every value comes from a measurement on an X52 Pro (`06a3:0762`, firmware as shipped) recorded in
 the spike documents, or from GX52 0.7 where the spikes confirmed it:
 
-- [S1/S2 USB control](spikes/01-usb-control.md): vendor commands, power-on state, POV 1 LED;
-- [S2 MFD character set](spikes/02-mfd-charset.md): how the glyph table was read;
-- [S3 input map](spikes/03-input.md): evdev buttons, axes, hats, mode selector;
-- [S4 Flatpak sandbox](spikes/04-flatpak-sandbox.md): access states, hotplug;
-- [S9 virtual mouse](spikes/09-virtual-mouse.md): uinput.
+- [S1/S2 USB
+  control](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/01-usb-control.md):
+  vendor commands, power-on state, POV 1 LED;
+- [S2 MFD character
+  set](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/02-mfd-charset.md):
+  how the glyph table was read;
+- [S3 input
+  map](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/03-input.md): evdev
+  buttons, axes, hats, mode selector;
+- [S4 Flatpak
+  sandbox](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/04-flatpak-sandbox.md):
+  access states, hotplug;
+- [S9 virtual
+  mouse](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/09-virtual-mouse.md):
+  uinput.
 
 The probe that sent the commands is `spikes/x52-probe` on the `spikes` branch.
 [libx52](https://github.com/nirenjan/libx52) is the second reference used to cross-check (character
@@ -35,11 +45,11 @@ while the app writes to it (S1, and S3 for input during writes).
 
 ### udev rule
 
-Without a rule the USB node is `root:root 0664` and opening it fails with `EACCES`. The rule file
-is `/etc/udev/rules.d/70-gx52.rules` (the number must stay below 73 for `uaccess` to apply); the
-udev guidance page shows its first line, the uinput subpage of Preferences the second
-([ui.md](ui.md#guidance-pages)). The app's copy of both lines (`src/device/udev.rs`) is tested
-against this file:
+Without a rule the USB node is `root:root 0664` and opening it fails with `EACCES`. The rule file is
+`/etc/udev/rules.d/70-gx52.rules` (the number must stay below 73 for `uaccess` to apply); the udev
+guidance page shows its first line, the uinput subpage of Preferences the second
+([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#guidance-pages)). The app's
+copy of both lines (`src/device/udev.rs`) is tested against this file:
 
 ```
 SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="06a3", ATTR{idProduct}=="0762|0255|075c", TAG+="uaccess"
@@ -208,7 +218,7 @@ The MFD shows one byte per character from this fixed 256-entry table. It was rea
 all 256 values on an X52 Pro (2026-10-28) and cross-checked against the glyph list in libx52's
 `x52_char_map.cfg` for the ambiguous ones (`0x0E`, `0x0F`, `0x10`, `0x9B`–`0x9F`). The table is our
 own transcription; libx52's file is GPL-2.0-only and is not copied. How it was read is in
-[spike 02](spikes/02-mfd-charset.md).
+[spike 02](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/02-mfd-charset.md).
 
 Summary:
 
@@ -418,8 +428,10 @@ app assumes, all unverified until a test on the device is recorded here:
   from 704, so those bits are keys 718–721, the codes of the candidate map above.
 - **Mode selector and virtual mouse** on the non-Pro use that candidate map (the per-type mode
   mapping exists for `x52` too). Confirming the map on a device, with an input tester, is an open
-  item owned by the roadmap (see [roadmap.md](roadmap.md): the input tester verifies the map,
-  and the `1.0.0` gate records the outcome); until then the non-Pro is documented as unverified.
+  item owned by the roadmap (see
+  [roadmap.md](https://github.com/leinardi/gx52/blob/main/docs/internal/roadmap.md): the input
+  tester verifies the map, and the `1.0.0` gate records the outcome); until then the non-Pro is
+  documented as unverified.
 
 ## Commands the app may send
 

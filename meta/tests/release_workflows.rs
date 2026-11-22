@@ -13,14 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The release workflows hold together (docs/release.md): the bump and the merge agree on the
+//! The release workflows hold together (docs/internal/release.md): the bump and the merge agree on the
 //! version command and the allowed files, which are the four files of the version and the paths
 //! that start the publish run; every reusable workflow of gh-reusable-workflows is pinned to one
 //! commit and given the trunk; the publish jobs run in their order, each only after the one before;
 //! the dry run gates and checks the bumped tree; the release attaches the Flathub files; no release
 //! workflow reaches a secret or an environment, as the Flathub pull request is opened on the
 //! Flathub side; and the dispatch inputs are those of master's stubs, which a meta-test on the
-//! trunk cannot read (docs/release.md lists them). Every rule has a negative control.
+//! trunk cannot read (docs/internal/release.md lists them). Every rule has a negative control.
 
 use std::collections::BTreeSet;
 use std::sync::LazyLock;
@@ -359,7 +359,7 @@ fn asset_problems(publish: &Value, flathub: &Value) -> Vec<String> {
 
 /// No release workflow reaches a secret or an environment, and the Flathub check writes nothing
 /// outside its run: the Flathub pull request is opened with the maintainer's own login
-/// (docs/release.md, "The Flathub pull requests"). The check is a called workflow only, so
+/// (docs/internal/release.md, "The Flathub pull requests"). The check is a called workflow only, so
 /// master needs no stub of it.
 fn token_problems(workflows: &Workflows) -> Vec<String> {
     let mut problems = Vec::new();

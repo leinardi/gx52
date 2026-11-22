@@ -18,7 +18,7 @@ ifndef MK_LOCAL_FLATHUB_INCLUDED
 MK_LOCAL_FLATHUB_INCLUDED := 1
 
 # Local snippet (NOT part of make-common): the maintainer's pull requests to
-# flathub/com.leinardi.gx52 (scripts/flathub-release.sh, docs/release.md "Flathub by hand"). The
+# flathub/com.leinardi.gx52 (scripts/flathub-release.sh, docs/internal/release.md "The Flathub pull requests"). The
 # clone lives in FLATHUB_DIR (_flathub, ignored and cloned on demand); each target pushes a branch
 # with the maintainer's git login and opens or updates its pull request with gh. VERSION
 # defaults to the version the tree carries, which after a release's merge is the released one.

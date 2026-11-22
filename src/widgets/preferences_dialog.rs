@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The preferences dialog (docs/ui.md, "Preferences"): every row bound to its `GSettings`
+//! The preferences dialog (docs/internal/ui.md, "Preferences"): every row bound to its `GSettings`
 //! key, the Start on Login warning while the desktop refuses it, and the uinput warning while the
 //! virtual mouse cannot work.
 

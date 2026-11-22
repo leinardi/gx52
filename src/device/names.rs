@@ -19,7 +19,7 @@
 //! Each MFD name fits an MFD line: at most 16 characters in English, shortened where the full
 //! name is longer ("Trigger stage 1", "Thr. hat left"). A longer translation is cut to 16 bytes
 //! when sent, as every dynamic line is. The input tester shows a shorter label on each indicator
-//! and the full name in its tooltip (docs/ui.md, "Input tester").
+//! and the full name in its tooltip (docs/internal/ui.md, "Input tester").
 
 use gettextrs::gettext;
 use x52::input::{Button, Input, Pov1Direction};

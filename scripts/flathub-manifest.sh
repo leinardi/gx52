@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # Turns the stable manifest of a tagged tree (build-aux/com.leinardi.gx52.json) into the manifest
-# of the Flathub repository (docs/release.md, "The Flathub check"). The release attaches it, and
+# of the Flathub repository (docs/internal/release.md, "The Flathub check"). The release attaches it, and
 # every Flathub pull request (scripts/flathub-release.sh) carries it.
 #
 # Only the app's own source changes: the one `dir` source of the `gx52` module becomes

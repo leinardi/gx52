@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# The version policy of a release (docs/release.md, "Versions and channels"), checked on the raw
+# The version policy of a release (docs/internal/release.md, "Versions and channels"), checked on the raw
 # `version` input of the Release workflow before any version is resolved. svu is not used before
 # 1.0.0: on a 0.x history it turns a `feat` into 0.100.0 and a breaking change into 1.0.0. So,
 # while no `vX.Y.Z` tag is 1.0.0 or higher:

@@ -1,0 +1,304 @@
+/*
+ * Landing page for Zensical 0.1.3 (repo-docs-toolkit "Minimal Developer Showcase").
+ *
+ * Use this file as is, listed in extra_css. Every rule is scoped to .rdt-home (the wrapper that
+ * overrides/home.html renders) or to .md-main:has(.rdt-home), so it styles the homepage only and
+ * stops applying when instant navigation leaves it. The one accent is the theme's: the palette's
+ * primary colour, or --md-primary-fg-color set in the project's own stylesheet.
+ *
+ * Sizes are in rem at Zensical's 20px root font size: 2rem is 40px. The page keeps the theme's
+ * grid width (61rem), so the hero lines up with the header; front matter hides both sidebars.
+ */
+
+/* Layout */
+
+.rdt-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 3rem;
+  align-items: start;
+}
+
+.rdt-home > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+/* Two columns from 60em: the hero and install area on the left, the showcase on the right. */
+@media screen and (min-width: 60em) {
+  .rdt-home:has(> .rdt-showcase) {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 6fr);
+  }
+
+  .rdt-home:has(> .rdt-showcase) > .rdt-hero {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .rdt-home:has(> .rdt-showcase) > .rdt-install {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .rdt-home > .rdt-showcase {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+}
+
+/* Hero */
+
+.rdt-hero {
+  padding-block: 1.6rem 0.4rem;
+  animation: rdt-fade-in 200ms ease-out both;
+}
+
+.md-typeset .rdt-hero__logo {
+  display: block;
+  width: auto;
+  height: 3.2rem;
+  margin-bottom: 1rem;
+}
+
+.md-typeset .rdt-hero__name {
+  margin: 0;
+  color: var(--md-typeset-a-color);
+  font-size: clamp(1.6rem, 0.8rem + 3.2vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.md-typeset .rdt-hero__text {
+  display: block;
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .rdt-hero__tagline {
+  max-width: 32rem;
+  margin: 1rem 0 0;
+  color: var(--md-default-fg-color--light);
+  font-size: clamp(0.9rem, 0.75rem + 0.6vw, 1.2rem);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.md-typeset .rdt-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1.6rem 0 0;
+}
+
+/* Buttons: pills, 2rem tall. The secondary one keeps body-text colours in both schemes. */
+
+.rdt-home .md-button {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  padding: 0 1rem;
+  border-radius: 1rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.rdt-home .md-button:not(.md-button--primary) {
+  border-color: var(--md-default-fg-color--light);
+  color: var(--md-default-fg-color);
+}
+
+.rdt-home .md-button:not(.md-button--primary):is(:hover, :focus) {
+  border-color: var(--md-typeset-a-color);
+  background-color: transparent;
+  color: var(--md-typeset-a-color);
+}
+
+/* Focus: always visible, in a colour that holds 3:1 on both schemes. */
+
+.rdt-home :is(a, button, label, input):focus-visible {
+  outline: 0.1rem solid var(--md-typeset-a-color);
+  outline-offset: 0.15rem;
+}
+
+/* Install: one code block, or content tabs restyled as a segmented bar. */
+
+.rdt-install {
+  margin-top: 1.2rem;
+}
+
+.rdt-install .highlight pre > code {
+  border-radius: 1rem;
+  font-size: 0.7rem;
+}
+
+.md-typeset .rdt-install .tabbed-set {
+  margin-top: 0;
+}
+
+.md-typeset .rdt-install .tabbed-labels {
+  border-radius: 0.3rem 0.3rem 0 0;
+  background-color: var(--md-code-bg-color);
+  box-shadow: inset 0 -0.05rem var(--md-default-fg-color--lightest);
+}
+
+.md-typeset .rdt-install .tabbed-labels > label {
+  padding: 0.6rem 0.8rem 0.5rem;
+  color: var(--md-default-fg-color--light);
+  font-family: var(--md-code-font-family);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.md-typeset .rdt-install .tabbed-labels > label:hover {
+  color: var(--md-default-fg-color);
+}
+
+/* The selected tab: input N is checked, label N is marked (up to 4 install methods). */
+.md-typeset .rdt-install .tabbed-set > input:nth-child(1):checked ~ .tabbed-labels > :nth-child(1),
+.md-typeset .rdt-install .tabbed-set > input:nth-child(2):checked ~ .tabbed-labels > :nth-child(2),
+.md-typeset .rdt-install .tabbed-set > input:nth-child(3):checked ~ .tabbed-labels > :nth-child(3),
+.md-typeset .rdt-install .tabbed-set > input:nth-child(4):checked ~ .tabbed-labels > :nth-child(4) {
+  color: var(--md-default-fg-color);
+  box-shadow: inset 0 -0.15rem 0 var(--md-typeset-a-color);
+}
+
+.md-typeset .rdt-install .tabbed-labels::before {
+  display: none;
+}
+
+/* Keyboard focus on a tab (the radio input is focused; its label shows the ring). */
+.md-typeset .rdt-install .tabbed-set > input:nth-child(1):is(:focus-visible, .focus-visible) ~ .tabbed-labels > :nth-child(1),
+.md-typeset .rdt-install .tabbed-set > input:nth-child(2):is(:focus-visible, .focus-visible) ~ .tabbed-labels > :nth-child(2),
+.md-typeset .rdt-install .tabbed-set > input:nth-child(3):is(:focus-visible, .focus-visible) ~ .tabbed-labels > :nth-child(3),
+.md-typeset .rdt-install .tabbed-set > input:nth-child(4):is(:focus-visible, .focus-visible) ~ .tabbed-labels > :nth-child(4) {
+  outline: 0.1rem solid var(--md-typeset-a-color);
+  outline-offset: -0.2rem;
+}
+
+.md-typeset .rdt-install .tabbed-content .highlight pre > code {
+  border-radius: 0 0 0.3rem 0.3rem;
+}
+
+/* Showcase: a code block, terminal session or screenshot in a window card. */
+
+.rdt-showcase {
+  margin-block: 1.2rem;
+}
+
+.rdt-showcase > .highlight,
+.rdt-showcase > p > img,
+.rdt-showcase > img {
+  display: block;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  box-shadow:
+    0 0.6rem 1.6rem rgb(0 0 0 / 10%),
+    0 0.1rem 0.3rem rgb(0 0 0 / 8%);
+}
+
+[data-md-color-scheme="slate"] .rdt-showcase > .highlight,
+[data-md-color-scheme="slate"] .rdt-showcase > p > img,
+[data-md-color-scheme="slate"] .rdt-showcase > img {
+  box-shadow:
+    0 0.6rem 1.6rem rgb(0 0 0 / 50%),
+    0 0.1rem 0.3rem rgb(0 0 0 / 45%);
+}
+
+.md-typeset .rdt-showcase .highlight pre {
+  margin: 0;
+}
+
+.md-typeset .rdt-showcase .highlight pre > code {
+  padding: 1rem 1.2rem;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+/* Copy buttons: the theme draws them at a few percent opacity until hovered; on the homepage they
+   use the muted text colour, which holds 3:1 on code blocks in both schemes (WCAG 1.4.11). */
+.rdt-home .md-code__button:not(:hover, :focus-visible) {
+  color: var(--md-default-fg-color--light);
+}
+
+/* Features: grid cards, 4, 2 or 1 per row. */
+
+.md-typeset .rdt-home .grid.cards {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+@media screen and (min-width: 40em) {
+  .md-typeset .rdt-home .grid.cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .md-typeset .rdt-home .grid.cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.md-typeset .rdt-home .grid.cards > ul > li {
+  padding: 1.2rem;
+  border: 0.05rem solid var(--md-default-fg-color--lighter);
+  border-radius: 0.6rem;
+  /* The page background: a link or accent text on the card keeps the contrast checked for the page. */
+  background-color: transparent;
+  box-shadow: none;
+  transition: border-color 250ms;
+}
+
+.md-typeset .rdt-home .grid.cards > ul > li:is(:hover, :focus-within) {
+  border-color: var(--md-typeset-a-color);
+  box-shadow: none;
+}
+
+.md-typeset .rdt-home .grid.cards > ul > li > p:first-child {
+  margin-top: 0;
+}
+
+/* The card's icon, written as :lucide-rocket:{ .lg }: a tinted tile in the accent colour. */
+.md-typeset .rdt-home .grid.cards .lg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-bottom: 0.6rem;
+  padding: 0.6rem;
+  border-radius: 0.3rem;
+  background-color: color-mix(in srgb, var(--md-primary-fg-color) 14%, transparent);
+  color: var(--md-typeset-a-color);
+}
+
+.md-typeset .rdt-home .grid.cards > ul > li > hr {
+  margin-block: 0.6rem;
+}
+
+/* Motion: a short fade on the hero only, and none for readers who ask for less. */
+
+@keyframes rdt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rdt-hero {
+    animation: none;
+  }
+
+  .md-typeset .rdt-home .grid.cards > ul > li {
+    transition: none;
+  }
+}

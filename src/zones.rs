@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The time zones the zone search dialog lists, read from the tz database's `zone.tab` and
-//! `iso3166.tab`, which the GNOME runtime ships (docs/ui.md, "Clocks view").
+//! `iso3166.tab`, which the GNOME runtime ships (docs/internal/ui.md, "Clocks view").
 //!
 //! Plain Rust. [`load`] reads files, so the app runs it through `gio::spawn_blocking`.
 

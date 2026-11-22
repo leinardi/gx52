@@ -1,0 +1,3 @@
+# The Zensical version docstool and the skills are tested with (KNOWN_ZENSICAL in docstool.py).
+# Lock with: uv pip compile zensical-requirements.in --generate-hashes --python-version 3.11 -o zensical-requirements.txt
+zensical==0.1.3

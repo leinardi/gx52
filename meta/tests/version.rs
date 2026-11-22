@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! One version source (docs/release.md): the root package's version in `Cargo.toml`, its
+//! One version source (docs/internal/release.md): the root package's version in `Cargo.toml`, its
 //! `Cargo.lock` entry and the Meson project version always agree, and once the release workflow
 //! has set a real version, the newest `<release>` of the metainfo names it too. Until then they
 //! stay `0.0.0`, which has no `<release>`: the metainfo only holds the history of the legacy

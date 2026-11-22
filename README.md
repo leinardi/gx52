@@ -1,140 +1,66 @@
-# GX52
+<h1 align="center">
+  <img alt="GX52 icon" src="data/icons/com.leinardi.gx52.svg" width="96">
+  <br>GX52
+</h1>
 
-GX52 configures the Logitech (Saitek) X52 and X52 Pro joysticks on Linux: the LEDs, the brightness,
-the text and clocks of the multi-function display (MFD), and profiles that switch with the mode
-selector. It is a GNOME application written in Rust with GTK 4 and libadwaita, distributed through
-Flathub.
+<p align="center"><strong>Configure the LEDs, the display and the profiles of the Logitech (Saitek)
+X52 and X52 Pro joysticks on Linux.</strong></p>
 
-<img src="data/icons/com.leinardi.gx52.svg" alt="GX52 icon" width="96" align="right" hspace="0" />
+<p align="center">
+  <a href="https://github.com/leinardi/gx52/actions/workflows/ci.yaml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/leinardi/gx52/ci.yaml?style=flat-square"></a>
+  <a href="https://flathub.org/apps/com.leinardi.gx52"><img alt="Flathub" src="https://img.shields.io/flathub/v/com.leinardi.gx52?style=flat-square"></a>
+  <a href="COPYING.txt"><img alt="License" src="https://img.shields.io/github/license/leinardi/gx52?style=flat-square"></a>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://leinardi.github.io/gx52/">Documentation</a> ·
+  <a href="#-installation">Install</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
-- LED colours and on/off states per LED, and the blinking of the i and POV 1 LEDs (X52 Pro), on a
-  schematic of the stick, its base and the throttle, plus the LED and MFD brightness.
-- MFD text per line, the SHIFT indicator (X52 Pro), and the three clocks with real time zones
-  (daylight saving included) instead of minute offsets.
-- Custom names for the controls, per mode, shown by the MFD's "Last button" line ("Emerg. Lights"
-  for E).
-- Profiles: a single set of settings, or one per position of the mode selector (1/2/3). Import and
-  export as TOML files; the profiles of GX52 0.7 are imported on first start.
-- A tray icon, running in the background and starting on login.
-- An input tester: a live view of the axes, buttons, hats, toggles and the mode selector.
-- A virtual mouse: the throttle's ministick moves the pointer, with left click, right click (press
-  the wheel) and the wheel, with speed, curve, deadzone and wheel direction settings.
-- Guidance in the app for the udev rule the joystick (and the virtual mouse) needs.
+<p align="center">
+  <img alt="The LEDs of a per-mode profile" src="data/screenshots/leds.png" width="800">
+</p>
 
-The X52 Pro is the device GX52 is developed and tested with. The plain X52 is supported on a best
-effort basis and has not been tested on a device: its individual LEDs cannot be set, GX52 leaves
-out the LED blinking and the SHIFT indicator until they are verified on one, and its input codes
-come from the documentation, not from a device on the desk. Reports from X52 owners are welcome.
+GX52 is a GNOME application written in Rust with GTK 4 and libadwaita, distributed through
+Flathub. It is developed and tested on the X52 Pro; the plain X52 is supported on a best effort
+basis, as [Getting started][start] explains.
 
-## Screenshots
+## ✨ Features
 
-| LEDs | MFD | Clocks |
-| --- | --- | --- |
-| ![The LEDs of a per-mode profile](data/screenshots/leds.png) | ![The text of the multi-function display](data/screenshots/mfd.png) | ![Three clocks in real time zones](data/screenshots/clocks.png) |
+- **LEDs and display:** LED colours and blinking, the MFD text and three clocks in real time zones.
+- **Profiles:** one set of settings or one per mode, with custom control names and TOML files.
+- **Input tester and virtual mouse:** every axis and button live, and a ministick pointer.
+- **Runs in the background:** a tray icon, starting on login, with guidance for the udev rule.
 
-| Profiles | Preferences | Input tester |
-| --- | --- | --- |
-| ![The profile list](data/screenshots/profiles.png) | ![Running in the background and the virtual mouse](data/screenshots/preferences.png) | ![Every button, axis and hat, live](data/screenshots/tester.png) |
-
-| Names |
-| --- |
-| ![Custom names for the controls](data/screenshots/names.png) |
-
-## Install
-
-### Flathub
-
-GX52 is on [Flathub](https://flathub.org/apps/com.leinardi.gx52). With
-[Flatpak set up](https://flatpak.org/setup/):
+## 📦 Installation
 
 ```bash
 flatpak install flathub com.leinardi.gx52
 flatpak run com.leinardi.gx52
 ```
 
-Flathub is the only official channel: there are no `.deb` or Snap packages. Distribution packagers
-are welcome; the build is plain Meson and Cargo (see [Building from source](#building-from-source)).
+<a href="https://flathub.org/apps/com.leinardi.gx52"><img width="200" alt="Get it on Flathub" src="https://flathub.org/api/badge?locale=en"></a>
 
-### Beta
+GX52 needs a udev rule before it can set anything; it shows the rule and how to install it the
+first time it cannot open the device. The beta channel, the rule, the command line and where the
+settings are stored are in [Getting started][start].
 
-New versions are published on the Flathub beta channel first, for testing:
+## 🛠️ Building from source
 
-```bash
-flatpak remote-add --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
-flatpak install flathub-beta com.leinardi.gx52
-```
+Meson and Cargo, with the libraries of the GNOME 51 runtime: see [Building from source][build].
+The development build and its Flatpak are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Device access (udev)
-
-Without a udev rule the joystick's USB node belongs to root and GX52 cannot set anything. When it
-cannot open the device, GX52 shows a page with the rule, where to put it and the commands to reload
-udev; the virtual mouse's page in Preferences does the same for `/dev/uinput`. The rule uses
-`TAG+="uaccess"`, so only the user of the active seat gets access, and GX52 never asks for root or
-installs anything itself. The rule, line by line, is in
-[docs/protocol.md](docs/protocol.md#udev-rule).
-
-If libx52's `x52d` daemon is running, it writes the same LEDs and MFD as GX52 does; GX52 shows a
-warning while it sees it.
-
-## Running
-
-`gx52 --hidden` starts in the background, without a window (the login autostart uses it). Logs go to
-the terminal; set `RUST_LOG=debug` for more.
-
-The GX52 0.7 command line options are gone: `--add-udev-rule` and `--remove-udev-rule` (GX52 no
-longer writes host files; the guidance page shows the rule instead), `--autostart-on` and
-`--autostart-off` (the switch in Preferences, through the Background portal), `--hide-window`
-(now `--hidden`), and `--debug` and `--version` (set `RUST_LOG`; the About dialog shows the version).
-
-## Where settings and profiles are stored
-
-| Installation | Location |
-| --- | --- |
-| Flatpak | `~/.var/app/com.leinardi.gx52/config/gx52/` |
-| From source | `$XDG_CONFIG_HOME/gx52/` (usually `~/.config/gx52/`) |
-
-Profiles are TOML files in its `profiles/` directory; the preferences are GSettings keys.
-
-**Moving from a source install of GX52 0.7 to the Flatpak:** the old profiles are in
-`~/.config/gx52/gx52.db`, which the sandbox cannot read. Copy the file before the first start, and
-GX52 imports it:
-
-```bash
-mkdir -p ~/.var/app/com.leinardi.gx52/config/gx52
-cp ~/.config/gx52/gx52.db ~/.var/app/com.leinardi.gx52/config/gx52/gx52.db
-```
-
-## Building from source
-
-On Ubuntu 26.04 (other distributions: the same libraries at the versions the GNOME 51 runtime
-ships):
-
-```bash
-sudo apt install libgtk-4-dev libadwaita-1-dev libsqlite3-dev blueprint-compiler meson \
-    desktop-file-utils appstream
-git clone https://github.com/leinardi/gx52.git
-cd gx52
-meson setup _build
-meson compile -C _build
-meson test -C _build
-sudo meson install -C _build
-```
-
-Rust comes from `rustup`; `rust-toolchain.toml` pins the release. The development build
-(`com.leinardi.gx52.Devel`, installable next to the stable app) and its Flatpak are described in
-[CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Contributing and security
-
-- [CONTRIBUTING.md](CONTRIBUTING.md): building, checks, branches, commits and translations.
-- [SECURITY.md](SECURITY.md): reporting a vulnerability privately, and the security model.
-- [docs/](docs/): the architecture, the device protocol, the release process and the roadmap.
+## 🤝 Contributing
 
 Bug reports and feature requests go to the [issue tracker](https://github.com/leinardi/gx52/issues).
+[CONTRIBUTING.md](CONTRIBUTING.md) covers building, checks, branches, commits and translations;
+[SECURITY.md](SECURITY.md) explains how to report a vulnerability privately.
 
-## License
+## 📝 License
 
 GX52 is free software under the [GNU General Public License, version 3 or
 later](COPYING.txt). Copyright (c) 2019 Roberto Leinardi.
+
+[start]: https://leinardi.github.io/gx52/getting-started/
+[build]: https://leinardi.github.io/gx52/building/

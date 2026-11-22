@@ -1,6 +1,6 @@
 name: Release gate
 
-# The gate of a release (docs/release.md, "The release workflow"): the stable manifest built the way
+# The gate of a release (docs/internal/release.md, "The gate"): the stable manifest built the way
 # Flathub builds it, offline from a cargo-sources.json generated from the tree's own Cargo.lock,
 # with meson test run inside the build, on x86_64 and aarch64 natively, on the runners and container
 # of ci.yaml's flatpak job; then flatpak-builder-lint on the manifest and on the exported repository.

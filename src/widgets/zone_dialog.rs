@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The time zone search dialog of clocks 2 and 3: the zones of the tz database by city, country
-//! and name, with their time now (docs/ui.md, "Clocks view").
+//! and name, with their time now (docs/internal/ui.md, "Clocks view").
 //!
 //! A pick looks the zone up off the main thread and is applied to the profile and clock the
 //! dialog was opened for, only while the dialog is still open for them

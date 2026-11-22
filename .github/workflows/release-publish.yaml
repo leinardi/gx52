@@ -1,6 +1,6 @@
 name: Release publish
 
-# The second half of a release (docs/release.md): on the push that merges release.yaml's bump pull
+# The second half of a release (docs/internal/release.md): on the push that merges release.yaml's bump pull
 # request into the trunk, in this order, each job only when the one before succeeded:
 #
 #   decide   gh-reusable-workflows' release-on-merge: the push is the merge of the one bump commit
@@ -16,7 +16,7 @@ name: Release publish
 #            created by publishing the release with its assets; a 0.x release is a pre-release.
 #
 # No Flathub pull request is opened here: the maintainer opens it from the release with their own
-# login (`make release` or `make flathub-pr`; docs/release.md, "Flathub by hand").
+# login (`make release` or `make flathub-pr`; docs/internal/release.md, "The Flathub pull requests").
 #
 # Every step is re-runnable ("Re-run failed jobs"): each reusable workflow finishes what exists.
 on:
@@ -34,7 +34,7 @@ on:
 # workflows serialise what must not race: release-on-merge and simple-tag-and-release each run in
 # a group of their own per repository, never cancelled once running. One window remains: a
 # release push pending behind another run of release-on-merge is replaced by a third version-file
-# push. That run then shows as cancelled; re-run it (docs/release.md, "Recovering a failed run").
+# push. That run then shows as cancelled; re-run it (docs/internal/release.md, "Recovering a failed run").
 
 permissions: {}
 

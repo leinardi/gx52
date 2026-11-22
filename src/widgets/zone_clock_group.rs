@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The group of clock 2 or 3 in the Clocks view: a time zone or a fixed offset, and 12 or 24 h
-//! (docs/ui.md, "Clocks view").
+//! (docs/internal/ui.md, "Clocks view").
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;

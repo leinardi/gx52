@@ -15,7 +15,7 @@
 
 //! The clocks as the Clocks view shows them: the offset text, the fixed offset a clock gets when
 //! it leaves its time zone, the zone kept for each profile and clock, and the guard that keeps a
-//! late zone lookup away from a profile that is no longer shown (docs/ui.md, "Clocks view").
+//! late zone lookup away from a profile that is no longer shown (docs/internal/ui.md, "Clocks view").
 //!
 //! Plain Rust: the widgets only apply what is computed here, so the rules are tested here.
 

@@ -85,7 +85,7 @@ impl DeviceStatus {
         *self != before
     }
 
-    /// What the sidebar footer shows (docs/ui.md, "Device status"); `active_kind` is the kind of
+    /// What the sidebar footer shows (docs/internal/ui.md, "Device status"); `active_kind` is the kind of
     /// the active profile, since only a per-mode profile shows the mode.
     pub(crate) fn footer(self, active_kind: ProfileKind) -> Footer {
         let Some(device_type) = self.device_type else {
@@ -128,7 +128,7 @@ impl DeviceStatus {
         }
     }
 
-    /// The tray menu's status line (docs/ui.md, "Tray menu"): the device, the selector's mode for
+    /// The tray menu's status line (docs/internal/ui.md, "Tray menu"): the device, the selector's mode for
     /// a per-mode profile and the active profile's name, or what keeps the device from using it.
     /// `selector` is the mode the application keeps (`Application::selector_mode`), not this
     /// status's, which a reopen of the evdev node clears and a new selection does not; `active`

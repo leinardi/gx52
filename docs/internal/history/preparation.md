@@ -1,5 +1,8 @@
 # Rewrite preparation
 
+> **Status:** Historical: the preparation for the Rust rewrite (stages A to C), finished: every item
+> is ticked. The ordered plan that followed is roadmap.md.
+
 The work to do before the long coding session on the Rust rewrite: housekeeping, spikes that retire
 the technical risks, then the documentation and the roadmap that the coding session follows. The
 decisions behind it are in [rewrite-analysis.md](rewrite-analysis.md).
@@ -46,7 +49,7 @@ Throwaway code on a separate `spikes` branch that is never merged. Each spike re
 | S9 ✅ (optional X11 check: roadmap M7) | Virtual mouse: ministick as mouse pointer like the Windows driver; prior art, evdev codes, uinput access on the host and in the sandbox. | X52 Pro |
 
 Desk research, can run in parallel with the spikes (results in
-[spikes/00-desk-research.md](spikes/00-desk-research.md)):
+[spikes/00-desk-research.md](../research/spikes/00-desk-research.md)):
 
 - [x] Do `game-devices-udev` / `steam-devices` already cover the X52 product IDs?
 - [x] Flathub beta branch process for an existing app.
@@ -63,31 +66,32 @@ tray and the LED editor) are collected in [hands-on.md](hands-on.md).
 
 Written after the spikes, so they describe what has been proven.
 
-- [x] [`docs/architecture.md`](architecture.md): crates, threads and data flow, device service,
+- [x] [`docs/architecture.md`](../../architecture.md): crates, threads and data flow, device service,
       state model, error handling, where the 1.x features plug in.
-- [x] [`docs/protocol.md`](protocol.md): USB commands and evdev key maps as verified in S2 and S3.
-- [x] [`docs/profiles.md`](profiles.md): TOML schema and versioning, legacy import mapping.
-- [-] `docs/ui.md`: screens, navigation, libadwaita widgets, wireframes (Blueprint sketches or
-      ASCII). **Postponed** to the UI design session,
-      [roadmap.md, M4](roadmap.md#m4-ui-design-session): the UI is redesigned from scratch.
-- [x] [`docs/release.md`](release.md): Flatpak, beta and stable channels, versioning procedure.
-- [x] [`docs/roadmap.md`](roadmap.md): milestones `0.99.0`, `0.99.x`, `1.0.0`, `1.x`, each with an
+- [x] [`docs/protocol.md`](../../protocol.md): USB commands and evdev key maps as verified in S2 and
+      S3.
+- [x] [`docs/profiles.md`](../../profiles.md): TOML schema and versioning, legacy import mapping.
+- [-] `docs/internal/ui.md`: screens, navigation, libadwaita widgets, wireframes (Blueprint sketches
+      or ASCII). **Postponed** to the UI design session, [roadmap.md,
+      M4](../roadmap.md#m4-ui-design-session): the UI is redesigned from scratch.
+- [x] [`docs/release.md`](../release.md): Flatpak, beta and stable channels, versioning procedure.
+- [x] [`docs/roadmap.md`](../roadmap.md): milestones `0.99.0`, `0.99.x`, `1.0.0`, `1.x`, each with an
       ordered task list and a "done when" condition per task. The first milestone is the project
       setup (Makefile, pre-commit, CI, Meson scaffold), built on what S6 proved. This is the input
       for the coding session. The tooling already ported, and what is left of it, is tracked in
-      [tooling-todo.md](tooling-todo.md).
-- [x] `docs/rewrite-analysis.md`: kept as the decision record, updated where spikes change a
-      decision.
+      [tooling-todo.md](../tooling-todo.md).
+- [x] `docs/internal/history/rewrite-analysis.md`: kept as the decision record, updated where spikes
+      change a decision.
 
 ## Status
 
 Where each spike and hands-on item stands now that stage C is written. Open items have an owner in
-[roadmap.md](roadmap.md).
+[roadmap.md](../roadmap.md).
 
 **Done spikes:**
 
 - S1, S2: USB control without detaching the HID driver; every command verified, MFD character set,
-  POV 1 LED fixed green ([protocol.md](protocol.md)).
+  POV 1 LED fixed green ([protocol.md](../../protocol.md)).
 - S3: evdev input map and mode selector; S4: access in the sandbox, hotplug by polling, the access
   states.
 - S5: tray over D-Bus and the visual check on the host, GNOME.
@@ -100,20 +104,20 @@ Where each spike and hands-on item stands now that stage C is written. Open item
 
 **Optional checks** (nice to have, not blocking `1.0.0`):
 
-- Tray on KDE Plasma ([M6](roadmap.md#m6-tray-and-background)).
+- Tray on KDE Plasma ([M6](../roadmap.md#m6-tray-and-background)).
 - Virtual mouse in an X11 session and in games that bind every axis
-  ([M7](roadmap.md#m7-virtual-mouse)).
+  ([M7](../roadmap.md#m7-virtual-mouse)).
 - Clock offsets across midnight in the backward direction: a negative offset with clock 1 before
   noon (`gx52 --device-check midnight`); the forward direction passed on 2026-11-07
-  ([M2](roadmap.md#m2-the-device-service)).
+  ([M2](../roadmap.md#m2-the-device-service)).
 - X52 (non-Pro) input map and commands, needing a user with the device (the input tester and the
-  [`1.0.0` gate](roadmap.md#100-gate-checklist)).
+  [`1.0.0` gate](../roadmap.md#100-gate-checklist)).
 
 **Deferred acceptance tests** (need the real app):
 
 - Background portal dialog and autostart after logging out and in, and the tray inside the Flatpak
-  build ([M6](roadmap.md#m6-tray-and-background)).
+  build ([M6](../roadmap.md#m6-tray-and-background)).
 - Virtual mouse: off by default, guidance page without uinput permission, no button held after
-  unplug or disable ([M7](roadmap.md#m7-virtual-mouse)).
+  unplug or disable ([M7](../roadmap.md#m7-virtual-mouse)).
 - The LED editor checks skipped on 2026-11-02: keyboard, narrow window, light and dark, Orca
-  ([M5](roadmap.md#m5-ui-implementation)).
+  ([M5](../roadmap.md#m5-ui-implementation)).

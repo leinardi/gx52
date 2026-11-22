@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The LEDs view of the profile editor: the mode bar, one card per part of the device with its
-//! LED buttons, and the brightness and blink rows (docs/ui.md, "LEDs view").
+//! LED buttons, and the brightness and blink rows (docs/internal/ui.md, "LEDs view").
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;

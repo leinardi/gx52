@@ -1,5 +1,8 @@
 # S6: build and release dry run
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 Throwaway app generated with the `gtk-rs-new-app` scaffold (gtk-rs-skills 0.1.0) in
 `spikes/s6-hello` on the `spikes` branch: app id `com.leinardi.gx52`, Devel id
 `com.leinardi.gx52.Devel`, crate `gx52`, GPL-3.0-or-later. Run on 2026-10-28.

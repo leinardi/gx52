@@ -18,7 +18,7 @@
 # Copyright (c) 2026 Roberto Leinardi.
 #
 # The workspace: the root package is the gx52 application (src/, next to the Meson build), x52 the
-# device library with no GTK dependency, meta the repository meta-tests (docs/tooling-todo.md).
+# device library with no GTK dependency, meta the repository meta-tests (docs/internal/tooling-todo.md).
 
 [workspace]
 # Listed explicitly, never as a glob, so a new member is a reviewed change.
@@ -60,7 +60,7 @@ disallowed_methods = "deny"
 
 [package]
 name = "gx52"
-# The release workflow sets the version (docs/rewrite-analysis.md, section 9).
+# The release workflow sets the version (docs/internal/history/rewrite-analysis.md, section 9).
 version = "1.1.0"
 description = "Configure the Logitech X52 and X52 Pro joysticks"
 edition.workspace = true

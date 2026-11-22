@@ -1,5 +1,8 @@
 # S4: device access inside the Flatpak sandbox
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 Run on 2026-10-28 with the spike binaries (`x52-probe`, `x52-input`) executed inside the GNOME 51
 runtime the way the app will run on Flathub:
 `flatpak run --user --device=all --unshare=network --filesystem=<spikes>:ro --command=<binary> org.gnome.Platform//51`.

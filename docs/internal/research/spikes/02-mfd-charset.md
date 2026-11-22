@@ -1,5 +1,8 @@
 # S2: MFD character set (X52 Pro)
 
+> **Status:** Historical: a spike of the GX52 rewrite preparation, October and November 2026. The
+> current facts are in the reference docs: protocol.md, architecture.md and profiles.md.
+
 The MFD shows one byte per character from a fixed 256-entry table. Read from photos of all 256
 values on the device (`x52-probe charset`, 2026-10-28) and cross-checked against the glyph list in
 libx52's `x52_char_map.cfg` for the ambiguous ones (0x0E, 0x0F, 0x10, 0x9B to 0x9F). The table
@@ -15,6 +18,5 @@ Summary:
 - `0xE0`-`0xFF`: more Latin letters, currency, fractions and math symbols.
 
 The full table, and the rules the app follows when converting text (per-character conversion,
-fallbacks, the 16-byte limit, the preview), are in
-[protocol.md, MFD character set](../protocol.md#mfd-character-set). This spike keeps only how the
-table was read.
+fallbacks, the 16-byte limit, the preview), are in [protocol.md, MFD character
+set](../../../protocol.md#mfd-character-set). This spike keeps only how the table was read.

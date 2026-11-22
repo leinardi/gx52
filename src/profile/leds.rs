@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! The LEDs as the LED editor shows them: names, states, where each sits, and what each button
-//! shows for a mode's settings (docs/ui.md, "LEDs view").
+//! shows for a mode's settings (docs/internal/ui.md, "LEDs view").
 //!
 //! Plain Rust: the widgets only apply a [`LedView`], so the rules are tested here.
 
@@ -242,7 +242,7 @@ const fn place(led: EditorLed, card: Card, row: i32, column: i32, width: i32) ->
     }
 }
 
-/// Where every LED sits, roughly as on the device (docs/spikes/07-led-editor.md, "Design for the
+/// Where every LED sits, roughly as on the device (docs/internal/research/spikes/07-led-editor.md, "Design for the
 /// app").
 pub(crate) const PLACES: [Place; 12] = [
     place(EditorLed::Bi(BiColourLed::Pov2), Card::Stick, 0, 0, 1),

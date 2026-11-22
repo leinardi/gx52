@@ -2,13 +2,14 @@
 
 How the Rust rewrite is built: crates, threads and data flow, the state model, persistence, errors,
 the sandbox and the test strategy. The decisions behind it are in
-[rewrite-analysis.md](rewrite-analysis.md) (sections 1, 5, 10 and 12); what the device does is in
-[protocol.md](protocol.md); the profile format is in [profiles.md](profiles.md). Where a value
-comes from a spike, the spike is named.
+[rewrite-analysis.md](https://github.com/leinardi/gx52/blob/main/docs/internal/history/rewrite-analysis.md)
+(sections 1, 5, 10 and 12); what the device does is in [protocol.md](protocol.md); the profile
+format is in [profiles.md](profiles.md). Where a value comes from a spike, the spike is named.
 
 ## Skills
 
-The skills rule is in [AGENTS.md, "Project skills"](../AGENTS.md#project-skills) and is not repeated
+The skills rule is in [AGENTS.md, "Project
+skills"](https://github.com/leinardi/gx52/blob/main/AGENTS.md#project-skills) and is not repeated
 here. On top of it:
 
 - The Meson + Cargo + Blueprint + Flatpak scaffold of milestone M0 is generated with the
@@ -65,7 +66,8 @@ encoded control transfer; the app implements it with `nusb`, the tests with a re
   passes in, never from a direct `now()` call. Then `clippy.toml` `disallowed-methods` can ban
   `jiff::Timestamp::now`, `jiff::Zoned::now` and `std::time::SystemTime::now` everywhere except the
   one production time source, whose exception is an `#[expect]` with a reason. This is the
-  [tooling-todo.md](tooling-todo.md#needs-the-cargo-workspace) `clippy.toml` item.
+  [tooling-todo.md](https://github.com/leinardi/gx52/blob/main/docs/internal/tooling-todo.md#needs-the-cargo-workspace)
+  `clippy.toml` item.
 - **Event timestamps:** the mode debounce uses the timestamps evdev puts on each event, not the
   wall clock, so it is tested with recorded event sequences (the S3 bounce log is the first
   fixture).
@@ -89,8 +91,10 @@ ones in the profile directory) and the legacy `gx52.db`. Both are parsed as untr
 
 The boundaries, with the rule each keeps and the tests that hold it, are listed in the
 `adversarial-review` skill's untrusted-input pass; M3 decided against a separate `trust-boundary`
-skill ([tooling-todo.md](tooling-todo.md#docs-and-project-files)). The check of
-[SECURITY.md](../SECURITY.md) against the final import/export path is still open there.
+skill
+([tooling-todo.md](https://github.com/leinardi/gx52/blob/main/docs/internal/tooling-todo.md#docs-and-project-files)).
+The check of [SECURITY.md](https://github.com/leinardi/gx52/blob/main/SECURITY.md) against the final
+import/export path is still open there.
 
 ## Threads and data flow
 
@@ -312,12 +316,12 @@ flowchart LR
     as the tray's own reports, after that report; it only fills "unknown". The start's handle
     comes back by another path and sets no availability.
   - **Closing the window** with "Run in background" on destroys it, whether or not a tray is
-    available, also after a tray host went away while the window was open (GNOME lists the app
-    under Background Apps, and launching it again shows the window;
-    [ui.md](ui.md#preferences)), and a background hold keeps the application, the device service
-    and the tray running; with it off, closing quits. Showing the window again builds a new one,
-    so a hidden start (M6 task 2) and a closed window are the same state. The hold is separate from
-    the write queue's (see Persistence).
+    available, also after a tray host went away while the window was open (GNOME lists the app under
+    Background Apps, and launching it again shows the window;
+    [ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#preferences)), and a
+    background hold keeps the application, the device service and the tray running; with it off,
+    closing quits. Showing the window again builds a new one, so a hidden start (M6 task 2) and a
+    closed window are the same state. The hold is separate from the write queue's (see Persistence).
   - **Quit** (the menu, Ctrl+Q, the tray) sets `quitting`: the tray goes, the window closes
     without the background hold and the process ends once the profiles are written. While
     quitting, tray messages are dropped; launching GX52 again calls the quit off.
@@ -361,7 +365,7 @@ flowchart LR
     the user turns it off, or "Run in Background" goes off; nothing more is asked then. A refusal
     shows as a warning in Preferences, or, with no Preferences dialog showing (a start at login
     has no window), as a banner the next window shows until Preferences opens
-    ([ui.md](ui.md#preferences)). A permission
+    ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#preferences)). A permission
     turned off answers Cancelled, like a dismissed dialog, so Cancelled is a refusal also for the
     start's own request; that request only logs a failure: at login the portal may not be ready,
     and turning the key off would remove the entry at the next hidden start. A request holds the
@@ -412,14 +416,15 @@ overrides ───────────────────────�
     value is converted and cut to 16 bytes as [profiles.md](profiles.md#mfd-lines) says;
   - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
     fixed offset), which the writer turns into wire values;
-  - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode
-    bar ([ui.md](ui.md#mode-bar)), live edits not yet saved and, in 1.x, MFD pages and D-Bus
-    requests. The **mode shown** is the picked mode, else the active mode, else mode 1
-    (`src/profile/editing.rs`); the pick is dropped when the selector moves, the active profile
-    changes or becomes single, or the device goes or is selected again. The device, the editor and
-    the profile list's badges all show the mode shown; the sidebar footer keeps the selector's
-    mode. The editor's edits change the active profile's settings of the mode shown, go to the
-    device at once and are saved after the debounce (`src/application/editing.rs`).
+  - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode bar
+    ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#mode-bar)), live edits
+    not yet saved and, in 1.x, MFD pages and D-Bus requests. The **mode shown** is the picked mode,
+    else the active mode, else mode 1 (`src/profile/editing.rs`); the pick is dropped when the
+    selector moves, the active profile changes or becomes single, or the device goes or is selected
+    again. The device, the editor and the profile list's badges all show the mode shown; the sidebar
+    footer keeps the selector's mode. The editor's edits change the active profile's settings of the
+    mode shown, go to the device at once and are saved after the debounce
+    (`src/application/editing.rs`).
 - The **MFD editor's simulated display** is built from the same desired state
   (`src/profile/active.rs`, `state_for`, then `src/profile/mfd.rs`, `preview`), so it shows exactly
   what is sent: the converted lines, the time of the clock shown as clock 1's plus the offset sent,
@@ -565,15 +570,16 @@ The Flatpak `finish-args` beyond the display sockets:
   source.
 - **Screenshot mode** (Devel builds only, `src/screenshots/`): `gx52 --screenshots <dir>` takes the
   metainfo screenshots and exits; `make screenshots` runs it in the Devel Flatpak on a headless
-  weston ([release.md](release.md#screenshots)). It refuses to start unless
-  `GSETTINGS_BACKEND=memory`, then points the config root at a temporary directory holding fixture
-  profiles, installs a fixed clock and local zone (the `src/time.rs` seam every UI time read goes
-  through), runs the device service over a fake X52 Pro backend that opens, holds mode 1 and drops
-  every transfer, pins the fonts, DPI, animations and light style, and leaves the strings
-  untranslated. A pure `Driver` sequences the shots (set up, poll the readiness checks, wait two
-  frames, capture), with a timeout per shot and for the whole run; a shot that never gets ready
-  exits 1 naming the condition. Unit tests cover the arguments, the memory-backend refusal, the
-  fixtures, the fake backend and the driver's timeouts.
+  weston
+  ([release.md](https://github.com/leinardi/gx52/blob/main/docs/internal/release.md#screenshots)).
+  It refuses to start unless `GSETTINGS_BACKEND=memory`, then points the config root at a temporary
+  directory holding fixture profiles, installs a fixed clock and local zone (the `src/time.rs` seam
+  every UI time read goes through), runs the device service over a fake X52 Pro backend that opens,
+  holds mode 1 and drops every transfer, pins the fonts, DPI, animations and light style, and leaves
+  the strings untranslated. A pure `Driver` sequences the shots (set up, poll the readiness checks,
+  wait two frames, capture), with a timeout per shot and for the whole run; a shot that never gets
+  ready exits 1 naming the condition. Unit tests cover the arguments, the memory-backend refusal,
+  the fixtures, the fake backend and the driver's timeouts.
 - Repository checks: `make verify` and `make check` (AGENTS.md), and the `meta` crate once it
   exists.
 
