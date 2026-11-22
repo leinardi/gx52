@@ -45,7 +45,7 @@ repos:
         args: ["-oneline", "-shellcheck", "shellcheck -S error"]
         stages: [manual]
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.24.0
+    rev: v0.24.1
     hooks:
       - id: markdownlint-cli2
         additional_dependencies:
@@ -141,7 +141,7 @@ repos:
   # changes only; deleting the last `use` of a crate in a .rs file is what usually makes a
   # dependency unused, so Rust sources trigger it too.
   - repo: https://github.com/bnjbvr/cargo-machete
-    rev: v0.9.2
+    rev: v0.10.1
     hooks:
       - id: cargo-machete
         types_or: [rust, cargo, cargo-lock]
@@ -184,7 +184,7 @@ repos:
   # a message nobody can classify is a release nobody can version. With
   # --force-scope: every commit here names a scope, and AGENTS.md requires one.
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
