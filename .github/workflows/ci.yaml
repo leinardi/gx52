@@ -116,7 +116,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check dependencies with cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2.1.3
         with:
           # The root is a package as well as the workspace, so without --workspace cargo-deny
           # would check the application's graph only, not the meta and x52 crates.
@@ -240,7 +240,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run actionlint via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/actionlint@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/actionlint@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -264,7 +264,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run pre-commit hooks + reviewdog diff
-        uses: leinardi/gha-pre-commit-reviewdog-actions/pre-commit-hooks@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/pre-commit-hooks@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -297,7 +297,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run markdownlint-cli2 via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/markdownlint-cli2@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/markdownlint-cli2@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -321,7 +321,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run shellcheck via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/shellcheck@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/shellcheck@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -345,7 +345,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run yamllint via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/yamllint@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/yamllint@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -372,7 +372,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate the commit messages
-        uses: leinardi/gha-pre-commit-reviewdog-actions/conventional-commits@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/conventional-commits@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
