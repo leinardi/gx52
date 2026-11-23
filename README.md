@@ -23,10 +23,10 @@ X52 and X52 Pro joysticks on Linux.</strong></p>
   <img alt="The LEDs of a per-mode profile" src="data/screenshots/leds.png" width="800">
 </p>
 
-GX52 is a GNOME application written in Rust with GTK 4 and libadwaita, distributed through
-Flathub. It is developed and tested on the X52 Pro; the plain X52 is supported on a best effort
-basis and has not been tested on a device yet, so its LED blinking and SHIFT indicator are left
-out until an owner confirms them. [Getting started][start] has the details.
+GX52 is a desktop app for setting up your X52 on Linux. Pick the LED colours and brightness, put
+your own text and three time zones on the display, and save it all as profiles that can follow the
+joystick's mode selector. Changes reach the joystick as you make them, and your games keep working
+while GX52 runs.
 
 ## ✨ Features
 
@@ -62,8 +62,7 @@ login autostart does, and `RUST_LOG` raises the log level:
 flatpak run --env=RUST_LOG=debug com.leinardi.gx52 --hidden
 ```
 
-If libx52's `x52d` daemon is running, it drives the same LEDs and display, and GX52 shows a
-banner while it sees it. Where the settings and profiles are stored, and how to bring the
+Where the settings and profiles are stored, and how to bring the
 profiles of a GX52 0.7 source install into the Flatpak, are in [Getting started][start].
 
 ## 🛠️ Building from source
@@ -83,8 +82,9 @@ The packages to install first are in [Building from source][build]. The developm
 
 ## 🤝 Contributing
 
-Bug reports, X52 test reports and feature requests go to the
-[issue tracker](https://github.com/leinardi/gx52/issues). [CONTRIBUTING.md](CONTRIBUTING.md)
+Bug reports and feature requests go to the [issue tracker](https://github.com/leinardi/gx52/issues).
+GX52 is developed on an X52 Pro, so test reports from plain X52 owners are especially welcome.
+[CONTRIBUTING.md](CONTRIBUTING.md)
 covers building, checks, branches, commits and translations (`po/`);
 [SECURITY.md](SECURITY.md) explains how to report a vulnerability privately.
 
