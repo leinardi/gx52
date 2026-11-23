@@ -36,7 +36,7 @@ doc-valid-idents = [
 # disallowed_methods = "deny", any other read fails clippy.
 disallowed-methods = [
     { path = "jiff::Timestamp::now", reason = "read the time from the injected Clock" },
-    { path = "jiff::Zoned::now", reason = "read the time from the injected Clock" },
+    { path = "jiff::ZonedDateTime::now", reason = "read the time from the injected Clock" },
     { path = "std::time::SystemTime::now", reason = "read the time from the injected Clock" },
     { path = "std::time::Instant::now", reason = "read the time from the injected Clock" },
 ]

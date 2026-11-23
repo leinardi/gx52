@@ -354,7 +354,7 @@ impl Session<'_> {
         let time = self
             .clock
             .now()
-            .to_zoned((self.env.local_zone)())
+            .to_zoned_datetime((self.env.local_zone)())
             .strftime("%H:%M:%S%.3f")
             .to_string();
         // The report is the harness's output; a closed stdout leaves nothing to report to.
@@ -856,7 +856,7 @@ impl Session<'_> {
         // A clock 1 sent between the last tick and the suspend still shows the time before the
         // jump; the re-send after the resume shows the minute the jump was detected in, or the
         // one after it.
-        let after_jump = jumped_to.to_zoned((self.env.local_zone)());
+        let after_jump = jumped_to.to_zoned_datetime((self.env.local_zone)());
         let after_jump = i32::from(after_jump.hour()) * 60 + i32::from(after_jump.minute());
         let resent = |seen: &Seen| {
             seen.sent
@@ -884,7 +884,7 @@ impl Session<'_> {
             }
             None => self.fail("clock 1 was not re-sent after the resume"),
         }
-        let now = self.clock.now().to_zoned((self.env.local_zone)());
+        let now = self.clock.now().to_zoned_datetime((self.env.local_zone)());
         self.check(&format!(
             "The MFD clock 1 shows {} (the current time).",
             now.strftime("%H:%M")
@@ -895,7 +895,7 @@ impl Session<'_> {
         let Some((device, mut state)) = self.connect(DeviceState::default_for) else {
             return;
         };
-        let now = self.clock.now().to_zoned((self.env.local_zone)());
+        let now = self.clock.now().to_zoned_datetime((self.env.local_zone)());
         let minute = i32::from(now.hour()) * 60 + i32::from(now.minute());
         let local_offset = now.offset().seconds() / 60;
         let plan = MidnightPlan::new(minute);
