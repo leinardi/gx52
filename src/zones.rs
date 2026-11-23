@@ -85,7 +85,7 @@ pub(crate) fn city_of(iana: &str) -> String {
 /// Reads the database, so it runs off the main thread.
 pub(crate) fn zone_time(entry: &ZoneEntry, now: Timestamp) -> Option<ZoneTime> {
     let zone = TimeZone::get(&entry.iana).ok()?;
-    let zoned = now.to_zoned(zone);
+    let zoned = now.to_zoned_datetime(zone);
     Some(ZoneTime {
         time: zoned.strftime("%H:%M").to_string(),
         offset_minutes: zoned.offset().seconds().div_euclid(60),

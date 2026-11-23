@@ -45,9 +45,9 @@ encoded control transfer; the app implements it with `nusb`, the tests with a re
   normalisation into `−720`–`+720` minutes from [protocol.md](protocol.md#usb-vendor-commands), the
   next instant to re-send) takes the current time and zone as input from a time source the app
   passes in, never from a direct `now()` call. Then `clippy.toml` `disallowed-methods` can ban
-  `jiff::Timestamp::now`, `jiff::Zoned::now` and `std::time::SystemTime::now` everywhere except the
-  one production time source, whose exception is an `#[expect]` with a reason. This is the
-  [tooling-todo.md](https://github.com/leinardi/gx52/blob/main/docs/internal/tooling-todo.md#needs-the-cargo-workspace)
+  `jiff::Timestamp::now`, `jiff::ZonedDateTime::now` and `std::time::SystemTime::now` everywhere
+  except the one production time source, whose exception is an `#[expect]` with a reason. This is
+  the [tooling-todo.md](https://github.com/leinardi/gx52/blob/main/docs/internal/tooling-todo.md#needs-the-cargo-workspace)
   `clippy.toml` item.
 - **Event timestamps:** the mode debounce uses the timestamps evdev puts on each event, not the
   wall clock, so it is tested with recorded event sequences (a bounce log from a device is the first
