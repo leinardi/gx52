@@ -15,7 +15,7 @@ A task marked **(code)** touches code, build files or CI. For each one:
 
 - **Before starting:** load the skills listed in [AGENTS.md, "Project
   skills"](../../AGENTS.md#project-skills) (for Rust and GTK work `gtk-rs-development` and
-  `rust-best-practices`), as [architecture.md](../architecture.md#skills) explains.
+  `rust-best-practices`).
 - **Done when**, in addition to the task's own condition (written "DW, plus" below):
   - `make verify` and `make check` pass;
   - the `adversarial-review` skill reports no open findings on the task's diff;

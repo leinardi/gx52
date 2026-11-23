@@ -32,6 +32,8 @@ custom_dir = "overrides"  # holds home.html, the landing page template
 logo = "assets/gx52-symbolic.svg"
 favicon = "assets/gx52-symbolic.svg"
 features = [
+  "content.action.edit",
+  "content.action.view",
   "content.code.copy",
   "content.tabs.link",
   "navigation.footer",
@@ -105,7 +107,9 @@ pygments_lang_class = true
 [project.markdown_extensions."pymdownx.keys"]
 [project.markdown_extensions."pymdownx.magiclink"]
 [project.markdown_extensions."pymdownx.mark"]
+# fractions stays off: it turns "clocks 2/3" and "modes 1/2/3" into vulgar fractions.
 [project.markdown_extensions."pymdownx.smartsymbols"]
+fractions = false
 
 # Snippets: --8<-- "compose.yaml" includes a repository file; a missing one fails the build.
 [project.markdown_extensions."pymdownx.snippets"]
