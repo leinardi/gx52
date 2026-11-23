@@ -2,22 +2,17 @@
 
 The profile data format: the TOML schema, where the files live, the default profiles, the active
 profile and the profile order, validation and recovery, import and export, the legacy import from
-GX52 0.7 and the migration policy. Sources: [spike
-S8](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/08-legacy-import.md)
-(the legacy database and the importer decisions),
-[rewrite-analysis.md](https://github.com/leinardi/gx52/blob/main/docs/internal/history/rewrite-analysis.md)
-sections 1, 2.4 and 10, the device facts in [protocol.md](protocol.md) and the UI decisions in
-[ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md). Where the profile store
-sits in the app is in [architecture.md](architecture.md#persistence).
+GX52 0.7 and the migration policy. The device facts are in [protocol.md](protocol.md); where the
+profile store sits in the app is in [architecture.md](architecture.md#persistence).
 
 ## Model
 
 - A **profile** is the device state for **one device type**: `x52-pro` or `x52` (the device types
   of [protocol.md](protocol.md#device-ids-and-access)). A profile never applies to the other type.
 - A profile is one of two **kinds**:
-  - **single**: one set of mode settings; the mode selector on the stick changes nothing;
-  - **per-mode**: three sets of mode settings, one per position of the mode selector (1, 2, 3);
-    the selector picks the set.
+    - **single**: one set of mode settings; the mode selector on the stick changes nothing;
+    - **per-mode**: three sets of mode settings, one per position of the mode selector (1, 2, 3);
+      the selector picks the set.
 - **Mode settings** are what may differ between modes: LED states, LED brightness, MFD
   brightness, MFD lines, shift and blink. The **clocks and the date format** belong to the whole
   profile and are the same in every mode.
@@ -104,7 +99,7 @@ verified ([protocol.md, "X52 (non-Pro)"](protocol.md#x52-non-pro)).
 | `date_format` | string | `"dd-mm-yy"`, `"mm-dd-yy"`, `"yy-mm-dd"` | Field order of [protocol.md](protocol.md#usb-vendor-commands) |
 | `clock_1.source` | string | `"local"`, `"utc"` |  |
 | `clock_2.source`, `clock_3.source` | table | `{ iana = "<zone>" }` or `{ fixed_offset_minutes = <n> }` | See [Clocks](#clocks) |
-| `clock_N.use_24h` | boolean |  | Per clock (S2: the 12/24 h flag is independent per clock) |
+| `clock_N.use_24h` | boolean |  | The 12/24 h flag is independent per clock |
 | `<set>.led_brightness`, `<set>.mfd_brightness` | integer | `0`–`128` | `<set>` is `settings` or `mode_1`–`mode_3`. The wire scale of `0xb2` / `0xb1`. GX52 0.7 stored `0`–`32` and multiplied by 4; imported values are multiplied by 4 |
 | `<set>.shift`, `<set>.blink` | boolean |  | `x52-pro` only |
 | `<set>.leds.<name>` | string | single-colour `fire`, `throttle`: `"off"`, `"on"`; bi-colour `a`, `b`, `d`, `e`, `t1_t2`, `t3_t4`, `t5_t6`, `pov_2`, `i`: `"off"`, `"green"`, `"red"`, `"amber"` | `x52-pro` only. The set of names comes from the `x52` device model (the [LED bits](protocol.md#led-bits)). POV 1 is not stored: its LED is fixed green |
@@ -206,18 +201,18 @@ writes no `names` table for a set without names.
 
 - **Clock 1** shows `local` time (the system zone, following its daylight saving) or `utc`.
 - **Clocks 2 and 3** have a tagged source:
-  - `{ iana = "Europe/Rome" }`: a geographic zone from the runtime's tz database, read through
-    `jiff` (desk research: GNOME 51 ships `/usr/share/zoneinfo`), with its daylight saving
-    transitions. The Clocks view picks one from the same database's `zone.tab` and `iso3166.tab`
-    ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#clocks-view)), but any
-    name the database knows is valid;
-  - `{ fixed_offset_minutes = 345 }`: a fixed offset from UTC in minutes, `−720`–`+840` (UTC−12:00
-    to UTC+14:00, the range GX52 0.7 offered). A fixed offset has **no daylight saving**.
+    - `{ iana = "Europe/Rome" }`: a geographic zone from the runtime's tz database, read through
+      `jiff` (desk research: GNOME 51 ships `/usr/share/zoneinfo`), with its daylight saving
+      transitions. The Clocks view picks one from the same database's `zone.tab` and `iso3166.tab`
+      ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#clocks-view)), but any
+      name the database knows is valid;
+    - `{ fixed_offset_minutes = 345 }`: a fixed offset from UTC in minutes, `−720`–`+840` (UTC−12:00
+      to UTC+14:00, the range GX52 0.7 offered). A fixed offset has **no daylight saving**.
 - What is sent: the device only knows clock 1's time and offsets from clock 1, so the app sends
   `clock N offset − clock 1 offset`, normalised as [protocol.md](protocol.md#usb-vendor-commands)
   describes. That is a property of the wire, not of the profile.
 
-**Legacy offsets** (GX52 0.7 stored minutes from UTC, S8) are imported **unchanged** as
+**Legacy offsets** (GX52 0.7 stored minutes from UTC) are imported **unchanged** as
 `fixed_offset_minutes`. They are never guessed into a geographic zone: `-240` could be New York in
 summer or Santiago in winter, and the app cannot tell. The user can switch a clock to a zone after
 the import.
@@ -228,25 +223,25 @@ Worked examples, clock 1 on `local` with the system zone at UTC+1 (Central Europ
 | --- | --- | --- | --- |
 | `-240` | `{ fixed_offset_minutes = -240 }` | UTC−04:00, all year | `-240 − 60 = -300` |
 | `480` | `{ fixed_offset_minutes = 480 }` | UTC+08:00, all year | `480 − 60 = +420` |
-| `345` | `{ fixed_offset_minutes = 345 }` | UTC+05:45 (Nepal's offset; `Etc/GMT±N` cannot express it, S8) | `345 − 60 = +285` |
+| `345` | `{ fixed_offset_minutes = 345 }` | UTC+05:45 (Nepal's offset; `Etc/GMT±N` cannot express it) | `345 − 60 = +285` |
 
 In summer (UTC+2) the same profile sends `-360`, `+360` and `+225`: the profile is unchanged, the
 offsets from clock 1 move because clock 1 moved.
 
-**Round-trip tests:** for each sample row of S8 and each worked example above, legacy row → profile
+**Round-trip tests:** for each sample legacy row and each worked example above, legacy row → profile
 → TOML → profile gives the same profile, and the TOML matches a stored expected file.
 
 ## Files
 
 - **Directory:** `glib::user_config_dir().join("gx52/profiles")`, i.e.
-  `$XDG_CONFIG_HOME/gx52/profiles/` as decided in rewrite analysis section 1.
+  `$XDG_CONFIG_HOME/gx52/profiles/`.
 - **One file per profile**, named `<id>.toml`. The id is stable for the profile's whole life and is
   not its name, so renaming never renames the file.
-  - Default profiles: `x52-pro-default` and `x52-default`.
-  - Other profiles: a random UUID (`glib::uuid_string_random()`), lowercase.
-  - A file whose name ends in `.toml` but whose stem is not a valid id (only lowercase letters,
-    digits and `-`) is ignored and reported, never touched. Files whose names do not end in `.toml`
-    (`*.rejected-*`, `*.bak`, editor leftovers such as `x.toml~`) are ignored silently.
+    - Default profiles: `x52-pro-default` and `x52-default`.
+    - Other profiles: a random UUID (`glib::uuid_string_random()`), lowercase.
+    - A file whose name ends in `.toml` but whose stem is not a valid id (only lowercase letters,
+      digits and `-`) is ignored and reported, never touched. Files whose names do not end in
+      `.toml` (`*.rejected-*`, `*.bak`, editor leftovers such as `x.toml~`) are ignored silently.
 - **Saving:** an edit changes the profile in memory and on the device at once; its file is
   written 500 ms after the last edit, one write at a time per profile. Closing the window writes
   what is pending at once, and GX52 keeps running until every write is done. At the end of the
@@ -273,7 +268,7 @@ offsets from clock 1 move because clock 1 moved.
   as imported.
 - **Size limits:** a profile file (and an import file) larger than 64 KiB is not parsed; it is
   handled like a malformed file. A valid profile is well under 2 KiB. A legacy database larger than
-  16 MiB is not opened and is handled like an unreadable one (the two S8 databases are 32 KiB each).
+  16 MiB is not opened and is handled like an unreadable one.
 - **Production and Devel** are isolated by the Flatpak sandbox: each app ID has its own config
   directory, `~/.var/app/com.leinardi.gx52/config/gx52/profiles/` and
   `~/.var/app/com.leinardi.gx52.Devel/config/gx52-devel/profiles/` (directory name below).
@@ -284,8 +279,8 @@ offsets from clock 1 move because clock 1 moved.
   writes to `~/.config/gx52-devel/profiles/` on the host and to the path above in its Flatpak.
 - **Legacy database lookup**, separate from the new store:
   `glib::user_config_dir().join("gx52/gx52.db")`, the path GX52 0.7 used, for every build profile.
-  It is never opened, modified or deleted, so users can go back to `0.7.6` (rewrite analysis,
-  section 10). The import reads it, with its `-journal` or `-wal` file when there is one, into
+  It is never opened, modified or deleted, so users can go back to `0.7.6`. The import reads it,
+  with its `-journal` or `-wal` file when there is one, into
   memory, and reads the whole set again until two reads in a row agree (up to five reads, 200 ms
   apart). Two identical reads mean that every file, as read, was on disk at the same moment, so a
   rollback between the copy of the database and the copy of its journal can never produce
@@ -309,7 +304,7 @@ offsets from clock 1 move because clock 1 moved.
   brightness values `128`; on the X52 Pro every bi-colour LED green and Fire and Throttle on; clock
   1 `local`, 24 h; clock 2 `{ fixed_offset_minutes = -240 }`, clock 3 `{ fixed_offset_minutes = 480
   }`, both 24 h; date `yy-mm-dd`; shift and blink off; MFD lines empty. GX52 0.7's X52 table
-  defaulted clock 1 to UTC while the Pro table used local time; the rewrite uses `local` for both.
+  defaulted clock 1 to UTC while the Pro table used local time; GX52 uses `local` for both.
   A new per-mode profile has these values in all three modes.
 - **Built-ins always exist in memory:** each default profile exists in memory with its stable id
   even when its file is missing, unreadable or of a future schema, so every fallback of the
@@ -317,13 +312,13 @@ offsets from clock 1 move because clock 1 moved.
 
 ### Legacy import
 
-At the first start that finds `gx52.db` (rewrite analysis, section 10; the S8 schema):
+At the first start that finds `gx52.db`:
 
-| S8 decision | Rule |
+| Topic | Rule |
 | --- | --- |
 | Device type per table | `x52_pro_profile` rows become `x52-pro` profiles, `x52_profile` rows become `x52` profiles. Columns are read by name; extra columns are ignored |
 | LED columns | Taken only from `x52_pro_profile`. `x52_profile` rows **never** take LED columns, even in the 2019 schema that has them |
-| Per-type default | The row with `can_be_removed = 0` maps onto **that type's default profile** (its values replace the built-in values; the id stays `x52-…-default` and the name stays "Default", so `Default` / `Default Profile` from S8 is not carried over). If a table has more than one such row, the one with the lowest `id` is the default and the others are imported as normal profiles |
+| Per-type default | The row with `can_be_removed = 0` maps onto **that type's default profile** (its values replace the built-in values; the id stays `x52-…-default` and the name stays "Default", so `Default` / `Default Profile` is not carried over). If a table has more than one such row, the one with the lowest `id` is the default and the others are imported as normal profiles |
 | Kind | Every imported row becomes a **single** profile (GX52 0.7 had no modes) |
 | Other rows | Become new profiles with new ids, names kept; a name that clashes with an existing profile of the same type gets `(2)`, `(3)`, ... appended |
 | Brightness scale | `led_brightness`, `mfd_brightness` × 4 (`0`–`32` becomes `0`–`128`) |
@@ -335,9 +330,9 @@ At the first start that finds `gx52.db` (rewrite analysis, section 10; the S8 sc
 
 The result is reported once: a toast "Imported N profiles from GX52 0.7". When values were
 replaced or a row was not imported, the toast has a "Details" button with the list.
-`current_profile` is empty in both real databases (S8), so nothing is imported for the selected
+`current_profile` is empty in the GX52 0.7 databases, so nothing is imported for the selected
 profile: the default profile is active after the import. Test fixtures are two small databases reproducing
-both S8 schemas, created by the test suite.
+both GX52 0.7 schemas, created by the test suite.
 
 **Done flag.** The GSettings key `legacy-import-done` (`b`, default `false`) records that the import
 is over. The import is due while the flag is unset and there is a `gx52.db` or a saved plan (below).
@@ -452,16 +447,16 @@ it is replaced only through the confirm-and-back-up path there.
   portal; no filesystem permission). The file has no id: the id belongs to the local store.
 - **Import** reads one file through the same portal, with the same limits and validation as the
   store:
-  - the import is started from one device type's profile list; a file whose `device_type` is the
-    other type, or not a known type, is **refused with a message** that names the type the file is
-    for;
-  - a newer `schema_version` is refused with a message (it could only be read-only); an older one is
-    migrated;
-  - per-field problems are fixed to the type defaults and listed before the import is confirmed;
-  - a name that clashes within the type gets `(2)`, `(3)`, ... appended. Only one import runs at
-    a time, and the name is checked against the store again after the confirmation, right before
-    the write; when a profile added meanwhile changed it, the user confirms the new name;
-  - the imported profile gets a new random id and is never a default profile.
+    - the import is started from one device type's profile list; a file whose `device_type` is the
+      other type, or not a known type, is **refused with a message** that names the type the file is
+      for;
+    - a newer `schema_version` is refused with a message (it could only be read-only); an older one
+      is migrated;
+    - per-field problems are fixed to the type defaults and listed before the import is confirmed;
+    - a name that clashes within the type gets `(2)`, `(3)`, ... appended. Only one import runs at
+      a time, and the name is checked against the store again after the confirmation, right before
+      the write; when a profile added meanwhile changed it, the user confirms the new name;
+    - the imported profile gets a new random id and is never a default profile.
 - **In the app:** "Import Profile…" in the main menu (Ctrl+O, the window action `win.import`, or
   `win.import-profile` with the device type, `x52-pro` or `x52`) and "Export…" in a profile's row
   menu (Ctrl+Shift+E, or `win.export-profile` with the profile id). Reading and checking the file
@@ -486,3 +481,5 @@ it is replaced only through the confirm-and-back-up path there.
 - A schema bump is a user-visible change: its commit is a `feat` or `fix` (AGENTS.md, "Commit
   messages"), and the release notes say that profiles saved by the new version cannot be edited by
   older ones.
+
+<!-- markdownlint-configure-file { "ul-indent": { "indent": 4 } } -->

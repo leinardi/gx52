@@ -5,26 +5,8 @@ normative: the app sends only the commands listed in
 [Commands the app may send](#commands-the-app-may-send), and AGENTS.md's "never guess at the device"
 rule points here.
 
-Every value comes from a measurement on an X52 Pro (`06a3:0762`, firmware as shipped) recorded in
-the spike documents, or from GX52 0.7 where the spikes confirmed it:
-
-- [S1/S2 USB
-  control](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/01-usb-control.md):
-  vendor commands, power-on state, POV 1 LED;
-- [S2 MFD character
-  set](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/02-mfd-charset.md):
-  how the glyph table was read;
-- [S3 input
-  map](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/03-input.md): evdev
-  buttons, axes, hats, mode selector;
-- [S4 Flatpak
-  sandbox](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/04-flatpak-sandbox.md):
-  access states, hotplug;
-- [S9 virtual
-  mouse](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/09-virtual-mouse.md):
-  uinput.
-
-The probe that sent the commands is `spikes/x52-probe` on the `spikes` branch.
+Every value comes from a measurement on an X52 Pro (`06a3:0762`, firmware as shipped), or from
+GX52 0.7 where a measurement confirmed it.
 [libx52](https://github.com/nirenjan/libx52) is the second reference used to cross-check (character
 set, report order, X52 non-Pro differences); nothing is copied from it (GPL-2.0-only).
 The X52 (non-Pro) has not been tested; see [X52 (non-Pro)](#x52-non-pro).
@@ -41,7 +23,7 @@ A device is only driven when its vendor and product ID are in this table.
 
 The joystick has one interface, bound to the kernel's `usbhid` driver. Vendor control transfers go
 to the device without claiming or detaching that interface, so the joystick keeps working for games
-while the app writes to it (S1, and S3 for input during writes).
+while the app writes to it, and input keeps arriving during writes.
 
 ### udev rule
 
@@ -56,22 +38,21 @@ SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="06a3", ATTR{idPro
 KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
 ```
 
-- The first line gives the logged-in user an ACL on the raw USB node (S1). It is needed for LEDs,
+- The first line gives the logged-in user an ACL on the raw USB node. It is needed for LEDs,
   brightness, MFD text and clocks.
-- The second line gives the same user write access to `/dev/uinput`, the line `steam-devices` uses
-  (S9). It is needed only for the virtual mouse. Security note for the guidance page: write access
+- The second line gives the same user write access to `/dev/uinput`, the line `steam-devices` uses.
+  It is needed only for the virtual mouse. Security note for the guidance page: write access
   to uinput lets any program of the logged-in user inject keyboard and mouse input.
-- The evdev node (`/dev/input/event*`) needs no rule: systemd's joystick `uaccess` rule covers it
-  (S1, S4).
+- The evdev node (`/dev/input/event*`) needs no rule: systemd's joystick `uaccess` rule covers it.
 
 After installing or restoring the rule, `sudo udevadm control --reload && sudo udevadm trigger` is
-enough: the ACL comes back on the existing node **without replugging** and `open` works at once
-(S4). So the guidance page says there is no need to unplug, and the app retries `open` while it is
+enough: the ACL comes back on the existing node **without replugging** and `open` works at once.
+So the guidance page says there is no need to unplug, and the app retries `open` while it is
 in the "no permission" state (every second, or at once when the user presses "Try Again").
 
 ### Access states
 
-The app tells these states apart without guessing (S4, host and sandbox behave the same):
+The app tells these states apart without guessing (host and sandbox behave the same):
 
 | State | How it is detected | What works |
 | --- | --- | --- |
@@ -86,8 +67,8 @@ affect LEDs, MFD or clocks.
 
 ### libx52's x52d
 
-libx52's `x52d` daemon drives the same LEDs, MFD and clocks, so the two would overwrite each other
-(risk R11 of the rewrite analysis). GX52 does not stop it; it warns while it runs.
+libx52's `x52d` daemon drives the same LEDs, MFD and clocks, so the two would overwrite each other.
+GX52 does not stop it; it warns while it runs.
 
 - **Socket:** `x52d` listens on a Unix stream socket, by default
   `$(prefix)/$(localstatedir)/run/x52d.cmd` (`daemon/constants.h`, `include/meson.build` and
@@ -117,9 +98,9 @@ Every command is a vendor control transfer to the device with no data stage:
 - `bmRequestType = 0x40` (host-to-device, vendor, recipient device), `bRequest = 0x91`;
 - `wIndex` is the command, `wValue` its argument;
 - timeout 5 s (GX52 0.7); `nusb::Device::control_out` with `ControlType::Vendor` and
-  `Recipient::Device` (S1).
+  `Recipient::Device`.
 
-| Command | `wIndex` | `wValue` encoding | Values | Observed behaviour (X52 Pro, S2) |
+| Command | `wIndex` | `wValue` encoding | Values | Observed behaviour (X52 Pro) |
 | --- | --- | --- | --- | --- |
 | MFD brightness | `0xb1` | level | `0`–`128` | `0` backlight off, `16` very dim, `128` full |
 | LED brightness | `0xb2` | level | `0`–`128` | One value for every LED, stick and throttle, POV 1 included. `0` off, `128` maximum; `255` looks the same as `128`, so the app never sends more than `128` |
@@ -145,7 +126,8 @@ Notes on the commands:
   transition on either side changes it). The MFD clocks show only the time of day, so the app
   first normalises the difference into `−720`–`+720` minutes by adding or subtracting whole days
   (1440 minutes); the time shown is the same, and every normalised value fits the 10-bit field. For
-  example clock 1 at UTC−5 and clock 2 at UTC+14 is `+1140`, sent as `−300`. S2 tested only
+  example clock 1 at UTC−5 and clock 2 at UTC+14 is `+1140`, sent as `−300`.
+  Testing covered only
   differences that stay within the same day (`+60`, `−120`). On 2026-11-07, with clock 1 at 14:43,
   clock 2 at `+617` showed 01:00, past midnight forward, and clock 3 at `−719` showed 02:44 (the
   device-check `midnight`). A negative offset that crosses midnight backward needs clock 1 before
@@ -163,8 +145,8 @@ Notes on the commands:
   | MM-DD-YY | month | day | year % 100 |
   | YY-MM-DD | year % 100 | month | day |
 
-  S2 verified the field order (`first.second.third`) with DD-MM-YY; the other two rows are the same
-  three fields in a different order.
+  Testing verified the field order (`first.second.third`) with DD-MM-YY; the other two rows are the
+  same three fields in a different order.
 - **MFD text.** A line holds 16 bytes after conversion through the character set. The app sends the
   clear command, then the bytes two per transfer; an odd last byte is padded with a space (`0x20`).
   Never raw UTF-8.
@@ -172,7 +154,7 @@ Notes on the commands:
 
 ### LED bits
 
-Bits for `0xb8` (GX52 0.7, all verified on the X52 Pro in S2). A bi-colour LED has a red and a green
+Bits for `0xb8` (GX52 0.7, all verified on the X52 Pro). A bi-colour LED has a red and a green
 bit; amber is both on, off is both off. A single-colour LED has one bit.
 
 | LED | Location | Red bit | Green / on bit |
@@ -189,12 +171,12 @@ bit; amber is both on, off is both off. A single-colour LED has one bit.
 | i | throttle (clutch) | `18` | `19` |
 | Throttle | throttle |  | `20` |
 
-Every bi-colour LED shows red, green, amber and off as encoded (S2). To set a bi-colour LED the app
+Every bi-colour LED shows red, green, amber and off as encoded. To set a bi-colour LED the app
 sends both bits; GX52 0.7 sent the green bit first, then the red bit.
 
 **POV 1 LED: fixed green, not controllable.** The lower hat between B and C has a green LED that
 stays green with every LED above switched off, follows the LED brightness (`0xb2`: dark at `0`,
-back at `128`) and blinks with `0xb4`. It does not react to any `0xb8` bit (S2 scan, 2026-11-02).
+back at `128`) and blinks with `0xb4`. It does not react to any `0xb8` bit (scan on 2026-11-02).
 The app shows it as a fixed, non-editable green LED with a short explanation (GitHub issue #3).
 
 **Throttle LED: red past the afterburner detent.** With bit `20` on, the throttle LED turns red
@@ -204,7 +186,7 @@ disables it or moves its threshold. With bit `20` off the LED stays dark past th
 
 ### Power-on state
 
-As observed in S2, after plugging in: **the MFD backlight and the throttle LEDs are off, while the
+As observed after plugging in: **the MFD backlight and the throttle LEDs are off, while the
 stick LEDs are lit.** Both come on once the brightness commands (`0xb1`, `0xb2`) are sent. The
 initial values of the device's registers (brightness, LED states, clocks, text) were not read and
 are not inferred from this; the device has no read command the app uses.
@@ -217,8 +199,7 @@ Requirement: on **every connect** (start-up, hotplug, resume, permission granted
 The MFD shows one byte per character from this fixed 256-entry table. It was read from photos of
 all 256 values on an X52 Pro (2026-10-28) and cross-checked against the glyph list in libx52's
 `x52_char_map.cfg` for the ambiguous ones (`0x0E`, `0x0F`, `0x10`, `0x9B`–`0x9F`). The table is our
-own transcription; libx52's file is GPL-2.0-only and is not copied. How it was read is in
-[spike 02](https://github.com/leinardi/gx52/blob/main/docs/internal/research/spikes/02-mfd-charset.md).
+own transcription; libx52's file is GPL-2.0-only and is not copied.
 
 Summary:
 
@@ -264,7 +245,7 @@ Rules for the app:
 ## evdev input map (X52 Pro)
 
 Read through `/dev/input/event*` with the `evdev` crate, without grabbing, while `usbhid` stays
-bound (S3). Device name "Logitech X52 Professional H.O.T.A.S.". Every control was pressed or moved
+bound. Device name "Logitech X52 Professional H.O.T.A.S.". Every control was pressed or moved
 by hand, one at a time, on 2026-11-02.
 
 ### Buttons
@@ -333,8 +314,8 @@ scroll wheel, "Thr. hat up" (right, down, left) for the throttle hat.
 ### Mode selector
 
 Each position is a held button (715 / 716 / 717). The current mode is in the key state at start-up
-(`EVIOCGKEY`), so the app knows it without waiting for a change. Turning the selector bounces (S3
-log): a position can pulse on and off several times within about 150 ms, there can be gaps of about
+(`EVIOCGKEY`), so the app knows it without waiting for a change. Turning the selector bounces:
+a position can pulse on and off several times within about 150 ms, there can be gaps of about
 70 ms with no mode held, and going from 3 to 1 passes through 2.
 
 Debounce rule: a mode becomes active only after **one** mode button has been held, alone, for **200
@@ -343,7 +324,7 @@ through for less than 200 ms (2 on the way from 3 to 1) is never applied.
 
 ## Hotplug
 
-One device-watch component with two sources (S4, verified on 2026-11-02):
+One device-watch component with two sources (verified on 2026-11-02):
 
 - **On the host:** `nusb::watch_devices`. It reports every connect and disconnect, 0.3–0.6 s before
   polling would.
@@ -356,13 +337,13 @@ One device-watch component with two sources (S4, verified on 2026-11-02):
   so the host watch also re-lists every 5 s.
 
 Devices are matched by **vendor and product ID** (later also serial or port path, for several
-devices), **never by USB address**: the address changes on every replug (S4 saw `4`, `5`, `6`).
+devices), **never by USB address**: the address changes on every replug.
 "Device appeared" is a trigger to enumerate, open and send the full state (see
 [Power-on state](#power-on-state)).
 
 ## Virtual mouse (uinput)
 
-The ministick drives a uinput pointer, as the Windows driver does in software (S9). No USB command
+The ministick drives a uinput pointer, as the Windows driver does in software. No USB command
 is involved. The joystick's evdev node is read **without grabbing**, so games still see every axis
 and button.
 
@@ -399,7 +380,7 @@ second table are the defaults of the Speed, Curve and Deadzone settings.
 Release rule: when the joystick goes away (the evdev node is closed) or the feature is disabled,
 the app sends `BTN_LEFT` and `BTN_RIGHT` release events followed by `SYN_REPORT`, then removes the
 uinput device: it exists only while the feature is on and a joystick is connected. Destroying the
-uinput device also releases them (S9 unplug test), but the app does not rely on that.
+uinput device also releases them, but the app does not rely on that.
 
 ## X52 (non-Pro)
 
@@ -411,13 +392,13 @@ app assumes, all unverified until a test on the device is recorded here:
   0.7 sent exactly these to the non-Pro (its `x52_profile` has brightness, clock and date fields but
   no LEDs). The individual LEDs (`0xb8`) are not controllable on the non-Pro, so the app never sends
   `0xb8` to it and hides the LED editor, as GX52 0.7 did.
-- **Shift and blink** (`0xfd`, `0xb4`) were verified only on the X52 Pro (S2); GX52 0.7 never sent
+- **Shift and blink** (`0xfd`, `0xb4`) were verified only on the X52 Pro; GX52 0.7 never sent
   either to any device. They are not sent to the non-Pro until verified on one.
 - **Character set:** assumed the same as the X52 Pro.
 - **evdev map:** the candidate is GX52 0.7's non-Pro table (`X52EvdevKeyMapping` in
   `gx52/driver/x52_driver.py`): the first 15 buttons as on the Pro (288–302), then POV 2 303 and
-  704–706, throttle hat 707–710, **mode 1, 2, 3 at 711/712/713**, MFD Function / Start/Stop / Reset
-  at 714 / 715 / 716, i at 717, mouse button 718, scroll wheel press / down / up at 719 / 720 / 721.
+  704–706, throttle hat 707–710, **mode 1/2/3 at 711/712/713**, MFD Function / Start/Stop / Reset at
+  714 / 715 / 716, i at 717, mouse button 718, scroll wheel press / down / up at 719 / 720 / 721.
   It is to be compared with the non-Pro report order in [libx52](https://github.com/nirenjan/libx52)
   (which differs from the Pro's). Not checked against a device.
 - **Ministick and mouse controls**, derived from documented sources, not tested on a device. The
@@ -454,7 +435,7 @@ The complete list. Anything not in it is never sent, to any device.
 The `x52` crate encodes these as typed commands (an enum, not raw numbers), so a value outside the
 allowed range cannot be built; the transport only ever sees encoded commands.
 
-**Not part of the protocol, never sent by the app.** The S2 and hands-on experiments sent values
+**Not part of the protocol, never sent by the app.** Hands-on experiments sent values
 outside this list to find out what the device does:
 
 - the `0xb8` scan with LED bits `0` and `21`–`255`, state on and off (accepted without error, no

@@ -1,27 +1,10 @@
 # GX52 architecture
 
-How the Rust rewrite is built: crates, threads and data flow, the state model, persistence, errors,
-the sandbox and the test strategy. The decisions behind it are in
-[rewrite-analysis.md](https://github.com/leinardi/gx52/blob/main/docs/internal/history/rewrite-analysis.md)
-(sections 1, 5, 10 and 12); what the device does is in [protocol.md](protocol.md); the profile
-format is in [profiles.md](profiles.md). Where a value comes from a spike, the spike is named.
-
-## Skills
-
-The skills rule is in [AGENTS.md, "Project
-skills"](https://github.com/leinardi/gx52/blob/main/AGENTS.md#project-skills) and is not repeated
-here. On top of it:
-
-- The Meson + Cargo + Blueprint + Flatpak scaffold of milestone M0 is generated with the
-  `gtk-rs-new-app` skill, as spike S6 did (`spikes/s6-hello` on the `spikes` branch).
-- Every review uses the project's `adversarial-review` skill, which routes Rust and GTK code to
-  `gtk-rs-review` and `rust-review`.
-- Each roadmap task that touches code points to the AGENTS.md rule, so the skills are loaded before
-  the work starts.
+How GX52 is built: crates, threads and data flow, the state model, persistence, errors, the
+sandbox and the test strategy. What the device does is in [protocol.md](protocol.md); the profile
+format is in [profiles.md](profiles.md).
 
 ## Workspace
-
-As committed in `a763177`; the crates are still stubs.
 
 | Member | Path | Role |
 | --- | --- | --- |
@@ -31,21 +14,19 @@ As committed in `a763177`; the crates are still stubs.
 
 - **Lints** live only in `[workspace.lints]` of the root `Cargo.toml`; every member opts in with
   `[lints] workspace = true`. `unsafe_code = "deny"`: nothing in the app needs `unsafe`. USB goes
-  through `nusb`, evdev reads and the uinput device through the `evdev` crate's safe API, as in the
-  S9 spike (and S1, S3, S4 for `nusb` and evdev reads).
+  through `nusb`, evdev reads and the uinput device through the `evdev` crate's safe API.
 - **Toolchain:** `rust-toolchain.toml` pins `1.98.0`, the same release as the workspace
   `rust-version` and as the Rust of `org.freedesktop.Sdk.Extension.rust-stable//26.08`, which the
   Flatpak builds use. The pin follows that extension: Cargo refuses a `rust-version` newer than its
   `rustc`, so a pin ahead of the extension breaks the Flatpak build.
-- **Meson + Cargo:** the layout of the S6 scaffold. Meson drives Cargo for the root package,
+- **Meson + Cargo:** Meson drives Cargo for the root package,
   sets the constants of `src/config.rs` (app ID, profile, version, paths) through the environment
   of its cargo invocations (`option_env!`, with Devel defaults so a plain `cargo build` works),
   compiles the Blueprint templates and
   the GResource, installs the desktop file, metainfo, icons and GSettings schema, and runs their
-  validation in `meson test`. The Devel profile builds `com.leinardi.gx52.Devel`. S6 built this on
-  the host, as a Devel Flatpak and as an offline Flathub-style build. The `x52` and `meta` crates
-  are built by Cargo only.
-- **Versions:** GNOME 50 required, GNOME 51 runtime (S6 decision): `gtk4` 0.11 with `gnome_50`,
+  validation in `meson test`. The Devel profile builds `com.leinardi.gx52.Devel`. The `x52` and
+  `meta` crates are built by Cargo only.
+- **Versions:** GNOME 50 required, GNOME 51 runtime: `gtk4` 0.11 with `gnome_50`,
   `libadwaita` 0.9 with `v1_9` + `gtk_v4_22`, Meson `gtk4 >= 4.22`, `libadwaita-1 >= 1.9`. A feature
   is raised only when an API needs it, together with the Meson check.
 
@@ -69,7 +50,7 @@ encoded control transfer; the app implements it with `nusb`, the tests with a re
   [tooling-todo.md](https://github.com/leinardi/gx52/blob/main/docs/internal/tooling-todo.md#needs-the-cargo-workspace)
   `clippy.toml` item.
 - **Event timestamps:** the mode debounce uses the timestamps evdev puts on each event, not the
-  wall clock, so it is tested with recorded event sequences (the S3 bounce log is the first
+  wall clock, so it is tested with recorded event sequences (a bounce log from a device is the first
   fixture).
 
 ## Untrusted input
@@ -86,8 +67,8 @@ ones in the profile directory) and the legacy `gx52.db`. Both are parsed as untr
   (brightness `0`–`128`, offsets `0`–`720`, ...), and the type system guarantees that nothing
   reaches the transport without going through them;
 - the legacy database is never opened or modified: a private copy of a consistent snapshot is
-  read, and an import whose files keep changing is deferred (rewrite analysis, section 10;
-  [profiles.md](profiles.md#files)).
+  read, and an import whose files keep changing is deferred
+  ([profiles.md](profiles.md#files)).
 
 The boundaries, with the rule each keeps and the tests that hold it, are listed in the
 `adversarial-review` skill's untrusted-input pass; M3 decided against a separate `trust-boundary`
@@ -146,49 +127,46 @@ flowchart LR
   (`src/device/writer.rs`). Messages in: the desired state, `Selected` and `Gone` from the device
   watch, `Retry` from the user, `Shutdown`. Events out: the access state and errors, each error
   reported once until the device recovers.
-  - **Sent-command cache:** the writer keeps, per `x52::command::CommandSlot`, the encoded
-    transfers it last sent successfully. On every wake it resolves the desired state at the
-    injected clock's current instant (`x52::state::DeviceState::resolve`) and sends exactly the
-    commands whose transfers differ from the cache, then updates the cache. There is no
-    state-to-state diff: the comparison is with what the device was last told.
-  - **Coalescing:** before resolving, it drains every queued message and keeps only the latest
-    state, so a dragged brightness slider becomes one transfer per drain, not one per pixel. The
-    S7 worker (`spikes/s7-led-editor/src/device.rs` on the `spikes` branch) kept the latest command
-    per LED in a map and replayed that map on every connect.
-  - **Full-state replay on connect:** a newly opened device starts with an empty cache, so its
-    first wake sends the full state, brightness first, then LEDs, MFD lines, clocks, date, shift
-    and blink, as [protocol.md, "Power-on state"](protocol.md#power-on-state) requires. Start-up,
-    hotplug, a replug into the same port (a new generation of the selection), a resume that
-    re-enumerates the device and a granted permission all go through a new open. S7's worker did
-    this and the device caught up within about a second after a replug.
-  - **Permission:** `EACCES` on `open` gives "found, no permission". While in it the writer retries
-    `open` every **1 s** on both backends (host and sandbox), at once on every `Selected` and on
-    "Try again" (`Retry`), so an ACL restored with `udevadm trigger` and no hotplug event is
-    noticed (S4: the ACL comes back without a replug). A failed transfer drops the handle and the
-    cache, and the writer retries `open` every 1 s for as long as the device stays selected, so a
-    transient failure or a missed reattachment never leaves it waiting for an event that may not
-    come.
-  - **Clocks and the wake schedule:** the writer owns the injected time source. The desired state
-    carries only clock *sources* (local, UTC, a zone, a fixed offset) and 12/24 h; the writer turns
-    them into the clock 1 time and the clock 2/3 offsets it sends, with the `x52` clock logic; the
-    device clock does not tick by itself (S2). The writer wakes at the earlier of the next instant
-    a clock has to be re-sent (the next minute boundary, or an earlier DST transition from `jiff`)
-    and **5 s** of monotonic time. Because every wake compares the resolved clock commands with
-    the cache, a minute rollover, a date rollover, a DST transition, a forward jump and a backward
-    wall-clock jump are all corrected within 5 s.
-  - **Resume (decided in M2):** monotonic time does not advance during suspend, so a pending wait
-    ends at most 5 s after the resume and the clocks are re-sent then. The app asks for no logind
-    D-Bus permission to hear about suspend; a resume that re-enumerates the USB device is a new
-    selection with a reopen and a full replay.
-  - **Channels:** messages towards the workers go through `std::sync::mpsc` (unbounded, so the main
-    thread never blocks on a send; the writer waits with `recv_timeout`), events towards the main
-    thread through `async_channel`, which the main thread awaits in a `glib::spawn_future_local`
-    loop. Monotonic time comes from an injected source too, so the tests drive every schedule
-    without sleeping.
+    - **Sent-command cache:** the writer keeps, per `x52::command::CommandSlot`, the encoded
+      transfers it last sent successfully. On every wake it resolves the desired state at the
+      injected clock's current instant (`x52::state::DeviceState::resolve`) and sends exactly the
+      commands whose transfers differ from the cache, then updates the cache. There is no
+      state-to-state diff: the comparison is with what the device was last told.
+    - **Coalescing:** before resolving, it drains every queued message and keeps only the latest
+      state, so a dragged brightness slider becomes one transfer per drain, not one per pixel.
+    - **Full-state replay on connect:** a newly opened device starts with an empty cache, so its
+      first wake sends the full state, brightness first, then LEDs, MFD lines, clocks, date, shift
+      and blink, as [protocol.md, "Power-on state"](protocol.md#power-on-state) requires. Start-up,
+      hotplug, a replug into the same port (a new generation of the selection), a resume that
+      re-enumerates the device and a granted permission all go through a new open.
+    - **Permission:** `EACCES` on `open` gives "found, no permission". While in it the writer
+      retries `open` every **1 s** on both backends (host and sandbox), at once on every `Selected`
+      and on "Try again" (`Retry`), so an ACL restored with `udevadm trigger` and no hotplug event
+      is noticed (the ACL comes back without a replug). A failed transfer drops the handle and the
+      cache, and the writer retries `open` every 1 s for as long as the device stays selected, so a
+      transient failure or a missed reattachment never leaves it waiting for an event that may not
+      come.
+    - **Clocks and the wake schedule:** the writer owns the injected time source. The desired state
+      carries only clock *sources* (local, UTC, a zone, a fixed offset) and 12/24 h; the writer
+      turns them into the clock 1 time and the clock 2/3 offsets it sends, with the `x52` clock
+      logic; the device clock does not tick by itself. The writer wakes at the earlier of the next
+      instant a clock has to be re-sent (the next minute boundary, or an earlier DST transition from
+      `jiff`) and **5 s** of monotonic time. Because every wake compares the resolved clock commands
+      with the cache, a minute rollover, a date rollover, a DST transition, a forward jump and a
+      backward wall-clock jump are all corrected within 5 s.
+    - **Resume (decided in M2):** monotonic time does not advance during suspend, so a pending wait
+      ends at most 5 s after the resume and the clocks are re-sent then. The app asks for no logind
+      D-Bus permission to hear about suspend; a resume that re-enumerates the USB device is a new
+      selection with a reopen and a full replay.
+    - **Channels:** messages towards the workers go through `std::sync::mpsc` (unbounded, so the
+      main thread never blocks on a send; the writer waits with `recv_timeout`), events towards the
+      main thread through `async_channel`, which the main thread awaits in a
+      `glib::spawn_future_local` loop. Monotonic time comes from an injected source too, so the
+      tests drive every schedule without sleeping.
 - **evdev reader thread.** Follows the device watch's selection (`src/device/reader.rs`). USB
   presence and evdev readiness are tracked apart: while a device is selected and its evdev node is
   not found or cannot be opened, the reader looks for it again every 250 ms (the node can appear a
-  poll after the USB device, S4). A node belongs to the selected device when its sysfs device
+  poll after the USB device). A node belongs to the selected device when its sysfs device
   (`/sys/class/input/eventN/device`, canonicalised) lies under the selected USB device's sysfs
   directory, so USB and evdev always come from the same physical device. It opens the node
   **without grabbing** (games keep every input), reads the initial mode with `EVIOCGKEY`, reads
@@ -196,82 +174,82 @@ flowchart LR
   [protocol.md](protocol.md#mode-selector), and sends to the main thread mode changes, **every key
   event** (buttons, toggles, the hats that are keys) and **the POV 1 hat axes** (`ABS_HAT0X` /
   `ABS_HAT0Y`), a few events per second at most, and the other **axis events** only while the
-  input tester listens. Nothing logs per event (axis noise, S3).
-  - Key and hat events always flow because the MFD "Last button" source needs them while the
-    window is hidden. The reader's events (`ReaderEvent`) are `NodeOpened`, `NodeClosed`, `Mode`,
-    `Held` and `Axes`. A `Held` change is a `Snapshot`, a `Key` (a button other than the mode
-    selector, pressed or released; repeats are dropped) or a `Pov1` position (sent only when it
-    changes).
-    The main thread keeps the set of held buttons and hat directions from them, an
-    `x52::input::HeldInputs` in press order, whose newest entry is the "last button". On every
-    open of the node the reader sends the current key and hat state (`EVIOCGKEY`, `EVIOCGABS`)
-    before any event, so the set is rebuilt; on `ENODEV`, a read error, `Gone` or a reader
-    shutdown the main thread clears the set, so no button stays "held" on the MFD after a
-    disconnect. A snapshot says what is held but not since when, so its order is fixed: the held
-    keys in ascending evdev code order, then the POV 1 directions (up, right, down, left). The
-    "last button" after an open is the POV 1 direction if one is held, else the highest key code.
-    The main thread also keeps the notch hold (`device::notch::NotchHold`,
-    [profiles.md](profiles.md#control-names)): a wheel notch pressed is shown in place of the
-    newest held entry until a 0.7 s `glib` timeout fires, another control is pressed (a key, or a
-    POV 1 direction not held before), a snapshot arrives or the set is cleared. The hold follows
-    the kind of change, never a comparison of sets, since a snapshot is not a press. A change
-    pushes the state only when the input shown changed and the set on the device shows a "last
-    button" line, and never logs. The line shows that input's custom name in the mode shown, else
-    its built-in name.
-  - The other axes flow only while an input tester is shown. The main thread counts the testers
-    that are mapped (`Application::listen_to_axes` and `ignore_axes`) and sends the reader
-    `ListenToAxes` on the first and `IgnoreAxes` after the last, so nothing streams while the
-    window is hidden or another page is shown. The flag is kept across node reopens and new
-    selections. While it is on, the reader sends an `Axes` `Snapshot` (every axis but POV 1's,
-    with the range and value `EVIOCGABS` reports) for every `ListenToAxes` while a node is open
-    (also one right after an `IgnoreAxes`, since the main thread has forgotten the axes by then)
-    and on every open while listening, after the held snapshot. Then it sends one `Values` event
-    per read with the last value of each axis that moved, so the throttle's noise is coalesced
-    to one message per wake-up. The main thread keeps them in an `x52::input::AxisValues`,
-    cleared with the held set and when the last tester goes; an `Axes` event that arrives with
-    no tester left is dropped. Whether the node is open is part of `DeviceStatus`
-    (`input_open`), cleared on `Selected` and `Gone` as well, because the earlier selection's
-    `NodeClosed` can be dropped as stale.
-  - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
-    further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
-    follow the wall clock, so the time since the last key event is measured with monotonic time.
-  - On `ENODEV` or a read error it closes the node and looks for it again while the USB device
-    stays selected; on `Gone` for its generation it stops reading.
-  - Control transfers and evdev reads do not disturb each other (S3), so writer and reader are
-    independent.
+  input tester listens. Nothing logs per event (axis noise).
+    - Key and hat events always flow because the MFD "Last button" source needs them while the
+      window is hidden. The reader's events (`ReaderEvent`) are `NodeOpened`, `NodeClosed`, `Mode`,
+      `Held` and `Axes`. A `Held` change is a `Snapshot`, a `Key` (a button other than the mode
+      selector, pressed or released; repeats are dropped) or a `Pov1` position (sent only when it
+      changes).
+      The main thread keeps the set of held buttons and hat directions from them, an
+      `x52::input::HeldInputs` in press order, whose newest entry is the "last button". On every
+      open of the node the reader sends the current key and hat state (`EVIOCGKEY`, `EVIOCGABS`)
+      before any event, so the set is rebuilt; on `ENODEV`, a read error, `Gone` or a reader
+      shutdown the main thread clears the set, so no button stays "held" on the MFD after a
+      disconnect. A snapshot says what is held but not since when, so its order is fixed: the held
+      keys in ascending evdev code order, then the POV 1 directions (up, right, down, left). The
+      "last button" after an open is the POV 1 direction if one is held, else the highest key code.
+      The main thread also keeps the notch hold (`device::notch::NotchHold`,
+      [profiles.md](profiles.md#control-names)): a wheel notch pressed is shown in place of the
+      newest held entry until a 0.7 s `glib` timeout fires, another control is pressed (a key, or a
+      POV 1 direction not held before), a snapshot arrives or the set is cleared. The hold follows
+      the kind of change, never a comparison of sets, since a snapshot is not a press. A change
+      pushes the state only when the input shown changed and the set on the device shows a "last
+      button" line, and never logs. The line shows that input's custom name in the mode shown, else
+      its built-in name.
+    - The other axes flow only while an input tester is shown. The main thread counts the testers
+      that are mapped (`Application::listen_to_axes` and `ignore_axes`) and sends the reader
+      `ListenToAxes` on the first and `IgnoreAxes` after the last, so nothing streams while the
+      window is hidden or another page is shown. The flag is kept across node reopens and new
+      selections. While it is on, the reader sends an `Axes` `Snapshot` (every axis but POV 1's,
+      with the range and value `EVIOCGABS` reports) for every `ListenToAxes` while a node is open
+      (also one right after an `IgnoreAxes`, since the main thread has forgotten the axes by then)
+      and on every open while listening, after the held snapshot. Then it sends one `Values` event
+      per read with the last value of each axis that moved, so the throttle's noise is coalesced
+      to one message per wake-up. The main thread keeps them in an `x52::input::AxisValues`,
+      cleared with the held set and when the last tester goes; an `Axes` event that arrives with
+      no tester left is dropped. Whether the node is open is part of `DeviceStatus`
+      (`input_open`), cleared on `Selected` and `Gone` as well, because the earlier selection's
+      `NodeClosed` can be dropped as stale.
+    - The poll timeout is the debounce deadline capped at 250 ms, so a hold is applied without a
+      further event and a shutdown or a new selection is noticed within 250 ms. evdev timestamps
+      follow the wall clock, so the time since the last key event is measured with monotonic time.
+    - On `ENODEV` or a read error it closes the node and looks for it again while the USB device
+      stays selected; on `Gone` for its generation it stops reading.
+    - Control transfers and evdev reads do not disturb each other, so writer and reader are
+      independent.
 - **Virtual-mouse loop.** Its own thread, "virtual-mouse", part of the device service
   (`src/device/mouse_loop.rs`, the pure mapping in `src/device/mouse.rs`). It drives the uinput
-  pointer "GX52 virtual mouse" with the S9 mapping and the tuning of the five GSettings keys
+  pointer "GX52 virtual mouse" with the mapping and the tuning of the five GSettings keys
   ([protocol.md, "Virtual mouse"](protocol.md#virtual-mouse-uinput)).
-  - One FIFO channel: `Enable(tuning)`, `Tune(tuning)` and `Disable` from the main thread, which
-    follows the keys (a tuning change applies to the running pointer, without creating it again),
-    and `Shutdown`, which releases both buttons and removes the device before the thread exits;
-    `Present`, the ministick values, the four mouse buttons and `Gone` from the reader. The reader
-    always forwards them while its node is open, whether or not the switch is on (the kernel queue
-    never fills while the mouse is off), and sends `Present` with the ministick's position on
-    every open and `Gone` on every close. The loop alone decides what to do with them.
-  - Contract: the loop acts on what *arrives* after `Enable`. A click made just before the switch
-    turned on, still queued while the reader was not scheduled, can arrive after `Enable` and is
-    then injected; this window is accepted. Nothing that arrived before `Enable`, or after
-    `Disable`, is emitted, and a button is released only when the loop emitted its press, so no
-    button stays held. Buttons held when the node opens are not pressed for the loop.
-  - The uinput device exists only while the switch is on and a joystick is present: on `Gone` or
-    `Disable` the loop sends `BTN_LEFT` and `BTN_RIGHT` up followed by `SYN_REPORT`, then drops
-    the device, which removes it; a replug creates a new one. A leftover pointer could make GNOME's
-    "disable touchpad while a mouse is connected" turn a laptop's touchpad off.
-  - Failures: a failed creation, or a failed write (motion, a click, a release), releases both
-    buttons as far as it can, drops the device, reports the failure to the main thread once
-    (`DeviceEvent::VirtualMouse`, sent on every status change and logged there) and, while the
-    switch is on and a joystick present, creates the device again every second, so a fixed
-    `/dev/uinput` brings the pointer back without a replug or a toggle. A failed release during
-    `Gone` or `Disable` still drops the device, with nothing to retry. The Preferences warning
-    runs its own access check.
-  - Timing: while the pointer exists and a ministick axis is outside the deadzone, ticks fall
-    every 10 ms on a monotonic deadline that incoming messages do not move, so frequent reports
-    cannot starve motion; missed ticks are skipped, not caught up, so motion never comes in bursts.
-    Centred, without a pointer or failed, the loop blocks on its channel or waits only for the
-    next retry: no 100 Hz wake-ups while idle.
-- **Device watch.** One component, two sources (S4, `src/device/watch.rs`): `nusb::watch_devices`
+    - One FIFO channel: `Enable(tuning)`, `Tune(tuning)` and `Disable` from the main thread, which
+      follows the keys (a tuning change applies to the running pointer, without creating it again),
+      and `Shutdown`, which releases both buttons and removes the device before the thread exits;
+      `Present`, the ministick values, the four mouse buttons and `Gone` from the reader. The reader
+      always forwards them while its node is open, whether or not the switch is on (the kernel queue
+      never fills while the mouse is off), and sends `Present` with the ministick's position on
+      every open and `Gone` on every close. The loop alone decides what to do with them.
+    - Contract: the loop acts on what *arrives* after `Enable`. A click made just before the switch
+      turned on, still queued while the reader was not scheduled, can arrive after `Enable` and is
+      then injected; this window is accepted. Nothing that arrived before `Enable`, or after
+      `Disable`, is emitted, and a button is released only when the loop emitted its press, so no
+      button stays held. Buttons held when the node opens are not pressed for the loop.
+    - The uinput device exists only while the switch is on and a joystick is present: on `Gone` or
+      `Disable` the loop sends `BTN_LEFT` and `BTN_RIGHT` up followed by `SYN_REPORT`, then drops
+      the device, which removes it; a replug creates a new one. A leftover pointer could make
+      GNOME's "disable touchpad while a mouse is connected" turn a laptop's touchpad off.
+    - Failures: a failed creation, or a failed write (motion, a click, a release), releases both
+      buttons as far as it can, drops the device, reports the failure to the main thread once
+      (`DeviceEvent::VirtualMouse`, sent on every status change and logged there) and, while the
+      switch is on and a joystick present, creates the device again every second, so a fixed
+      `/dev/uinput` brings the pointer back without a replug or a toggle. A failed release during
+      `Gone` or `Disable` still drops the device, with nothing to retry. The Preferences warning
+      runs its own access check.
+    - Timing: while the pointer exists and a ministick axis is outside the deadzone, ticks fall
+      every 10 ms on a monotonic deadline that incoming messages do not move, so frequent reports
+      cannot starve motion; missed ticks are skipped, not caught up, so motion never comes in
+      bursts. Centred, without a pointer or failed, the loop blocks on its channel or waits only for
+      the next retry: no 100 Hz wake-ups while idle.
+- **Device watch.** One component, two sources (`src/device/watch.rs`): `nusb::watch_devices`
   when not sandboxed, re-listing the USB devices at start, after every hotplug event (a
   `Disconnected` carries no vendor or product ID) and every 5 s, because the kernel drops hotplug
   events when the netlink socket overflows (`ENOBUFS`, seen on resume from suspend) and `nusb`
@@ -283,148 +261,153 @@ flowchart LR
   so the `Selected` never clears that mode. The reader's node and mode events carry the
   generation of their selection, and the main thread drops those of any selection but the current
   one, so a mode change of the previous device still in flight never applies to the next.
-  - **Selection:** the USB device's sysfs path is the selection key. With nothing selected, the
-    first supported device in sysfs-path order is selected; the selection is kept while that path
-    stays listed, whatever the enumeration order and whatever else appears (a second X52 does not
-    steal it). When the path goes, the watch sends `Gone` for its generation and selects the next
-    supported device, if any.
-  - **Reattachment:** every selection has a generation. A host `Disconnected` for the selected
-    attachment, or a different attachment at the selected path (a replug faster than the re-list,
-    or between two polls), sends `Gone` for the old generation and `Selected` with the same path,
-    the new attachment and a new generation, so the writer reopens and replays everything. A
-    disconnected attachment is left out of the listings until one no longer contains it, since
-    its sysfs directory can outlive the event for a moment.
-  - **Shutdown:** the hotplug stream is awaited with `futures_lite::future::or` against a shutdown
-    signal; the polling loop waits on the same signal with the 250 ms timeout. Dropping the
-    trigger signals both.
+    - **Selection:** the USB device's sysfs path is the selection key. With nothing selected, the
+      first supported device in sysfs-path order is selected; the selection is kept while that path
+      stays listed, whatever the enumeration order and whatever else appears (a second X52 does not
+      steal it). When the path goes, the watch sends `Gone` for its generation and selects the next
+      supported device, if any.
+    - **Reattachment:** every selection has a generation. A host `Disconnected` for the selected
+      attachment, or a different attachment at the selected path (a replug faster than the re-list,
+      or between two polls), sends `Gone` for the old generation and `Selected` with the same path,
+      the new attachment and a new generation, so the writer reopens and replays everything. A
+      disconnected attachment is left out of the listings until one no longer contains it, since
+      its sysfs directory can outlive the event for a moment.
+    - **Shutdown:** the hotplug stream is awaited with `futures_lite::future::or` against a shutdown
+      signal; the polling loop waits on the same signal with the 250 ms timeout. Dropping the
+      trigger signals both.
 - **ksni tray** (`src/tray.rs`, `src/application/background.rs`). `ksni` with the `async-io`
-  feature runs its own executor thread and is spawned from `glib::spawn_future_local` (desk
-  research, S5). The tray item holds only plain data: a `TrayModel` slot (status line, whether a
+  feature runs its own executor thread and is spawned from `glib::spawn_future_local`.
+  The tray item holds only plain data: a `TrayModel` slot (status line, whether a
   window is shown, the connected type's usable profiles) that the main thread publishes and the
   tray reads when the host asks for the menu, so updates in flight never apply out of order; the
   main thread then calls `Handle::update` only to make the host read it again, and only when the
   model changed. Menu callbacks send a `TrayMessage` (the action and the tray's generation)
   through an unbounded `async_channel` to a main-thread loop.
-  - **Lifecycle:** the tray shows only while "Run in background" is on and GX52 is not quitting.
-    `spawn()` is asynchronous, so every start gets a generation (`TrayLifecycle`): a start that
-    completes after the tray was turned off, or after a newer start, has its handle shut down at
-    once, and the messages of any generation but the current one are dropped. The handle of the
-    running tray is shut down when the setting goes off, on Quit and in the application's
-    `shutdown`. Availability is a tri-state (unknown, available, not available) reset by each
-    start. `ksni` reports a missing watcher during `spawn()` and never reports a present one for
-    the first registration (S5), so a successful start sends `Registered` through the same channel
-    as the tray's own reports, after that report; it only fills "unknown". The start's handle
-    comes back by another path and sets no availability.
-  - **Closing the window** with "Run in background" on destroys it, whether or not a tray is
-    available, also after a tray host went away while the window was open (GNOME lists the app under
-    Background Apps, and launching it again shows the window;
-    [ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#preferences)), and a
-    background hold keeps the application, the device service and the tray running; with it off,
-    closing quits. Showing the window again builds a new one, so a hidden start (M6 task 2) and a
-    closed window are the same state. The hold is separate from the write queue's (see Persistence).
-  - **Quit** (the menu, Ctrl+Q, the tray) sets `quitting`: the tray goes, the window closes
-    without the background hold and the process ends once the profiles are written. While
-    quitting, tray messages are dropped; launching GX52 again calls the quit off.
-  - **Activation tokens:** GNOME's AppIndicator extension starts a launch (the busy cursor) for
-    every click on the icon or the menu and hands its XDG activation token to the item first
-    (`ProvideXdgActivationToken`); the launch lasts until the token is used. Each `TrayMessage`
-    carries the token of its click (`ksni::current_xdg_activation_token`, only valid inside the
-    callback). A click that shows the window (Show, Preferences, About) presents it with the
-    token (`set_startup_id`), which also gives it the focus. Every other click, a dropped one
-    included, ends the launch with `gtk_shell1.set_startup_id`, which mutter takes without a
-    window: GTK sends it only on a compositor without xdg-activation, so
-    `notify_startup_complete` does nothing on GNOME. `src/tray/launch.rs` sends it on a short
-    Wayland connection of its own (`wayland-client`, pure-Rust backend, `gtk-shell.xml`
-    vendored from GTK 4.22) to the socket GDK uses, on a blocking-pool thread; an X11 display
-    still gets `notify_startup_complete`. A Quit that exits at once may end before it is sent;
-    the launch then ends with the process.
-  - **Closing a window with dialogs** (Hide, Quit) force-closes its dialogs first: with a dialog
-    open, closing the window closes only that dialog.
-  - A watcher that goes away while no window is there brings the window back (only a host that
-    showed the icon: one that never appeared, as on plain GNOME, is not a loss), never while
-    quitting. "Run in background" turned off while no window is there shows the window too, since
-    the tray goes with it.
+    - **Lifecycle:** the tray shows only while "Run in background" is on and GX52 is not quitting.
+      `spawn()` is asynchronous, so every start gets a generation (`TrayLifecycle`): a start that
+      completes after the tray was turned off, or after a newer start, has its handle shut down at
+      once, and the messages of any generation but the current one are dropped. The handle of the
+      running tray is shut down when the setting goes off, on Quit and in the application's
+      `shutdown`. Availability is a tri-state (unknown, available, not available) reset by each
+      start. `ksni` reports a missing watcher during `spawn()` and never reports a present one for
+      the first registration, so a successful start sends `Registered` through the same channel
+      as the tray's own reports, after that report; it only fills "unknown". The start's handle
+      comes back by another path and sets no availability.
+    - **Closing the window** with "Run in background" on destroys it, whether or not a tray is
+      available, also after a tray host went away while the window was open (GNOME lists the app
+      under Background Apps, and launching it again shows the window;
+      [ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#preferences)), and a
+      background hold keeps the application, the device service and the tray running; with it off,
+      closing quits. Showing the window again builds a new one, so a hidden start (M6 task 2) and a
+      closed window are the same state. The hold is separate from the write queue's (see
+      Persistence).
+    - **Quit** (the menu, Ctrl+Q, the tray) sets `quitting`: the tray goes, the window closes
+      without the background hold and the process ends once the profiles are written. While
+      quitting, tray messages are dropped; launching GX52 again calls the quit off.
+    - **Activation tokens:** GNOME's AppIndicator extension starts a launch (the busy cursor) for
+      every click on the icon or the menu and hands its XDG activation token to the item first
+      (`ProvideXdgActivationToken`); the launch lasts until the token is used. Each `TrayMessage`
+      carries the token of its click (`ksni::current_xdg_activation_token`, only valid inside the
+      callback). A click that shows the window (Show, Preferences, About) presents it with the
+      token (`set_startup_id`), which also gives it the focus. Every other click, a dropped one
+      included, ends the launch with `gtk_shell1.set_startup_id`, which mutter takes without a
+      window: GTK sends it only on a compositor without xdg-activation, so
+      `notify_startup_complete` does nothing on GNOME. `src/tray/launch.rs` sends it on a short
+      Wayland connection of its own (`wayland-client`, pure-Rust backend, `gtk-shell.xml`
+      vendored from GTK 4.22) to the socket GDK uses, on a blocking-pool thread; an X11 display
+      still gets `notify_startup_complete`. A Quit that exits at once may end before it is sent;
+      the launch then ends with the process.
+    - **Closing a window with dialogs** (Hide, Quit) force-closes its dialogs first: with a dialog
+      open, closing the window closes only that dialog.
+    - A watcher that goes away while no window is there brings the window back (only a host that
+      showed the icon: one that never appeared, as on plain GNOME, is not a loss), never while
+      quitting. "Run in background" turned off while no window is there shows the window too, since
+      the tray goes with it.
 - **Background and autostart:** the Background portal through `ashpd` (`request_background` with
   autostart), with `default-features = false` and the `async-io` and `background` features (ashpd
   0.13, which shares ksni's zbus 5; 0.14 moves to zbus 6), awaited on the main context, so the app
   adds no tokio runtime. While no window is there the app holds an `ApplicationHoldGuard`;
-  re-activating the app drops it (S5). `src/application/autostart.rs`:
-  - **Hidden start:** `gx52 --hidden`, the command of the autostart entry. The application handles
-    its command line (`HANDLES_COMMAND_LINE`), in the primary instance: without `--hidden` it shows
-    the window, as `activate` does; with it, the primary runs in the background with no window
-    while "Run in Background" is on, and shows the window otherwise, since no tray would lead back
-    to it. A hidden launch forwarded to a running instance changes nothing. A hidden start while
-    "Start on Login" is off comes from a stale entry, which is removed.
-  - **Requests:** the `autostart` key asks for the entry on or off whenever it changes (any
-    writer, "Run in Background" turned off included, also by the startup normalization, so its
-    handler is connected before it), and on at every start while it is on, so the entry follows
-    an updated GX52. A request has a side effect, so a stale reply cannot be dropped: requests go
-    one at a time, and the one that finishes sends the latest wish if it differs, so the last
-    request to finish is always the latest wish. An enable the portal refuses turns the key back
-    off and records why (not allowed, or no portal) until the key turns on and the portal agrees,
-    the user turns it off, or "Run in Background" goes off; nothing more is asked then. A refusal
-    shows as a warning in Preferences, or, with no Preferences dialog showing (a start at login
-    has no window), as a banner the next window shows until Preferences opens
-    ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#preferences)). A permission
-    turned off answers Cancelled, like a dismissed dialog, so Cancelled is a refusal also for the
-    start's own request; that request only logs a failure: at login the portal may not be ready,
-    and turning the key off would remove the entry at the next hidden start. A request holds the
-    application, so one sent just before Quit still arrives; Quit waits 5 s for it at most, and a
-    follow-up sent while quitting holds nothing. A request the portal leaves unanswered for 2
-    minutes counts as failed, so a hung portal does not leave the switch waiting.
-  - **Background permission:** GX52 cannot read it, only learn it from a request's answer. With
-    it off, xdg-desktop-portal ends any instance of the app id with no window a few seconds after
-    the last one closes, "Run in Background" or not, and the same for a `flatpak-builder` test
-    run of the Devel id. On Ubuntu 26.04 (xdg-desktop-portal 1.21, GNOME 50) no dialog asks: an
-    unset permission is granted and stored as allowed.
-  - **Host build:** the app registers its id with `org.freedesktop.host.portal.Registry` before
-    the first request (xdg-desktop-portal 1.19 and later; a no-op in the sandbox). On the host the
-    entry's `Exec` is `gx52 --hidden`, so `gx52` must be on `PATH`; in the Flatpak the portal
-    writes a `flatpak run` line.
-  - **Logging:** zbus's proxies warn on every request (ashpd's request object is gone once it
-    answered), so the default filter keeps `zbus::proxy` at errors.
+  re-activating the app drops it. `src/application/autostart.rs`:
+    - **Hidden start:** `gx52 --hidden`, the command of the autostart entry. The application handles
+      its command line (`HANDLES_COMMAND_LINE`), in the primary instance: without `--hidden` it
+      shows the window, as `activate` does; with it, the primary runs in the background with no
+      window while "Run in Background" is on, and shows the window otherwise, since no tray would
+      lead back to it. A hidden launch forwarded to a running instance changes nothing. A hidden
+      start while "Start on Login" is off comes from a stale entry, which is removed.
+    - **Requests:** the `autostart` key asks for the entry on or off whenever it changes (any
+      writer, "Run in Background" turned off included, also by the startup normalization, so its
+      handler is connected before it), and on at every start while it is on, so the entry follows an
+      updated GX52. A request has a side effect, so a stale reply cannot be dropped: requests go one
+      at a time, and the one that finishes sends the latest wish if it differs, so the last request
+      to finish is always the latest wish. An enable the portal refuses turns the key back off and
+      records why (not allowed, or no portal) until the key turns on and the portal agrees, the user
+      turns it off, or "Run in Background" goes off; nothing more is asked then. A refusal shows as
+      a warning in Preferences, or, with no Preferences dialog showing (a start at login has no
+      window), as a banner the next window shows until Preferences opens
+      ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#preferences)). A
+      permission turned off answers Cancelled, like a dismissed dialog, so Cancelled is a refusal
+      also for the start's own request; that request only logs a failure: at login the portal may
+      not be ready, and turning the key off would remove the entry at the next hidden start. A
+      request holds the application, so one sent just before Quit still arrives; Quit waits 5 s for
+      it at most, and a follow-up sent while quitting holds nothing. A request the portal leaves
+      unanswered for 2 minutes counts as failed, so a hung portal does not leave the switch waiting.
+    - **Background permission:** GX52 cannot read it, only learn it from a request's answer. With
+      it off, xdg-desktop-portal ends any instance of the app id with no window a few seconds after
+      the last one closes, "Run in Background" or not, and the same for a `flatpak-builder` test
+      run of the Devel id. On Ubuntu 26.04 (xdg-desktop-portal 1.21, GNOME 50) no dialog asks: an
+      unset permission is granted and stored as allowed.
+    - **Host build:** the app registers its id with `org.freedesktop.host.portal.Registry` before
+      the first request (xdg-desktop-portal 1.19 and later; a no-op in the sandbox). On the host the
+      entry's `Exec` is `gx52 --hidden`, so `gx52` must be on `PATH`; in the Flatpak the portal
+      writes a `flatpak run` line.
+    - **Logging:** zbus's proxies warn on every request (ashpd's request object is gone once it
+      answered), so the default filter keeps `zbus::proxy` at errors.
 
 ## State model
 
-```text
-device type ──> active profile for that type ─┐
-active mode ──> its mode settings (per-mode) ─┼─> desired device state ─> writer
-clocks, MFD line sources ─────────────────────┤
-overrides ────────────────────────────────────┘
+```mermaid
+flowchart LR
+    type["Device type"] --> profile["Active profile for that type"]
+    mode["Active mode"] --> settings["Its mode settings (per-mode)"]
+    profile --> desired["Desired device state"]
+    settings --> desired
+    sources["Clocks, MFD line sources"] --> desired
+    overrides["Overrides"] --> desired
+    desired --> writer["Writer"]
 ```
 
 - The **desired device state** is a plain `x52` value: LED states (X52 Pro only), both brightness
   values, three MFD lines, clock 1 source and 12/24 h, clock 2/3 sources and 12/24 h, date format,
   shift, blink. It holds clock sources, not times: the writer resolves them (see the writer above).
   It is computed on the main thread from:
-  - the **device type** of the connected device (`x52-pro` or `x52`), which also decides which
-    fields exist (no LEDs, shift or blink on the non-Pro, per
-    [protocol.md](protocol.md#x52-non-pro));
-  - the **active profile for that device type** (GSettings, see
-    [profiles.md](profiles.md#active-profile)); a missing or wrong-type profile falls back to that
-    type's default profile. Until the store has loaded, the built-in default is sent;
-  - the **active mode** (from the reader), which picks the mode settings of a per-mode profile; a
-    single profile has one set and ignores it. Until the reader reports a mode, mode 1 is used. The
-    last reported mode is kept while the evdev node is reopened and dropped when the device goes.
-    The state is pushed again on a new selection, a mode change, a change of the active profile
-    and once the store has loaded or a profile was imported (`src/application.rs`,
-    `push_desired_state`; the active id is resolved in `src/profile/active.rs`, the list order in
-    `src/profile/order.rs`). It is logged only when the applied profile or mode changes;
-  - the **MFD line sources**, resolved into three lines of text: custom text, the active profile's
-    name, the name of the most recently pressed button that is still held (from the set of held
-    buttons and POV 1 directions above, the mode selector keys excluded), or empty. Every dynamic
-    value is converted and cut to 16 bytes as [profiles.md](profiles.md#mfd-lines) says;
-  - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
-    fixed offset), which the writer turns into wire values;
-  - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode bar
-    ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#mode-bar)), live edits
-    not yet saved and, in 1.x, MFD pages and D-Bus requests. The **mode shown** is the picked mode,
-    else the active mode, else mode 1 (`src/profile/editing.rs`); the pick is dropped when the
-    selector moves, the active profile changes or becomes single, or the device goes or is selected
-    again. The device, the editor and the profile list's badges all show the mode shown; the sidebar
-    footer keeps the selector's mode. The editor's edits change the active profile's settings of the
-    mode shown, go to the device at once and are saved after the debounce
-    (`src/application/editing.rs`).
+    - the **device type** of the connected device (`x52-pro` or `x52`), which also decides which
+      fields exist (no LEDs, shift or blink on the non-Pro, per
+      [protocol.md](protocol.md#x52-non-pro));
+    - the **active profile for that device type** (GSettings, see
+      [profiles.md](profiles.md#active-profile)); a missing or wrong-type profile falls back to that
+      type's default profile. Until the store has loaded, the built-in default is sent;
+    - the **active mode** (from the reader), which picks the mode settings of a per-mode profile; a
+      single profile has one set and ignores it. Until the reader reports a mode, mode 1 is used.
+      The last reported mode is kept while the evdev node is reopened and dropped when the device
+      goes. The state is pushed again on a new selection, a mode change, a change of the active
+      profile and once the store has loaded or a profile was imported (`src/application.rs`,
+      `push_desired_state`; the active id is resolved in `src/profile/active.rs`, the list order in
+      `src/profile/order.rs`). It is logged only when the applied profile or mode changes;
+    - the **MFD line sources**, resolved into three lines of text: custom text, the active profile's
+      name, the name of the most recently pressed button that is still held (from the set of held
+      buttons and POV 1 directions above, the mode selector keys excluded), or empty. Every dynamic
+      value is converted and cut to 16 bytes as [profiles.md](profiles.md#mfd-lines) says;
+    - the **clocks**: the clock sources of the profile (clock 1 local or UTC, clocks 2/3 a zone or a
+      fixed offset), which the writer turns into wire values;
+    - **overrides**: temporary values on top of the profile: the mode picked in the editor's mode
+      bar ([ui.md](https://github.com/leinardi/gx52/blob/main/docs/internal/ui.md#mode-bar)), live
+      edits not yet saved and, in 1.x, MFD pages and D-Bus requests. The **mode shown** is the
+      picked mode, else the active mode, else mode 1 (`src/profile/editing.rs`); the pick is dropped
+      when the selector moves, the active profile changes or becomes single, or the device goes or
+      is selected again. The device, the editor and the profile list's badges all show the mode
+      shown; the sidebar footer keeps the selector's mode. The editor's edits change the active
+      profile's settings of the mode shown, go to the device at once and are saved after the
+      debounce (`src/application/editing.rs`).
 - The **MFD editor's simulated display** is built from the same desired state
   (`src/profile/active.rs`, `state_for`, then `src/profile/mfd.rs`, `preview`), so it shows exactly
   what is sent: the converted lines, the time of the clock shown as clock 1's plus the offset sent,
@@ -444,8 +427,7 @@ overrides ───────────────────────�
 
 ## Virtual mouse
 
-From S9; the 1.0.0 scope is an on/off switch plus speed, curve, deadzone and wheel direction
-settings, defaulting to the S9 values.
+An on/off switch plus speed, curve, deadzone and wheel direction settings.
 
 - **Off by default**, enabled by a GSettings switch. The switch exists because the feature needs the
   uinput permission and some games may react to the ministick axes too.
@@ -457,7 +439,7 @@ settings, defaulting to the S9 values.
   `BTN_LEFT` and `BTN_RIGHT` up followed by `SYN_REPORT`, then removes the uinput device: it exists
   only while the switch is on and a joystick is connected (M7 decision, "Virtual-mouse loop"
   above).
-- The joystick is never grabbed, so games still see the ministick and mouse buttons (S9: no side
+- The joystick is never grabbed, so games still see the ministick and mouse buttons (no side
   effects in X4: Foundations). Hiding them needs a grab plus a virtual joystick and is not planned.
 
 ## Persistence
@@ -478,33 +460,32 @@ settings, defaulting to the S9 values.
   store, the order and the active profile (`src/profile/list.rs`), keeping the objects of the
   profiles that stay. The shown type is the connected one, or the last one seen (GSettings
   `last-device-type`) while no device is connected.
-  - **Edits change the store in memory; file work is a job.** `store.rs` hands out `SaveJob`,
-    `AddJob` and `DeleteJob` values (the path, the contents and how to write them) that run in
-    `gio::spawn_blocking`; the main thread then commits the result (`saved`, `added`). A removal
-    takes the entry out of the store at once (`take`) and deletes its file later; an undo or a
-    failed delete puts it back (`restore`). A file that is not a profile is a `Damaged` entry,
-    listed under the device type its TOML names (read leniently) or under every type, never
-    written, and deleted only by an explicit removal.
-  - **One write at a time per profile** (`writes.rs`). The write queue debounces saves (500 ms
-    after the last edit) and keeps one lane per profile, so a save and a delete of the same
-    profile never overlap and a save never lands after the delete. It also counts the creates (new,
-    duplicated, imported profiles) until their profile is in the store. It only decides: it returns
-    commands (arm or cancel a timer, start a job) that the application carries out, so every order
-    of events is unit-tested.
-  - **Names claimed before the store has them** (`reservations.rs`): the name of a create or an
-    import while its file is written, and the name of a removed profile until its file is deleted
-    or it is restored. Every name check (new, duplicate, rename, import) looks at the store and the
-    reservations together, so two profiles of a type never share a name.
-  - **Removals until the file is gone** (`removals.rs`): a removed entry with its reserved name,
-    its place in the list and whether it was active, until Undo or a failed delete puts it back
-    or the delete frees the name. Each removal is numbered, so a late toast signal of an undone
-    removal never ends the Undo of the next one; a profile the user makes active meanwhile is not
-    overridden by the put-back. Pure like the queue, and unit-tested the same way.
+    - **Edits change the store in memory; file work is a job.** `store.rs` hands out `SaveJob`,
+      `AddJob` and `DeleteJob` values (the path, the contents and how to write them) that run in
+      `gio::spawn_blocking`; the main thread then commits the result (`saved`, `added`). A removal
+      takes the entry out of the store at once (`take`) and deletes its file later; an undo or a
+      failed delete puts it back (`restore`). A file that is not a profile is a `Damaged` entry,
+      listed under the device type its TOML names (read leniently) or under every type, never
+      written, and deleted only by an explicit removal.
+    - **One write at a time per profile** (`writes.rs`). The write queue debounces saves (500 ms
+      after the last edit) and keeps one lane per profile, so a save and a delete of the same
+      profile never overlap and a save never lands after the delete. It also counts the creates
+      (new, duplicated, imported profiles) until their profile is in the store. It only decides: it
+      returns commands (arm or cancel a timer, start a job) that the application carries out, so
+      every order of events is unit-tested.
+    - **Names claimed before the store has them** (`reservations.rs`): the name of a create or an
+      import while its file is written, and the name of a removed profile until its file is deleted
+      or it is restored. Every name check (new, duplicate, rename, import) looks at the store and
+      the reservations together, so two profiles of a type never share a name.
+    - **Removals until the file is gone** (`removals.rs`): a removed entry with its reserved name,
+      its place in the list and whether it was active, until Undo or a failed delete puts it back
+      or the delete frees the name. Each removal is numbered, so a late toast signal of an undone
+      removal never ends the Undo of the next one; a profile the user makes active meanwhile is not
+      overridden by the put-back. Pure like the queue, and unit-tested the same way.
 - **One-time legacy import:** at start-up, before the store is loaded, if the import flag is not set
   and `gx52.db` exists; a private copy of a consistent snapshot is read; the flag is set even when
   the database is unreadable, so start-up never fails because of it, but not while GX52 0.7 keeps
-  writing it (rewrite analysis, section 10; S8 for the
-  schema).
+  writing it.
 
 ## Errors and logging
 
@@ -518,25 +499,25 @@ settings, defaulting to the S9 values.
 - **Logging:** `tracing` + `tracing-subscriber` with an `EnvFilter`; `--debug` maps to a `debug`
   filter and `RUST_LOG` overrides it. GLib, GTK and libadwaita messages are forwarded into
   `tracing` with a GLib log writer (`glib::log_set_writer_func`), so there is one filter and one
-  format (rewrite analysis, section 5.5). Log once, where an error is handled; never per input
+  format. Log once, where an error is handled; never per input
   event.
 
 ## Sandbox and permissions
 
 The Flatpak `finish-args` beyond the display sockets:
 
-- `--device=all`: the USB node, the evdev node and `/dev/uinput` (S4, S9: without it `/dev/uinput`
+- `--device=all`: the USB node, the evdev node and `/dev/uinput` (without it `/dev/uinput`
   does not exist in the sandbox). Device access itself comes from the host udev rule. The
   narrower `--device=usb` and `--device=input` are not enough: together they expose
   `/dev/bus/usb` and `/dev/input` but not `/dev/uinput`, which no device class covers, so the
   virtual mouse would fail (checked in the Devel Flatpak with Flatpak 1.16.6, 2026-11-19). They
   also need Flatpak 1.15.11 and 1.15.6, newer than some supported distributions ship.
-- `--talk-name=org.kde.StatusNotifierWatcher` for the tray (S5; accepted by `flatpak-builder-lint`
-  in S6); no well-known name is owned (`disable_dbus_name(true)`).
-- **No network**: hotplug works by polling (S4), so `--share=network` is not needed. It is added
-  only with the X-Plane adapter in 1.x (risk R12).
+- `--talk-name=org.kde.StatusNotifierWatcher` for the tray (accepted by `flatpak-builder-lint`); no
+  well-known name is owned (`disable_dbus_name(true)`).
+- **No network**: hotplug works by polling, so `--share=network` is not needed. It is added
+  only with the X-Plane adapter in 1.x.
 - `--filesystem=/run/x52d.cmd:ro`: only so the device watch can see a running libx52 `x52d` by its
-  command socket ([protocol.md, "libx52's x52d"](protocol.md#libx52s-x52d); risk R11). Accepted
+  command socket ([protocol.md, "libx52's x52d"](protocol.md#libx52s-x52d)). Accepted
   by `flatpak-builder-lint`.
 - No other filesystem permission: profile import and export go through `gtk::FileDialog` (the
   file chooser portal); the legacy database is in the app's own config directory (rewrite
@@ -552,10 +533,10 @@ The Flatpak `finish-args` beyond the display sockets:
 - **Profile fixtures and round-trip tests:** valid files, every failure case of
   [profiles.md](profiles.md#validation-and-recovery) (malformed, out of range, unknown value, future
   schema), and legacy row → profile → TOML → profile.
-- **Legacy DB fixture:** small databases with both schemas found in S8, created by the test suite
+- **Legacy DB fixture:** small databases with both schemas of GX52 0.7, created by the test suite
   (the real files are not committed).
 - **`meson test`:** validates the desktop file, metainfo and GSettings schema and runs
-  `cargo test`; it runs in CI inside the Flatpak build on both architectures (S6).
+  `cargo test`; it runs in CI inside the Flatpak build on both architectures.
 - **Device check harness** (Devel builds only, `src/device/check.rs`): `gx52 --device-check
   <scenario>` runs the device service without a window, before GTK starts, and prints
   timestamped lines: `STEP` (something the user must do), `CHECK` (something to confirm by
@@ -585,15 +566,17 @@ The Flatpak `finish-args` beyond the display sockets:
 
 ## Extension points for 1.x
 
-Designed in from the start so the 1.x features need no rework (rewrite analysis, section 12):
+Designed in from the start so the 1.x features need no rework:
 
 - **D-Bus API:** GApplication actions plus a D-Bus interface on the app's own bus name (apply a
   profile, set MFD lines or pages, set LEDs). It feeds the overrides of the state model; owning the
   app-ID name needs no Flatpak permission.
 - **MFD pages engine:** pages of three 16-character lines built from static text and named values,
-  switched with the MFD buttons (which arrive through evdev, S3). It writes into the MFD lines of
+  switched with the MFD buttons (which arrive through evdev). It writes into the MFD lines of
   the overrides.
 - **One device:** the app drives the first supported device it finds. Several devices at once
-  were dropped on 2026-11-09 (rewrite analysis, section 12.2).
+  are not supported.
 - **Game adapters:** data sources for the MFD pages engine; the first is X-Plane over UDP, which
   needs `--share=network` (R12).
+
+<!-- markdownlint-configure-file { "ul-indent": { "indent": 4 } } -->
