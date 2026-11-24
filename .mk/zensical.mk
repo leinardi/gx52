@@ -78,6 +78,11 @@ DOCS_PIP_AUDIT_VERSION ?= 2.10.1
 # docs-serve address (IP:PORT); empty uses Zensical's default, localhost:8000.
 DOCS_ADDR ?=
 
+# docs-audit fails when pip-audit does (a known vulnerability, or pip-audit itself failing).
+# 0 makes it advisory: pip-audit's findings are printed, its failure is reported as a warning,
+# and the target passes.
+DOCS_AUDIT_FAIL ?= 1
+
 # Set DOCS_UV_PROJECT before including this file (or on the command line): the mode is fixed
 # when make reads it.
 DOCS_UV_MODE := $(strip $(DOCS_UV_PROJECT))
@@ -184,17 +189,18 @@ docs-deps-outdated: docs-bootstrap $(if $(DOCS_UV_MODE),,$(ZENSICAL_LOCK)) ## Sh
 ifneq ($(DOCS_UV_MODE),)
 	$(DOCS_UV_BIN) lock --project "$(DOCS_UV_PROJECT)" --upgrade --dry-run
 else
-	@tmp=$$(mktemp); \
+	@tmp=$$(mktemp); log=$$(mktemp); trap 'rm -f "$$tmp" "$$log"' EXIT; \
 	echo "Checking for available updates (dry-run) ..."; \
-	$(DOCS_PIP_COMPILE) --upgrade $(DOCS_PIP_COMPILE_FLAGS) -o $$tmp $(DOCS_TOOLS_IN) $(ZENSICAL_IN) >/dev/null 2>&1 || true; \
-	if ! diff -u $(ZENSICAL_LOCK) $$tmp >/dev/null 2>&1; then \
-	  echo "Updates available for $(ZENSICAL_LOCK):"; \
-	  diff -u $(ZENSICAL_LOCK) $$tmp || true; \
-	  echo; echo "Run: make docs-deps-upgrade && make docs-deps-sync"; \
-	else \
-	  echo "Zensical requirements are up-to-date."; \
+	if ! $(DOCS_PIP_COMPILE) --upgrade $(DOCS_PIP_COMPILE_FLAGS) -o $$tmp $(DOCS_TOOLS_IN) $(ZENSICAL_IN) >$$log 2>&1; then \
+	  cat $$log >&2; echo "Error: pip-compile failed; no updates were checked." >&2; exit 1; \
 	fi; \
-	rm -f $$tmp
+	status=0; diff -u $(ZENSICAL_LOCK) $$tmp >$$log 2>&1 || status=$$?; \
+	case $$status in \
+	  0) echo "Zensical requirements are up-to-date." ;; \
+	  1) echo "Updates available for $(ZENSICAL_LOCK):"; cat $$log; \
+	     echo; echo "Run: make docs-deps-upgrade && make docs-deps-sync" ;; \
+	  *) cat $$log >&2; echo "Error: diff failed (exit $$status)." >&2; exit $$status ;; \
+	esac
 endif
 
 # The target's name before v1.16.0; kept so existing scripts and habits still work.
@@ -230,6 +236,11 @@ else
 	$(DOCS_VENV_BIN)/zensical serve -f $(ZENSICAL_CONFIG)$(if $(DOCS_ADDR), -a $(DOCS_ADDR))
 endif
 
+# Shell for docs-audit, after pip-audit set status: with DOCS_AUDIT_FAIL=0, a failure is a warning.
+DOCS_AUDIT_ADVISORY = if [ $$status -ne 0 ] && [ "$(DOCS_AUDIT_FAIL)" = 0 ]; then \
+	  echo "Warning: pip-audit exited $$status; not failing because DOCS_AUDIT_FAIL=0." >&2; status=0; \
+	fi;
+
 .PHONY: docs-audit
 docs-audit: docs-deps-sync ## Audit docs dependencies for known vulnerabilities
 ifneq ($(DOCS_UV_MODE),)
@@ -237,11 +248,15 @@ ifneq ($(DOCS_UV_MODE),)
 	status=0; \
 	$(DOCS_UV_BIN) export --project "$(DOCS_UV_PROJECT)" --locked --no-emit-project --format requirements-txt -o $$tmp >/dev/null || status=$$?; \
 	if [ $$status -eq 0 ]; then \
-	  $(DOCS_UV_BIN) tool run pip-audit==$(DOCS_PIP_AUDIT_VERSION) --require-hashes --disable-pip -r $$tmp || true; \
+	  $(DOCS_UV_BIN) tool run pip-audit==$(DOCS_PIP_AUDIT_VERSION) --require-hashes --disable-pip -r $$tmp || status=$$?; \
+	  $(DOCS_AUDIT_ADVISORY) \
 	fi; \
 	rm -f $$tmp; exit $$status
 else
-	$(DOCS_VENV_BIN)/pip-audit -r $(ZENSICAL_LOCK) || true
+	@status=0; \
+	$(DOCS_VENV_BIN)/pip-audit -r $(ZENSICAL_LOCK) || status=$$?; \
+	$(DOCS_AUDIT_ADVISORY) \
+	exit $$status
 endif
 
 .PHONY: docs-clean
@@ -263,6 +278,6 @@ docs-install-system-deps-ubuntu: ## Install Ubuntu system packages for the docs
 .PHONY: docs-install-system-deps-macos
 docs-install-system-deps-macos: ## Install macOS system packages for the docs
 	@command -v brew >/dev/null 2>&1 || { echo "Homebrew not found: https://brew.sh"; exit 1; }
-	brew install python || true
+	brew install python
 
 endif  # MK_COMMON_ZENSICAL_INCLUDED
