@@ -90,35 +90,9 @@ struct AllowedFragment {
     reason: &'static str,
 }
 
-/// The repository's reviewed exceptions. All are in make-common's zensical.mk, fetched as is
-/// (`MK_COMMON_FILES`); none of its targets is a gate here.
-const ALLOWED_FRAGMENTS: &[AllowedFragment] = &[
-    AllowedFragment {
-        file: ".mk/zensical.mk",
-        fragment: "$(ZENSICAL_IN) >/dev/null 2>&1 || true;",
-        reason: "docs-deps-outdated (pip mode, unused here): a failed dry-run compile only means no diff to show",
-    },
-    AllowedFragment {
-        file: ".mk/zensical.mk",
-        fragment: "diff -u $(ZENSICAL_LOCK) $$tmp || true;",
-        reason: "docs-deps-outdated (pip mode, unused here): diff exits 1 when updates exist, which is the answer",
-    },
-    AllowedFragment {
-        file: ".mk/zensical.mk",
-        fragment: "-r $$tmp || true;",
-        reason: "docs-audit (uv mode): reports advisories without failing; an advisory report, not a gate",
-    },
-    AllowedFragment {
-        file: ".mk/zensical.mk",
-        fragment: "pip-audit -r $(ZENSICAL_LOCK) || true",
-        reason: "docs-audit (pip mode, unused here): an advisory report, not a gate",
-    },
-    AllowedFragment {
-        file: ".mk/zensical.mk",
-        fragment: "brew install python || true",
-        reason: "docs-install-system-deps-macos: brew exits non-zero when Python is already installed",
-    },
-];
+/// The repository's reviewed exceptions: none. make-common's zensical.mk had five until
+/// v1.16.1, which made its targets fail when their commands do.
+const ALLOWED_FRAGMENTS: &[AllowedFragment] = &[];
 
 /// One flag found on one line.
 #[derive(Debug)]
