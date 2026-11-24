@@ -796,7 +796,7 @@ dependencies = [
 
 [[package]]
 name = "gx52"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "ashpd",
  "async-channel",

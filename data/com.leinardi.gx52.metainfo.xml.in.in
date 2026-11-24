@@ -68,6 +68,15 @@
   <!-- Newest first. The release workflow adds the entry for each new version (docs/internal/release.md);
        the 0.7.x entries are the legacy Python application's history. -->
   <releases>
+    <release version="1.1.1" date="2026-11-24">
+      <description translate="no">
+        <ul>
+          <li>Bump the cargo-crates group with 5 updates</li>
+          <li>Point the homepage at the documentation site</li>
+          <li>Adapt to the jiff 1.0 API</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-11-20">
       <description translate="no">
         <ul>
